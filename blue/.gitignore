@@ -1,0 +1,9 @@
+*.toc
+*.aux
+*.log
+*.synctex.gz
+*.run.xml
+*blx.bib
+*.out
+*~
+auto

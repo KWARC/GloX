@@ -1,0 +1,84 @@
+\documentclass[12pt]{bluenote}
+\usepackage[show]{ed}
+% \usepackage{listings}
+% \lstset{basicstyle=\sf,columns=fullflexible}
+\usepackage[hyperref,backend=bibtex,style=alphabetic]{biblatex}
+\addbibresource{../bibs/kwarcpubs.bib}
+\addbibresource{../bibs/extpubs.bib}
+\addbibresource{../bibs/kwarccrossrefs.bib}
+\addbibresource{../bibs/extcrossrefs.bib}
+\usepackage{hyperref}
+
+\title{The \FAUstairs Glossary Extraction and Curation Process}
+\author{Michael Kohlhase\\
+  Computer Science, FAU Erlangen-N\"urnberg\\
+  \url{http://kwarc.info/kohlhase}}
+
+\def\defemph#1{\textbf{#1}}
+\def\FAUstairs{\textsf{FAUstairs}\xspace}
+\blueProject{\FAUstairs}
+\def\GloX{\textsf{GloX}\xspace}
+\def\studon{\textsf{StudOn}\xspace}
+\def\campo{\textsf{Campo}\xspace}
+\def\DIP{\textsf{DIP}\xspace}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+  We describe the initial ideas for the \FAUstairs glossary extraction and curation
+  process and the workflows and tooling we envision to supports it.
+
+  This blue note is (supposed to be) a living document that describes the current state of
+  the discussion, to serve as an implementation guide and initial documentation for the
+  \GloX tool ecosystem.
+\end{abstract}
+\tableofcontents\newpage
+
+\section{Introduction}\label{sec:intro}
+
+A Central part of the \FAUstairs project (``Formative Assessment for Universities:
+Strategic Application of Innovative Methods to Raise Study Success Rates'' see
+\url{https://faustairs.fau.de}) is the development and curation of a \defemph{domain
+  model} -- i.e. a set of key concepts and their definitions -- for large portions of the
+courses at FAU (and the development of added-value services on top of that to establish
+formative assessment).
+
+In the following we describe the information sources, the glossary extraction and curation
+workflows and the GloX tool ecosystem.
+
+\section{Information Sources and Stakeholders}\label{sec:sources}
+
+The main sources of information for the \FAUstairs domain model are the
+following\ednote{MK: I am sure there are more, need to extend}:
+\begin{enumerate}
+\item the module descriptions in \campo: \url{https://campo.fau.de}
+\item the course infrastructure and curriculum data on \studon: \url{https://studon.fau.de}
+\item the course materials of the instructors. 
+\end{enumerate}
+The first two are avaialable via the \DIP system, a centralized infrastructure and data
+store for synchronization of the FAU learning administration systems provided by the FAU
+RRZE.
+
+The stakeholders in the \GloX process are\ednote{MK: there must be more; extend}
+\begin{enumerate}
+\item The \defemph{degree programs} represented by the program directors (the faculty
+  member formally in charge), the program coordinators and maybe the study advisors.
+\item The \defemph{departments} that host the degree programs, represented by their
+  speakers and the department manager.
+\item The instructors of the mandatory courses of a degree program; here we include the
+  persons who organize the tutorials, homeworks, and (summative) assessments. 
+\end{enumerate}
+
+\section{Workflow}\label{sec:main}
+
+\section{The \GloX Tool Ecosystem}\label{sec:glox}
+
+\begin{sloppypar}
+\printbibliography
+\end{sloppypar}
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
