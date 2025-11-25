@@ -3,11 +3,13 @@
 % \usepackage{listings}
 % \lstset{basicstyle=\sf,columns=fullflexible}
 \usepackage[hyperref,backend=bibtex,style=alphabetic]{biblatex}
+
 \addbibresource{../bibs/kwarcpubs.bib}
 \addbibresource{../bibs/extpubs.bib}
 \addbibresource{../bibs/kwarccrossrefs.bib}
 \addbibresource{../bibs/extcrossrefs.bib}
 \usepackage{hyperref}
+\usepackage{cleveref}
 
 \title{The \FAUstairs Glossary Extraction and Curation Process}
 \author{Michael Kohlhase\\
@@ -21,6 +23,7 @@
 \def\studon{\textsf{StudOn}\xspace}
 \def\campo{\textsf{Campo}\xspace}
 \def\DIP{\textsf{DIP}\xspace}
+\def\FloDown{\textsf{FloDown}\xspace}
 
 \begin{document}
 \maketitle
@@ -44,7 +47,7 @@ courses at FAU (and the development of added-value services on top of that to es
 formative assessment).
 
 In the following we describe the information sources, the glossary extraction and curation
-workflows and the GloX tool ecosystem.
+workflows and the \GloX tool ecosystem.
 
 \section{Information Sources and Stakeholders}\label{sec:sources}
 
@@ -55,7 +58,7 @@ following\ednote{MK: I am sure there are more, need to extend}:
 \item the course infrastructure and curriculum data on \studon: \url{https://studon.fau.de}
 \item the course materials of the instructors. 
 \end{enumerate}
-The first two are avaialable via the \DIP system, a centralized infrastructure and data
+The first two are available via the \DIP system, a centralized infrastructure and data
 store for synchronization of the FAU learning administration systems provided by the FAU
 RRZE.
 
@@ -66,10 +69,54 @@ The stakeholders in the \GloX process are\ednote{MK: there must be more; extend}
 \item The \defemph{departments} that host the degree programs, represented by their
   speakers and the department manager.
 \item The instructors of the mandatory courses of a degree program; here we include the
-  persons who organize the tutorials, homeworks, and (summative) assessments. 
+  persons who organize the tutorials, homework assignments, and (summative) assessments.
+\item The \defemph{\FAUstairs GloXers} -- three pairs of knowledge representation and
+  domain specialists tasked with the \GloX process.
 \end{enumerate}
 
 \section{Workflow}\label{sec:main}
+
+The \GloX workflow will consist of two large steps glossary extraction and glossary
+curation, which we will sketch out in the following: 
+
+\subsection{Glossary Extraction}\label{sec:glox}
+
+In this step we examine the information sources from \cref{sec:sources} for
+glossary-relevant information and export it into a curation format (most probably
+\FloDown).
+
+The relevant steps are
+\begin{enumerate}
+\item \defemph{Concept Identification}: The domain specialists identify the key concepts
+  in the information source
+\item \defemph{Concept Annotation}: The concepts are annotated with
+  \begin{enumerate}
+  \item a \defemph{symbol} name (a system identifier), the concept in the source serves as the
+    default verbalization. 
+  \item (optionally) known \defemph{synonyms}, and 
+  \item a \defemph{definition} (rigorous) or \defemph{concept documentation} (less
+    rigorous description).
+  \end{enumerate}
+\item \defemph{Translation}\ednote{MK: do we want to do this?; I think it will be
+    necessary at least for Math, INF and the natural sciences}: Where the scientific
+  discourse is international, the concept names are standardized to their English
+  versions.
+\end{enumerate}
+
+\subsection{Domain Model Curation}\label{sec:gloc}
+
+In this step we collect all the available glossaries, aggregate them into a coherent
+domain model. The relevant steps are
+\begin{enumerate}
+\item \defemph{Collection}: The glossaries are collected and systematically organized into
+  a modular collection, most probably managed and served by MathHub.info.
+\item \defemph{Annotation}: The definitions are further annotated with term references
+  into the joint domain model by the GloXers.
+\item \defemph{Aggregation}: this is mainly a de-duplication step, which identifies
+  possible duplicate concepts (probably by their definitions and/or usage patterns).
+\item \defemph{Canonicalization}: The domain model is compared against the disciplinary
+  learning ontologies, etc.
+\end{enumerate}
 
 \section{The \GloX Tool Ecosystem}\label{sec:glox}
 
@@ -82,3 +129,5 @@ The stakeholders in the \GloX process are\ednote{MK: there must be more; extend}
 %%% mode: latex
 %%% TeX-master: t
 %%% End: 
+
+% LocalWords:  GloXers
