@@ -23,7 +23,9 @@
 \def\studon{\textsf{StudOn}\xspace}
 \def\campo{\textsf{Campo}\xspace}
 \def\DIP{\textsf{DIP}\xspace}
+\def\FLAMS{\textsf{FLAMS}\xspace}
 \def\FloDown{\textsf{FloDown}\xspace}
+\def\ALeA{\textsf{ALeA}\xspace}
 
 \begin{document}
 \maketitle
@@ -157,6 +159,25 @@ sources include
 \end{enumerate}
 All of the tools export FTML (FlexiFormal Text Markup Language)\ednote{MK: how to cite
   it?}, which is at the heart of the KWARC toolchain.
+
+Note that \GloX{ing} of course materials directly leads to semantically annotated course
+documents, which could be used in \ALeA. In this case, we want to hold on to the annotated
+course materials and provide additional added-value services. 
+
+\subsection{Domain Model Curation}
+
+For the domain model curation phase (see \cref{gloc}), we will (probably) use the
+MathHub.info infrastructure; in particular
+\begin{enumerate}
+\item The GitLab \url{https://gl.mathhub.info} for versioned storage of the domain model
+  (and possibly the anotated course materials). 
+\item The \FLAMS system for serving the FTML and querying the triplestore
+\item the new FloDown infrastructure to curate the domain model directly on MathHub.info
+  in a dedicated curation interface.\ednote{MK: I am sure that this interface can be
+    extended to sTeX, so that we can directly use it for MathHub curation as well. That
+    would be a welcome synergy. Abhishek tells me that he is interested for Sophize.org as
+    well.}
+\end{enumerate}
 
 \subsection{Development Model}\label{sec:devel}
 As always, I would like the \GloX tool ecosystem to be developed in an iterative fashion: first draft
