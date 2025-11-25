@@ -3,11 +3,11 @@
 % \usepackage{listings}
 % \lstset{basicstyle=\sf,columns=fullflexible}
 \usepackage[hyperref,backend=bibtex,style=alphabetic]{biblatex}
-
-\addbibresource{../bibs/kwarcpubs.bib}
-\addbibresource{../bibs/extpubs.bib}
-\addbibresource{../bibs/kwarccrossrefs.bib}
-\addbibresource{../bibs/extcrossrefs.bib}
+\addbibresource{kwarcpubs.bib}
+\addbibresource{extpubs.bib}
+\addbibresource{kwarccrossrefs.bib}
+\addbibresource{extcrossrefs.bib}
+\usepackage{stex-logo}
 \usepackage{hyperref}
 \usepackage{cleveref}
 
@@ -95,7 +95,7 @@ The relevant steps are
     default verbalization. 
   \item (optionally) known \defemph{synonyms}, and 
   \item a \defemph{definition} (rigorous) or \defemph{concept documentation} (less
-    rigorous description).
+    rigorous description); both may be annotated by term references. 
   \end{enumerate}
 \item \defemph{Translation}\ednote{MK: do we want to do this?; I think it will be
     necessary at least for Math, INF and the natural sciences}: Where the scientific
@@ -120,6 +120,51 @@ domain model. The relevant steps are
 
 \section{The \GloX Tool Ecosystem}\label{sec:glox}
 
+We will start off the \GloX process with a glossary extraction tool for HTML module
+descriptions (we assume that we can get them as HTML from the \DIP). We will have to
+process hundreds of module descriptions over the course of the \FAUstairs project, so a
+good workflow support for the three would be helpful.
+
+\subsection{HTML \GloX}\label{sec:glox:html}
+
+For concept identification (see above), the user selects a text region with a
+(verbalization of) a key concept. For concept annotation, \GloX provides interaction
+window that allows to enter the necessary data. \GloX should probably include Wikipedia or
+LLM-based suggestions for the synonyms and definitions, possibly a concept spotter as
+well. Also, we will need to include a snify-like workflow for the annotating the
+definitions with term references.
+
+It would be good if the HTML \GloX were not restricted to the module descriptions, but
+could be used for arbitrary HTML documents; so that we could use it via pandoc for other
+formats as well.
+
+\subsection{Other \GloX{es}}
+
+Many of the other information sources (see \cref{sec:sources}) are not (born as) HTML. It
+will be critical to infiltrate the native workflows of the respective stakeholders to
+lighten the workload (and possibly create alternative value). Other formats information
+sources include
+\begin{enumerate}
+\item {\LaTeX}: here the \sTeX format~\cite{sTeX:github:on} is appropriate, and
+  well-established.
+\item MS PowerPoint: here we can build on
+  CPoint~\cite{Kohlhase:SemanticInteractionDesignDiss:biblatex} to provide \GloX
+  functionality; in fact we are starting a re-implementation in a Master's project, which
+  should specialize in \GloX functionality initially.
+\item MS Word: Here we can build on WOIDE (Word OMDoc IDE; see
+  \cite{KohKoh:woide24,Adrian:bsc25}).
+\item Text and MarkDown: here we can build on FloDown\ednote{MK: how to cite it?}
+\end{enumerate}
+All of the tools export FTML (FlexiFormal Text Markup Language)\ednote{MK: how to cite
+  it?}, which is at the heart of the KWARC toolchain.
+
+\subsection{Development Model}\label{sec:devel}
+As always, I would like the \GloX tool ecosystem to be developed in an iterative fashion: first draft
+functionality soon, so that we can try and criticize, and advanced functionality/features
+later. And of course, having a first mockup to show/demo to the program coordinators (they
+need to have an idea what is coming) soon would be great.
+
+\newpage
 \begin{sloppypar}
 \printbibliography
 \end{sloppypar}
@@ -130,4 +175,4 @@ domain model. The relevant steps are
 %%% TeX-master: t
 %%% End: 
 
-% LocalWords:  GloXers
+% LocalWords:  GloXers de snify pandoc CPoint WOIDE MarkDown
