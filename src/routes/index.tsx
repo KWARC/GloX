@@ -26,9 +26,6 @@ function IndexPage() {
       <UploadDialog
         opened={opened}
         onClose={() => setOpened(false)}
-        onUpload={(file) => {
-          console.log('Selected PDF:', file)
-        }}
       />
     </>
   )

@@ -1,57 +1,50 @@
 import { useState } from 'react'
-import {
-  Modal,
-  FileInput,
-  Button,
-  Stack,
-  Text,
-} from '@mantine/core'
+import { Modal, FileInput, Button, Stack, Text } from '@mantine/core'
+import { uploadPdf } from '../routes/upload.server'
 
-interface UploadPdfDialogProps {
+interface Props {
   opened: boolean
   onClose: () => void
-  onUpload?: (file: File) => void
 }
 
-export default function UploadDialog({
-  opened,
-  onClose,
-  onUpload,
-}: UploadPdfDialogProps) {
+export default function UploadDialog({ opened, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  const handleUpload = () => {
-    if (!file) return
-    onUpload?.(file)
-    setFile(null)
+const handleUpload = async () => {
+  if (!file) return
+
+  setLoading(true)
+
+  try {
+    // ✅ pass File directly
+    const result = await uploadPdf(file)
+
+    console.log(result)
     onClose()
+    setFile(null)
+  } finally {
+    setLoading(false)
   }
+}
+
+
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title="Upload PDF"
-      centered
-    >
+    <Modal opened={opened} onClose={onClose} title="Upload PDF" centered>
       <Stack>
         <Text size="sm" c="dimmed">
-          Upload a PDF file to extract text and begin curation.
+          Upload a PDF file to begin extraction.
         </Text>
 
         <FileInput
           label="PDF file"
-          placeholder="Select a PDF file"
           accept="application/pdf"
           value={file}
           onChange={setFile}
-          clearable
         />
 
-        <Button
-          onClick={handleUpload}
-          disabled={!file}
-        >
+        <Button onClick={handleUpload} loading={loading} disabled={!file}>
           Upload
         </Button>
       </Stack>
