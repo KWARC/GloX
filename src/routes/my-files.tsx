@@ -1,34 +1,28 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import {
-  Stack,
-  Card,
-  Text,
-  Title,
-  Loader,
-} from '@mantine/core'
-import { myDocumentsQuery, MyDocument } from '@/queries/document'
-import { currentUser } from '@/serverFns/currentUser.server'
+import { MyDocument, myDocumentsQuery } from "@/queries/document";
+import { currentUser } from "@/serverFns/currentUser.server";
+import { Card, Loader, Stack, Text, Title } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/my-files')({
+export const Route = createFileRoute("/my-files")({
   beforeLoad: async () => {
-    const user = await currentUser()
+    const user = await currentUser();
     if (!user?.loggedIn) {
-      throw redirect({ to: '/login' })
+      throw redirect({ to: "/login" });
     }
   },
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
-  const { data = [], isLoading } = useQuery<MyDocument[]>(myDocumentsQuery)
+  const { data = [], isLoading } = useQuery<MyDocument[]>(myDocumentsQuery);
 
   if (isLoading) {
     return (
       <Stack align="center" p="xl">
         <Loader />
       </Stack>
-    )
+    );
   }
 
   return (
@@ -39,7 +33,14 @@ function RouteComponent() {
         <Text c="dimmed">No files uploaded yet</Text>
       ) : (
         data.map((doc) => (
-          <Card key={doc.id} withBorder>
+          <Card
+            key={doc.id}
+            withBorder
+            component={Link}
+            to="/my-files/$documentId"
+            params={{ documentId: doc.id }}
+            style={{ cursor: "pointer" }}
+          >
             <Text fw={500}>{doc.filename}</Text>
             <Text size="sm" c="dimmed">
               {(doc.fileSize / 1024 / 1024).toFixed(2)} MB
@@ -51,5 +52,5 @@ function RouteComponent() {
         ))
       )}
     </Stack>
-  )
+  );
 }
