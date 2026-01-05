@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Modal, FileInput, Button, Stack, Text } from "@mantine/core";
 import { uploadPdf } from "@/serverFns/upload.server";
+import { Button, FileInput, Modal, Stack, Text } from "@mantine/core";
+import { useState } from "react";
 
 interface Props {
   opened: boolean;

@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Burger,
   Drawer,
@@ -10,31 +10,32 @@ import {
   Text,
   Button,
 } from "@mantine/core";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { currentUser } from "@/serverFns/currentUser.server";
 import { logout } from "@/serverFns/logout.server";
 
 export default function Header() {
   const [opened, setOpened] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [loggingOut, setLoggingOut] = useState(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    currentUser().then(setUser);
-  }, []);
-
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try {
-      await logout();
-      window.location.href = "/?page=login";
-    } catch (error) {
-      console.error("Logout failed:", error);
-      setLoggingOut(false);
-    }
-  };
+  const { data: user } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: currentUser,
+  });
 
   const loggedIn = user?.loggedIn;
   const email = user?.user?.email;
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      navigate({ to: "/login" });
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
+  };
 
   return (
     <>
@@ -45,7 +46,6 @@ export default function Header() {
           <Title order={4}>
             <Link
               to="/"
-              search={{ page: undefined }}
               style={{ textDecoration: "none", color: "inherit" }}
             >
               GloX
@@ -58,11 +58,10 @@ export default function Header() {
             <Text size="sm">
               Signed in as <b>{email}</b>
             </Text>
-            <Button 
-              size="xs" 
-              variant="subtle" 
+            <Button
+              size="xs"
+              variant="subtle"
               onClick={handleLogout}
-              loading={loggingOut}
             >
               Logout
             </Button>
@@ -70,7 +69,11 @@ export default function Header() {
         )}
       </Group>
 
-      <Drawer opened={opened} onClose={() => setOpened(false)} title="Navigation">
+      <Drawer
+        opened={opened}
+        onClose={() => setOpened(false)}
+        title="Navigation"
+      >
         <Stack>
           <NavLink
             label="Home"
@@ -84,16 +87,14 @@ export default function Header() {
               <NavLink
                 label="My Files"
                 component={Link}
-                to="/"
-                search={{ page: "my-files" } as any}
+                to="/my-files"
                 onClick={() => setOpened(false)}
               />
 
-              <Button 
-                variant="light" 
-                color="red" 
+              <Button
+                variant="light"
+                color="red"
                 onClick={handleLogout}
-                loading={loggingOut}
                 fullWidth
                 mt="md"
               >
@@ -103,13 +104,20 @@ export default function Header() {
           )}
 
           {!loggedIn && (
-            <NavLink
-              label="Login"
-              component={Link}
-              to="/"
-              search={{ page: "login" } as any}
-              onClick={() => setOpened(false)}
-            />
+            <>
+              <NavLink
+                label="Login"
+                component={Link}
+                to="/login"
+                onClick={() => setOpened(false)}
+              />
+              <NavLink
+                label="Sign Up"
+                component={Link}
+                to="/signup"
+                onClick={() => setOpened(false)}
+              />
+            </>
           )}
         </Stack>
       </Drawer>
