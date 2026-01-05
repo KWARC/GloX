@@ -1,6 +1,6 @@
+import { uploadPdfApi } from "@/spec/document.spec";
+import { Button, FileInput, Modal, Stack, Text } from "@mantine/core";
 import { useState } from "react";
-import { Modal, FileInput, Button, Stack, Text } from "@mantine/core";
-import { uploadPdfApi } from "@/api/upload";
 
 interface Props {
   opened: boolean;

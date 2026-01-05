@@ -1,17 +1,8 @@
-import {
-  uploadDocumentServer,
-  extractDocumentTextServer,
-  listDocumentsServer,
-} from '../routes/document.server'
+import { uploadPdf } from '@/routes/upload'
 
-export async function uploadDocument(file: File) {
-  return uploadDocumentServer({ file })
-}
+export async function uploadPdfApi(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
 
-export async function extractDocumentText(documentId: string) {
-  return extractDocumentTextServer({ documentId })
-}
-
-export async function listDocuments() {
-  return listDocumentsServer()
+  return uploadPdf({ data: formData } as any)
 }

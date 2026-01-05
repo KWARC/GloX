@@ -35,12 +35,7 @@ export default function Header() {
             to="/"
             onClick={() => setOpened(false)}
           />
-          <NavLink
-            label="Upload PDF"
-            component={Link}
-            to="/upload"
-            onClick={() => setOpened(false)}
-          />
+         
         </Stack>
       </Drawer>
     </>

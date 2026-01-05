@@ -5,10 +5,10 @@ import UploadDialog from '@/components/UploadDialog'
 
 
 export const Route = createFileRoute('/')({
-  component: IndexPage,
+  component: App,
 })
 
-function IndexPage() {
+function App() {
   const [opened, setOpened] = useState(false)
 
   return (
