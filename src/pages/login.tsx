@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TextInput, Button, Stack, Text, PasswordInput } from "@mantine/core";
-import { loginApi } from "@/api/loginApi";
+import { login } from "@/serverFns/login.server";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -57,7 +57,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await loginApi(email, password);
+      const res = await login({ data: { email, password } } as any);
 
       if (res?.success) {
         window.location.href = "/?page=my-files";

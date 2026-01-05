@@ -89,14 +89,6 @@ export default function Header() {
                 onClick={() => setOpened(false)}
               />
 
-              <NavLink
-                label="Upload PDF"
-                component={Link}
-                to="/"
-                search={{ page: "upload" } as any}
-                onClick={() => setOpened(false)}
-              />
-
               <Button 
                 variant="light" 
                 color="red" 

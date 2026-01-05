@@ -9,8 +9,18 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import Header from "../components/Header";
 import { queryClient } from "@/queryClient";
 
+function NotFound() {
+  return (
+    <div style={{ padding: "2rem", textAlign: "center" }}>
+      <h1>404 - Page Not Found</h1>
+      <p>The page you're looking for doesn't exist.</p>
+    </div>
+  );
+}
+
 export const Route = createRootRoute({
   shellComponent: RootDocument,
+  notFoundComponent: NotFound,
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {

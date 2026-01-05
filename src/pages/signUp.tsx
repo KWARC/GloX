@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TextInput, Button, Stack, PasswordInput, Text, Progress } from "@mantine/core";
-import { signupApi } from "@/api/signUp";
+import { signup } from "@/serverFns/signUp.server";
 
 
 export default function SignupPage() {
@@ -95,7 +95,7 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await signupApi(email, password);
+      const res = await signup({ data: { email, password } } as any);
 
       if (res?.success) {
         window.location.href = "/?page=my-files";
