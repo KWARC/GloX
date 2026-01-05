@@ -10,19 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
-import { Route as MyFilesRouteImport } from './routes/my-files'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MyFilesIndexRouteImport } from './routes/my-files/index'
 import { Route as MyFilesDocumentIdRouteImport } from './routes/my-files/$documentId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MyFilesRoute = MyFilesRouteImport.update({
-  id: '/my-files',
-  path: '/my-files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -35,53 +30,59 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MyFilesIndexRoute = MyFilesIndexRouteImport.update({
+  id: '/my-files/',
+  path: '/my-files/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MyFilesDocumentIdRoute = MyFilesDocumentIdRouteImport.update({
-  id: '/$documentId',
-  path: '/$documentId',
-  getParentRoute: () => MyFilesRoute,
+  id: '/my-files/$documentId',
+  path: '/my-files/$documentId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/my-files': typeof MyFilesRouteWithChildren
   '/signup': typeof SignupRoute
   '/my-files/$documentId': typeof MyFilesDocumentIdRoute
+  '/my-files': typeof MyFilesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/my-files': typeof MyFilesRouteWithChildren
   '/signup': typeof SignupRoute
   '/my-files/$documentId': typeof MyFilesDocumentIdRoute
+  '/my-files': typeof MyFilesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/my-files': typeof MyFilesRouteWithChildren
   '/signup': typeof SignupRoute
   '/my-files/$documentId': typeof MyFilesDocumentIdRoute
+  '/my-files/': typeof MyFilesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/my-files' | '/signup' | '/my-files/$documentId'
+  fullPaths: '/' | '/login' | '/signup' | '/my-files/$documentId' | '/my-files'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/my-files' | '/signup' | '/my-files/$documentId'
+  to: '/' | '/login' | '/signup' | '/my-files/$documentId' | '/my-files'
   id:
     | '__root__'
     | '/'
     | '/login'
-    | '/my-files'
     | '/signup'
     | '/my-files/$documentId'
+    | '/my-files/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  MyFilesRoute: typeof MyFilesRouteWithChildren
   SignupRoute: typeof SignupRoute
+  MyFilesDocumentIdRoute: typeof MyFilesDocumentIdRoute
+  MyFilesIndexRoute: typeof MyFilesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -91,13 +92,6 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/my-files': {
-      id: '/my-files'
-      path: '/my-files'
-      fullPath: '/my-files'
-      preLoaderRoute: typeof MyFilesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -114,32 +108,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/my-files/': {
+      id: '/my-files/'
+      path: '/my-files'
+      fullPath: '/my-files'
+      preLoaderRoute: typeof MyFilesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/my-files/$documentId': {
       id: '/my-files/$documentId'
-      path: '/$documentId'
+      path: '/my-files/$documentId'
       fullPath: '/my-files/$documentId'
       preLoaderRoute: typeof MyFilesDocumentIdRouteImport
-      parentRoute: typeof MyFilesRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
 
-interface MyFilesRouteChildren {
-  MyFilesDocumentIdRoute: typeof MyFilesDocumentIdRoute
-}
-
-const MyFilesRouteChildren: MyFilesRouteChildren = {
-  MyFilesDocumentIdRoute: MyFilesDocumentIdRoute,
-}
-
-const MyFilesRouteWithChildren =
-  MyFilesRoute._addFileChildren(MyFilesRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  MyFilesRoute: MyFilesRouteWithChildren,
   SignupRoute: SignupRoute,
+  MyFilesDocumentIdRoute: MyFilesDocumentIdRoute,
+  MyFilesIndexRoute: MyFilesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

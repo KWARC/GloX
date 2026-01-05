@@ -1,22 +1,14 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Stack,
-  Title,
-  Text,
-  Loader,
-  Paper,
-  ScrollArea,
-} from '@mantine/core'
-import { documentByIdQuery } from '@/queries/documentById'
+import { Stack, Title, Text, Loader, Paper, ScrollArea } from '@mantine/core'
+
 import { currentUser } from '@/serverFns/currentUser.server'
+import { documentByIdQuery } from '@/queries/documentById'
 
 export const Route = createFileRoute('/my-files/$documentId')({
   beforeLoad: async () => {
     const user = await currentUser()
-    if (!user?.loggedIn) {
-      throw redirect({ to: '/login' })
-    }
+    if (!user?.loggedIn) throw redirect({ to: '/login' })
   },
   component: RouteComponent,
 })
@@ -43,25 +35,17 @@ function RouteComponent() {
   return (
     <Stack p="md">
       <Title order={2}>{data.filename}</Title>
-
-      <Text size="sm" c="dimmed">
-        Status: {data.status}
-      </Text>
+      <Text size="sm" c="dimmed">Status: {data.status}</Text>
 
       <Paper withBorder p="md">
         {data.extractedText ? (
           <ScrollArea h={500}>
-            <Text
-              style={{ whiteSpace: 'pre-wrap' }}
-              size="sm"
-            >
+            <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
               {data.extractedText}
             </Text>
           </ScrollArea>
         ) : (
-          <Text c="dimmed">
-            No extracted text available
-          </Text>
+          <Text c="dimmed">No extracted text</Text>
         )}
       </Paper>
     </Stack>
