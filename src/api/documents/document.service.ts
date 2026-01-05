@@ -5,7 +5,7 @@ import { UploadDocumentInput, UploadDocumentResult } from './document.types'
 export async function uploadDocument(
   input: UploadDocumentInput
 ): Promise<UploadDocumentResult> {
-  const { file } = input
+  const { file , userId } = input
 
   if (!(file instanceof File)) {
     throw new Error('INVALID_FILE')
@@ -39,6 +39,7 @@ export async function uploadDocument(
       fileHash,
       mimeType: file.type,
       fileSize: buffer.length,
+      userId,     
       status: 'UPLOADED',
     },
   })

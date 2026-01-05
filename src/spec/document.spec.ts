@@ -4,8 +4,8 @@ import {
   listDocumentsServer,
 } from '../routes/document.server'
 
-export async function uploadDocument(file: File) {
-  return uploadDocumentServer({ file })
+export async function uploadDocument(file: File, userId: string) {
+  return uploadDocumentServer({ file, userId })
 }
 
 export async function extractDocumentText(documentId: string) {
