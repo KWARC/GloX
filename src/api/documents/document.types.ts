@@ -1,5 +1,6 @@
 export interface UploadDocumentInput {
   file: File
+  userId: string
 }
 
 export type UploadDocumentResult =

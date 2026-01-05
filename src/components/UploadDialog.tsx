@@ -1,4 +1,4 @@
-import { uploadPdfApi } from "@/spec/document.spec";
+import { uploadPdf } from "@/serverFns/upload.server";
 import { Button, FileInput, Modal, Stack, Text } from "@mantine/core";
 import { useState } from "react";
 
@@ -16,7 +16,9 @@ export default function UploadDialog({ opened, onClose }: Props) {
     setLoading(true);
 
     try {
-      const result = await uploadPdfApi(file);
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await uploadPdf({ data: formData } as any);
       console.log(result);
       onClose();
       setFile(null);
