@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Stack,
   TextInput,
@@ -15,6 +16,7 @@ export const Route = createFileRoute('/login')({
 
 function RouteComponent() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -50,6 +52,7 @@ function RouteComponent() {
       const res = await login({ data: { email, password } } as any)
 
       if (res?.success) {
+        queryClient.invalidateQueries({ queryKey: ['currentUser'] })
         navigate({ to: '/my-files' })
         return
       }
