@@ -1,9 +1,10 @@
 console.log("DOCUMENT SERVICE MODULE LOADED");
+
 import crypto from "node:crypto";
 import prisma from "../../lib/prisma";
 
 import { UploadDocumentInput, UploadDocumentResult } from "./document.types";
-import { extractPdfText } from "./text-extractor";
+import { extractPdfPages } from "./text-extractor";
 
 export async function uploadDocument(
   input: UploadDocumentInput
@@ -43,24 +44,30 @@ export async function uploadDocument(
   try {
     console.log("EXTRACTION: start", document.id);
 
-    const extractedText = await extractPdfText(buffer);
+    const pages = await extractPdfPages(buffer);
 
-    console.log(
-      "EXTRACTION: success",
-      document.id,
-      "length:",
-      extractedText?.length
-    );
+    await prisma.$transaction([
+      prisma.document.update({
+        where: { id: document.id },
+        data: {
+          status: "TEXT_EXTRACTED",
+        },
+      }),
+      prisma.documentPage.createMany({
+        data: pages.map((p) => ({
+          documentId: document.id,
+          pageNumber: p.pageNumber,
+          text: p.text,
+        })),
+      }),
+    ]);
 
-    await prisma.document.update({
-      where: { id: document.id },
-      data: {
-        extractedText,
-        status: "TEXT_EXTRACTED",
-      },
-    });
+    console.log("EXTRACTION: success", document.id);
 
-    console.log("DB UPDATE: TEXT_EXTRACTED", document.id);
+    return {
+      status: "OK",
+      documentId: document.id,
+    };
   } catch (error) {
     console.error("EXTRACTION FAILED:", error);
 
@@ -70,10 +77,7 @@ export async function uploadDocument(
         status: "FAILED",
       },
     });
-  }
 
-  return {
-    status: "OK",
-    documentId: document.id,
-  };
+    throw error;
+  }
 }

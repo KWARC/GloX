@@ -1,9 +1,13 @@
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
-export async function extractPdfText(buffer: Buffer): Promise<string> {
-  console.log("PDFJS: getDocument start");
+export type ExtractedPage = {
+  pageNumber: number;
+  text: string;
+};
 
-  // 🔴 REQUIRED: convert Buffer → Uint8Array
+export async function extractPdfPages(
+  buffer: Buffer
+): Promise<ExtractedPage[]> {
   const uint8Array = new Uint8Array(buffer);
 
   const loadingTask = pdfjs.getDocument({
@@ -13,21 +17,22 @@ export async function extractPdfText(buffer: Buffer): Promise<string> {
 
   const pdf = await loadingTask.promise;
 
-  console.log("PDFJS: loaded, pages =", pdf.numPages);
-
-  let text = "";
+  const pages: ExtractedPage[] = [];
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const content = await page.getTextContent();
 
-    text +=
-      content.items
-        .map((item: any) => item.str)
-        .join(" ") + "\n";
+    const text = content.items
+      .map((item: any) => item.str)
+      .join(" ")
+      .trim();
+
+    pages.push({
+      pageNumber: pageNum,
+      text,
+    });
   }
 
-  console.log("PDFJS: extraction done");
-
-  return text.trim();
+  return pages;
 }

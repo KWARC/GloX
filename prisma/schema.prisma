@@ -23,10 +23,24 @@ model Document {
   user     User   @relation(fields: [userId], references: [id])
 
   status        DocumentStatus @default(UPLOADED)
-  extractedText String?        @db.Text
+  pages DocumentPage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model DocumentPage {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  pageNumber Int
+  text       String   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@unique([documentId, pageNumber])
+  @@index([documentId])
 }
 
 enum DocumentStatus {

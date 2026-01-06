@@ -1,9 +1,18 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Stack, Title, Text, Loader, Paper, ScrollArea } from '@mantine/core'
+import {
+  Stack,
+  Title,
+  Text,
+  Loader,
+  Paper,
+  ScrollArea,
+  Divider,
+} from '@mantine/core'
 
 import { currentUser } from '@/serverFns/currentUser.server'
 import { documentByIdQuery } from '@/queries/documentById'
+import { documentPagesQuery } from '@/queries/documentPages'
 
 export const Route = createFileRoute('/my-files/$documentId')({
   beforeLoad: async () => {
@@ -16,11 +25,15 @@ export const Route = createFileRoute('/my-files/$documentId')({
 function RouteComponent() {
   const { documentId } = Route.useParams()
 
-  const { data, isLoading } = useQuery(
+  const { data: document, isLoading: docLoading } = useQuery(
     documentByIdQuery(documentId)
   )
 
-  if (isLoading) {
+  const { data: pages = [], isLoading: pagesLoading } = useQuery(
+    documentPagesQuery(documentId)
+  )
+
+  if (docLoading || pagesLoading) {
     return (
       <Stack align="center" p="xl">
         <Loader />
@@ -28,26 +41,37 @@ function RouteComponent() {
     )
   }
 
-  if (!data) {
+  if (!document) {
     return <Text c="red">Document not found</Text>
   }
 
   return (
     <Stack p="md">
-      <Title order={2}>{data.filename}</Title>
-      <Text size="sm" c="dimmed">Status: {data.status}</Text>
+      <Title order={2}>{document.filename}</Title>
+      <Text size="sm" c="dimmed">
+        Status: {document.status}
+      </Text>
 
-      <Paper withBorder p="md">
-        {data.extractedText ? (
-          <ScrollArea h={500}>
-            <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-              {data.extractedText}
-            </Text>
-          </ScrollArea>
-        ) : (
-          <Text c="dimmed">No extracted text</Text>
-        )}
-      </Paper>
+      <Divider my="md" />
+
+      {pages.length === 0 ? (
+        <Text c="dimmed">No extracted pages</Text>
+      ) : (
+        <ScrollArea h={500}>
+          <Stack gap="md">
+            {pages.map((page) => (
+              <Paper key={page.id} withBorder p="md">
+                <Text fw={500} mb="xs">
+                  Page {page.pageNumber}
+                </Text>
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+                  {page.text}
+                </Text>
+              </Paper>
+            ))}
+          </Stack>
+        </ScrollArea>
+      )}
     </Stack>
   )
 }

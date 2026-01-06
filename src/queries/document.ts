@@ -1,5 +1,5 @@
-import { queryOptions } from "@tanstack/react-query";
 import { getMyDocuments } from "@/serverFns/myDocuments.server";
+import { queryOptions } from "@tanstack/react-query";
 
 export type MyDocument = {
   id: string;
@@ -9,7 +9,6 @@ export type MyDocument = {
   fileSize: number;
   userId: string;
   status: string;
-  extractedText: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
