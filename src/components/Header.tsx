@@ -44,10 +44,7 @@ export default function Header() {
           <Burger opened={opened} onClick={() => setOpened(true)} />
 
           <Title order={4}>
-            <Link
-              to="/"
-              style={{ textDecoration: "none", color: "inherit" }}
-            >
+            <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
               GloX
             </Link>
           </Title>
@@ -58,11 +55,7 @@ export default function Header() {
             <Text size="sm">
               Signed in as <b>{email}</b>
             </Text>
-            <Button
-              size="xs"
-              variant="subtle"
-              onClick={handleLogout}
-            >
+            <Button size="xs" variant="subtle" onClick={handleLogout}>
               Logout
             </Button>
           </Group>

@@ -13,21 +13,20 @@ datasource db {
   provider = "postgresql"
 }
 
-
 model Document {
-  id            String   @id @default(uuid())
-  filename      String
-  fileHash      String   @unique
-  mimeType      String
-  fileSize      Int
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
+  id       String @id @default(uuid())
+  filename String
+  fileHash String @unique
+  mimeType String
+  fileSize Int
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
 
   status        DocumentStatus @default(UPLOADED)
-  extractedText String?  @db.Text
+  extractedText String?        @db.Text
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum DocumentStatus {
@@ -37,19 +36,10 @@ enum DocumentStatus {
 }
 
 model User {
-  id        String      @id @default(uuid())
-  email     String      @unique
-  password  String
-
-  createdAt DateTime    @default(now())
-  documents Document[]  
-  logins    Login[]
-}
-
-model Login {
-  id        String   @id @default(uuid())
-  userId    String
-  loginTime DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id])
+  id           String     @id @default(uuid())
+  name         String?
+  email        String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  documents    Document[]
 }
