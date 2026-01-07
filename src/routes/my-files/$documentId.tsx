@@ -15,16 +15,13 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { currentUser } from "@/serverFns/currentUser.server";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
-import {
-  DefinitionLookupDialog,
-  DefinitionResult,
-} from "@/components/DefinitionLookUp";
 
 export const Route = createFileRoute("/my-files/$documentId")({
   beforeLoad: async () => {
@@ -35,6 +32,7 @@ export const Route = createFileRoute("/my-files/$documentId")({
 });
 
 function RouteComponent() {
+  const navigate = useNavigate();
   const { documentId } = Route.useParams();
 
   const { data: document, isLoading: docLoading } = useQuery(
@@ -59,7 +57,6 @@ function RouteComponent() {
   } | null>(null);
 
   const [mode, setMode] = useState<"definition" | null>(null);
-  const [conceptUri, setConceptUri] = useState<string>("");
 
   function handleSelection(source: "left" | "right") {
     const sel = window.getSelection();
@@ -95,14 +92,9 @@ function RouteComponent() {
         futureRepo,
         filePath: fileName,
       },
-    } as any);
+    });
 
     clearPopup();
-  }
-
-  function handleDefinitionSelect(def: DefinitionResult) {
-    console.log("Selected definition:", def);
-    setMode(null);
   }
 
   if (docLoading || pagesLoading) {
@@ -273,7 +265,6 @@ function RouteComponent() {
                   style={{ cursor: "pointer" }}
                   onClick={() => {
                     setMode("definition");
-                    setConceptUri(selection);
                     clearPopup();
                   }}
                 >
@@ -289,7 +280,7 @@ function RouteComponent() {
         </Portal>
       )}
 
-      {/* DEFINITION LOOKUP DIALOG */}
+      {/* DEFINITION FLOW PLACEHOLDER */}
       {mode === "definition" && (
         <Portal>
           <Paper
@@ -310,14 +301,36 @@ function RouteComponent() {
                 <ActionIcon onClick={() => setMode(null)}>×</ActionIcon>
               </Group>
 
-              <DefinitionLookupDialog
-                conceptUri={conceptUri}
-                onSelect={handleDefinitionSelect}
-              />
+              <Text size="sm">
+                MathHub query will be executed for selected concept.
+              </Text>
             </Stack>
           </Paper>
         </Portal>
       )}
+      <Portal>
+        <ActionIcon
+          size="xl"
+          radius="xl"
+          variant="filled"
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 50,
+            zIndex: 5000,
+          }}
+          onClick={() =>
+            navigate({
+              to: "/create-latex",
+              search: {
+                documentId,
+              },
+            })
+          }
+        >
+          →
+        </ActionIcon>
+      </Portal>
     </Box>
   );
 }

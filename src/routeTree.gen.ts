@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as CreateLatexRouteImport } from './routes/create-latex'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MyFilesIndexRouteImport } from './routes/my-files/index'
 import { Route as MyFilesDocumentIdRouteImport } from './routes/my-files/$documentId'
@@ -23,6 +24,11 @@ const SignupRoute = SignupRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateLatexRoute = CreateLatexRouteImport.update({
+  id: '/create-latex',
+  path: '/create-latex',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,6 +49,7 @@ const MyFilesDocumentIdRoute = MyFilesDocumentIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/create-latex': typeof CreateLatexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/my-files/$documentId': typeof MyFilesDocumentIdRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/create-latex': typeof CreateLatexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/my-files/$documentId': typeof MyFilesDocumentIdRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/create-latex': typeof CreateLatexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/my-files/$documentId': typeof MyFilesDocumentIdRoute
@@ -65,12 +74,25 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/signup' | '/my-files/$documentId' | '/my-files'
+  fullPaths:
+    | '/'
+    | '/create-latex'
+    | '/login'
+    | '/signup'
+    | '/my-files/$documentId'
+    | '/my-files'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/my-files/$documentId' | '/my-files'
+  to:
+    | '/'
+    | '/create-latex'
+    | '/login'
+    | '/signup'
+    | '/my-files/$documentId'
+    | '/my-files'
   id:
     | '__root__'
     | '/'
+    | '/create-latex'
     | '/login'
     | '/signup'
     | '/my-files/$documentId'
@@ -79,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CreateLatexRoute: typeof CreateLatexRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   MyFilesDocumentIdRoute: typeof MyFilesDocumentIdRoute
@@ -99,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create-latex': {
+      id: '/create-latex'
+      path: '/create-latex'
+      fullPath: '/create-latex'
+      preLoaderRoute: typeof CreateLatexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -127,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CreateLatexRoute: CreateLatexRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   MyFilesDocumentIdRoute: MyFilesDocumentIdRoute,
