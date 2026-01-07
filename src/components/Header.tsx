@@ -31,6 +31,7 @@ export default function Header() {
     try {
       await logout();
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      setOpened(false);
       navigate({ to: "/login" });
     } catch (err) {
       console.error("Logout failed", err);
@@ -50,16 +51,22 @@ export default function Header() {
           </Title>
         </Group>
 
-        {loggedIn && (
-          <Group gap="sm">
-            <Text size="sm">
-              Signed in as <b>{email}</b>
-            </Text>
-            <Button size="xs" variant="subtle" onClick={handleLogout}>
-              Logout
+        <Group gap="sm">
+          {loggedIn ? (
+            <Group gap="sm">
+              <Text size="sm">
+                Signed in as <b>{email}</b>
+              </Text>
+              <Button size="xs" variant="subtle" onClick={handleLogout}>
+                Logout
+              </Button>
+            </Group>
+          ) : (
+            <Button size="xs" variant="subtle" component={Link} to="/login">
+              Login
             </Button>
-          </Group>
-        )}
+          )}
+        </Group>
       </Group>
 
       <Drawer

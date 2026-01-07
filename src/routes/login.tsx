@@ -1,74 +1,68 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import {
-  Stack,
-  TextInput,
-  PasswordInput,
-  Button,
-  Text,
-} from '@mantine/core'
-import { login } from '@/serverFns/login.server'
+import { login } from "@/serverFns/login.server";
+import { Button, PasswordInput, Stack, Text, TextInput } from "@mantine/core";
+import { useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
-export const Route = createFileRoute('/login')({
+export const Route = createFileRoute("/login")({
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateEmail = (value: string) => {
-    if (!value) return 'Email is required'
+    if (!value) return "Email is required";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      return 'Invalid email address'
+      return "Invalid email address";
     }
-    return null
-  }
+    return null;
+  };
 
   const validatePassword = (value: string) => {
-    if (!value) return 'Password is required'
-    return null
-  }
+    if (!value) return "Password is required";
+    return null;
+  };
 
   const handleLogin = async () => {
-    const emailError = validateEmail(email)
-    const passwordError = validatePassword(password)
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
 
     if (emailError || passwordError) {
-      setError(emailError || passwordError)
-      return
+      setError(emailError || passwordError);
+      return;
     }
 
-    setIsSubmitting(true)
-    setError(null)
+    setIsSubmitting(true);
+    setError(null);
 
     try {
-      const res = await login({ data: { email, password } } as any)
+      const res = await login({ data: { email, password } } as any);
 
       if (res?.success) {
-        queryClient.invalidateQueries({ queryKey: ['currentUser'] })
-        navigate({ to: '/my-files' })
-        return
+        queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+        navigate({ to: "/my-files" });
+        return;
       }
 
-      if (res?.code === 'NOT_SIGNED_UP') {
-        setError('Not signed up')
-        return
+      if (res?.code === "NOT_SIGNED_UP") {
+        setError("Not signed up");
+        return;
       }
 
-      setError(res?.error ?? 'Login failed')
+      setError(res?.error ?? "Login failed");
     } catch {
-      setError('Unexpected error during login')
+      setError("Unexpected error during login");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <Stack p="md" maw={400} mx="auto">
@@ -96,25 +90,23 @@ function RouteComponent() {
         Login
       </Button>
 
-      {error === 'Not signed up' && (
-        <Text c="red" size="sm">
-          Not signed up.{' '}
-          <Text
-            component="span"
-            c="blue"
-            style={{ cursor: 'pointer', textDecoration: 'underline' }}
-            onClick={() => navigate({ to: '/signup' })}
-          >
-            Please sign up
-          </Text>
+      <Text size="sm" ta="center">
+        Don’t have an account?{" "}
+        <Text
+          component="span"
+          c="blue"
+          style={{ cursor: "pointer", textDecoration: "underline" }}
+          onClick={() => navigate({ to: "/signup" })}
+        >
+          Sign up
         </Text>
-      )}
+      </Text>
 
-      {error && error !== 'Not signed up' && (
+      {error && error !== "Not signed up" && (
         <Text c="red" size="sm">
           {error}
         </Text>
       )}
     </Stack>
-  )
+  );
 }
