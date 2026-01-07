@@ -1,13 +1,12 @@
-import "@mantine/core/styles.css";
-import "@mantine/core/styles.css";
 import { AppShell, MantineProvider } from "@mantine/core";
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import "@mantine/core/styles.css";
 import { TanStackDevtools } from "@tanstack/react-devtools";
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
-import Header from "../components/Header";
 import { queryClient } from "@/queryClient";
+import Header from "../components/Header";
 
 function NotFound() {
   return (
@@ -32,7 +31,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <QueryClientProvider client={queryClient}>
           <MantineProvider theme={{ primaryColor: "blue" }}>
-            <AppShell header={{ height: 56 }} padding="md">
+            <AppShell
+              header={{ height: 56 }}
+              padding="md"
+              styles={{
+                main: {
+                  height: "calc(100dvh - 56px)",
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                },
+              }}
+            >
               <AppShell.Header>
                 <Header />
               </AppShell.Header>

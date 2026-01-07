@@ -109,7 +109,11 @@ function RouteComponent() {
   }
 
   return (
-   <Box h="100dvh" p="md" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <Box
+      h="100dvh"
+      p="md"
+      style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}
+    >
       {/* TOP BAR */}
       <Paper withBorder p="sm" mb="md">
         <Group>
@@ -151,12 +155,23 @@ function RouteComponent() {
         </Box>
 
         {/* RIGHT PANEL */}
-        <Box w={380} style={{ height: "100%" }}>
-          <Paper withBorder p="md" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+       <Box w={380} style={{ height: "100%", minHeight: 0 }}>
+  <Paper
+    withBorder
+    p="sm"
+    style={{
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+      minHeight: 0,
+    }}
+  >
+
             {!extractedText ? (
               <Text c="dimmed">No extracted text</Text>
             ) : (
-              <Stack style={{ flex: 1, minHeight: 0 }}>
+              <Stack style={{ flex: 1, minHeight: 0, overflow: "hidden" }} gap="md">
+
                 <Group justify="space-between">
                   <Text fw={500}>Extracted</Text>
                   <Switch
@@ -170,11 +185,15 @@ function RouteComponent() {
                   <Textarea
                     value={extractedText}
                     onChange={(e) => setExtractedText(e.currentTarget.value)}
-                    autosize
-                    minRows={12}
                     styles={{
-                      wrapper: { flex: 1 },
-                      input: { height: "100%" },
+                      wrapper: {
+                        flex: 1,
+                        minHeight: 0,
+                      },
+                      input: {
+                        height: "100%",
+                        overflowY: "auto",
+                      },
                     }}
                   />
                 ) : (
