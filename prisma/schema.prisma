@@ -70,7 +70,8 @@ model Definiendum {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([name, futureRepo])
+  @@index([name])
+  @@index([futureRepo])
 }
 
 model Definition {
@@ -89,4 +90,5 @@ model Definition {
   updatedAt DateTime @updatedAt
 
   @@index([definiendumId])
+  @@index([archive, filePath, fileName, concept])
 }

@@ -21,6 +21,7 @@ import { useState } from "react";
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { currentUser } from "@/serverFns/currentUser.server";
+import { createDefiniendum } from "@/serverFns/definiendum.server";
 
 export const Route = createFileRoute("/my-files/$documentId")({
   beforeLoad: async () => {
@@ -84,15 +85,12 @@ function RouteComponent() {
   }
 
   async function saveDefiniendum() {
-    await fetch("/api/definiendum", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: selection,
-        futureRepo,
-        filePath: fileName,
-      }),
+    await createDefiniendum({
+      name: selection,
+      futureRepo,
+      filePath: fileName,
     });
+
     clearPopup();
   }
 
