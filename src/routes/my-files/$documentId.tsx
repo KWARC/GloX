@@ -44,7 +44,9 @@ function RouteComponent() {
   );
 
   const [futureRepo, setFutureRepo] = useState("Glox");
-  const [fileName, setFileName] = useState("");
+  const [filePath, setFilePath] = useState("");
+  const [futureRepoError, setFutureRepoError] = useState<string | null>(null);
+  const [filePathError, setFilePathError] = useState<string | null>(null);
 
   const [extractedText, setExtractedText] = useState("");
   const [editRaw, setEditRaw] = useState(false);
@@ -86,11 +88,25 @@ function RouteComponent() {
   }
 
   async function saveDefiniendum() {
+    let hasError = false;
+
+    if (!futureRepo.trim()) {
+      setFutureRepoError("Future Repo is required");
+      hasError = true;
+    }
+
+    if (!filePath.trim()) {
+      setFilePathError("File Path is required");
+      hasError = true;
+    }
+
+    if (hasError) return;
+
     await createDefiniendum({
       data: {
         name: selection,
-        futureRepo,
-        filePath: fileName,
+        futureRepo: futureRepo.trim(),
+        filePath: filePath.trim(),
       },
     });
 
@@ -115,29 +131,34 @@ function RouteComponent() {
       p="md"
       style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}
     >
-      {/* TOP BAR */}
       <Paper withBorder p="sm" mb="md">
         <Group>
           <Text fw={500}>Future Repo</Text>
           <TextInput
             value={futureRepo}
-            onChange={(e) => setFutureRepo(e.currentTarget.value)}
+            onChange={(e) => {
+              setFutureRepo(e.currentTarget.value);
+              if (futureRepoError) setFutureRepoError(null);
+            }}
             w={260}
+            error={futureRepoError}
           />
 
-          <Text fw={500}>File Name</Text>
+          <Text fw={500}>File Path</Text>
           <TextInput
-            value={fileName}
-            onChange={(e) => setFileName(e.currentTarget.value)}
-            placeholder="derivative"
+            value={filePath}
+            onChange={(e) => {
+              setFilePath(e.currentTarget.value);
+              if (filePathError) setFilePathError(null);
+            }}
+            placeholder="e.g. derivative"
             w={260}
+            error={filePathError}
           />
         </Group>
       </Paper>
 
-      {/* PANELS */}
       <Flex gap="md" style={{ flex: 1, minHeight: 0 }}>
-        {/* LEFT PANEL */}
         <Box flex={1} style={{ height: "100%" }}>
           <ScrollArea h="100%" onMouseUp={() => handleSelection("left")}>
             <Stack p="md" gap="md">
@@ -155,7 +176,6 @@ function RouteComponent() {
           </ScrollArea>
         </Box>
 
-        {/* RIGHT PANEL */}
         <Box w={380}>
           <Paper withBorder p="md" h="100%">
             {!extractedText ? (
@@ -280,7 +300,6 @@ function RouteComponent() {
         </Portal>
       )}
 
-      {/* DEFINITION FLOW PLACEHOLDER */}
       {mode === "definition" && (
         <Portal>
           <Paper
