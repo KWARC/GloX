@@ -155,23 +155,12 @@ function RouteComponent() {
         </Box>
 
         {/* RIGHT PANEL */}
-       <Box w={380} style={{ height: "100%", minHeight: 0 }}>
-  <Paper
-    withBorder
-    p="sm"
-    style={{
-      height: "100%",
-      display: "flex",
-      flexDirection: "column",
-      minHeight: 0,
-    }}
-  >
-
+        <Box w={380}>
+          <Paper withBorder p="md" h="100%">
             {!extractedText ? (
-              <Text c="dimmed">No extracted text</Text>
+              <Text c="dimmed">No extracted text yet</Text>
             ) : (
-              <Stack style={{ flex: 1, minHeight: 0, overflow: "hidden" }} gap="md">
-
+              <Stack h="100%">
                 <Group justify="space-between">
                   <Text fw={500}>Extracted</Text>
                   <Switch
@@ -181,33 +170,46 @@ function RouteComponent() {
                   />
                 </Group>
 
-                {editRaw ? (
-                  <Textarea
-                    value={extractedText}
-                    onChange={(e) => setExtractedText(e.currentTarget.value)}
-                    styles={{
-                      wrapper: {
+                <Box
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    display: "flex",
+                  }}
+                >
+                  {editRaw ? (
+                    <Textarea
+                      value={extractedText}
+                      onChange={(e) => setExtractedText(e.currentTarget.value)}
+                      resize="none"
+                      styles={{
+                        root: {
+                          flex: 1,
+                          minHeight: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                        },
+                        wrapper: {
+                          flex: 1,
+                          minHeight: 0,
+                          display: "flex",
+                        },
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      style={{
                         flex: 1,
                         minHeight: 0,
-                      },
-                      input: {
-                        height: "100%",
                         overflowY: "auto",
-                      },
-                    }}
-                  />
-                ) : (
-                  <Box
-                    flex={1}
-                    style={{
-                      overflowY: "auto",
-                      whiteSpace: "pre-wrap",
-                    }}
-                    onMouseUp={() => handleSelection("right")}
-                  >
-                    <Text size="sm">{extractedText}</Text>
-                  </Box>
-                )}
+                        whiteSpace: "pre-wrap",
+                      }}
+                      onMouseUp={() => handleSelection("right")}
+                    >
+                      <Text size="sm">{extractedText}</Text>
+                    </Box>
+                  )}
+                </Box>
 
                 <Divider />
                 <Text size="xs" c="dimmed">
