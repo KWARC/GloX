@@ -17,11 +17,14 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
-
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { currentUser } from "@/serverFns/currentUser.server";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
+import {
+  DefinitionLookupDialog,
+  DefinitionResult,
+} from "@/components/DefinitionLookUp";
 
 export const Route = createFileRoute("/my-files/$documentId")({
   beforeLoad: async () => {
@@ -56,6 +59,7 @@ function RouteComponent() {
   } | null>(null);
 
   const [mode, setMode] = useState<"definition" | null>(null);
+  const [conceptUri, setConceptUri] = useState<string>("");
 
   function handleSelection(source: "left" | "right") {
     const sel = window.getSelection();
@@ -86,12 +90,19 @@ function RouteComponent() {
 
   async function saveDefiniendum() {
     await createDefiniendum({
-      name: selection,
-      futureRepo,
-      filePath: fileName,
-    });
+      data: {
+        name: selection,
+        futureRepo,
+        filePath: fileName,
+      },
+    } as any);
 
     clearPopup();
+  }
+
+  function handleDefinitionSelect(def: DefinitionResult) {
+    console.log("Selected definition:", def);
+    setMode(null);
   }
 
   if (docLoading || pagesLoading) {
@@ -262,6 +273,7 @@ function RouteComponent() {
                   style={{ cursor: "pointer" }}
                   onClick={() => {
                     setMode("definition");
+                    setConceptUri(selection);
                     clearPopup();
                   }}
                 >
@@ -277,7 +289,7 @@ function RouteComponent() {
         </Portal>
       )}
 
-      {/* DEFINITION FLOW PLACEHOLDER */}
+      {/* DEFINITION LOOKUP DIALOG */}
       {mode === "definition" && (
         <Portal>
           <Paper
@@ -298,9 +310,10 @@ function RouteComponent() {
                 <ActionIcon onClick={() => setMode(null)}>×</ActionIcon>
               </Group>
 
-              <Text size="sm">
-                MathHub query will be executed for selected concept.
-              </Text>
+              <DefinitionLookupDialog
+                conceptUri={conceptUri}
+                onSelect={handleDefinitionSelect}
+              />
             </Stack>
           </Paper>
         </Portal>
