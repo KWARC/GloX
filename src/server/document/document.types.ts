@@ -29,6 +29,8 @@ export type CreateExtractedTextInput = {
 
   futureRepo: string;
   filePath: string;
+  fileName: string;
+  language: string;
 };
 
 export type UpdateExtractedTextInput = {

@@ -19,6 +19,8 @@ export const createExtractedText = createServerFn<
     statement,
     futureRepo,
     filePath,
+    fileName,
+    language,
   } = (ctx.data ?? {}) as CreateExtractedTextInput;
 
   if (
@@ -28,7 +30,9 @@ export const createExtractedText = createServerFn<
     !originalText?.trim() ||
     !statement?.trim() ||
     !futureRepo?.trim() ||
-    !filePath?.trim()
+    !filePath?.trim() ||
+    !fileName?.trim() ||
+    !language?.trim()
   ) {
     throw new Error("Missing extracted text fields");
   }
@@ -42,6 +46,8 @@ export const createExtractedText = createServerFn<
       statement,
       futureRepo,
       filePath,
+      fileName,
+      language,
     },
   });
 

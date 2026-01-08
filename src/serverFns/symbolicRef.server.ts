@@ -1,40 +1,40 @@
 import prisma from "@/lib/prisma";
 import { createServerFn } from "@tanstack/react-start";
 
-export type CreateDefinitionInput = {
+export type CreateSymbolicRefInput = {
   name: string;
-  concept: string;
+  conceptUri: string;
   archive?: string;
   filePath: string;
   fileName?: string;
   definiendumId: string;
 };
 
-export const createDefinition = createServerFn<
+export const createSymbolicRef = createServerFn<
   any,
   "POST",
-  CreateDefinitionInput,
+  CreateSymbolicRefInput,
   Promise<any>
 >({ method: "POST" }).handler(async (ctx) => {
   const {
     name,
-    concept,
+    conceptUri,
     archive = "Glox",
     filePath,
     fileName = "Glox",
     definiendumId,
-  } = (ctx.data ?? {}) as CreateDefinitionInput;
+  } = (ctx.data ?? {}) as CreateSymbolicRefInput;
   
   console.log("Creating definition with data:", ctx.data);
 
-  if (!name?.trim() || !concept?.trim() || !filePath?.trim() || !definiendumId?.trim()) {
+  if (!name?.trim() || !conceptUri?.trim() || !filePath?.trim() || !definiendumId?.trim()) {
     throw new Error("Missing required definition fields");
   }
 
   return prisma.definition.create({
     data: {
       name,
-      concept,
+      conceptUri,
       archive,
       filePath,
       fileName,
@@ -43,7 +43,7 @@ export const createDefinition = createServerFn<
   });
 });
 
-export const listDefinitions = createServerFn<
+export const listSymbolicRef = createServerFn<
   any,
   "POST",
   { definiendumId: string },
@@ -65,7 +65,7 @@ export const listDefinitions = createServerFn<
   });
 });
 
-export const deleteDefinition = createServerFn<
+export const deleteSymbolicRef = createServerFn<
   any,
   "POST",
   { id: string },

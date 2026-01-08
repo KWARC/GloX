@@ -53,6 +53,8 @@ function RouteComponent() {
 
   const [futureRepo, setFutureRepo] = useState("Glox");
   const [filePath, setFilePath] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [language, setLanguage] = useState("en");
   const { errors, validate, clearError } = useValidation();
 
   const [activePage, setActivePage] = useState<ActivePage | null>(null);
@@ -86,7 +88,7 @@ function RouteComponent() {
 
   async function handleExtractToRight() {
     if (!activePage) return;
-    if (!validate(futureRepo, filePath)) return;
+    if (!validate(futureRepo, filePath, fileName, language)) return;
 
     await extractText({
       documentPageId: activePage.id,
@@ -94,18 +96,22 @@ function RouteComponent() {
       text: selection,
       futureRepo: futureRepo.trim(),
       filePath: filePath.trim(),
+      fileName: fileName.trim(),
+      language: language.trim(),
     });
 
     clearPopup();
   }
 
   async function handleSaveDefiniendum() {
-    if (!validate(futureRepo, filePath)) return;
+    if (!validate(futureRepo, filePath, fileName, language)) return;
 
     await saveDefiniendum({
       symbolName: selection,
       futureRepo: futureRepo.trim(),
       filePath: filePath.trim(),
+      fileName: fileName.trim(),
+      language: language.trim(),
     });
 
     clearPopup();
@@ -164,6 +170,8 @@ function RouteComponent() {
       <DocumentHeader
         futureRepo={futureRepo}
         filePath={filePath}
+        fileName={fileName}
+        language={language}
         onFutureRepoChange={(value) => {
           setFutureRepo(value);
           clearError("futureRepo");
@@ -171,6 +179,14 @@ function RouteComponent() {
         onFilePathChange={(value) => {
           setFilePath(value);
           clearError("filePath");
+        }}
+        onFileNameChange={(value) => {
+          setFileName(value);
+          clearError("fileName");
+        }}
+        onLanguageChange={(value) => {
+          setLanguage(value);
+          clearError("language");
         }}
         errors={errors}
       />
