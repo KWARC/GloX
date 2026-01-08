@@ -30,12 +30,11 @@ export function DefiniendumDialog({
   onSubmit,
   onClose,
 }: DefiniendumDialogProps) {
-  const [symbolName, setSymbolName] = useState("");
+  const [symbolName, setSymbolName] = useState(extractedText);
   const [alias, setAlias] = useState("");
   const [symdecl, setSymdecl] = useState(false);
 
   function handleClose() {
-    setSymbolName("");
     setAlias("");
     setSymdecl(false);
     onClose();
@@ -66,19 +65,13 @@ export function DefiniendumDialog({
             </ActionIcon>
           </Group>
 
-          <Paper withBorder p="sm" bg="gray.0">
-            <Text size="xs" fw={600} c="dimmed">
-              Extracted text
-            </Text>
-            <Text size="sm">{extractedText}</Text>
-          </Paper>
-
           <TextInput
             label="Symbol name"
             placeholder="e.g. f, G, Hom(X,Y)"
             value={symbolName}
             onChange={(e) => setSymbolName(e.currentTarget.value)}
             required
+            autoFocus
           />
 
           <Textarea
@@ -105,7 +98,6 @@ export function DefiniendumDialog({
                 alias: alias.trim(),
                 symdecl,
               });
-              setSymbolName("");
               setAlias("");
               setSymdecl(true);
             }}

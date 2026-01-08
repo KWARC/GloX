@@ -70,6 +70,8 @@ model Definiendum {
 
   futureRepo String
   filePath   String
+  fileName   String 
+  language   String @default("en")
 
   definitions Definition[]
 
