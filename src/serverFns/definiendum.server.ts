@@ -30,3 +30,11 @@ export const createDefiniendum = createServerFn<
 
   return defi;
 });
+
+export const listDefinienda = createServerFn({ method: "GET" }).handler(
+  async () => {
+    return prisma.definiendum.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+  }
+);

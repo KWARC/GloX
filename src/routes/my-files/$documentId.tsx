@@ -17,11 +17,14 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { currentUser } from "@/serverFns/currentUser.server";
-import { createDefiniendum } from "@/serverFns/definiendum.server";
+import {
+  createDefiniendum,
+  listDefinienda,
+} from "@/serverFns/definiendum.server";
+import { queryClient } from "@/queryClient";
 
 export const Route = createFileRoute("/my-files/$documentId")({
   beforeLoad: async () => {
@@ -59,6 +62,10 @@ function RouteComponent() {
   } | null>(null);
 
   const [mode, setMode] = useState<"definition" | null>(null);
+  const { data: definienda = [], isLoading: defLoading } = useQuery({
+    queryKey: ["definienda", documentId],
+    queryFn: () => listDefinienda({ data: { documentId } as any }),
+  });
 
   function handleSelection(source: "left" | "right") {
     const sel = window.getSelection();
@@ -108,6 +115,9 @@ function RouteComponent() {
         futureRepo: futureRepo.trim(),
         filePath: filePath.trim(),
       },
+    } as any);
+    await queryClient.invalidateQueries({
+      queryKey: ["definienda", documentId],
     });
 
     clearPopup();
@@ -278,6 +288,59 @@ function RouteComponent() {
                     💡 Select text above to create
                   </Text>
                 </Group>
+                <Paper
+                  withBorder
+                  p="sm"
+                  radius="md"
+                  bg="gray.1"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    height: 240,
+                    minHeight: 160,
+                  }}
+                >
+                  <Text fw={600} size="sm" mb="xs">
+                    📌 Saved Definienda
+                  </Text>
+
+                  {defLoading ? (
+                    <Text size="xs" c="dimmed">
+                      Loading…
+                    </Text>
+                  ) : !definienda.length ? (
+                    <Text size="xs" c="dimmed">
+                      No definienda saved yet.
+                    </Text>
+                  ) : (
+                    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
+                      <Stack gap="xs">
+                        {definienda.map((d: any) => (
+                          <Box
+                            key={d.id}
+                            style={{
+                              border: "1px solid #ddd",
+                              borderRadius: 8,
+                              padding: 8,
+                            }}
+                          >
+                            <Text fw={600}>{d.name}</Text>
+
+                            {d.definition && (
+                              <Text size="sm" c="gray.7">
+                                {d.definition}
+                              </Text>
+                            )}
+
+                            <Text size="xs" c="dimmed">
+                              {d.futureRepo} / {d.filePath}
+                            </Text>
+                          </Box>
+                        ))}
+                      </Stack>
+                    </ScrollArea>
+                  )}
+                </Paper>
               </Stack>
             )}
           </Paper>
