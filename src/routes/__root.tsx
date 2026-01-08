@@ -27,6 +27,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+         <title>GloX</title>
+        <link rel="icon" type="image/jpeg" href="/fau.jpeg" />
       </head>
       <body>
         <QueryClientProvider client={queryClient}>

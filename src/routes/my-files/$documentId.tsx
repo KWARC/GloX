@@ -1,17 +1,21 @@
-import { SymbolicRef } from "@/components/SymbolicRef";
+import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { DocumentHeader } from "@/components/DocumentHeader";
 import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { SelectionPopup } from "@/components/SelectionPopup";
+import { SymbolicRef } from "@/components/SymbolicRef";
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import {
   ActivePage,
+  buildDefiniendumMacro,
+  replaceAllUnwrapped,
   useExtractionActions,
   useTextSelection,
   useValidation,
 } from "@/server/text-selection";
 import { currentUser } from "@/serverFns/currentUser.server";
+import { createDefiniendum } from "@/serverFns/definiendum.server";
 import { listExtractedText } from "@/serverFns/extractText.server";
 import {
   ActionIcon,
@@ -22,6 +26,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { IconArrowRight } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -66,9 +71,12 @@ function RouteComponent() {
   const [conceptUri, setConceptUri] = useState<string>("");
   const [selectedUri, setSelectedUri] = useState<string>("");
 
+  const [defDialogOpen, setDefDialogOpen] = useState(false);
+  const [defExtractId, setDefExtractId] = useState<string | null>(null);
+  const [defExtractText, setDefExtractText] = useState("");
+
   const { selection, popup, handleSelection, clearPopup } = useTextSelection();
-  const { extractText, saveDefiniendum, updateExtract } =
-    useExtractionActions(documentId);
+  const { extractText, updateExtract } = useExtractionActions(documentId);
 
   function handleLeftSelection() {
     handleSelection("left", (text) => {
@@ -105,18 +113,42 @@ function RouteComponent() {
     clearPopup();
   }
 
-  async function handleSaveDefiniendum() {
-    if (!validate(futureRepo, filePath, fileName, language)) return;
+  async function handleDefiniendumSubmit(params: {
+    symbolName: string;
+    alias: string;
+    symdecl: boolean;
+  }) {
+    if (!defExtractId) return;
+    if (!validate(futureRepo, filePath)) return;
 
-    await saveDefiniendum({
-      symbolName: selection,
-      futureRepo: futureRepo.trim(),
-      filePath: filePath.trim(),
-      fileName: fileName.trim(),
-      language: language.trim(),
-    });
+    const extract = extracts.find((e) => e.id === defExtractId);
+    if (!extract) return;
 
-    clearPopup();
+    const macro = buildDefiniendumMacro(params.symbolName, params.alias);
+
+    const updatedStatement = replaceAllUnwrapped(
+      extract.statement,
+      defExtractText,
+      macro
+    );
+
+    await updateExtract(defExtractId, updatedStatement);
+
+    if (params.symdecl) {
+      await createDefiniendum({
+        data: {
+          symbolName: params.symbolName.trim(),
+          alias: params.alias?.trim() || null,
+          symbolDeclared: params.symdecl,
+          futureRepo: futureRepo.trim(),
+          filePath: filePath.trim(),
+        },
+      } as any);
+    }
+
+    setDefDialogOpen(false);
+    setDefExtractId(null);
+    setDefExtractText("");
   }
 
   function handleOpenSymbolicRef() {
@@ -234,7 +266,19 @@ function RouteComponent() {
           popup={popup}
           onExtract={popup.source === "left" ? handleExtractToRight : undefined}
           onDefiniendum={
-            popup.source === "right" ? handleSaveDefiniendum : undefined
+            popup.source === "right"
+              ? () => {
+                  const extract = extracts.find((e) =>
+                    e.statement.includes(selection)
+                  );
+                  if (!extract) return;
+
+                  setDefExtractId(extract.id);
+                  setDefExtractText(selection);
+                  setDefDialogOpen(true);
+                  clearPopup();
+                }
+              : undefined
           }
           onSymbolicRef={
             popup.source === "right" ? handleOpenSymbolicRef : undefined
@@ -253,6 +297,13 @@ function RouteComponent() {
         />
       )}
 
+      <DefiniendumDialog
+        opened={defDialogOpen}
+        extractedText={defExtractText}
+        onClose={() => setDefDialogOpen(false)}
+        onSubmit={handleDefiniendumSubmit}
+      />
+
       <Portal>
         <ActionIcon
           size="xl"
@@ -266,7 +317,7 @@ function RouteComponent() {
           }}
           onClick={handleNavigateToLatex}
         >
-          →
+          <IconArrowRight size={22} />
         </ActionIcon>
       </Portal>
     </Box>

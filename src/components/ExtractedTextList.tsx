@@ -8,6 +8,7 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
+import { IconPencil } from "@tabler/icons-react";
 
 interface ExtractedTextPanelProps {
   extracts: ExtractedItem[];
@@ -45,7 +46,7 @@ export function ExtractedTextPanel({
                     variant="subtle"
                     onClick={() => onToggleEdit(item.id)}
                   >
-                    ✎
+                   <IconPencil size={16} /> 
                   </ActionIcon>
                 </Group>
 
