@@ -26,12 +26,18 @@ export interface ActivePage {
 export interface ValidationErrors {
   futureRepo: string | null;
   filePath: string | null;
+  fileName: string | null;
+  language: string | null;
 }
 
 export interface ExtractedItem {
   id: string;
   pageNumber: number;
   statement: string;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
 }
 
 export function useTextSelection() {
@@ -77,6 +83,8 @@ export function useExtractionActions(documentId: string) {
     text: string;
     futureRepo: string;
     filePath: string;
+    fileName: string;
+    language: string;
   }) {
     await createExtractedText({
       data: {
@@ -89,6 +97,8 @@ export function useExtractionActions(documentId: string) {
           \\end{sdefinition}`,
         futureRepo: params.futureRepo,
         filePath: params.filePath,
+        fileName: params.fileName,
+        language: params.language,
       },
     } as any);
 
@@ -101,6 +111,8 @@ export function useExtractionActions(documentId: string) {
     symbolName: string;
     futureRepo: string;
     filePath: string;
+    fileName: string;
+    language: string;
   }) {
     await createDefiniendum({
       data: {
@@ -108,6 +120,8 @@ export function useExtractionActions(documentId: string) {
         symbolDeclared: true,
         futureRepo: params.futureRepo,
         filePath: params.filePath,
+        fileName: params.fileName,
+        language: params.language,
       },
     } as any);
 
@@ -133,12 +147,16 @@ export function useValidation() {
   const [errors, setErrors] = useState<ValidationErrors>({
     futureRepo: null,
     filePath: null,
+    fileName: null,
+    language: null,
   });
 
-  function validate(futureRepo: string, filePath: string): boolean {
+  function validate(futureRepo: string, filePath: string, fileName: string, language: string): boolean {
     const newErrors: ValidationErrors = {
       futureRepo: null,
       filePath: null,
+      fileName: null,
+      language: null,
     };
 
     if (!futureRepo.trim()) {
@@ -147,6 +165,14 @@ export function useValidation() {
 
     if (!filePath.trim()) {
       newErrors.filePath = "File Path is required";
+    }
+
+    if (!fileName.trim()) {
+      newErrors.fileName = "File Name is required";
+    }
+    
+    if (!language.trim()) {
+      newErrors.language = "Language is required";
     }
 
     setErrors(newErrors);

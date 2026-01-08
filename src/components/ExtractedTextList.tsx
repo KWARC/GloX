@@ -68,6 +68,14 @@ export function ExtractedTextPanel({
                     {item.statement}
                   </Text>
                 )}
+                <Text
+                  size="10px"
+                  c="dimmed"
+                  ff="monospace"
+                  mt={6}
+                >
+                  {item.futureRepo}/{item.filePath}/{item.fileName}/{item.language}
+                </Text>
               </Paper>
             ))
           )}

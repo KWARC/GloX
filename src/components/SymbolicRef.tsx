@@ -1,4 +1,5 @@
 import { UriAutoComplete } from "@/components/UriAutoComplete";
+import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
 import {
   ActionIcon,
   Button,
@@ -14,7 +15,7 @@ interface SymbolicRefProps {
   conceptUri: string;
   selectedUri: string;
   onUriChange: (value: string) => void;
-  onSelect: () => void;
+  onSelect: (parsed: ParsedMathHubUri) => void;
   onClose: () => void;
 }
 
@@ -52,7 +53,6 @@ export function SymbolicRef({
               <IconX size={16} />
             </ActionIcon>
           </Group>
-
           <Paper withBorder p="sm" bg="blue.0" radius="md">
             <Text size="xs" fw={600} c="dimmed" mb={4}>
               Selected Text:
@@ -61,11 +61,9 @@ export function SymbolicRef({
               {conceptUri}
             </Text>
           </Paper>
-
           <Text size="sm" c="dimmed" lh={1.6}>
             Search for matching URIs below:
           </Text>
-
           <UriAutoComplete
             selectedText={conceptUri}
             value={selectedUri}
@@ -73,7 +71,6 @@ export function SymbolicRef({
             label="Matching URIs"
             placeholder="Click here to see matching URIs..."
           />
-
           {selectedUri && (
             <Paper withBorder p="sm" bg="green.0" radius="md">
               <Text size="xs" fw={600} c="dimmed" mb={4}>
@@ -84,8 +81,15 @@ export function SymbolicRef({
               </Text>
             </Paper>
           )}
-
-          <Button onClick={onSelect} disabled={!selectedUri} fullWidth>
+          <Button
+            onClick={() => {
+              if (!selectedUri) return;
+              const parsed = parseUri(selectedUri);
+              onSelect(parsed);
+            }}
+            disabled={!selectedUri}
+            fullWidth
+          >
             Select URI
           </Button>
         </Stack>
