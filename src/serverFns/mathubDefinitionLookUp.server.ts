@@ -21,7 +21,7 @@ export const lookupDefinitions = createServerFn<
   const safeTerm = concept.replace(/"/g, '\\"');
 
   const endpoint =
-    process.env.VITE_MATHHUB_APP_URL ?? "https://mathhub.info/sparql";
+    process.env.VITE_MATHHUB_APP_URL ?? "https://mathhub.info/dashboard/query";
 
   const query = `
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
