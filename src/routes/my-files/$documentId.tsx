@@ -25,6 +25,10 @@ import {
   listDefinienda,
 } from "@/serverFns/definiendum.server";
 import { queryClient } from "@/queryClient";
+import {
+  DefinitionLookupDialog,
+  DefinitionResult,
+} from "@/components/DefinitionLookUp";
 
 export const Route = createFileRoute("/my-files/$documentId")({
   beforeLoad: async () => {
@@ -66,6 +70,7 @@ function RouteComponent() {
     queryKey: ["definienda", documentId],
     queryFn: () => listDefinienda({ data: { documentId } as any }),
   });
+  const [conceptUri, setConceptUri] = useState<string>("");
 
   function handleSelection(source: "left" | "right") {
     const sel = window.getSelection();
@@ -94,6 +99,10 @@ function RouteComponent() {
     clearPopup();
   }
 
+  function handleDefinitionSelect(def: DefinitionResult) {
+    console.log("Selected definition:", def);
+    setMode(null);
+  }
   async function saveDefiniendum() {
     let hasError = false;
 
@@ -400,6 +409,7 @@ function RouteComponent() {
                   style={{ cursor: "pointer", padding: "2px 8px" }}
                   onClick={() => {
                     setMode("definition");
+                    setConceptUri(selection);
                     clearPopup();
                   }}
                 >
@@ -454,6 +464,10 @@ function RouteComponent() {
               <Text size="sm" c="dimmed" lh={1.6}>
                 MathHub query will be executed for selected concept.
               </Text>
+              <DefinitionLookupDialog
+                conceptUri={conceptUri}
+                onSelect={handleDefinitionSelect}
+              />
             </Stack>
           </Paper>
         </Portal>
