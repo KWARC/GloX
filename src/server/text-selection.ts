@@ -34,6 +34,10 @@ export interface ExtractedItem {
   id: string;
   pageNumber: number;
   statement: string;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
 }
 
 export function useTextSelection() {
