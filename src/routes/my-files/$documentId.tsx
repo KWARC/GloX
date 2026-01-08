@@ -6,10 +6,13 @@ import { SelectionPopup } from "@/components/SelectionPopup";
 import { SymbolicRef } from "@/components/SymbolicRef";
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
+import { ParsedMathHubUri } from "@/server/parseUri";
 import {
   ActivePage,
   buildDefiniendumMacro,
+  buildSymbolicRefMacro,
   replaceAllUnwrapped,
+  replaceFirstUnwrapped,
   useExtractionActions,
   useTextSelection,
   useValidation,
@@ -17,6 +20,7 @@ import {
 import { currentUser } from "@/serverFns/currentUser.server";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
 import { listExtractedText } from "@/serverFns/extractText.server";
+import { createSymbolicRef } from "@/serverFns/symbolicRef.server";
 import {
   ActionIcon,
   Box,
@@ -30,8 +34,6 @@ import { IconArrowRight } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ParsedMathHubUri } from "@/server/parseUri";
-import { createSymbolicRef } from "@/serverFns/symbolicRef.server";
 
 export const Route = createFileRoute("/my-files/$documentId")({
   beforeLoad: async () => {
@@ -75,7 +77,9 @@ function RouteComponent() {
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
   const [defExtractText, setDefExtractText] = useState("");
 
-  const { selection, popup, handleSelection, clearPopup } = useTextSelection();
+  const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
+    useTextSelection();
+
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
   function handleLeftSelection() {
@@ -99,18 +103,19 @@ function RouteComponent() {
   async function handleExtractToRight() {
     if (!activePage) return;
     if (!validate(futureRepo, filePath, fileName, language)) return;
+    if (!selection) return;
 
     await extractText({
       documentPageId: activePage.id,
       pageNumber: activePage.pageNumber,
-      text: selection,
+      text: selection.text,
       futureRepo: futureRepo.trim(),
       filePath: filePath.trim(),
       fileName: fileName.trim(),
       language: language.trim(),
     });
 
-    clearPopup();
+    clearAll();
   }
 
   async function handleDefiniendumSubmit(params: {
@@ -153,31 +158,71 @@ function RouteComponent() {
     setDefExtractText("");
   }
 
-  function handleOpenSymbolicRef() {
+  function handleOpenSymbolicRef(extractId: string) {
+    if (!selection) return;
+
+    if (selection.isWholeStatement) {
+      console.warn("[SymbolicRef] Invalid selection");
+      return;
+    }
+
+    setDefExtractId(extractId);
+    setConceptUri(selection.text);
     setMode("definition");
-    setConceptUri(selection);
-    clearPopup();
+
+    clearPopupOnly(); // ✅ popup hidden, selection preserved
   }
 
   function handleCloseSymbolicRefDialog() {
     setMode(null);
     setSelectedUri("");
+    setDefExtractId(null);
+    clearAll();
   }
 
   async function handleSaveSymbolicRef(parsed: ParsedMathHubUri) {
-    if (
-      !validate(
-        parsed.archive,
-        parsed.filePath,
-        parsed.fileName,
-        parsed.language
-      )
-    ) {
+    if (!defExtractId) {
+      console.log("[Route] defExtractId is null, aborting");
       return;
     }
+
+    const isValid = validate(
+      parsed.archive,
+      parsed.filePath,
+      parsed.fileName,
+      parsed.language
+    );
+
+    console.log("[Route] validation result =", isValid);
+
+    if (!isValid) {
+      console.warn("[Route] validation failed", {
+        archive: parsed.archive,
+        filePath: parsed.filePath,
+        fileName: parsed.fileName,
+        language: parsed.language,
+      });
+      return;
+    }
+
+    const extract = extracts.find((e) => e.id === defExtractId);
+    console.log("[Route] matched extract =", extract);
+    if (!extract) return;
+    if (!selection) return;
+    console.log({ extract }, { selection });
+    const macro = buildSymbolicRefMacro(selection?.text, parsed.conceptUri);
+
+    const updatedStatement = replaceFirstUnwrapped(
+      extract.statement,
+      selection.text,
+      macro
+    );
+    console.log("[Route] updatedStatement =", updatedStatement);
+    await updateExtract(defExtractId, updatedStatement);
+
     await createSymbolicRef({
       data: {
-        name: conceptUri,
+        name: parsed.conceptUri,
         conceptUri: parsed.conceptUri,
         archive: parsed.archive,
         filePath: parsed.filePath,
@@ -270,22 +315,33 @@ function RouteComponent() {
           onDefiniendum={
             popup.source === "right"
               ? () => {
+                  if (!selection) return;
                   const extract = extracts.find((e) =>
-                    e.statement.includes(selection)
+                    e.statement.includes(selection.text)
                   );
                   if (!extract) return;
 
                   setDefExtractId(extract.id);
-                  setDefExtractText(selection);
+                  setDefExtractText(selection.text);
                   setDefDialogOpen(true);
-                  clearPopup();
+                  clearAll();
                 }
               : undefined
           }
           onSymbolicRef={
-            popup.source === "right" ? handleOpenSymbolicRef : undefined
+            popup.source === "right"
+              ? () => {
+                  if (!selection) return;
+                  const extract = extracts.find((e) =>
+                    e.statement.includes(selection.text)
+                  );
+                  if (!extract) return;
+
+                  handleOpenSymbolicRef(extract.id);
+                }
+              : undefined
           }
-          onClose={clearPopup}
+          onClose={clearAll}
         />
       )}
 

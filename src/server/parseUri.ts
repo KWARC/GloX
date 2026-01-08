@@ -11,22 +11,40 @@ export function parseUri(uri: string): ParsedMathHubUri {
   const params = url.searchParams;
 
   const archiveParam = params.get("a") ?? "";
-  const fileName = params.get("d") ?? "";
-  const language = params.get("l") ?? "";
+  const pParam = params.get("p") ?? "";
 
- 
   const [archive, ...pathParts] = archiveParam.split("/");
-  const filePath = params.get("p") ?? pathParts.join("/");
+  const filePath = pParam || pathParts.join("/");
 
-  if (!archive || !fileName || !language) {
-    throw new Error("Invalid MathHub URI");
+  // ---------- CASE 1: definition-based ----------
+  const d = params.get("d");
+  const l = params.get("l");
+
+  if (archive && d) {
+    return {
+      archive,
+      filePath,
+      fileName: d,
+      language: l ?? "en",
+      conceptUri: uri,
+    };
   }
 
-  return {
-    archive,
-    filePath,
-    fileName,
-    language,
-    conceptUri: uri,
-  };
+  // ---------- CASE 2: module + symbol ----------
+  const m = params.get("m"); // module = file name
+  const s = params.get("s"); // symbol / concept name
+
+  if (archive && m && s) {
+    return {
+      archive,
+      filePath,
+      fileName: m,
+      language: "en",
+      conceptUri: s,
+    };
+  }
+
+  // ---------- INVALID ----------
+  throw new Error("Invalid MathHub URI");
 }
+

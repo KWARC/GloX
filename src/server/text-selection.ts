@@ -39,9 +39,13 @@ export interface ExtractedItem {
   fileName: string;
   language: string;
 }
+export type TextSelection = {
+  text: string;
+  isWholeStatement: boolean;
+};
 
 export function useTextSelection() {
-  const [selection, setSelection] = useState("");
+  const [selection, setSelection] = useState<TextSelection | null>(null);
   const [popup, setPopup] = useState<PopupState | null>(null);
 
   function handleSelection(
@@ -51,12 +55,19 @@ export function useTextSelection() {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
 
-    const text = sel.toString().trim();
+    const rawText = sel.toString();
+    const text = rawText.trim();
     if (!text) return;
+
+    const isWholeStatement =
+      rawText.includes("\\begin") ||
+      rawText.includes("\\end") ||
+      rawText.includes("{") ||
+      rawText.includes("}");
 
     const rect = sel.getRangeAt(0).getBoundingClientRect();
 
-    setSelection(text);
+    setSelection({ text, isWholeStatement });
     setPopup({
       x: rect.right + window.scrollX + 8,
       y: rect.top + window.scrollY - 4,
@@ -68,12 +79,22 @@ export function useTextSelection() {
     }
   }
 
-  function clearPopup() {
-    setSelection("");
+  function clearPopupOnly() {
     setPopup(null);
   }
 
-  return { selection, popup, handleSelection, clearPopup };
+  function clearAll() {
+    setSelection(null);
+    setPopup(null);
+  }
+
+  return {
+    selection,
+    popup,
+    handleSelection,
+    clearPopupOnly,
+    clearAll,
+  };
 }
 
 export function useExtractionActions(documentId: string) {
@@ -151,7 +172,12 @@ export function useValidation() {
     language: null,
   });
 
-  function validate(futureRepo: string, filePath: string, fileName: string, language: string): boolean {
+  function validate(
+    futureRepo: string,
+    filePath: string,
+    fileName: string,
+    language: string
+  ): boolean {
     const newErrors: ValidationErrors = {
       futureRepo: null,
       filePath: null,
@@ -170,7 +196,7 @@ export function useValidation() {
     if (!fileName.trim()) {
       newErrors.fileName = "File Name is required";
     }
-    
+
     if (!language.trim()) {
       newErrors.language = "Language is required";
     }
@@ -215,3 +241,37 @@ export function replaceAllUnwrapped(
   return text.replace(regex, replacement);
 }
 
+export function buildSymbolicRefMacro(selection: string, symbol: string) {
+  return selection.trim() === symbol.trim()
+    ? `\\sn{${symbol}}`
+    : `\\sr{${symbol}}`;
+}
+
+export function replaceFirstUnwrapped(
+  text: string,
+  target: string,
+  replacement: string
+): string {
+  // Split target into words and escape safely
+  const parts = target
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+  /**
+   * Build pattern:
+   *  - \bsoftware\b
+   *  - \bsoftware\s+engineering\b
+   *  - tolerates newlines / indentation
+   *  - avoids replacing inside \sr{ } or \sn{ }
+   */
+  const pattern =
+    `(?<!\\\\sr\\{|\\\\sn\\{)` + // not already wrapped
+    `\\b` +
+    parts.join(`\\s+`) +
+    `\\b`;
+
+  const regex = new RegExp(pattern, "i");
+
+  return text.replace(regex, replacement);
+}
