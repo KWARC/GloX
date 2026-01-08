@@ -1,7 +1,4 @@
-import {
-  DefinitionLookupDialog,
-  DefinitionResult,
-} from "@/components/DefinitionLookUp";
+import { UriAutoComplete } from "@/components/UriAutoComplete"; // Add this import
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { queryClient } from "@/queryClient";
@@ -14,6 +11,7 @@ import { createExtractedText } from "@/serverFns/extractText.server";
 import {
   ActionIcon,
   Box,
+  Button,
   Divider,
   Flex,
   Group,
@@ -77,6 +75,7 @@ function RouteComponent() {
     queryFn: () => listDefinienda({ data: { documentId } as any }),
   });
   const [conceptUri, setConceptUri] = useState<string>("");
+  const [selectedUri, setSelectedUri] = useState<string>(""); // For UriAutoComplete
 
   function handleSelection(
     source: "left" | "right",
@@ -148,10 +147,12 @@ function RouteComponent() {
     clearPopup();
   }
 
-  function handleDefinitionSelect(def: DefinitionResult) {
-    console.log("Selected definition:", def);
+  function handleUriSelect() {
+    console.log("Selected URI:", selectedUri);
     setMode(null);
+    setSelectedUri(""); // Reset after selection
   }
+
   async function saveDefiniendum() {
     let hasError = false;
 
@@ -467,7 +468,7 @@ function RouteComponent() {
                     clearPopup();
                   }}
                 >
-                  📖 Definition
+                  📖 URI Lookup
                 </Text>
               </>
             )}
@@ -497,6 +498,8 @@ function RouteComponent() {
               right: 60,
               top: 80,
               width: 440,
+              maxHeight: "calc(100vh - 120px)",
+              overflowY: "auto",
               zIndex: 4000,
               border: "2px solid var(--mantine-color-blue-4)",
             }}
@@ -504,7 +507,7 @@ function RouteComponent() {
             <Stack gap="sm">
               <Group justify="space-between" mb="xs">
                 <Group gap="xs">
-                  <Text fw={600}>📖 MathHub Definition</Text>
+                  <Text fw={600}>🔖 URI Autocomplete</Text>
                 </Group>
                 <ActionIcon
                   variant="subtle"
@@ -515,17 +518,50 @@ function RouteComponent() {
                 </ActionIcon>
               </Group>
 
+              <Paper withBorder p="sm" bg="blue.0" radius="md">
+                <Text size="xs" fw={600} c="dimmed" mb={4}>
+                  Selected Text:
+                </Text>
+                <Text size="sm" fw={500}>
+                  {conceptUri}
+                </Text>
+              </Paper>
+
               <Text size="sm" c="dimmed" lh={1.6}>
-                MathHub query will be executed for selected concept.
+                Search for matching URIs below:
               </Text>
-              <DefinitionLookupDialog
-                conceptUri={conceptUri}
-                onSelect={handleDefinitionSelect}
+              
+              <UriAutoComplete
+                selectedText={conceptUri}
+                value={selectedUri}
+                onChange={setSelectedUri}
+                label="Matching URIs"
+                placeholder="Click here to see matching URIs..."
               />
+
+              {selectedUri && (
+                <Paper withBorder p="sm" bg="green.0" radius="md">
+                  <Text size="xs" fw={600} c="dimmed" mb={4}>
+                    Selected URI:
+                  </Text>
+                  <Text size="xs" style={{ wordBreak: "break-all" }}>
+                    {selectedUri}
+                  </Text>
+                </Paper>
+              )}
+
+              <Button 
+                onClick={handleUriSelect}
+                disabled={!selectedUri}
+                fullWidth
+              >
+                Select URI
+              </Button>
             </Stack>
           </Paper>
         </Portal>
       )}
+      
       <Portal>
         <ActionIcon
           size="xl"

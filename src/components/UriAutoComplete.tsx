@@ -1,6 +1,6 @@
-import { Autocomplete, Loader } from "@mantine/core";
+import { Combobox, InputBase, Loader, ScrollArea, useCombobox } from "@mantine/core";
 import { useEffect, useState } from "react";
-import { searchUriUsingSubstr } from "@/serverFns/searchUriUsingSubStr";
+import { searchUriUsingSubstr } from "@/serverFns/searchUriUsingSubstr";
 
 interface UriAutoCompleteProps {
   selectedText: string; 
@@ -19,6 +19,9 @@ export function UriAutoComplete({
 }: UriAutoCompleteProps) {
   const [options, setOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const combobox = useCombobox({
+    onDropdownClose: () => combobox.resetSelectedOption(),
+  });
 
   useEffect(() => {
     if (!selectedText) {
@@ -40,7 +43,10 @@ export function UriAutoComplete({
           }as any,
         });
 
-        if (!cancelled) setOptions(results ?? []);
+        if (!cancelled) {
+          setOptions(results ?? []);
+          combobox.openDropdown();
+        }
       } catch (err) {
         console.error("URI search failed", err);
         if (!cancelled) setOptions([]);
@@ -54,18 +60,58 @@ export function UriAutoComplete({
       cancelled = true;
     };
   }, [selectedText]);
+  
   useEffect(() => {
     console.log("URI AUTOCOMPLETE INPUT =", selectedText);
   }, [selectedText]);
+
+  const comboboxOptions = options.map((option) => (
+    <Combobox.Option value={option} key={option}>
+      {option}
+    </Combobox.Option>
+  ));
+  
   return (
-    <Autocomplete
-      data={options}
-      value={value}
-      onChange={onChange}
-      label={label}
-      placeholder={placeholder}
-      rightSection={loading ? <Loader size="xs" /> : null}
-      maxDropdownHeight={240}
-    />
+    <Combobox
+      store={combobox}
+      withinPortal
+      position="bottom"
+      middlewares={{ flip: true, shift: true }}
+      zIndex={5000}
+      onOptionSubmit={(val) => {
+        onChange(val);
+        combobox.closeDropdown();
+      }}
+    >
+      <Combobox.Target>
+        <InputBase
+          label={label}
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => {
+            onChange(event.currentTarget.value);
+            combobox.openDropdown();
+          }}
+          onClick={() => combobox.toggleDropdown()}
+          onFocus={() => combobox.openDropdown()}
+          rightSection={loading ? <Loader size="xs" /> : <Combobox.Chevron />}
+          rightSectionPointerEvents="none"
+        />
+      </Combobox.Target>
+
+      <Combobox.Dropdown>
+        <Combobox.Options>
+          <ScrollArea.Autosize mah={200} type="scroll">
+            {loading ? (
+              <Combobox.Empty>Loading...</Combobox.Empty>
+            ) : options.length === 0 ? (
+              <Combobox.Empty>No URIs found</Combobox.Empty>
+            ) : (
+              comboboxOptions
+            )}
+          </ScrollArea.Autosize>
+        </Combobox.Options>
+      </Combobox.Dropdown>
+    </Combobox>
   );
 }
