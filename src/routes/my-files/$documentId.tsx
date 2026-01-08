@@ -1,17 +1,20 @@
-import { SymbolicRef } from "@/components/SymbolicRef";
+import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { DocumentHeader } from "@/components/DocumentHeader";
 import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { SelectionPopup } from "@/components/SelectionPopup";
+import { SymbolicRef } from "@/components/SymbolicRef";
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import {
   ActivePage,
+  buildDefiniendumMacro,
   useExtractionActions,
   useTextSelection,
-  useValidation,
+  useValidation
 } from "@/server/text-selection";
 import { currentUser } from "@/serverFns/currentUser.server";
+import { createDefiniendum } from "@/serverFns/definiendum.server";
 import { listExtractedText } from "@/serverFns/extractText.server";
 import {
   ActionIcon,
@@ -62,9 +65,12 @@ function RouteComponent() {
   const [conceptUri, setConceptUri] = useState<string>("");
   const [selectedUri, setSelectedUri] = useState<string>("");
 
+  const [defDialogOpen, setDefDialogOpen] = useState(false);
+  const [defExtractId, setDefExtractId] = useState<string | null>(null);
+  const [defExtractText, setDefExtractText] = useState("");
+
   const { selection, popup, handleSelection, clearPopup } = useTextSelection();
-  const { extractText, saveDefiniendum, updateExtract } =
-    useExtractionActions(documentId);
+  const { extractText, updateExtract } = useExtractionActions(documentId);
 
   function handleLeftSelection() {
     handleSelection("left", (text) => {
@@ -99,16 +105,43 @@ function RouteComponent() {
     clearPopup();
   }
 
-  async function handleSaveDefiniendum() {
+  async function handleDefiniendumSubmit(params: {
+    symbolName: string;
+    alias: string;
+    symdecl: boolean;
+  }) {
+    if (!defExtractId) return;
     if (!validate(futureRepo, filePath)) return;
 
-    await saveDefiniendum({
-      symbolName: selection,
-      futureRepo: futureRepo.trim(),
-      filePath: filePath.trim(),
-    });
+    const extract = extracts.find((e) => e.id === defExtractId);
+    if (!extract) return;
 
-    clearPopup();
+    const macro = buildDefiniendumMacro(params.symbolName, params.alias);
+
+    // Escape special regex characters in the selected text
+    const escaped = defExtractText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped);
+
+    // Replace the selected text with the macro inline
+    const updatedStatement = extract.statement.replace(regex, macro);
+
+    await updateExtract(defExtractId, updatedStatement);
+
+    if (params.symdecl) {
+      await createDefiniendum({
+        data: {
+          symbolName: params.symbolName.trim(),
+          alias: params.alias?.trim() || null,
+          symbolDeclared: params.symdecl,
+          futureRepo: futureRepo.trim(),
+          filePath: filePath.trim(),
+        },
+      } as any);
+    }
+
+    setDefDialogOpen(false);
+    setDefExtractId(null);
+    setDefExtractText("");
   }
 
   function handleOpenSymbolicRef() {
@@ -196,7 +229,19 @@ function RouteComponent() {
           popup={popup}
           onExtract={popup.source === "left" ? handleExtractToRight : undefined}
           onDefiniendum={
-            popup.source === "right" ? handleSaveDefiniendum : undefined
+            popup.source === "right"
+              ? () => {
+                  const extract = extracts.find((e) =>
+                    e.statement.includes(selection)
+                  );
+                  if (!extract) return;
+
+                  setDefExtractId(extract.id);
+                  setDefExtractText(selection);
+                  setDefDialogOpen(true);
+                  clearPopup();
+                }
+              : undefined
           }
           onSymbolicRef={
             popup.source === "right" ? handleOpenSymbolicRef : undefined
@@ -214,6 +259,13 @@ function RouteComponent() {
           onClose={handleCloseDefinitionDialog}
         />
       )}
+
+      <DefiniendumDialog
+        opened={defDialogOpen}
+        extractedText={defExtractText}
+        onClose={() => setDefDialogOpen(false)}
+        onSubmit={handleDefiniendumSubmit}
+      />
 
       <Portal>
         <ActionIcon

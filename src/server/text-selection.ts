@@ -84,7 +84,9 @@ export function useExtractionActions(documentId: string) {
         documentPageId: params.documentPageId,
         pageNumber: params.pageNumber,
         originalText: params.text,
-        statement: params.text,
+        statement: `\\begin{sdefinition}
+            ${params.text}
+          \\end{sdefinition}`,
         futureRepo: params.futureRepo,
         filePath: params.filePath,
       },
@@ -156,4 +158,18 @@ export function useValidation() {
   }
 
   return { errors, validate, clearError };
+}
+
+export function normalize(s: string) {
+  return s.trim().replace(/\s+/g, " ");
+}
+
+export function buildDefiniendumMacro(symbol: string, alias?: string) {
+  const s = normalize(symbol);
+  const a = normalize(alias || "");
+
+  if (a && a !== s) {
+    return `\\definiendum{${s}}{${a}}`;
+  }
+  return `\\definame{${s}}`;
 }
