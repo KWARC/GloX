@@ -3,11 +3,12 @@ import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { queryClient } from "@/queryClient";
 import { currentUser } from "@/serverFns/currentUser.server";
+import { createDefiniendum } from "@/serverFns/definiendum.server";
 import {
-  createDefiniendum,
-  listDefinienda,
-} from "@/serverFns/definiendum.server";
-import { createExtractedText } from "@/serverFns/extractText.server";
+  createExtractedText,
+  listExtractedText,
+  updateExtractedText,
+} from "@/serverFns/extractText.server";
 import {
   ActionIcon,
   Box,
@@ -20,7 +21,6 @@ import {
   Portal,
   ScrollArea,
   Stack,
-  Switch,
   Text,
   Textarea,
   TextInput,
@@ -54,8 +54,7 @@ function RouteComponent() {
   const [futureRepoError, setFutureRepoError] = useState<string | null>(null);
   const [filePathError, setFilePathError] = useState<string | null>(null);
 
-  const [extractedText, setExtractedText] = useState("");
-  const [editRaw, setEditRaw] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [selection, setSelection] = useState("");
   const [popup, setPopup] = useState<{
@@ -70,10 +69,6 @@ function RouteComponent() {
   } | null>(null);
 
   const [mode, setMode] = useState<"definition" | null>(null);
-  const { data: definienda = [], isLoading: defLoading } = useQuery({
-    queryKey: ["definienda", documentId],
-    queryFn: () => listDefinienda({ data: { documentId } as any }),
-  });
   const [conceptUri, setConceptUri] = useState<string>("");
   const [selectedUri, setSelectedUri] = useState<string>(""); // For UriAutoComplete
 
@@ -126,23 +121,23 @@ function RouteComponent() {
 
     if (hasError) return;
 
-    const nextExtractedText = extractedText
-      ? extractedText + "\n\n" + selection
-      : selection;
-
-    setExtractedText(nextExtractedText);
-
     await createExtractedText({
       data: {
         documentId,
         documentPageId: activePage.id,
         pageNumber: activePage.pageNumber,
         originalText: selection,
-        statement: nextExtractedText,
+        statement: selection,
         futureRepo: futureRepo.trim(),
         filePath: filePath.trim(),
       },
     } as any);
+
+    await queryClient.invalidateQueries({
+      queryKey: ["extracts", documentId],
+    });
+
+    clearPopup();
 
     clearPopup();
   }
@@ -183,6 +178,11 @@ function RouteComponent() {
 
     clearPopup();
   }
+
+  const { data: extracts = [] } = useQuery({
+    queryKey: ["extracts", documentId],
+    queryFn: () => listExtractedText({ data: { documentId } as any }),
+  });
 
   if (docLoading || pagesLoading) {
     return (
@@ -277,136 +277,65 @@ function RouteComponent() {
 
         <Box w={400}>
           <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
-            {!extractedText ? (
-              <Stack align="center" justify="center" h="100%">
-                <Text c="dimmed" size="sm" ta="center">
-                  Select text from the left panel
-                  <br />
-                  to extract it here
-                </Text>
+            <ScrollArea style={{ flex: 1 }}>
+              <Stack gap="sm">
+                {!extracts.length ? (
+                  <Text size="sm" c="dimmed" ta="center">
+                    No extracted text yet
+                  </Text>
+                ) : (
+                  extracts.map((item) => (
+                    <Paper key={item.id} withBorder p="sm" radius="md">
+                      <Group justify="space-between" mb={4}>
+                        <Text size="xs" c="dimmed">
+                          Page {item.pageNumber}
+                        </Text>
+
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          onClick={() =>
+                            setEditingId(editingId === item.id ? null : item.id)
+                          }
+                        >
+                          ✎
+                        </ActionIcon>
+                      </Group>
+
+                      {editingId === item.id ? (
+                        <Textarea
+                          defaultValue={item.statement}
+                          autosize
+                          onBlur={async (e) => {
+                            await updateExtractedText({
+                              data: {
+                                id: item.id,
+                                statement: e.currentTarget.value,
+                              },
+                            } as any);
+
+                            setEditingId(null);
+
+                            await queryClient.invalidateQueries({
+                              queryKey: ["extracts", documentId],
+                            });
+                          }}
+                        />
+                      ) : (
+                        <Text
+                          size="sm"
+                          lh={1.6}
+                          style={{ userSelect: "text", cursor: "text" }}
+                          onMouseUp={() => handleSelection("right")}
+                        >
+                          {item.statement}
+                        </Text>
+                      )}
+                    </Paper>
+                  ))
+                )}
               </Stack>
-            ) : (
-              <Stack h="100%" gap="md">
-                <Group justify="space-between" mb={4}>
-                  <Text fw={600} size="sm" c="blue.9">
-                    Extracted Text
-                  </Text>
-                  <Switch
-                    label="Edit raw"
-                    labelPosition="left"
-                    checked={editRaw}
-                    onChange={(e) => setEditRaw(e.currentTarget.checked)}
-                    size="sm"
-                  />
-                </Group>
-
-                <Box
-                  style={{
-                    flex: 1,
-                    minHeight: 0,
-                    display: "flex",
-                  }}
-                >
-                  {editRaw ? (
-                    <Textarea
-                      value={extractedText}
-                      onChange={(e) => setExtractedText(e.currentTarget.value)}
-                      resize="none"
-                      size="sm"
-                      styles={{
-                        root: {
-                          flex: 1,
-                          minHeight: 0,
-                          display: "flex",
-                          flexDirection: "column",
-                        },
-                        wrapper: {
-                          flex: 1,
-                          minHeight: 0,
-                          display: "flex",
-                        },
-                        input: { lineHeight: 1.8 },
-                      }}
-                    />
-                  ) : (
-                    <Box
-                      style={{
-                        flex: 1,
-                        minHeight: 0,
-                        overflowY: "auto",
-                        whiteSpace: "pre-wrap",
-                        cursor: "text",
-                      }}
-                      onMouseUp={() => handleSelection("right")}
-                    >
-                      <Text size="sm" lh={1.8}>
-                        {extractedText}
-                      </Text>
-                    </Box>
-                  )}
-                </Box>
-
-                <Divider />
-                <Group gap={6} justify="center">
-                  <Text size="xs" c="dimmed" ta="center">
-                    💡 Select text above to create
-                  </Text>
-                </Group>
-                <Paper
-                  withBorder
-                  p="sm"
-                  radius="md"
-                  bg="gray.1"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    height: 240,
-                    minHeight: 160,
-                  }}
-                >
-                  <Text fw={600} size="sm" mb="xs">
-                    📌 Saved Definienda
-                  </Text>
-
-                  {defLoading ? (
-                    <Text size="xs" c="dimmed">
-                      Loading…
-                    </Text>
-                  ) : !definienda.length ? (
-                    <Text size="xs" c="dimmed">
-                      No definienda saved yet.
-                    </Text>
-                  ) : (
-                    <ScrollArea style={{ flex: 1, minHeight: 0 }}>
-                      <Stack gap="xs">
-                        {definienda.map((d: any) => (
-                          <Box
-                            key={d.id}
-                            style={{
-                              border: "1px solid #ddd",
-                              borderRadius: 8,
-                              padding: 8,
-                            }}
-                          >
-                            <Text fw={600}>{d.symbolName}</Text>
-
-                            {d.definition && (
-                              <Text size="sm" c="gray.7">
-                                {d.definition}
-                              </Text>
-                            )}
-
-                            <Text size="xs" c="dimmed">
-                              {d.futureRepo} / {d.filePath}
-                            </Text>
-                          </Box>
-                        ))}
-                      </Stack>
-                    </ScrollArea>
-                  )}
-                </Paper>
-              </Stack>
-            )}
+            </ScrollArea>
           </Paper>
         </Box>
       </Flex>
@@ -454,7 +383,7 @@ function RouteComponent() {
                   style={{ cursor: "pointer", padding: "2px 8px" }}
                   onClick={saveDefiniendum}
                 >
-                  📌 Definiendum
+                  Definiendum
                 </Text>
                 <Divider orientation="vertical" />
                 <Text
@@ -468,7 +397,7 @@ function RouteComponent() {
                     clearPopup();
                   }}
                 >
-                  📖 URI Lookup
+                  Symbolic Ref
                 </Text>
               </>
             )}
