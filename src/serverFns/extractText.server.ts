@@ -1,5 +1,8 @@
 import prisma from "@/lib/prisma";
-import type { CreateExtractedTextInput } from "@/server/document/document.types";
+import type {
+  CreateExtractedTextInput,
+  UpdateExtractedTextInput,
+} from "@/server/document/document.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export const createExtractedText = createServerFn<
@@ -48,4 +51,37 @@ export const createExtractedText = createServerFn<
   });
 
   return extracted;
+});
+
+export const listExtractedText = createServerFn({ method: "GET" }).handler(
+  async (ctx) => {
+    const data = (ctx.data ?? {}) as Partial<{ documentId: string }>;
+
+    if (!data.documentId) {
+      throw new Error("documentId is required");
+    }
+
+    return prisma.extractedText.findMany({
+      where: { documentId: data.documentId },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+);
+
+export const updateExtractedText = createServerFn<
+  any,
+  "POST",
+  UpdateExtractedTextInput,
+  Promise<any>
+>({ method: "POST" }).handler(async (ctx) => {
+  const data = (ctx.data ?? {}) as Partial<UpdateExtractedTextInput>;
+
+  if (!data.id || !data.statement?.trim()) {
+    throw new Error("Missing update fields");
+  }
+
+  return prisma.extractedText.update({
+    where: { id: data.id },
+    data: { statement: data.statement },
+  });
 });

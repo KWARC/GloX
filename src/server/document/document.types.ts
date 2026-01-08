@@ -30,3 +30,8 @@ export type CreateExtractedTextInput = {
   futureRepo: string;
   filePath: string;
 };
+
+export type UpdateExtractedTextInput = {
+  id: string;
+  statement: string;
+};
