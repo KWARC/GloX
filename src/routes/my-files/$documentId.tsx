@@ -300,6 +300,7 @@ function RouteComponent() {
       )}
 
       <DefiniendumDialog
+        key={defExtractText}
         opened={defDialogOpen}
         extractedText={defExtractText}
         onClose={() => setDefDialogOpen(false)}
