@@ -7,6 +7,8 @@ export type CreateDefiniendumInput = {
   symbolDeclared?: boolean;
   futureRepo: string;
   filePath: string;
+  fileName: string;
+  language: string;
 };
 
 export const createDefiniendum = createServerFn<
@@ -21,6 +23,8 @@ export const createDefiniendum = createServerFn<
     symbolDeclared = true,
     futureRepo,
     filePath,
+    fileName,
+    language,
   } = (ctx.data ?? {}) as CreateDefiniendumInput;
   console.log("Creating definiendum with data:", ctx.data);
 
@@ -35,6 +39,8 @@ export const createDefiniendum = createServerFn<
       symbolDeclared,
       futureRepo,
       filePath,
+      fileName,
+      language,
     },
   });
 });

@@ -142,6 +142,8 @@ function RouteComponent() {
           symbolDeclared: params.symdecl,
           futureRepo: futureRepo.trim(),
           filePath: filePath.trim(),
+          fileName: fileName.trim(),
+          language: language.trim(),
         },
       } as any);
     }
@@ -182,7 +184,7 @@ function RouteComponent() {
         fileName: parsed.fileName,
         language: parsed.language,
       },
-    }as any);
+    } as any);
 
     handleCloseSymbolicRefDialog();
   }
