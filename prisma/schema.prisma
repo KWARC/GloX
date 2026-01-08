@@ -24,6 +24,7 @@ model Document {
 
   status DocumentStatus @default(UPLOADED)
   pages  DocumentPage[]
+  extractedTexts ExtractedText[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -36,6 +37,8 @@ model DocumentPage {
 
   pageNumber Int
   text       String @db.Text
+
+  extractedTexts ExtractedText[]
 
   createdAt DateTime @default(now())
 
@@ -59,20 +62,24 @@ model User {
 }
 
 model Definiendum {
-  id   String @id @default(uuid())
-  name String
+  id              String @id @default(uuid())
 
-  futureRepo String @default("Glox")
-  filePath   String @default("Glox")
+  symbolName      String
+  alias           String?
+  symbolDeclared  Boolean @default(false)
 
-  definitions Definition[]
+  futureRepo      String
+  filePath        String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  definitions     Definition[]
 
-  @@index([name])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([symbolName])
   @@index([futureRepo])
 }
+
 
 model Definition {
   id   String @id @default(uuid())
@@ -92,3 +99,32 @@ model Definition {
   @@index([definiendumId])
   @@index([archive, filePath, fileName, concept])
 }
+
+
+model ExtractedText {
+  id String @id @default(uuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  documentPageId String
+  documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
+
+  pageNumber Int
+
+  originalText String @db.Text
+  statement    String @db.Text
+
+  futureRepo String
+  filePath   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([documentId])
+  @@index([documentPageId])
+  @@index([documentId, pageNumber])
+  @@index([futureRepo, filePath])
+}
+
+

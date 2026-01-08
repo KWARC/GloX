@@ -1,8 +1,10 @@
-import { createServerFn } from "@tanstack/react-start";
 import prisma from "@/lib/prisma";
+import { createServerFn } from "@tanstack/react-start";
 
 export type CreateDefiniendumInput = {
-  name: string;
+  symbolName: string;
+  alias?: string;
+  symbolDeclared?: boolean;
   futureRepo: string;
   filePath: string;
 };
@@ -13,22 +15,28 @@ export const createDefiniendum = createServerFn<
   CreateDefiniendumInput,
   Promise<any>
 >({ method: "POST" }).handler(async (ctx) => {
-  const { name, futureRepo, filePath } = (ctx.data ??
-    {}) as CreateDefiniendumInput;
-    console.log("Creating definiendum with data:", ctx.data);
-  if (!name?.trim() || !filePath?.trim()) {
+  const {
+    symbolName,
+    alias,
+    symbolDeclared = true,
+    futureRepo,
+    filePath,
+  } = (ctx.data ?? {}) as CreateDefiniendumInput;
+  console.log("Creating definiendum with data:", ctx.data);
+
+  if (!symbolName?.trim() || !futureRepo?.trim() || !filePath?.trim()) {
     throw new Error("Missing definiendum fields");
   }
 
-  const defi = await prisma.definiendum.create({
+  return prisma.definiendum.create({
     data: {
-      name,
+      symbolName,
+      alias,
+      symbolDeclared,
       futureRepo,
       filePath,
     },
   });
-
-  return defi;
 });
 
 export const listDefinienda = createServerFn({ method: "GET" }).handler(
