@@ -1,4 +1,17 @@
 import {
+  DefinitionLookupDialog,
+  DefinitionResult,
+} from "@/components/DefinitionLookUp";
+import { documentByIdQuery } from "@/queries/documentById";
+import { documentPagesQuery } from "@/queries/documentPages";
+import { queryClient } from "@/queryClient";
+import { currentUser } from "@/serverFns/currentUser.server";
+import {
+  createDefiniendum,
+  listDefinienda,
+} from "@/serverFns/definiendum.server";
+import { createExtractedText } from "@/serverFns/extractText.server";
+import {
   ActionIcon,
   Box,
   Divider,
@@ -17,18 +30,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { documentByIdQuery } from "@/queries/documentById";
-import { documentPagesQuery } from "@/queries/documentPages";
-import { currentUser } from "@/serverFns/currentUser.server";
-import {
-  createDefiniendum,
-  listDefinienda,
-} from "@/serverFns/definiendum.server";
-import { queryClient } from "@/queryClient";
-import {
-  DefinitionLookupDialog,
-  DefinitionResult,
-} from "@/components/DefinitionLookUp";
 
 export const Route = createFileRoute("/my-files/$documentId")({
   beforeLoad: async () => {
@@ -65,6 +66,11 @@ function RouteComponent() {
     source: "left" | "right";
   } | null>(null);
 
+  const [activePage, setActivePage] = useState<{
+    id: string;
+    pageNumber: number;
+  } | null>(null);
+
   const [mode, setMode] = useState<"definition" | null>(null);
   const { data: definienda = [], isLoading: defLoading } = useQuery({
     queryKey: ["definienda", documentId],
@@ -72,7 +78,17 @@ function RouteComponent() {
   });
   const [conceptUri, setConceptUri] = useState<string>("");
 
-  function handleSelection(source: "left" | "right") {
+  function handleSelection(
+    source: "left" | "right",
+    page?: { id: string; pageNumber: number }
+  ) {
+    if (source === "left" && page) {
+      setActivePage({
+        id: page.id,
+        pageNumber: page.pageNumber,
+      });
+    }
+
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
 
@@ -94,8 +110,41 @@ function RouteComponent() {
     setPopup(null);
   }
 
-  function extractToRight() {
-    setExtractedText((prev) => (prev ? prev + "\n\n" + selection : selection));
+  async function extractToRight() {
+    if (!activePage) return;
+
+    let hasError = false;
+
+    if (!futureRepo.trim()) {
+      setFutureRepoError("Future Repo is required");
+      hasError = true;
+    }
+
+    if (!filePath.trim()) {
+      setFilePathError("File Path is required");
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    const nextExtractedText = extractedText
+      ? extractedText + "\n\n" + selection
+      : selection;
+
+    setExtractedText(nextExtractedText);
+
+    await createExtractedText({
+      data: {
+        documentId,
+        documentPageId: activePage.id,
+        pageNumber: activePage.pageNumber,
+        originalText: selection,
+        statement: nextExtractedText,
+        futureRepo: futureRepo.trim(),
+        filePath: filePath.trim(),
+      },
+    } as any);
+
     clearPopup();
   }
 
@@ -120,11 +169,13 @@ function RouteComponent() {
 
     await createDefiniendum({
       data: {
-        name: selection,
+        symbolName: selection,
+        symbolDeclared: true,
         futureRepo: futureRepo.trim(),
         filePath: filePath.trim(),
       },
     } as any);
+
     await queryClient.invalidateQueries({
       queryKey: ["definienda", documentId],
     });
@@ -199,6 +250,7 @@ function RouteComponent() {
                     <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">
                       Page {page.pageNumber}
                     </Text>
+
                     <Text
                       size="sm"
                       lh={1.8}
@@ -207,9 +259,11 @@ function RouteComponent() {
                         userSelect: "text",
                         cursor: "text",
                       }}
+                      onMouseUp={() => handleSelection("left", page)}
                     >
                       {page.text}
                     </Text>
+
                     {page.id !== pages[pages.length - 1]?.id && (
                       <Divider mt="lg" />
                     )}
@@ -333,7 +387,7 @@ function RouteComponent() {
                               padding: 8,
                             }}
                           >
-                            <Text fw={600}>{d.name}</Text>
+                            <Text fw={600}>{d.symbolName}</Text>
 
                             {d.definition && (
                               <Text size="sm" c="gray.7">

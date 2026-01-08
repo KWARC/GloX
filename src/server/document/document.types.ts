@@ -18,3 +18,16 @@ export enum DocumentStatus {
   TEXT_EXTRACTED = 'TEXT_EXTRACTED',
   FAILED = 'FAILED',
 }
+
+export type CreateExtractedTextInput = {
+  documentId: string;
+  documentPageId: string;
+  pageNumber: number;
+
+  originalText: string;
+  statement: string;
+
+  futureRepo: string;
+  filePath: string;
+};
+
