@@ -1,18 +1,18 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import {
-  Burger,
-  Drawer,
-  Stack,
-  NavLink,
-  Group,
-  Title,
-  Text,
-  Button,
-} from "@mantine/core";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { currentUser } from "@/serverFns/currentUser.server";
 import { logout } from "@/serverFns/logout.server";
+import {
+  Burger,
+  Button,
+  Drawer,
+  Group,
+  NavLink,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 export default function Header() {
   const [opened, setOpened] = useState(false);
@@ -31,6 +31,7 @@ export default function Header() {
     try {
       await logout();
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      setOpened(false);
       navigate({ to: "/login" });
     } catch (err) {
       console.error("Logout failed", err);
@@ -50,16 +51,22 @@ export default function Header() {
           </Title>
         </Group>
 
-        {loggedIn && (
-          <Group gap="sm">
-            <Text size="sm">
-              Signed in as <b>{email}</b>
-            </Text>
-            <Button size="xs" variant="subtle" onClick={handleLogout}>
-              Logout
+        <Group gap="sm">
+          {loggedIn ? (
+            <Group gap="sm">
+              <Text size="sm">
+                Signed in as <b>{email}</b>
+              </Text>
+              <Button size="xs" variant="subtle" onClick={handleLogout}>
+                Logout
+              </Button>
+            </Group>
+          ) : (
+            <Button size="xs" variant="subtle" component={Link} to="/login">
+              Login
             </Button>
-          </Group>
-        )}
+          )}
+        </Group>
       </Group>
 
       <Drawer
@@ -102,12 +109,6 @@ export default function Header() {
                 label="Login"
                 component={Link}
                 to="/login"
-                onClick={() => setOpened(false)}
-              />
-              <NavLink
-                label="Sign Up"
-                component={Link}
-                to="/signup"
                 onClick={() => setOpened(false)}
               />
             </>

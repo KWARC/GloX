@@ -1,4 +1,3 @@
-// myDocuments.server.ts
 import { createServerFn } from "@tanstack/react-start";
 import prisma from "../lib/prisma";
 import { getSessionUser } from "../server/authSession";

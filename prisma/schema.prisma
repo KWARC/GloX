@@ -22,8 +22,9 @@ model Document {
   userId   String
   user     User   @relation(fields: [userId], references: [id])
 
-  status        DocumentStatus @default(UPLOADED)
-  pages DocumentPage[]
+  status         DocumentStatus  @default(UPLOADED)
+  pages          DocumentPage[]
+  extractedTexts ExtractedText[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -35,7 +36,9 @@ model DocumentPage {
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   pageNumber Int
-  text       String   @db.Text
+  text       String @db.Text
+
+  extractedTexts ExtractedText[]
 
   createdAt DateTime @default(now())
 
@@ -56,4 +59,71 @@ model User {
   passwordHash String
   createdAt    DateTime   @default(now())
   documents    Document[]
+}
+
+model Definiendum {
+  id String @id @default(uuid())
+
+  symbolName     String
+  alias          String?
+  symbolDeclared Boolean @default(false)
+
+  futureRepo String
+  filePath   String
+
+  definitions Definition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([symbolName])
+  @@index([futureRepo])
+}
+
+model Definition {
+  id   String @id @default(uuid())
+  name String
+
+  conceptUri String @default("Glox")
+  archive    String @default("Glox")
+  filePath   String @default("Glox")
+  fileName   String @default("Glox")
+  language   String @default("en")
+
+  definiendumId String
+  definiendum   Definiendum @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([definiendumId])
+  @@index([archive, filePath, fileName, conceptUri, language])
+}
+
+model ExtractedText {
+  id String @id @default(uuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  documentPageId String
+  documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
+
+  pageNumber Int
+
+  originalText String @db.Text
+  statement    String @db.Text
+
+  futureRepo String @default("Glox")
+  filePath   String @default("Glox")
+  fileName   String @default("Glox")
+  language   String @default("en")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([documentId])
+  @@index([documentPageId])
+  @@index([documentId, pageNumber])
+  @@index([futureRepo, filePath, fileName, language])
 }
