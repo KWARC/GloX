@@ -9,9 +9,10 @@ import { documentPagesQuery } from "@/queries/documentPages";
 import {
   ActivePage,
   buildDefiniendumMacro,
+  replaceAllUnwrapped,
   useExtractionActions,
   useTextSelection,
-  useValidation
+  useValidation,
 } from "@/server/text-selection";
 import { currentUser } from "@/serverFns/currentUser.server";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
@@ -118,12 +119,11 @@ function RouteComponent() {
 
     const macro = buildDefiniendumMacro(params.symbolName, params.alias);
 
-    // Escape special regex characters in the selected text
-    const escaped = defExtractText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(escaped);
-
-    // Replace the selected text with the macro inline
-    const updatedStatement = extract.statement.replace(regex, macro);
+    const updatedStatement = replaceAllUnwrapped(
+      extract.statement,
+      defExtractText,
+      macro
+    );
 
     await updateExtract(defExtractId, updatedStatement);
 

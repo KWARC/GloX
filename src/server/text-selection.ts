@@ -173,3 +173,19 @@ export function buildDefiniendumMacro(symbol: string, alias?: string) {
   }
   return `\\definame{${s}}`;
 }
+
+export function replaceAllUnwrapped(
+  text: string,
+  word: string,
+  replacement: string
+) {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const regex = new RegExp(
+    `(?<!\\\\definame\\{|\\\\definiendum\\{)\\b${escaped}\\b`,
+    "g"
+  );
+
+  return text.replace(regex, replacement);
+}
+
