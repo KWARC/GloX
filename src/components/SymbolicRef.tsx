@@ -8,6 +8,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { IconX } from "@tabler/icons-react";
 
 interface SymbolicRefProps {
   conceptUri: string;
@@ -48,7 +49,7 @@ export function SymbolicRef({
               <Text fw={600}>Symbolic Reference</Text>
             </Group>
             <ActionIcon variant="subtle" color="gray" onClick={onClose}>
-              ×
+              <IconX size={16} />
             </ActionIcon>
           </Group>
 

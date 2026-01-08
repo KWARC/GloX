@@ -26,6 +26,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { IconArrowRight } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -280,7 +281,7 @@ function RouteComponent() {
           }}
           onClick={handleNavigateToLatex}
         >
-          →
+          <IconArrowRight size={22} />
         </ActionIcon>
       </Portal>
     </Box>

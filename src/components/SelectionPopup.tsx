@@ -1,5 +1,6 @@
 import { PopupState } from "@/server/text-selection";
 import { ActionIcon, Divider, Paper, Portal, Text } from "@mantine/core";
+import { IconX } from "@tabler/icons-react";
 
 interface SelectionPopupProps {
   popup: PopupState;
@@ -82,7 +83,7 @@ export function SelectionPopup({
 
         <Divider orientation="vertical" />
         <ActionIcon size="xs" variant="subtle" color="gray" onClick={onClose}>
-          ×
+          <IconX size={16} />
         </ActionIcon>
       </Paper>
     </Portal>

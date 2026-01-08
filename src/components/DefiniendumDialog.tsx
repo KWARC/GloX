@@ -10,6 +10,7 @@ import {
   Textarea,
   TextInput,
 } from "@mantine/core";
+import { IconCheck, IconX } from "@tabler/icons-react";
 import { useState } from "react";
 
 interface DefiniendumDialogProps {
@@ -61,7 +62,7 @@ export function DefiniendumDialog({
           <Group justify="space-between">
             <Text fw={600}>Add Definiendum</Text>
             <ActionIcon variant="subtle" onClick={handleClose}>
-              ×
+              <IconX size={16} />
             </ActionIcon>
           </Group>
 
@@ -97,6 +98,7 @@ export function DefiniendumDialog({
 
           <Button
             fullWidth
+            leftSection={<IconCheck size={16} />}
             onClick={() => {
               onSubmit({
                 symbolName: symbolName.trim(),
