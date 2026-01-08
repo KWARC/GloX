@@ -9,7 +9,7 @@ import {
   Text,
 } from "@mantine/core";
 
-interface DefinitionDialogProps {
+interface SymbolicRefProps {
   conceptUri: string;
   selectedUri: string;
   onUriChange: (value: string) => void;
@@ -17,13 +17,13 @@ interface DefinitionDialogProps {
   onClose: () => void;
 }
 
-export function DefinitionDialog({
+export function SymbolicRef({
   conceptUri,
   selectedUri,
   onUriChange,
   onSelect,
   onClose,
-}: DefinitionDialogProps) {
+}: SymbolicRefProps) {
   return (
     <Portal>
       <Paper
@@ -45,7 +45,7 @@ export function DefinitionDialog({
         <Stack gap="sm">
           <Group justify="space-between" mb="xs">
             <Group gap="xs">
-              <Text fw={600}>📖 URI Autocomplete</Text>
+              <Text fw={600}>Symbolic Reference</Text>
             </Group>
             <ActionIcon variant="subtle" color="gray" onClick={onClose}>
               ×

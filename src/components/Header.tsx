@@ -1,18 +1,18 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import {
-  Burger,
-  Drawer,
-  Stack,
-  NavLink,
-  Group,
-  Title,
-  Text,
-  Button,
-} from "@mantine/core";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { currentUser } from "@/serverFns/currentUser.server";
 import { logout } from "@/serverFns/logout.server";
+import {
+  Burger,
+  Button,
+  Drawer,
+  Group,
+  NavLink,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 export default function Header() {
   const [opened, setOpened] = useState(false);
@@ -109,12 +109,6 @@ export default function Header() {
                 label="Login"
                 component={Link}
                 to="/login"
-                onClick={() => setOpened(false)}
-              />
-              <NavLink
-                label="Sign Up"
-                component={Link}
-                to="/signup"
                 onClick={() => setOpened(false)}
               />
             </>

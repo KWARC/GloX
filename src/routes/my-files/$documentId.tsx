@@ -1,4 +1,4 @@
-import { DefinitionDialog } from "@/components/DefinitionDialog";
+import { SymbolicRef } from "@/components/SymbolicRef";
 import { DocumentHeader } from "@/components/DocumentHeader";
 import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
@@ -206,7 +206,7 @@ function RouteComponent() {
       )}
 
       {mode === "definition" && (
-        <DefinitionDialog
+        <SymbolicRef
           conceptUri={conceptUri}
           selectedUri={selectedUri}
           onUriChange={setSelectedUri}
