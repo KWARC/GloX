@@ -1,6 +1,6 @@
-import { createServerFn } from "@tanstack/react-start";
 import prisma from "@/lib/prisma";
 import type { CreateExtractedTextInput } from "@/server/document/document.types";
+import { createServerFn } from "@tanstack/react-start";
 
 export const createExtractedText = createServerFn<
   any,
