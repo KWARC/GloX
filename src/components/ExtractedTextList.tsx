@@ -1,50 +1,77 @@
-import { ActionIcon, Box, Text, Textarea, Group } from "@mantine/core";
-import { IconEdit, IconCheck } from "@tabler/icons-react";
+import { ExtractedItem } from "@/server/text-selection";
+import {
+  ActionIcon,
+  Group,
+  Paper,
+  ScrollArea,
+  Stack,
+  Text,
+  Textarea,
+} from "@mantine/core";
 
-export function ExtractedTextList({
-  items,
-  editingId,
-  onEdit,
-  onSave,
-}: {
-  items: any[];
+interface ExtractedTextPanelProps {
+  extracts: ExtractedItem[];
   editingId: string | null;
-  onEdit: (id: string) => void;
-  onSave: (id: string, value: string) => void;
-}) {
+  onToggleEdit: (id: string) => void;
+  onUpdate: (id: string, statement: string) => Promise<void>;
+  onSelection: () => void;
+}
+
+export function ExtractedTextPanel({
+  extracts,
+  editingId,
+  onToggleEdit,
+  onUpdate,
+  onSelection,
+}: ExtractedTextPanelProps) {
   return (
-    <Box>
-      {items.map((item) => (
-        <Box key={item.id} p="sm" mb="xs" style={{ border: "1px solid #ddd", borderRadius: 8 }}>
-          <Group justify="space-between">
-            <Text size="xs" c="dimmed">
-              Page {item.pageNumber}
+    <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
+      <ScrollArea h="100%">
+        <Stack gap="sm">
+          {!extracts.length ? (
+            <Text size="sm" c="dimmed" ta="center">
+              No extracted text yet
             </Text>
-
-            <ActionIcon
-              size="sm"
-              variant="subtle"
-              onClick={() => onEdit(item.id)}
-            >
-              {editingId === item.id ? <IconCheck /> : <IconEdit />}
-            </ActionIcon>
-          </Group>
-
-          {editingId === item.id ? (
-            <Textarea
-              value={item.statement}
-              onChange={(e) =>
-                onSave(item.id, e.currentTarget.value)
-              }
-              autosize
-            />
           ) : (
-            <Text size="sm" lh={1.6}>
-              {item.statement}
-            </Text>
+            extracts.map((item) => (
+              <Paper key={item.id} withBorder p="sm" radius="md">
+                <Group justify="space-between" mb={4}>
+                  <Text size="xs" c="dimmed">
+                    Page {item.pageNumber}
+                  </Text>
+
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    onClick={() => onToggleEdit(item.id)}
+                  >
+                    ✎
+                  </ActionIcon>
+                </Group>
+
+                {editingId === item.id ? (
+                  <Textarea
+                    defaultValue={item.statement}
+                    autosize
+                    onBlur={async (e) => {
+                      await onUpdate(item.id, e.currentTarget.value);
+                    }}
+                  />
+                ) : (
+                  <Text
+                    size="sm"
+                    lh={1.6}
+                    style={{ userSelect: "text", cursor: "text" }}
+                    onMouseUp={onSelection}
+                  >
+                    {item.statement}
+                  </Text>
+                )}
+              </Paper>
+            ))
           )}
-        </Box>
-      ))}
-    </Box>
+        </Stack>
+      </ScrollArea>
+    </Paper>
   );
 }
