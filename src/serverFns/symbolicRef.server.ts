@@ -1,86 +1,71 @@
 import prisma from "@/lib/prisma";
 import { createServerFn } from "@tanstack/react-start";
 
+export type ListSymbolicRefInput = {
+  id: string;
+};
+
+export type DeleteSymbolicRefInput = {
+  id: string;
+};
 export type CreateSymbolicRefInput = {
   name: string;
   conceptUri: string;
-  archive?: string;
+  archive: string;
   filePath: string;
-  fileName?: string;
+  fileName: string;
+  language: string;
   definiendumId: string;
 };
 
-export const createSymbolicRef = createServerFn<
-  any,
-  "POST",
-  CreateSymbolicRefInput,
-  Promise<any>
->({ method: "POST" }).handler(async (ctx) => {
-  const {
-    name,
-    conceptUri,
-    archive = "Glox",
-    filePath,
-    fileName = "Glox",
-    definiendumId,
-  } = (ctx.data ?? {}) as CreateSymbolicRefInput;
-  
-  console.log("Creating definition with data:", ctx.data);
-
-  if (!name?.trim() || !conceptUri?.trim() || !filePath?.trim() || !definiendumId?.trim()) {
-    throw new Error("Missing required definition fields");
+export const createSymbolicRef = createServerFn({
+  method: "POST",
+}).handler(async (ctx: { data?: CreateSymbolicRefInput }) => {
+  if (!ctx.data) {
+    throw new Error("Missing data");
   }
 
   return prisma.definition.create({
-    data: {
-      name,
-      conceptUri,
-      archive,
-      filePath,
-      fileName,
-      definiendumId,
-    },
+    data: ctx.data,
   });
 });
+
+
 
 export const listSymbolicRef = createServerFn<
   any,
   "POST",
-  { definiendumId: string },
-  Promise<any>
->({ method: "POST" }).handler(async (ctx) => {
-  const { definiendumId } = (ctx.data ?? {}) as { definiendumId: string };
+  ListSymbolicRefInput
+>({
+  method: "POST",
+}).handler(async (ctx: { data?: ListSymbolicRefInput }) => {
+  const { id } = ctx.data ?? {};
 
-  if (!definiendumId?.trim()) {
+  if (!id?.trim()) {
     throw new Error("Definiendum ID is required");
   }
 
   return prisma.definition.findMany({
-    where: {
-      definiendumId,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
+    where: { id },
+    orderBy: { createdAt: "desc" },
   });
 });
 
 export const deleteSymbolicRef = createServerFn<
   any,
   "POST",
-  { id: string },
-  Promise<any>
->({ method: "POST" }).handler(async (ctx) => {
-  const { id } = (ctx.data ?? {}) as { id: string };
+  DeleteSymbolicRefInput
+>({
+  method: "POST",
+}).handler(async (ctx: { data?: DeleteSymbolicRefInput }) => {
+  const { id } = ctx.data ?? {};
 
   if (!id?.trim()) {
     throw new Error("Definition ID is required");
   }
 
   await prisma.definition.delete({
-    where: {
-      id,
-    },
+    where: { id },
   });
 
   return { success: true };

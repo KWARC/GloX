@@ -25,6 +25,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { ParsedMathHubUri } from "@/server/parseUri";
+import { createSymbolicRef } from "@/serverFns/symbolicRef.server";
 
 export const Route = createFileRoute("/my-files/$documentId")({
   beforeLoad: async () => {
@@ -123,14 +125,34 @@ function RouteComponent() {
     clearPopup();
   }
 
-  function handleCloseDefinitionDialog() {
+  function handleCloseSymbolicRefDialog() {
     setMode(null);
     setSelectedUri("");
   }
 
-  function handleUriSelect() {
-    console.log("Selected URI:", selectedUri);
-    handleCloseDefinitionDialog();
+  async function handleSaveSymbolicRef(parsed: ParsedMathHubUri) {
+    if (
+      !validate(
+        parsed.archive,
+        parsed.filePath,
+        parsed.fileName,
+        parsed.language
+      )
+    ) {
+      return;
+    }
+    await createSymbolicRef({
+      data: {
+        name: conceptUri,
+        conceptUri: parsed.conceptUri,
+        archive: parsed.archive,
+        filePath: parsed.filePath,
+        fileName: parsed.fileName,
+        language: parsed.language
+      },
+    }as any);
+
+    handleCloseSymbolicRefDialog();
   }
 
   function handleToggleEdit(id: string) {
@@ -226,8 +248,8 @@ function RouteComponent() {
           conceptUri={conceptUri}
           selectedUri={selectedUri}
           onUriChange={setSelectedUri}
-          onSelect={handleUriSelect}
-          onClose={handleCloseDefinitionDialog}
+          onSelect={handleSaveSymbolicRef}
+          onClose={handleCloseSymbolicRefDialog}
         />
       )}
 
