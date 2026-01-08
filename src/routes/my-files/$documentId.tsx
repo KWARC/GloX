@@ -119,7 +119,7 @@ function RouteComponent() {
     symdecl: boolean;
   }) {
     if (!defExtractId) return;
-    if (!validate(futureRepo, filePath)) return;
+    if (!validate(futureRepo, filePath, fileName, language)) return;
 
     const extract = extracts.find((e) => e.id === defExtractId);
     if (!extract) return;
@@ -180,7 +180,7 @@ function RouteComponent() {
         archive: parsed.archive,
         filePath: parsed.filePath,
         fileName: parsed.fileName,
-        language: parsed.language
+        language: parsed.language,
       },
     }as any);
 

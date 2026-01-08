@@ -16,7 +16,7 @@ export function parseUri(uri: string): ParsedMathHubUri {
 
  
   const [archive, ...pathParts] = archiveParam.split("/");
-  const filePath = pathParts.join("/") || "";
+  const filePath = params.get("p") ?? pathParts.join("/");
 
   if (!archive || !fileName || !language) {
     throw new Error("Invalid MathHub URI");

@@ -90,8 +90,8 @@ model Definition {
   fileName   String @default("Glox")
   language   String @default("en")
 
-  definiendumId String
-  definiendum   Definiendum @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
+  definiendumId String?
+  definiendum   Definiendum? @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
