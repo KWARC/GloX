@@ -275,3 +275,17 @@ export function replaceFirstUnwrapped(
 
   return text.replace(regex, replacement);
 }
+
+export function definiendumToLatex(d: {
+  symbolName: string;
+  alias: string | null;
+  symbolDeclared: boolean;
+}) {
+  if (!d.symbolDeclared) return "";
+
+  if (d.alias) {
+    return `\\symdef{${d.symbolName}}{${d.alias}}`;
+  }
+
+  return `\\symdef{${d.symbolName}}{}`;
+}

@@ -2,21 +2,25 @@ export function generateLatex({
   title = "",
   moduleName = "",
   imports = [],
-  definition = "",
+  definitions = [],
+  extracts = [],
 }: {
   title?: string;
   moduleName?: string;
   imports?: string[];
-  definition?: string;
+  definitions?: string[];
+  extracts?: string[];
 }) {
   return `\\documentclass{stex}
 \\libinput{preamble}
 \\begin{document}
 \\begin{smodule}[title={${title}}]{${moduleName}}
 ${imports.map((i) => `\\importmodule${i}`).join("\n")}
-\\begin{sdefinition}
-${definition}
-\\end{sdefinition}
+
+${definitions.join("\n\n")}
+
+${extracts.join("\n\n")}
+
 \\end{smodule}
 \\end{document}`;
 }

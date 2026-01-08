@@ -52,3 +52,42 @@ export const listDefinienda = createServerFn({ method: "GET" }).handler(
     });
   }
 );
+
+
+export const listDefiniendaByDocument = createServerFn<
+  any,
+  "POST",
+  { documentId: string },
+  Promise<any[]>
+>({ method: "POST" }).handler(async (ctx) => {
+  const { documentId } = ctx.data;
+
+  const extracts = await prisma.extractedText.findMany({
+    where: { documentId },
+    select: {
+      futureRepo: true,
+      filePath: true,
+      fileName: true,
+      language: true,
+    },
+  });
+
+  if (extracts.length === 0) return [];
+
+  const ors = extracts.map((e) => ({
+    definitions: {
+      some: {
+        archive: e.futureRepo,
+        filePath: e.filePath,
+        fileName: e.fileName,
+        language: e.language,
+      },
+    },
+  }));
+
+  return prisma.definiendum.findMany({
+    where: { OR: ors },
+    orderBy: { createdAt: "asc" },
+  });
+});
+

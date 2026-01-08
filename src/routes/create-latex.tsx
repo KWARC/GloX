@@ -1,4 +1,7 @@
 import { generateLatex } from "@/components/generateLatex";
+import { definiendumToLatex } from "@/server/text-selection";
+import { listDefiniendaByDocument } from "@/serverFns/definiendum.server";
+import { listExtractedText } from "@/serverFns/extractText.server";
 import {
   Box,
   Button,
@@ -8,6 +11,7 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -19,18 +23,32 @@ export const Route = createFileRoute("/create-latex")({
 function CreateLatexPage() {
   const navigate = useNavigate();
   const { documentId } = Route.useSearch();
-  const [latex, setLatex] = useState(
-    generateLatex({
-      title: "",
-      moduleName: "",
-      imports: ["{p?s}", "[a]{p?s}"],
-      definition: `A \\definiendum{computer}{computing device} or simply a \\definame{computer} is an
-physical (usually electrical or electronic) (example).
 
-A \\sn{computer} consists of physical parts (its \\definame{hardware}) and a \\sn{set} of
-\\sns{program?program} and \\sn{data?data}, its \\definame{software}.`,
-    })
-  );
+  const [editedLatex, setEditedLatex] = useState<string | null>(null);
+
+  const { data: extracts = [] } = useQuery({
+    queryKey: ["extracts", documentId],
+    queryFn: () => listExtractedText({ data: { documentId } as any }),
+    enabled: !!documentId,
+  });
+
+  const { data: definitions = [] } = useQuery({
+    queryKey: ["definitions", documentId],
+    queryFn: () =>
+      listDefiniendaByDocument({ data: { documentId: documentId! } }),
+    enabled: !!documentId,
+  });
+
+  const latex = generateLatex({
+    title: "",
+    moduleName: "",
+    imports: ["{p?s}", "[a]{p?s}"],
+    definitions: definitions.map(definiendumToLatex).filter(Boolean),
+
+    extracts: extracts.map((e) => e.statement),
+  });
+
+  const displayLatex = editedLatex ?? latex;
 
   return (
     <Box p="md" h="100dvh">
@@ -39,9 +57,8 @@ A \\sn{computer} consists of physical parts (its \\definame{hardware}) and a \\s
 
         <Paper withBorder style={{ flex: 1 }}>
           <Textarea
-            value={latex}
-            onChange={(e) => setLatex(e.currentTarget.value)}
-            autosize={false}
+            value={displayLatex}
+            onChange={(e) => setEditedLatex(e.currentTarget.value)}
             resize="none"
             styles={{
               root: { height: "100%" },
@@ -60,7 +77,6 @@ A \\sn{computer} consists of physical parts (its \\definame{hardware}) and a \\s
             variant="default"
             onClick={() => {
               if (!documentId) return;
-
               navigate({
                 to: "/my-files/$documentId",
                 params: { documentId },
