@@ -36,7 +36,6 @@ export function MainLayout({ children }: MainLayoutProps) {
             position: "relative",
           }}
         >
-          {/* Subtle top accent line */}
           <div
             style={{
               position: "absolute",
@@ -49,8 +48,6 @@ export function MainLayout({ children }: MainLayoutProps) {
               zIndex: 2,
             }}
           />
-
-          {/* Main content area with padding */}
           <Box
             style={{
               flex: 1,

@@ -1,5 +1,5 @@
 import { ExtractedItem } from "@/server/text-selection";
-import { Button, Group, Modal, Select, Stack, Text } from "@mantine/core";
+import { Button, Group, Modal, Select, Stack, Text, Badge, Box } from "@mantine/core";
 import { useState } from "react";
 
 interface LatexConfigModelProps {
@@ -65,20 +65,43 @@ export function LatexConfigModel({
     });
   };
 
+  const selectedConfigData = configOptions.find((opt) => opt.value === selectedConfig);
+
   if (configOptions.length === 0) {
     return (
       <Modal
         opened={opened}
         onClose={onClose}
-        title="Configure LaTeX Generation"
+        title={
+          <Group gap="xs">
+            <Text fw={600} size="lg">Configure LaTeX Generation</Text>
+          </Group>
+        }
         size="md"
+        centered
+        padding="lg"
       >
-        <Stack gap="md">
-          <Text c="dimmed">
-            No extracted text found. Please extract some text first.
-          </Text>
+        <Stack gap="lg">
+          <Box
+            p="xl"
+            style={{
+              backgroundColor: "var(--mantine-color-gray-0)",
+              borderRadius: "8px",
+              textAlign: "center",
+            }}
+          >
+            <Text size="lg" fw={500} c="gray.7" mb="xs">
+              No Extracted Text Found
+            </Text>
+            <Text size="sm" c="dimmed">
+              Please extract some text first before generating LaTeX.
+            </Text>
+          </Box>
+          
           <Group justify="flex-end">
-            <Button onClick={onClose}>Close</Button>
+            <Button variant="default" onClick={onClose}>
+              Close
+            </Button>
           </Group>
         </Stack>
       </Modal>
@@ -89,12 +112,21 @@ export function LatexConfigModel({
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Configure LaTeX Generation"
+      title={
+        <Group gap="xs">
+          <Text fw={600} size="lg">Configure LaTeX Generation</Text>
+          <Badge size="sm" color="blue" variant="light">
+            {configOptions.length} {configOptions.length === 1 ? 'option' : 'options'}
+          </Badge>
+        </Group>
+      }
       size="md"
+      centered
+      padding="lg"
     >
-      <Stack gap="md">
+      <Stack gap="lg">
         <Text size="sm" c="dimmed">
-          Select a configuration from your extracted text:
+          Select a configuration from your extracted text to generate LaTeX output.
         </Text>
 
         <Select
@@ -105,7 +137,49 @@ export function LatexConfigModel({
           onChange={setSelectedConfig}
           searchable
           required
+          size="sm"
+          styles={{
+            input: {
+              fontFamily: "monospace",
+              fontSize: "0.85rem",
+            },
+          }}
         />
+
+        {selectedConfigData && (
+          <Box
+            p="md"
+            style={{
+              backgroundColor: "var(--mantine-color-gray-0)",
+              borderRadius: "8px",
+              border: "1px solid var(--mantine-color-gray-2)",
+            }}
+          >
+            <Text size="xs" fw={600} c="gray.7" mb="sm" tt="uppercase">
+              Selected Configuration
+            </Text>
+            <Stack gap="xs">
+              <Group gap="xs">
+                <Text size="xs" c="dimmed" w={80}>Repository:</Text>
+                <Text size="xs" fw={500} ff="monospace">{selectedConfigData.futureRepo}</Text>
+              </Group>
+              <Group gap="xs">
+                <Text size="xs" c="dimmed" w={80}>File Path:</Text>
+                <Text size="xs" fw={500} ff="monospace">{selectedConfigData.filePath}</Text>
+              </Group>
+              <Group gap="xs">
+                <Text size="xs" c="dimmed" w={80}>File Name:</Text>
+                <Text size="xs" fw={500} ff="monospace">{selectedConfigData.fileName}</Text>
+              </Group>
+              <Group gap="xs">
+                <Text size="xs" c="dimmed" w={80}>Language:</Text>
+                <Badge size="xs" variant="light" color="teal">
+                  {selectedConfigData.language}
+                </Badge>
+              </Group>
+            </Stack>
+          </Box>
+        )}
 
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={onClose}>
