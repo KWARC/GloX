@@ -2,6 +2,7 @@ import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { DocumentHeader } from "@/components/DocumentHeader";
 import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
+import { LatexConfigModel } from "@/components/LatexConfigModel";
 import { SelectionPopup } from "@/components/SelectionPopup";
 import { SymbolicRef } from "@/components/SymbolicRef";
 import { documentByIdQuery } from "@/queries/documentById";
@@ -76,6 +77,8 @@ function RouteComponent() {
   const [defDialogOpen, setDefDialogOpen] = useState(false);
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
   const [defExtractText, setDefExtractText] = useState("");
+
+  const [latexConfigOpen, setLatexConfigOpen] = useState(false);
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
@@ -176,7 +179,7 @@ function RouteComponent() {
     setConceptUri(selection.text);
     setMode("definition");
 
-    clearPopupOnly(); // ✅ popup hidden, selection preserved
+    clearPopupOnly();
   }
 
   function handleCloseSymbolicRefDialog() {
@@ -249,11 +252,27 @@ function RouteComponent() {
     setEditingId(null);
   }
 
-  function handleNavigateToLatex() {
+  function handleOpenLatexConfig() {
+    setLatexConfigOpen(true);
+  }
+
+  function handleLatexConfigSubmit(config: {
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
+  }) {
     navigate({
       to: "/create-latex",
-      search: { documentId },
+      search: {
+        documentId,
+        futureRepo: config.futureRepo,
+        filePath: config.filePath,
+        fileName: config.fileName,
+        language: config.language,
+      },
     });
+    setLatexConfigOpen(false);
   }
 
   if (docLoading || pagesLoading) {
@@ -369,6 +388,13 @@ function RouteComponent() {
         onSubmit={handleDefiniendumSubmit}
       />
 
+      <LatexConfigModel
+        opened={latexConfigOpen}
+        onClose={() => setLatexConfigOpen(false)}
+        onSubmit={handleLatexConfigSubmit}
+        extracts={extracts}
+      />
+
       <Portal>
         <ActionIcon
           size="xl"
@@ -380,7 +406,7 @@ function RouteComponent() {
             right: 50,
             zIndex: 5000,
           }}
-          onClick={handleNavigateToLatex}
+          onClick={handleOpenLatexConfig}
         >
           <IconArrowRight size={22} />
         </ActionIcon>
