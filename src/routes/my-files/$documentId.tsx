@@ -97,6 +97,12 @@ function RouteComponent() {
   }
 
   function handleRightSelection() {
+    const ok = validate(futureRepo, filePath, fileName, language);
+
+    if (!ok) {
+      clearAll();
+      return;
+    }
     handleSelection("right");
   }
 
@@ -210,7 +216,7 @@ function RouteComponent() {
     if (!extract) return;
     if (!selection) return;
     console.log({ extract }, { selection });
-    const macro = buildSymbolicRefMacro(selection?.text, parsed.conceptUri);
+    const macro = buildSymbolicRefMacro(selection.text, parsed.symbol);
 
     const updatedStatement = replaceFirstUnwrapped(
       extract.statement,

@@ -242,9 +242,11 @@ export function replaceAllUnwrapped(
 }
 
 export function buildSymbolicRefMacro(selection: string, symbol: string) {
-  return selection.trim() === symbol.trim()
-    ? `\\sn{${symbol}}`
-    : `\\sr{${symbol}}`;
+  const sel = selection.trim();
+  const sym = symbol.trim();
+  const key = `${sym}?${sym}`;
+
+  return sel === sym ? `\\sn{${key}}` : `\\sr{${key}}{${sel}}`;
 }
 
 export function replaceFirstUnwrapped(

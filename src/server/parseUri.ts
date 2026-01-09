@@ -4,6 +4,7 @@ export interface ParsedMathHubUri {
   fileName: string;
   language: string;
   conceptUri: string;
+  symbol: string;
 }
 
 export function parseUri(uri: string): ParsedMathHubUri {
@@ -16,10 +17,12 @@ export function parseUri(uri: string): ParsedMathHubUri {
   const [archive, ...pathParts] = archiveParam.split("/");
   const filePath = pParam || pathParts.join("/");
 
-  // ---------- CASE 1: definition-based ----------
   const d = params.get("d");
   const l = params.get("l");
+  const m = params.get("m");
+  const s = params.get("s");
 
+  // ---------- fileName-based ----------
   if (archive && d) {
     return {
       archive,
@@ -27,24 +30,21 @@ export function parseUri(uri: string): ParsedMathHubUri {
       fileName: d,
       language: l ?? "en",
       conceptUri: uri,
+      symbol: d.replace(/-/g, " "),
     };
   }
 
-  // ---------- CASE 2: module + symbol ----------
-  const m = params.get("m"); // module = file name
-  const s = params.get("s"); // symbol / concept name
-
+  // ---------- conceptName ----------
   if (archive && m && s) {
     return {
       archive,
       filePath,
       fileName: m,
       language: "en",
-      conceptUri: s,
+      conceptUri: uri,
+      symbol: s,
     };
   }
 
-  // ---------- INVALID ----------
   throw new Error("Invalid MathHub URI");
 }
-
