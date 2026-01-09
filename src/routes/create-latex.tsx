@@ -1,11 +1,9 @@
-import { generateLatex } from "@/components/generateLatex";
-import { definiendumToLatex } from "@/server/text-selection";
-import { listDefiniendaByDocument } from "@/serverFns/definiendum.server";
-import { listExtractedText } from "@/serverFns/extractText.server";
+import { generateLatexWithDependencies } from "@/serverFns/latexGeneration.server";
 import {
   Box,
   Button,
   Group,
+  Loader,
   Paper,
   Stack,
   Text,
@@ -26,32 +24,31 @@ function CreateLatexPage() {
 
   const [editedLatex, setEditedLatex] = useState<string | null>(null);
 
-  const { data: extracts = [] } = useQuery({
-    queryKey: ["extracts", documentId],
-    queryFn: () => listExtractedText({ data: { documentId } as any }),
+  // Generate LaTeX with dependency resolution via server function
+  const { data: generatedLatex, isLoading: latexLoading } = useQuery({
+    queryKey: ["latex-with-deps", documentId],
+    queryFn: async () => {
+      if (!documentId) return "";
+
+      return generateLatexWithDependencies({
+        data: { documentId },
+      } as any);
+    },
     enabled: !!documentId,
   });
 
-  const { data: definitions = [] } = useQuery({
-  queryKey: ["definitions", documentId],
-  queryFn: () =>
-    listDefiniendaByDocument({
-      data: { documentId: documentId! } ,
-    } as any),
-  enabled: !!documentId,
-});
+  const displayLatex = editedLatex ?? generatedLatex ?? "";
 
-
-  const latex = generateLatex({
-    title: "",
-    moduleName: "",
-    imports: ["{p?s}", "[a]{p?s}"],
-    definitions: definitions.map(definiendumToLatex).filter(Boolean),
-
-    extracts: extracts.map((e) => e.statement),
-  });
-
-  const displayLatex = editedLatex ?? latex;
+  if (latexLoading) {
+    return (
+      <Box p="md" h="100dvh">
+        <Stack align="center" justify="center" h="100%">
+          <Loader />
+          <Text>Generating LaTeX with dependencies...</Text>
+        </Stack>
+      </Box>
+    );
+  }
 
   return (
     <Box p="md" h="100dvh">
