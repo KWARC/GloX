@@ -36,7 +36,7 @@ function CreateLatexPage() {
     queryFn: async () => {
       if (!documentId) return "";
       return generateLatexWithDependencies({
-        data: { documentId },
+        data: { documentId, futureRepo, filePath, fileName, language },
       } as any);
     },
     enabled: !!documentId,

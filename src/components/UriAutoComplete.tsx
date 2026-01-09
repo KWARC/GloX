@@ -7,7 +7,6 @@ import {
   useCombobox,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
 interface UriAutoCompleteProps {
   selectedText: string;
@@ -24,12 +23,9 @@ export function UriAutoComplete({
   label,
   placeholder,
 }: UriAutoCompleteProps) {
-  const [opened, setOpened] = useState(false);
-
   const combobox = useCombobox({
     onDropdownClose: () => {
       combobox.resetSelectedOption();
-      setOpened(false);
     },
   });
 
@@ -42,7 +38,7 @@ export function UriAutoComplete({
       searchUriUsingSubstr({
         data: { input: selectedText },
       } as any),
-    enabled: !!selectedText && opened,
+    enabled: !!selectedText,
   });
 
   const filteredOptions = value
@@ -51,8 +47,11 @@ export function UriAutoComplete({
       )
     : allOptions;
 
+  if (allOptions.length > 0 && !combobox.dropdownOpened && !value) {
+    combobox.openDropdown();
+  }
+
   const openDropdown = () => {
-    setOpened(true);
     combobox.openDropdown();
   };
 
@@ -76,7 +75,7 @@ export function UriAutoComplete({
           onClick={openDropdown}
           onChange={(event) => {
             onChange(event.currentTarget.value);
-            combobox.openDropdown();
+            openDropdown();
           }}
           rightSection={
             isFetching ? <Loader size="xs" /> : <Combobox.Chevron />
@@ -88,7 +87,7 @@ export function UriAutoComplete({
       <Combobox.Dropdown>
         <Combobox.Options>
           <ScrollArea.Autosize mah={200}>
-            {isFetching ? (
+            {isFetching && filteredOptions.length === 0 ? (
               <Combobox.Empty>Loading…</Combobox.Empty>
             ) : filteredOptions.length === 0 ? (
               <Combobox.Empty>No matching URIs</Combobox.Empty>
