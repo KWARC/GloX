@@ -1,9 +1,15 @@
-import { Combobox, InputBase, Loader, ScrollArea, useCombobox } from "@mantine/core";
-import { useEffect, useState } from "react";
 import { searchUriUsingSubstr } from "@/serverFns/searchUriUsingSubstr";
+import {
+  Combobox,
+  InputBase,
+  Loader,
+  ScrollArea,
+  useCombobox,
+} from "@mantine/core";
+import { useRef, useState } from "react";
 
 interface UriAutoCompleteProps {
-  selectedText: string; 
+  selectedText: string;
   value: string;
   onChange: (value: string) => void;
   label?: string;
@@ -17,66 +23,67 @@ export function UriAutoComplete({
   label,
   placeholder,
 }: UriAutoCompleteProps) {
-  const [options, setOptions] = useState<string[]>([]);
+  const [allOptions, setAllOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const lastFetchedTextRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
+  const didInitialLoadRef = useRef(false);
+
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
   });
 
-  useEffect(() => {
-    if (!selectedText) {
-      setOptions([]);
-      return;
+  const ensureLoaded = async () => {
+    if (!selectedText) return;
+
+    if (lastFetchedTextRef.current !== selectedText) {
+      lastFetchedTextRef.current = selectedText;
+      setAllOptions([]);
     }
 
-    let cancelled = false;
+    if (isFetchingRef.current) return;
 
-    const runSearch = async () => {
-      setLoading(true);
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set("selectedText", selectedText);
-        window.history.replaceState({}, "", url.toString());
-        const results = await searchUriUsingSubstr({
-          data: {
-            input: selectedText,
-          }as any,
-        });
+    isFetchingRef.current = true;
+    setLoading(true);
 
-        if (!cancelled) {
-          setOptions(results ?? []);
-          combobox.openDropdown();
-        }
-      } catch (err) {
-        console.error("URI search failed", err);
-        if (!cancelled) setOptions([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
+    try {
+      const results = await searchUriUsingSubstr({
+        data: { input: selectedText },
+      } as any);
 
-    runSearch();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedText]);
-  
-  useEffect(() => {
-    console.log("URI AUTOCOMPLETE INPUT =", selectedText);
-  }, [selectedText]);
+      setAllOptions(results ?? []);
+      combobox.openDropdown();
+    } catch (err) {
+      console.error("URI search failed", err);
+      setAllOptions([]);
+    } finally {
+      isFetchingRef.current = false;
+      setLoading(false);
+    }
+  };
 
-  const comboboxOptions = options.map((option) => (
-    <Combobox.Option value={option} key={option}>
-      {option}
-    </Combobox.Option>
-  ));
-  
+  if (!didInitialLoadRef.current && selectedText) {
+    didInitialLoadRef.current = true;
+    ensureLoaded();
+  }
+
+  const openAndLoad = () => {
+    combobox.openDropdown();
+    ensureLoaded();
+  };
+
+  const filteredOptions = value
+    ? allOptions.filter((uri) =>
+        uri.toLowerCase().includes(value.toLowerCase())
+      )
+    : allOptions;
+
   return (
     <Combobox
       store={combobox}
       withinPortal
       position="bottom"
-      middlewares={{ flip: true, shift: true }}
       zIndex={5000}
       onOptionSubmit={(val) => {
         onChange(val);
@@ -88,12 +95,12 @@ export function UriAutoComplete({
           label={label}
           placeholder={placeholder}
           value={value}
+          onFocus={openAndLoad}
+          onClick={openAndLoad}
           onChange={(event) => {
             onChange(event.currentTarget.value);
             combobox.openDropdown();
           }}
-          onClick={() => combobox.toggleDropdown()}
-          onFocus={() => combobox.openDropdown()}
           rightSection={loading ? <Loader size="xs" /> : <Combobox.Chevron />}
           rightSectionPointerEvents="none"
         />
@@ -101,13 +108,17 @@ export function UriAutoComplete({
 
       <Combobox.Dropdown>
         <Combobox.Options>
-          <ScrollArea.Autosize mah={200} type="scroll">
+          <ScrollArea.Autosize mah={200}>
             {loading ? (
-              <Combobox.Empty>Loading...</Combobox.Empty>
-            ) : options.length === 0 ? (
-              <Combobox.Empty>No URIs found</Combobox.Empty>
+              <Combobox.Empty>Loading…</Combobox.Empty>
+            ) : filteredOptions.length === 0 ? (
+              <Combobox.Empty>No matching URIs</Combobox.Empty>
             ) : (
-              comboboxOptions
+              filteredOptions.map((option) => (
+                <Combobox.Option value={option} key={option}>
+                  {option}
+                </Combobox.Option>
+              ))
             )}
           </ScrollArea.Autosize>
         </Combobox.Options>
