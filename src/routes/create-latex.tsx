@@ -33,11 +33,14 @@ function CreateLatexPage() {
   });
 
   const { data: definitions = [] } = useQuery({
-    queryKey: ["definitions", documentId],
-    queryFn: () =>
-      listDefiniendaByDocument({ data: { documentId: documentId! } }),
-    enabled: !!documentId,
-  });
+  queryKey: ["definitions", documentId],
+  queryFn: () =>
+    listDefiniendaByDocument({
+      data: { documentId: documentId! } ,
+    } as any),
+  enabled: !!documentId,
+});
+
 
   const latex = generateLatex({
     title: "",
