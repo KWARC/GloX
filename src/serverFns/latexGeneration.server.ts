@@ -40,18 +40,31 @@ function extractSymbols(latex: string): {
 export const generateLatexWithDependencies = createServerFn<
   any,
   "POST",
-  { documentId: string },
+  {
+    documentId: string;
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
+  },
   Promise<string>
 >({ method: "POST" }).handler(async (ctx) => {
-  const { documentId } = ctx.data ?? {};
+  const { documentId, futureRepo, filePath, fileName, language } =
+    ctx.data ?? ({} as any);
 
-  if (!documentId) {
-    throw new Error("documentId is required");
+  if (!documentId || !futureRepo || !filePath || !fileName || !language) {
+    throw new Error("documentId and path info are required");
   }
 
   // 1. Fetch all extracted text for this document
   const extracts = await prisma.extractedText.findMany({
-    where: { documentId },
+    where: {
+      documentId,
+      futureRepo,
+      filePath,
+      fileName,
+      language,
+    },
     select: { statement: true },
     orderBy: { createdAt: "asc" },
   });

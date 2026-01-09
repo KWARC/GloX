@@ -16,7 +16,7 @@ export function DocumentPagesPanel({
         <Stack p="lg" gap="lg">
           {pages.map((page) => (
             <Box key={page.id}>
-              <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">
+              <Text size="xs" fw={700} c="dark" mb="xs" tt="uppercase">
                 Page {page.pageNumber}
               </Text>
 

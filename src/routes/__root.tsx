@@ -4,9 +4,9 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-
 import { queryClient } from "@/queryClient";
 import Header from "../components/Header";
+import { MainLayout } from "@/components/MainLayout";
 
 function NotFound() {
   return (
@@ -27,7 +27,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
-         <title>GloX</title>
+        <title>GloX</title>
         <link rel="icon" type="image/jpeg" href="/fau.jpeg" />
       </head>
       <body>
@@ -49,19 +49,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 <Header />
               </AppShell.Header>
 
-              <AppShell.Main>{children}</AppShell.Main>
+              <AppShell.Main>
+                <MainLayout>{children}</MainLayout>
+              </AppShell.Main>
             </AppShell>
           </MantineProvider>
 
-          <TanStackDevtools
-            config={{ position: "bottom-right" }}
+          {/* <TanStackDevtools
+            config={{ position: "bottom-right"}}
             plugins={[
               {
                 name: "TanStack Router",
                 render: <TanStackRouterDevtoolsPanel />,
               },
             ]}
-          />
+          /> */}
         </QueryClientProvider>
         <Scripts />
       </body>
