@@ -30,8 +30,11 @@ import {
   Portal,
   Stack,
   Text,
+  Paper,
+  Tabs,
 } from "@mantine/core";
-import { IconArrowRight } from "@tabler/icons-react";
+import { useMediaQuery } from "@mantine/hooks";
+import { IconArrowRight, IconFileText, IconList } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -47,6 +50,8 @@ export const Route = createFileRoute("/my-files/$documentId")({
 function RouteComponent() {
   const navigate = useNavigate();
   const { documentId } = Route.useParams();
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isTablet = useMediaQuery("(max-width: 1024px)");
 
   const { data: document, isLoading: docLoading } = useQuery(
     documentByIdQuery(documentId)
@@ -79,6 +84,7 @@ function RouteComponent() {
   const [defExtractText, setDefExtractText] = useState("");
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string | null>("document");
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
@@ -277,61 +283,117 @@ function RouteComponent() {
 
   if (docLoading || pagesLoading) {
     return (
-      <Stack align="center" p="xl">
-        <Loader />
+      <Stack align="center" justify="center" h="100vh">
+        <Loader size="lg" />
+        <Text c="dimmed">Loading document...</Text>
       </Stack>
     );
   }
 
   if (!document) {
-    return <Text c="red">Document not found</Text>;
+    return (
+      <Stack align="center" justify="center" h="100vh">
+        <Text size="xl" fw={500} c="red">
+          Document not found
+        </Text>
+      </Stack>
+    );
   }
 
   return (
-    <Box
-      h="100dvh"
-      p="md"
-      style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}
-    >
-      <DocumentHeader
-        futureRepo={futureRepo}
-        filePath={filePath}
-        fileName={fileName}
-        language={language}
-        onFutureRepoChange={(value) => {
-          setFutureRepo(value);
-          clearError("futureRepo");
-        }}
-        onFilePathChange={(value) => {
-          setFilePath(value);
-          clearError("filePath");
-        }}
-        onFileNameChange={(value) => {
-          setFileName(value);
-          clearError("fileName");
-        }}
-        onLanguageChange={(value) => {
-          setLanguage(value);
-          clearError("language");
-        }}
-        errors={errors}
-      />
-
-      <Flex gap="md" style={{ flex: 1, minHeight: 0 }}>
-        <Box flex={1} style={{ height: "100%" }}>
-          <DocumentPagesPanel pages={pages} onSelection={handleLeftSelection} />
-        </Box>
-
-        <Box w={400}>
-          <ExtractedTextPanel
-            extracts={extracts}
-            editingId={editingId}
-            onToggleEdit={handleToggleEdit}
-            onUpdate={handleUpdateExtract}
-            onSelection={handleRightSelection}
+    <Box h="100dvh" p={isMobile ? "sm" : isTablet ? "md" : "lg"}>
+      <Stack gap={isMobile ? "sm" : "md"} h="100%">
+        <Paper shadow="xs" p={isMobile ? "sm" : "md"} withBorder>
+          <DocumentHeader
+            futureRepo={futureRepo}
+            filePath={filePath}
+            fileName={fileName}
+            language={language}
+            onFutureRepoChange={(value) => {
+              setFutureRepo(value);
+              clearError("futureRepo");
+            }}
+            onFilePathChange={(value) => {
+              setFilePath(value);
+              clearError("filePath");
+            }}
+            onFileNameChange={(value) => {
+              setFileName(value);
+              clearError("fileName");
+            }}
+            onLanguageChange={(value) => {
+              setLanguage(value);
+              clearError("language");
+            }}
+            errors={errors}
           />
-        </Box>
-      </Flex>
+        </Paper>
+
+        {isMobile ? (
+          <Paper flex={1} shadow="sm" withBorder style={{ minHeight: 0 }}>
+            <Tabs value={activeTab} onChange={setActiveTab}>
+              <Tabs.List>
+                <Tabs.Tab value="document" leftSection={<IconFileText size={16} />}>
+                  Document
+                </Tabs.Tab>
+                <Tabs.Tab value="extracts" leftSection={<IconList size={16} />}>
+                  Extracts
+                </Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="document" pt="xs">
+                <DocumentPagesPanel
+                  pages={pages}
+                  onSelection={handleLeftSelection}
+                />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="extracts" pt="xs">
+                <ExtractedTextPanel
+                  extracts={extracts}
+                  editingId={editingId}
+                  onToggleEdit={handleToggleEdit}
+                  onUpdate={handleUpdateExtract}
+                  onSelection={handleRightSelection}
+                />
+              </Tabs.Panel>
+            </Tabs>
+          </Paper>
+        ) : (
+          <Flex 
+            gap={isTablet ? "md" : "lg"} 
+            style={{ flex: 1, minHeight: 0 }}
+            direction={isTablet ? "column" : "row"}
+          >
+            <Paper 
+              flex={isTablet ? undefined : 1} 
+              shadow="sm" 
+              withBorder
+              style={{ minHeight: isTablet ? "50%" : undefined }}
+            >
+              <DocumentPagesPanel
+                pages={pages}
+                onSelection={handleLeftSelection}
+              />
+            </Paper>
+
+            <Paper 
+              w={isTablet ? undefined : 420} 
+              shadow="sm" 
+              withBorder
+              style={{ minHeight: isTablet ? "50%" : undefined }}
+            >
+              <ExtractedTextPanel
+                extracts={extracts}
+                editingId={editingId}
+                onToggleEdit={handleToggleEdit}
+                onUpdate={handleUpdateExtract}
+                onSelection={handleRightSelection}
+              />
+            </Paper>
+          </Flex>
+        )}
+      </Stack>
 
       {popup && (
         <SelectionPopup
@@ -397,18 +459,17 @@ function RouteComponent() {
 
       <Portal>
         <ActionIcon
-          size="xl"
+          size={isMobile ? "lg" : "xl"}
           radius="xl"
           variant="filled"
-          style={{
-            position: "fixed",
-            bottom: 24,
-            right: 50,
-            zIndex: 5000,
-          }}
+          color="blue"
+          pos="fixed"
+          bottom={isMobile ? 16 : 24}
+          right={isMobile ? 16 : 24}
+          style={{ zIndex: 5000 }}
           onClick={handleOpenLatexConfig}
         >
-          <IconArrowRight size={22} />
+          <IconArrowRight size={isMobile ? 18 : 22} />
         </ActionIcon>
       </Portal>
     </Box>

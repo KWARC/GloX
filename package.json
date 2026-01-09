@@ -25,6 +25,7 @@
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
+    "lucide-react": "^0.562.0",
     "nitro": "latest",
     "pdfjs-dist": "^5.4.530",
     "pg": "^8.16.3",

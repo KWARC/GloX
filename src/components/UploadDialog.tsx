@@ -112,8 +112,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
     >
       <Stack gap="lg">
         <Text size="sm" c="dimmed">
-          Upload a PDF file to extract and analyze its contents. Supported
-          formats: PDF files up to 50MB.
+          Upload a PDF file to extract and analyze its contents.
         </Text>
 
         {error && (
