@@ -86,7 +86,7 @@ export function SymbolicRef({
               if (!selectedUri) return;
               const parsed = parseUri(selectedUri);
               console.log("[SymbolicRef] parsed URI =", parsed);
-              onSelect(parsed); // ← THIS is the trigger
+              onSelect(parsed); 
             }}
             disabled={!selectedUri}
             fullWidth

@@ -97,6 +97,12 @@ function RouteComponent() {
   }
 
   function handleRightSelection() {
+    const ok = validate(futureRepo, filePath, fileName, language);
+
+    if (!ok) {
+      clearAll();
+      return;
+    }
     handleSelection("right");
   }
 
