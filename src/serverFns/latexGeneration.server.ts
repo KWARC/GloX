@@ -25,7 +25,8 @@ function extractSymbols(latex: string): {
   }
 
   // Match \sn{symbol}, \sr{symbol}, \sns{symbol}
-  const refRegex = /\\s(?:n|r|ns)\{([^}]+)\}/g;
+  // ✅ extract ONLY the symbol name (before '?')
+  const refRegex = /\\s(?:n|r|ns)\{([^}?]+)\?/g;
   while ((match = refRegex.exec(latex)) !== null) {
     referenced.add(match[1].trim());
   }

@@ -228,7 +228,7 @@ function RouteComponent() {
 
     await createSymbolicRef({
       data: {
-        name: parsed.conceptUri,
+        name: parsed.symbol,
         conceptUri: parsed.conceptUri,
         archive: parsed.archive,
         filePath: parsed.filePath,
