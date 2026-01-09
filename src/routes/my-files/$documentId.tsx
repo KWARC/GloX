@@ -27,11 +27,11 @@ import {
   Box,
   Flex,
   Loader,
+  Paper,
   Portal,
   Stack,
-  Text,
-  Paper,
   Tabs,
+  Text,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { IconArrowRight, IconFileText, IconList } from "@tabler/icons-react";
@@ -301,8 +301,16 @@ function RouteComponent() {
   }
 
   return (
-    <Box h="100dvh" p={isMobile ? "sm" : isTablet ? "md" : "lg"}>
-      <Stack gap={isMobile ? "sm" : "md"} h="100%">
+    <Box
+      h="100%"
+      p={isMobile ? "sm" : isTablet ? "md" : "lg"}
+      style={{ overflow: "hidden" }}
+    >
+      <Stack
+        gap={isMobile ? "sm" : "md"}
+        h="100%"
+        style={{ overflow: "hidden" }}
+      >
         <Paper shadow="xs" p={isMobile ? "sm" : "md"} withBorder>
           <DocumentHeader
             futureRepo={futureRepo}
@@ -330,10 +338,23 @@ function RouteComponent() {
         </Paper>
 
         {isMobile ? (
-          <Paper flex={1} shadow="sm" withBorder style={{ minHeight: 0 }}>
+          <Paper
+            flex={1}
+            shadow="sm"
+            withBorder
+            style={{
+              minHeight: 0,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             <Tabs value={activeTab} onChange={setActiveTab}>
               <Tabs.List>
-                <Tabs.Tab value="document" leftSection={<IconFileText size={16} />}>
+                <Tabs.Tab
+                  value="document"
+                  leftSection={<IconFileText size={16} />}
+                >
                   Document
                 </Tabs.Tab>
                 <Tabs.Tab value="extracts" leftSection={<IconList size={16} />}>
@@ -341,14 +362,32 @@ function RouteComponent() {
                 </Tabs.Tab>
               </Tabs.List>
 
-              <Tabs.Panel value="document" pt="xs">
+              <Tabs.Panel
+                value="document"
+                pt="xs"
+                style={{
+                  height: "100%",
+                  overflow: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
                 <DocumentPagesPanel
                   pages={pages}
                   onSelection={handleLeftSelection}
                 />
               </Tabs.Panel>
 
-              <Tabs.Panel value="extracts" pt="xs">
+              <Tabs.Panel
+                value="extracts"
+                pt="xs"
+                style={{
+                  height: "100%",
+                  overflow: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
                 <ExtractedTextPanel
                   extracts={extracts}
                   editingId={editingId}
@@ -360,16 +399,21 @@ function RouteComponent() {
             </Tabs>
           </Paper>
         ) : (
-          <Flex 
-            gap={isTablet ? "md" : "lg"} 
-            style={{ flex: 1, minHeight: 0 }}
+          <Flex
+            gap={isTablet ? "md" : "lg"}
+            style={{ flex: 1, minHeight: 0, overflow: "hidden" }}
             direction={isTablet ? "column" : "row"}
           >
-            <Paper 
-              flex={isTablet ? undefined : 1} 
-              shadow="sm" 
+            <Paper
+              flex={isTablet ? undefined : 1}
+              shadow="sm"
               withBorder
-              style={{ minHeight: isTablet ? "50%" : undefined }}
+              style={{
+                minHeight: isTablet ? "50%" : undefined,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+              }}
             >
               <DocumentPagesPanel
                 pages={pages}
@@ -377,11 +421,16 @@ function RouteComponent() {
               />
             </Paper>
 
-            <Paper 
-              w={isTablet ? undefined : 420} 
-              shadow="sm" 
+            <Paper
+              w={isTablet ? undefined : 420}
+              shadow="sm"
               withBorder
-              style={{ minHeight: isTablet ? "50%" : undefined }}
+              style={{
+                minHeight: isTablet ? "50%" : undefined,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+              }}
             >
               <ExtractedTextPanel
                 extracts={extracts}
