@@ -30,14 +30,14 @@ export function ExtractedTextPanel({
       <ScrollArea h="100%">
         <Stack gap="sm">
           {!extracts.length ? (
-            <Text size="sm" c="dimmed" ta="center">
+            <Text size="sm" c="dark" ta="center">
               No extracted text yet
             </Text>
           ) : (
             extracts.map((item) => (
               <Paper key={item.id} withBorder p="sm" radius="md">
                 <Group justify="space-between" mb={4}>
-                  <Text size="xs" c="dimmed">
+                  <Text size="xs" c="dark">
                     Page {item.pageNumber}
                   </Text>
 
