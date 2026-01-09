@@ -42,6 +42,7 @@ export interface ExtractedItem {
 export type TextSelection = {
   text: string;
   isWholeStatement: boolean;
+  extractId?: string;
 };
 
 export function useTextSelection() {
@@ -50,7 +51,10 @@ export function useTextSelection() {
 
   function handleSelection(
     source: "left" | "right",
-    onLeftSelection?: (text: string) => void
+    options?: {
+      extractId?: string;
+      onLeftSelection?: (text: string) => void;
+    }
   ) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
@@ -67,15 +71,20 @@ export function useTextSelection() {
 
     const rect = sel.getRangeAt(0).getBoundingClientRect();
 
-    setSelection({ text, isWholeStatement });
+    setSelection({
+      text,
+      extractId: options?.extractId,
+      isWholeStatement,
+    });
+
     setPopup({
       x: rect.right + window.scrollX + 8,
       y: rect.top + window.scrollY - 4,
       source,
     });
 
-    if (source === "left" && onLeftSelection) {
-      onLeftSelection(text);
+    if (source === "left" && options?.onLeftSelection) {
+      options.onLeftSelection(text);
     }
   }
 

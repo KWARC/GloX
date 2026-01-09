@@ -15,7 +15,7 @@ interface ExtractedTextPanelProps {
   editingId: string | null;
   onToggleEdit: (id: string) => void;
   onUpdate: (id: string, statement: string) => Promise<void>;
-  onSelection: () => void;
+  onSelection: (extractId: string) => void;
 }
 
 export function ExtractedTextPanel({
@@ -46,7 +46,7 @@ export function ExtractedTextPanel({
                     variant="subtle"
                     onClick={() => onToggleEdit(item.id)}
                   >
-                   <IconPencil size={16} /> 
+                    <IconPencil size={16} />
                   </ActionIcon>
                 </Group>
 
@@ -63,18 +63,14 @@ export function ExtractedTextPanel({
                     size="sm"
                     lh={1.6}
                     style={{ userSelect: "text", cursor: "text" }}
-                    onMouseUp={onSelection}
+                    onMouseUp={() => onSelection(item.id)}
                   >
                     {item.statement}
                   </Text>
                 )}
-                <Text
-                  size="10px"
-                  c="dimmed"
-                  ff="monospace"
-                  mt={6}
-                >
-                  {item.futureRepo}/{item.filePath}/{item.fileName}/{item.language}
+                <Text size="10px" c="dimmed" ff="monospace" mt={6}>
+                  {item.futureRepo}/{item.filePath}/{item.fileName}/
+                  {item.language}
                 </Text>
               </Paper>
             ))

@@ -92,27 +92,30 @@ function RouteComponent() {
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
   function handleLeftSelection() {
-    handleSelection("left", (text) => {
-      const pageIndex = pages.findIndex((p) =>
-        p.text.includes(text.substring(0, 50))
-      );
-      if (pageIndex !== -1) {
-        setActivePage({
-          id: pages[pageIndex].id,
-          pageNumber: pages[pageIndex].pageNumber,
-        });
-      }
+    handleSelection("left", {
+      onLeftSelection: (text: string) => {
+        const pageIndex = pages.findIndex((p) =>
+          p.text.includes(text.substring(0, 50))
+        );
+
+        if (pageIndex !== -1) {
+          setActivePage({
+            id: pages[pageIndex].id,
+            pageNumber: pages[pageIndex].pageNumber,
+          });
+        }
+      },
     });
   }
 
-  function handleRightSelection() {
+  function handleRightSelection(extractId: string) {
     const ok = validate(futureRepo, filePath, fileName, language);
-
     if (!ok) {
       clearAll();
       return;
     }
-    handleSelection("right");
+
+    handleSelection("right", { extractId });
   }
 
   async function handleExtractToRight() {
@@ -232,7 +235,7 @@ function RouteComponent() {
       selection.text,
       macro
     );
-    console.log("[Route] updatedStatement =", updatedStatement);
+
     await updateExtract(defExtractId, updatedStatement);
 
     await createSymbolicRef({
@@ -452,8 +455,8 @@ function RouteComponent() {
             popup.source === "right"
               ? () => {
                   if (!selection) return;
-                  const extract = extracts.find((e) =>
-                    e.statement.includes(selection.text)
+                  const extract = extracts.find(
+                    (e) => e.id === selection.extractId
                   );
                   if (!extract) return;
 
@@ -468,9 +471,10 @@ function RouteComponent() {
             popup.source === "right"
               ? () => {
                   if (!selection) return;
-                  const extract = extracts.find((e) =>
-                    e.statement.includes(selection.text)
+                  const extract = extracts.find(
+                    (e) => e.id === selection.extractId
                   );
+
                   if (!extract) return;
 
                   handleOpenSymbolicRef(extract.id);
