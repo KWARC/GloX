@@ -1,11 +1,9 @@
-import { generateLatex } from "@/components/generateLatex";
-import { definiendumToLatex } from "@/server/text-selection";
-import { listDefiniendaByDocument } from "@/serverFns/definiendum.server";
-import { listExtractedText } from "@/serverFns/extractText.server";
+import { generateLatexWithDependencies } from "@/serverFns/latexGeneration.server";
 import {
   Box,
   Button,
   Group,
+  Loader,
   Paper,
   Stack,
   Text,
@@ -33,53 +31,29 @@ function CreateLatexPage() {
 
   const [editedLatex, setEditedLatex] = useState<string | null>(null);
 
-  const { data: extracts = [] } = useQuery({
-    queryKey: ["extracts", documentId],
-    queryFn: () => listExtractedText({ data: { documentId } as any }),
+  const { data: generatedLatex, isLoading } = useQuery({
+    queryKey: ["latex-with-deps", documentId],
+    queryFn: async () => {
+      if (!documentId) return "";
+      return generateLatexWithDependencies({
+        data: { documentId },
+      } as any);
+    },
     enabled: !!documentId,
   });
 
-  const { data: definitions = [] } = useQuery({
-    queryKey: [
-      "definitions",
-      documentId,
-      futureRepo,
-      filePath,
-      fileName,
-      language,
-    ],
-    queryFn: () =>
-      listDefiniendaByDocument({
-        data: { documentId: documentId! },
-      } as any),
-    enabled: !!documentId,
-  });
+  const displayLatex = editedLatex ?? generatedLatex ?? "";
 
-  const filteredExtracts = extracts.filter((e) => {
-    if (futureRepo && e.futureRepo !== futureRepo) return false;
-    if (filePath && e.filePath !== filePath) return false;
-    if (fileName && e.fileName !== fileName) return false;
-    if (language && e.language !== language) return false;
-    return true;
-  });
-
-  const filteredDefinitions = definitions.filter((d) => {
-    if (futureRepo && d.futureRepo !== futureRepo) return false;
-    if (filePath && d.filePath !== filePath) return false;
-    if (fileName && d.fileName !== fileName) return false;
-    if (language && d.language !== language) return false;
-    return true;
-  });
-
-  const latex = generateLatex({
-    title: "",
-    moduleName: fileName || "",
-    imports: ["{p?s}", "[a]{p?s}"],
-    definitions: filteredDefinitions.map(definiendumToLatex).filter(Boolean),
-    extracts: filteredExtracts.map((e) => e.statement),
-  });
-
-  const displayLatex = editedLatex ?? latex;
+  if (isLoading) {
+    return (
+      <Box p="md" h="100dvh">
+        <Stack align="center" justify="center" h="100%">
+          <Loader />
+          <Text>Generating LaTeX with dependencies…</Text>
+        </Stack>
+      </Box>
+    );
+  }
 
   return (
     <Box p="md" h="100dvh">
@@ -130,3 +104,4 @@ function CreateLatexPage() {
     </Box>
   );
 }
+
