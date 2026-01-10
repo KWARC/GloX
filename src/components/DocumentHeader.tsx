@@ -5,6 +5,7 @@ interface DocumentHeaderProps {
   filePath: string;
   fileName: string;
   language: string;
+  disabled?: boolean;
   onFutureRepoChange: (value: string) => void;
   onFilePathChange: (value: string) => void;
   onFileNameChange: (value: string) => void;
@@ -17,6 +18,7 @@ export function DocumentHeader({
   filePath,
   fileName,
   language,
+  disabled,
   onFutureRepoChange,
   onFilePathChange,
   onFileNameChange,
@@ -36,6 +38,7 @@ export function DocumentHeader({
             w={200}
             size="sm"
             error={errors.futureRepo}
+            disabled={disabled}
             styles={{ input: { fontWeight: 500 } }}
           />
         </Group>
@@ -51,6 +54,7 @@ export function DocumentHeader({
             w={200}
             size="sm"
             error={errors.filePath}
+            disabled={disabled}
             styles={{ input: { fontWeight: 500 } }}
           />
         </Group>
@@ -66,6 +70,7 @@ export function DocumentHeader({
             w={200}
             size="sm"
             error={errors.fileName}
+            disabled={disabled}
             styles={{ input: { fontWeight: 500 } }}
           />
         </Group>
@@ -81,6 +86,7 @@ export function DocumentHeader({
             w={120}
             size="sm"
             error={errors.language}
+            disabled={disabled}
             styles={{ input: { fontWeight: 500 } }}
           />
         </Group>

@@ -20,7 +20,7 @@ import {
 } from "@/server/text-selection";
 import { currentUser } from "@/serverFns/currentUser.server";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
-import { listExtractedText } from "@/serverFns/extractText.server";
+import { listDefinition } from "@/serverFns/extractDefinition.server";
 import { createSymbolicRef } from "@/serverFns/symbolicRef.server";
 import {
   ActionIcon,
@@ -62,8 +62,8 @@ function RouteComponent() {
   );
 
   const { data: extracts = [] } = useQuery({
-    queryKey: ["extracts", documentId],
-    queryFn: () => listExtractedText({ data: { documentId } as any }),
+    queryKey: ["definitions", documentId],
+    queryFn: () => listDefinition({ data: { documentId } as any }),
   });
 
   const [futureRepo, setFutureRepo] = useState("Glox");
@@ -75,13 +75,16 @@ function RouteComponent() {
   const [activePage, setActivePage] = useState<ActivePage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const [mode, setMode] = useState<"definition" | null>(null);
+  const [mode, setMode] = useState<"SymbolicRef" | null>(null);
   const [conceptUri, setConceptUri] = useState<string>("");
   const [selectedUri, setSelectedUri] = useState<string>("");
 
   const [defDialogOpen, setDefDialogOpen] = useState(false);
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
   const [defExtractText, setDefExtractText] = useState("");
+  const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(
+    null
+  );
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
@@ -92,6 +95,13 @@ function RouteComponent() {
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
   function handleLeftSelection() {
+    setLockedByExtractId(null);
+
+    if (!lockedByExtractId) {
+      const ok = validate(futureRepo, filePath, fileName, language);
+      if (!ok) return;
+    }
+
     handleSelection("left", {
       onLeftSelection: (text: string) => {
         const pageIndex = pages.findIndex((p) =>
@@ -109,11 +119,20 @@ function RouteComponent() {
   }
 
   function handleRightSelection(extractId: string) {
-    const ok = validate(futureRepo, filePath, fileName, language);
-    if (!ok) {
-      clearAll();
-      return;
-    }
+    const extract = extracts.find((e) => e.id === extractId);
+    if (!extract) return;
+
+    setFutureRepo(extract.futureRepo);
+    setFilePath(extract.filePath);
+    setFileName(extract.fileName);
+    setLanguage(extract.language);
+
+    setLockedByExtractId(extractId);
+
+    clearError("futureRepo");
+    clearError("filePath");
+    clearError("fileName");
+    clearError("language");
 
     handleSelection("right", { extractId });
   }
@@ -186,7 +205,7 @@ function RouteComponent() {
 
     setDefExtractId(extractId);
     setConceptUri(selection.text);
-    setMode("definition");
+    setMode("SymbolicRef");
 
     clearPopupOnly();
   }
@@ -320,6 +339,7 @@ function RouteComponent() {
             filePath={filePath}
             fileName={fileName}
             language={language}
+            disabled={!!lockedByExtractId}
             onFutureRepoChange={(value) => {
               setFutureRepo(value);
               clearError("futureRepo");
@@ -485,7 +505,7 @@ function RouteComponent() {
         />
       )}
 
-      {mode === "definition" && (
+      {mode === "SymbolicRef" && (
         <SymbolicRef
           conceptUri={conceptUri}
           selectedUri={selectedUri}

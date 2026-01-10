@@ -1,14 +1,14 @@
 import prisma from "@/lib/prisma";
 import type {
-  CreateExtractedTextInput,
-  UpdateExtractedTextInput,
+  CreateDefinitionInput,
+  UpdateDefinitionInput,
 } from "@/server/document/document.types";
 import { createServerFn } from "@tanstack/react-start";
 
-export const createExtractedText = createServerFn<
+export const createDefinition = createServerFn<
   any,
   "POST",
-  CreateExtractedTextInput,
+  CreateDefinitionInput,
   Promise<any>
 >({ method: "POST" }).handler(async (ctx) => {
   const {
@@ -21,7 +21,7 @@ export const createExtractedText = createServerFn<
     filePath,
     fileName,
     language,
-  } = (ctx.data ?? {}) as CreateExtractedTextInput;
+  } = (ctx.data ?? {}) as CreateDefinitionInput;
 
   if (
     !documentId ||
@@ -34,10 +34,10 @@ export const createExtractedText = createServerFn<
     !fileName?.trim() ||
     !language?.trim()
   ) {
-    throw new Error("Missing extracted text fields");
+    throw new Error("Missing definition fields");
   }
 
-  const extracted = await prisma.extractedText.create({
+  const definition = await prisma.definition.create({
     data: {
       documentId,
       documentPageId,
@@ -56,10 +56,10 @@ export const createExtractedText = createServerFn<
     data: { status: "TEXT_EXTRACTED" },
   });
 
-  return extracted;
+  return definition;
 });
 
-export const listExtractedText = createServerFn({ method: "GET" }).handler(
+export const listDefinition = createServerFn({ method: "GET" }).handler(
   async (ctx) => {
     const data = (ctx.data ?? {}) as Partial<{ documentId: string }>;
 
@@ -67,26 +67,26 @@ export const listExtractedText = createServerFn({ method: "GET" }).handler(
       throw new Error("documentId is required");
     }
 
-    return prisma.extractedText.findMany({
+    return prisma.definition.findMany({
       where: { documentId: data.documentId },
       orderBy: { createdAt: "asc" },
     });
   }
 );
 
-export const updateExtractedText = createServerFn<
+export const updateDefinition = createServerFn<
   any,
   "POST",
-  UpdateExtractedTextInput,
+  UpdateDefinitionInput,
   Promise<any>
 >({ method: "POST" }).handler(async (ctx) => {
-  const data = (ctx.data ?? {}) as Partial<UpdateExtractedTextInput>;
+  const data = (ctx.data ?? {}) as Partial<UpdateDefinitionInput>;
 
   if (!data.id || !data.statement?.trim()) {
     throw new Error("Missing update fields");
   }
 
-  return prisma.extractedText.update({
+  return prisma.definition.update({
     where: { id: data.id },
     data: { statement: data.statement },
   });

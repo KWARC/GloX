@@ -25,12 +25,10 @@ export const createSymbolicRef = createServerFn({
     throw new Error("Missing data");
   }
 
-  return prisma.definition.create({
+  return prisma.symbolicReference.create({
     data: ctx.data,
   });
 });
-
-
 
 export const listSymbolicRef = createServerFn<
   any,
@@ -45,7 +43,7 @@ export const listSymbolicRef = createServerFn<
     throw new Error("Definiendum ID is required");
   }
 
-  return prisma.definition.findMany({
+  return prisma.symbolicReference.findMany({
     where: { id },
     orderBy: { createdAt: "desc" },
   });
@@ -61,10 +59,10 @@ export const deleteSymbolicRef = createServerFn<
   const { id } = ctx.data ?? {};
 
   if (!id?.trim()) {
-    throw new Error("Definition ID is required");
+    throw new Error("symbolicReference ID is required");
   }
 
-  await prisma.definition.delete({
+  await prisma.symbolicReference.delete({
     where: { id },
   });
 

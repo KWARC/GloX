@@ -19,12 +19,14 @@ model Document {
   fileHash String @unique
   mimeType String
   fileSize Int
-  userId   String
-  user     User   @relation(fields: [userId], references: [id])
 
-  status         DocumentStatus  @default(UPLOADED)
-  pages          DocumentPage[]
-  extractedTexts ExtractedText[]
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  status      DocumentStatus @default(UPLOADED)
+  pages       DocumentPage[]
+  definitions Definition[]
+  latexTables LatexTable[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -38,7 +40,7 @@ model DocumentPage {
   pageNumber Int
   text       String @db.Text
 
-  extractedTexts ExtractedText[]
+  definitions Definition[]
 
   createdAt DateTime @default(now())
 
@@ -70,10 +72,11 @@ model Definiendum {
 
   futureRepo String
   filePath   String
-  fileName   String 
+  fileName   String
   language   String @default("en")
 
-  definitions Definition[]
+  symbolicReferences SymbolicReference[]
+  definitions        Definition[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -82,8 +85,9 @@ model Definiendum {
   @@index([futureRepo])
 }
 
-model Definition {
-  id   String @id @default(uuid())
+model SymbolicReference {
+  id String @id @default(uuid())
+
   name String
 
   conceptUri String @default("Glox")
@@ -95,6 +99,8 @@ model Definition {
   definiendumId String?
   definiendum   Definiendum? @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
 
+  definitions Definition[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -102,7 +108,7 @@ model Definition {
   @@index([archive, filePath, fileName, conceptUri, language])
 }
 
-model ExtractedText {
+model Definition {
   id String @id @default(uuid())
 
   documentId String
@@ -116,6 +122,12 @@ model ExtractedText {
   originalText String @db.Text
   statement    String @db.Text
 
+  symbolicReferenceId String?
+  symbolicReference   SymbolicReference? @relation(fields: [symbolicReferenceId], references: [id])
+
+  definiendumId String?
+  definiendum   Definiendum? @relation(fields: [definiendumId], references: [id])
+
   futureRepo String @default("Glox")
   filePath   String @default("Glox")
   fileName   String @default("Glox")
@@ -127,5 +139,29 @@ model ExtractedText {
   @@index([documentId])
   @@index([documentPageId])
   @@index([documentId, pageNumber])
+  @@index([symbolicReferenceId])
+  @@index([definiendumId])
   @@index([futureRepo, filePath, fileName, language])
 }
+
+model LatexTable {
+  id String @id @default(uuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  futureRepo String
+  filePath   String
+  fileName   String
+  language   String
+
+  finalLatex String  @db.Text
+  history    Json    @db.JsonB
+  isFinal    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([documentId, futureRepo, filePath, fileName, language])
+}
+

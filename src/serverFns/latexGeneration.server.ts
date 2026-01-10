@@ -1,9 +1,6 @@
 import prisma from "@/lib/prisma";
 import { createServerFn } from "@tanstack/react-start";
 
-/**
- * Extracts all symbol names from LaTeX macros in the given text
- */
 function extractSymbols(latex: string): {
   defined: Set<string>;
   referenced: Set<string>;
@@ -11,21 +8,17 @@ function extractSymbols(latex: string): {
   const defined = new Set<string>();
   const referenced = new Set<string>();
 
-  // Match \definiendum{symbol} or \definiendum[alias]{symbol}
   const definiendumRegex = /\\definiendum(?:\[[^\]]*\])?\{([^}]+)\}/g;
   let match;
   while ((match = definiendumRegex.exec(latex)) !== null) {
     defined.add(match[1].trim());
   }
 
-  // Match \definame{symbol} or \definame[alias]{symbol}
   const definameRegex = /\\definame(?:\[[^\]]*\])?\{([^}]+)\}/g;
   while ((match = definameRegex.exec(latex)) !== null) {
     defined.add(match[1].trim());
   }
 
-  // Match \sn{symbol}, \sr{symbol}, \sns{symbol}
-  // ✅ extract ONLY the symbol name (before '?')
   const refRegex = /\\s(?:n|r|ns)\{([^}?]+)\?/g;
   while ((match = refRegex.exec(latex)) !== null) {
     referenced.add(match[1].trim());
@@ -34,9 +27,6 @@ function extractSymbols(latex: string): {
   return { defined, referenced };
 }
 
-/**
- * Server function to generate complete LaTeX with dependency resolution
- */
 export const generateLatexWithDependencies = createServerFn<
   any,
   "POST",
@@ -56,8 +46,7 @@ export const generateLatexWithDependencies = createServerFn<
     throw new Error("documentId and path info are required");
   }
 
-  // 1. Fetch all extracted text for this document
-  const extracts = await prisma.extractedText.findMany({
+  const definitions = await prisma.definition.findMany({
     where: {
       documentId,
       futureRepo,
@@ -69,17 +58,15 @@ export const generateLatexWithDependencies = createServerFn<
     orderBy: { createdAt: "asc" },
   });
 
-  // 2. Scan all statements to find defined and referenced symbols
   const allDefined = new Set<string>();
   const allReferenced = new Set<string>();
 
-  for (const extract of extracts) {
-    const { defined, referenced } = extractSymbols(extract.statement);
+  for (const definition of definitions) {
+    const { defined, referenced } = extractSymbols(definition.statement);
     defined.forEach((sym) => allDefined.add(sym));
     referenced.forEach((sym) => allReferenced.add(sym));
   }
 
-  // 3. Query database for symbol metadata
   const allSymbols = new Set([...allDefined, ...allReferenced]);
 
   const definienda = await prisma.definiendum.findMany({
@@ -88,18 +75,16 @@ export const generateLatexWithDependencies = createServerFn<
     },
   });
 
-  const definitions = await prisma.definition.findMany({
+  const symbolicReferences = await prisma.symbolicReference.findMany({
     where: {
       name: { in: Array.from(allReferenced) },
     },
   });
 
-  // 4. Build \symdecl* declarations
   const symdecls: string[] = [];
   const declaredSymbols = new Set<string>();
 
   for (const def of definienda) {
-    // Only emit if symbol is actually defined in content AND symbolDeclared is true
     if (
       allDefined.has(def.symbolName) &&
       def.symbolDeclared &&
@@ -110,39 +95,31 @@ export const generateLatexWithDependencies = createServerFn<
     }
   }
 
-  // 5. Build module imports
   const imports: string[] = [];
   const importedModules = new Set<string>();
 
-  for (const definition of definitions) {
-    const moduleKey = `${definition.archive}/${definition.filePath}/${definition.fileName}`;
+  for (const symbolicReference of symbolicReferences) {
+    const moduleKey = `${symbolicReference.archive}/${symbolicReference.filePath}/${symbolicReference.fileName}`;
 
-    if (importedModules.has(moduleKey)) {
-      continue; // Skip duplicates
-    }
+    if (importedModules.has(moduleKey)) continue;
 
     let importStmt: string;
-    if (definition.archive === "mod") {
-      // \importmodule{mod?fileName}
-      importStmt = `\\importmodule{${definition.archive}?${definition.fileName}}`;
+    if (symbolicReference.archive === "mod") {
+      importStmt = `\\importmodule{${symbolicReference.archive}?${symbolicReference.fileName}}`;
     } else {
-      // \usemodule[archive/filePath]{mod?fileName}
-      importStmt = `\\usemodule[${definition.archive}/${definition.filePath}]{mod?${definition.fileName}}`;
+      importStmt = `\\usemodule[${symbolicReference.archive}/${symbolicReference.filePath}]{mod?${symbolicReference.fileName}}`;
     }
 
     imports.push(importStmt);
     importedModules.add(moduleKey);
   }
 
-  // 6. Generate final LaTeX
-  const title = "";
-  const moduleName = "";
-  const statements = extracts.map((e) => e.statement);
+  const statements = definitions.map((e) => e.statement);
 
   return `\\documentclass{stex}
 \\libinput{preamble}
 \\begin{document}
-\\begin{smodule}[title={${title}}]{${moduleName}}
+\\begin{smodule}[title={${fileName}}]{${fileName}}
 ${imports.join("\n")}
 
 ${symdecls.join("\n")}

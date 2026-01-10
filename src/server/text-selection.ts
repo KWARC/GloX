@@ -1,9 +1,9 @@
 import { queryClient } from "@/queryClient";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
 import {
-  createExtractedText,
-  updateExtractedText,
-} from "@/serverFns/extractText.server";
+  createDefinition,
+  updateDefinition,
+} from "@/serverFns/extractDefinition.server";
 import { useState } from "react";
 
 export interface DocumentPage {
@@ -116,7 +116,7 @@ export function useExtractionActions(documentId: string) {
     fileName: string;
     language: string;
   }) {
-    await createExtractedText({
+    await createDefinition({
       data: {
         documentId,
         documentPageId: params.documentPageId,
@@ -133,7 +133,7 @@ export function useExtractionActions(documentId: string) {
     } as any);
 
     await queryClient.invalidateQueries({
-      queryKey: ["extracts", documentId],
+      queryKey: ["definitions", documentId],
     });
   }
 
@@ -161,12 +161,12 @@ export function useExtractionActions(documentId: string) {
   }
 
   async function updateExtract(id: string, statement: string) {
-    await updateExtractedText({
+    await updateDefinition({
       data: { id, statement },
     } as any);
 
     await queryClient.invalidateQueries({
-      queryKey: ["extracts", documentId],
+      queryKey: ["definitions", documentId],
     });
   }
 
@@ -277,7 +277,7 @@ export function replaceFirstUnwrapped(
    *  - avoids replacing inside \sr{ } or \sn{ }
    */
   const pattern =
-    `(?<!\\\\sr\\{|\\\\sn\\{)` + // not already wrapped
+    `(?<!\\\\sr\\{|\\\\sn\\{)` + 
     `\\b` +
     parts.join(`\\s+`) +
     `\\b`;
