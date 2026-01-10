@@ -44,6 +44,7 @@ function CreateLatexPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [savingFinal, setSavingFinal] = useState(false);
+  const [isFromHistory, setIsFromHistory] = useState(false);
 
   const { data: generatedLatex, isLoading } = useQuery({
     queryKey: ["latex-with-deps", documentId],
@@ -59,62 +60,71 @@ function CreateLatexPage() {
   const displayLatex = editedLatex ?? generatedLatex ?? "";
 
   const handleDownload = () => {
-    const blob = new Blob([displayLatex], { type: "text/plain" });
+    const safeFileName = fileName?.trim() || "document";
+    const safeLanguage = language?.trim() || "en";
+
+    const finalName = `${safeFileName}.${safeLanguage}.tex`;
+
+    const blob = new Blob([displayLatex], {
+      type: "application/x-tex",
+    });
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
+
     a.href = url;
-    a.download = fileName || "document.tex";
+    a.download = finalName;
+
     document.body.appendChild(a);
     a.click();
+
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
- const handleSaveDraft = async () => {
-  if (!documentId) return;
+  const handleSaveDraft = async () => {
+    if (!documentId) return;
 
-  try {
-    setSavingDraft(true);
-    await saveLatexDraft({
-      data: {
-        documentId,
-        futureRepo,
-        filePath,
-        fileName,
-        language,
-        latex: displayLatex,
-      },
-    } as any);
+    try {
+      setSavingDraft(true);
+      await saveLatexDraft({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+          latex: displayLatex,
+        },
+      } as any);
 
-    await refetchHistory();
-  } finally {
-    setSavingDraft(false);
-  }
-};
+      await refetchHistory();
+    } finally {
+      setSavingDraft(false);
+    }
+  };
 
+  const handleSaveFinal = async () => {
+    if (!documentId) return;
 
-const handleSaveFinal = async () => {
-  if (!documentId) return;
+    try {
+      setSavingFinal(true);
+      await saveLatexFinal({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+          latex: displayLatex,
+        },
+      } as any);
 
-  try {
-    setSavingFinal(true);
-    await saveLatexFinal({
-      data: {
-        documentId,
-        futureRepo,
-        filePath,
-        fileName,
-        language,
-        latex: displayLatex,
-      },
-    } as any);
-
-    await refetchHistory();
-  } finally {
-    setSavingFinal(false);
-  }
-};
-
+      await refetchHistory();
+    } finally {
+      setSavingFinal(false);
+    }
+  };
 
   const {
     data: historyData,
@@ -177,6 +187,17 @@ const handleSaveFinal = async () => {
             </Group>
 
             <Group gap="xs">
+              <Tooltip label="View Version History">
+                <Button
+                  size="xs"
+                  variant="light"
+                  onClick={() => setHistoryOpen(true)}
+                  disabled={!historyData?.history.length}
+                >
+                  Version History
+                </Button>
+              </Tooltip>
+
               <Tooltip label="Download LaTeX">
                 <ActionIcon
                   variant="light"
@@ -201,7 +222,7 @@ const handleSaveFinal = async () => {
         <Modal
           opened={historyOpen}
           onClose={() => setHistoryOpen(false)}
-          title="LaTeX History"
+          title="LaTeX Version History"
           size="lg"
         >
           <Stack>
@@ -224,6 +245,7 @@ const handleSaveFinal = async () => {
                     size="xs"
                     onClick={() => {
                       setEditedLatex(entry.latex);
+                      setIsFromHistory(true);
                       setHistoryOpen(false);
                     }}
                   >
@@ -235,30 +257,6 @@ const handleSaveFinal = async () => {
           </Stack>
         </Modal>
 
-        <Group gap="xs">
-          <Tooltip label="View History">
-            <Button
-              size="xs"
-              variant="light"
-              onClick={() => setHistoryOpen(true)}
-              disabled={!historyData?.history.length}
-            >
-              History
-            </Button>
-          </Tooltip>
-
-          <Tooltip label="Download LaTeX">
-            <ActionIcon
-              variant="light"
-              color="green"
-              size="lg"
-              onClick={handleDownload}
-            >
-              <Download size={18} />
-            </ActionIcon>
-          </Tooltip>
-        </Group>
-
         <Paper
           withBorder
           shadow="md"
@@ -267,7 +265,10 @@ const handleSaveFinal = async () => {
         >
           <Textarea
             value={displayLatex}
-            onChange={(e) => setEditedLatex(e.currentTarget.value)}
+            onChange={(e) => {
+              setEditedLatex(e.currentTarget.value);
+              setIsFromHistory(false);
+            }}
             resize="none"
             placeholder="Your LaTeX content will appear here..."
             styles={{
@@ -307,13 +308,22 @@ const handleSaveFinal = async () => {
               </Button>
 
               <Group gap="sm">
-                <Button
-                  variant="default"
-                  onClick={handleSaveDraft}
-                  loading={savingDraft}
+                <Tooltip
+                  label={
+                    isFromHistory
+                      ? "Drafts are disabled for restored history. Edit or save final."
+                      : undefined
+                  }
                 >
-                  Save Draft
-                </Button>
+                  <Button
+                    variant="default"
+                    onClick={handleSaveDraft}
+                    loading={savingDraft}
+                    disabled={isFromHistory}
+                  >
+                    Save Draft
+                  </Button>
+                </Tooltip>
 
                 <Button
                   variant="gradient"
