@@ -82,6 +82,9 @@ function RouteComponent() {
   const [defDialogOpen, setDefDialogOpen] = useState(false);
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
   const [defExtractText, setDefExtractText] = useState("");
+  const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(
+    null
+  );
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
@@ -92,6 +95,13 @@ function RouteComponent() {
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
   function handleLeftSelection() {
+    setLockedByExtractId(null);
+
+    if (!lockedByExtractId) {
+      const ok = validate(futureRepo, filePath, fileName, language);
+      if (!ok) return;
+    }
+
     handleSelection("left", {
       onLeftSelection: (text: string) => {
         const pageIndex = pages.findIndex((p) =>
@@ -109,11 +119,20 @@ function RouteComponent() {
   }
 
   function handleRightSelection(extractId: string) {
-    const ok = validate(futureRepo, filePath, fileName, language);
-    if (!ok) {
-      clearAll();
-      return;
-    }
+    const extract = extracts.find((e) => e.id === extractId);
+    if (!extract) return;
+
+    setFutureRepo(extract.futureRepo);
+    setFilePath(extract.filePath);
+    setFileName(extract.fileName);
+    setLanguage(extract.language);
+
+    setLockedByExtractId(extractId);
+
+    clearError("futureRepo");
+    clearError("filePath");
+    clearError("fileName");
+    clearError("language");
 
     handleSelection("right", { extractId });
   }
@@ -320,6 +339,7 @@ function RouteComponent() {
             filePath={filePath}
             fileName={fileName}
             language={language}
+            disabled={!!lockedByExtractId}
             onFutureRepoChange={(value) => {
               setFutureRepo(value);
               clearError("futureRepo");
