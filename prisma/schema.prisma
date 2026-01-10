@@ -26,6 +26,7 @@ model Document {
   status      DocumentStatus @default(UPLOADED)
   pages       DocumentPage[]
   definitions Definition[]
+  latexTables LatexTable[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -132,8 +133,6 @@ model Definition {
   fileName   String @default("Glox")
   language   String @default("en")
 
-  latexTables LatexTable[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -148,17 +147,21 @@ model Definition {
 model LatexTable {
   id String @id @default(uuid())
 
-  definitionId String
-  definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  finalLatex String @db.Text
+  futureRepo String
+  filePath   String
+  fileName   String
+  language   String
 
-  history Json    @db.JsonB
-  isFinal Boolean @default(false)
+  finalLatex String  @db.Text
+  history    Json    @db.JsonB
+  isFinal    Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([definitionId])
-  @@index([definitionId])
+  @@index([documentId, futureRepo, filePath, fileName, language])
 }
+
