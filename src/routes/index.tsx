@@ -6,10 +6,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 export const Route = createFileRoute("/")({
-  component: IndexPage,
+  component: App,
 });
 
-function IndexPage() {
+function App() {
   const [opened, setOpened] = useState(false);
 
   const { data: user } = useQuery({

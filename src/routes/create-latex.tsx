@@ -1,3 +1,4 @@
+import { currentUser } from "@/serverFns/currentUser.server";
 import {
   getLatexHistory,
   saveLatexDraft,
@@ -20,11 +21,15 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/create-latex")({
+  beforeLoad: async () => {
+    const user = await currentUser();
+    if (!user?.loggedIn) throw redirect({ to: "/login" });
+  },
   validateSearch: (search: {
     documentId?: string;
     futureRepo?: string;
