@@ -19,7 +19,7 @@ export enum DocumentStatus {
   FAILED = "FAILED",
 }
 
-export type CreateExtractedTextInput = {
+export type CreateDefinitionInput = {
   documentId: string;
   documentPageId: string;
   pageNumber: number;
@@ -33,7 +33,7 @@ export type CreateExtractedTextInput = {
   language: string;
 };
 
-export type UpdateExtractedTextInput = {
+export type UpdateDefinitionInput = {
   id: string;
   statement: string;
 };

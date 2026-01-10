@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { createServerFn } from "@tanstack/react-start";
 
 /**
- * Extracts all symbol names from LaTeX macros in the given text
+ * definitions all symbol names from LaTeX macros in the given text
  */
 function extractSymbols(latex: string): {
   defined: Set<string>;
@@ -25,7 +25,7 @@ function extractSymbols(latex: string): {
   }
 
   // Match \sn{symbol}, \sr{symbol}, \sns{symbol}
-  // ✅ extract ONLY the symbol name (before '?')
+  // ✅ symbolicReference ONLY the symbol name (before '?')
   const refRegex = /\\s(?:n|r|ns)\{([^}?]+)\?/g;
   while ((match = refRegex.exec(latex)) !== null) {
     referenced.add(match[1].trim());
@@ -57,7 +57,7 @@ export const generateLatexWithDependencies = createServerFn<
   }
 
   // 1. Fetch all extracted text for this document
-  const extracts = await prisma.extractedText.findMany({
+  const definitions = await prisma.definition.findMany({
     where: {
       documentId,
       futureRepo,
@@ -73,8 +73,8 @@ export const generateLatexWithDependencies = createServerFn<
   const allDefined = new Set<string>();
   const allReferenced = new Set<string>();
 
-  for (const extract of extracts) {
-    const { defined, referenced } = extractSymbols(extract.statement);
+  for (const definition of definitions) {
+    const { defined, referenced } = extractSymbols(definition.statement);
     defined.forEach((sym) => allDefined.add(sym));
     referenced.forEach((sym) => allReferenced.add(sym));
   }
@@ -88,7 +88,7 @@ export const generateLatexWithDependencies = createServerFn<
     },
   });
 
-  const definitions = await prisma.definition.findMany({
+  const symbolicReferences = await prisma.symbolicReference.findMany({
     where: {
       name: { in: Array.from(allReferenced) },
     },
@@ -114,20 +114,18 @@ export const generateLatexWithDependencies = createServerFn<
   const imports: string[] = [];
   const importedModules = new Set<string>();
 
-  for (const definition of definitions) {
-    const moduleKey = `${definition.archive}/${definition.filePath}/${definition.fileName}`;
+  for (const symbolicReference of symbolicReferences) {
+    const moduleKey = `${symbolicReference.archive}/${symbolicReference.filePath}/${symbolicReference.fileName}`;
 
-    if (importedModules.has(moduleKey)) {
-      continue; // Skip duplicates
-    }
+    if (importedModules.has(moduleKey)) continue;
 
     let importStmt: string;
-    if (definition.archive === "mod") {
+    if (symbolicReference.archive === "mod") {
       // \importmodule{mod?fileName}
-      importStmt = `\\importmodule{${definition.archive}?${definition.fileName}}`;
+      importStmt = `\\importmodule{${symbolicReference.archive}?${symbolicReference.fileName}}`;
     } else {
       // \usemodule[archive/filePath]{mod?fileName}
-      importStmt = `\\usemodule[${definition.archive}/${definition.filePath}]{mod?${definition.fileName}}`;
+      importStmt = `\\usemodule[${symbolicReference.archive}/${symbolicReference.filePath}]{mod?${symbolicReference.fileName}}`;
     }
 
     imports.push(importStmt);
@@ -137,7 +135,7 @@ export const generateLatexWithDependencies = createServerFn<
   // 6. Generate final LaTeX
   const title = "";
   const moduleName = "";
-  const statements = extracts.map((e) => e.statement);
+  const statements = definitions.map((e) => e.statement);
 
   return `\\documentclass{stex}
 \\libinput{preamble}
