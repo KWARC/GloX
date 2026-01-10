@@ -277,7 +277,7 @@ export function replaceFirstUnwrapped(
    *  - avoids replacing inside \sr{ } or \sn{ }
    */
   const pattern =
-    `(?<!\\\\sr\\{|\\\\sn\\{)` + // not already wrapped
+    `(?<!\\\\sr\\{|\\\\sn\\{)` + 
     `\\b` +
     parts.join(`\\s+`) +
     `\\b`;
