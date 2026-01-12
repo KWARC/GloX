@@ -39,10 +39,13 @@ export interface ExtractedItem {
   fileName: string;
   language: string;
 }
+
 export type TextSelection = {
   text: string;
   isWholeStatement: boolean;
   extractId?: string;
+  startOffset: number;
+  endOffset: number;
 };
 
 export function useTextSelection() {
@@ -71,10 +74,14 @@ export function useTextSelection() {
 
     const rect = sel.getRangeAt(0).getBoundingClientRect();
 
+    const range = sel.getRangeAt(0);
+
     setSelection({
       text,
       extractId: options?.extractId,
       isWholeStatement,
+      startOffset: range.startOffset,
+      endOffset: range.endOffset,
     });
 
     setPopup({
@@ -258,35 +265,6 @@ export function buildSymbolicRefMacro(selection: string, symbol: string) {
   return sel === sym ? `\\sn{${key}}` : `\\sr{${key}}{${sel}}`;
 }
 
-export function replaceFirstUnwrapped(
-  text: string,
-  target: string,
-  replacement: string
-): string {
-  // Split target into words and escape safely
-  const parts = target
-    .trim()
-    .split(/\s+/)
-    .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-
-  /**
-   * Build pattern:
-   *  - \bsoftware\b
-   *  - \bsoftware\s+engineering\b
-   *  - tolerates newlines / indentation
-   *  - avoids replacing inside \sr{ } or \sn{ }
-   */
-  const pattern =
-    `(?<!\\\\sr\\{|\\\\sn\\{)` + 
-    `\\b` +
-    parts.join(`\\s+`) +
-    `\\b`;
-
-  const regex = new RegExp(pattern, "i");
-
-  return text.replace(regex, replacement);
-}
-
 export function definiendumToLatex(d: {
   symbolName: string;
   alias: string | null;
@@ -299,4 +277,13 @@ export function definiendumToLatex(d: {
   }
 
   return `\\symdef{${d.symbolName}}{}`;
+}
+
+export function replaceAtOffset(
+  text: string,
+  start: number,
+  end: number,
+  replacement: string
+): string {
+  return text.slice(0, start) + replacement + text.slice(end);
 }

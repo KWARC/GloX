@@ -13,7 +13,7 @@ import {
   buildDefiniendumMacro,
   buildSymbolicRefMacro,
   replaceAllUnwrapped,
-  replaceFirstUnwrapped,
+  replaceAtOffset,
   useExtractionActions,
   useTextSelection,
   useValidation,
@@ -244,9 +244,10 @@ function RouteComponent() {
     console.log({ extract }, { selection });
     const macro = buildSymbolicRefMacro(selection.text, parsed.symbol);
 
-    const updatedStatement = replaceFirstUnwrapped(
+    const updatedStatement = replaceAtOffset(
       extract.statement,
-      selection.text,
+      selection.startOffset,
+      selection.endOffset,
       macro
     );
 
