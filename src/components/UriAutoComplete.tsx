@@ -6,10 +6,10 @@ import {
   ScrollArea,
   useCombobox,
 } from "@mantine/core";
+import { useDebouncedValue } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
 
 interface UriAutoCompleteProps {
-  selectedText: string;
   value: string;
   onChange: (value: string) => void;
   label?: string;
@@ -17,43 +17,27 @@ interface UriAutoCompleteProps {
 }
 
 export function UriAutoComplete({
-  selectedText,
   value,
   onChange,
   label,
   placeholder,
 }: UriAutoCompleteProps) {
   const combobox = useCombobox({
-    onDropdownClose: () => {
-      combobox.resetSelectedOption();
-    },
+    onDropdownClose: () => combobox.resetSelectedOption(),
   });
 
+  const [debouncedValue] = useDebouncedValue(value, 300);
   const {
-    data: allOptions = [],
+    data: options = [],
     isFetching,
   } = useQuery({
-    queryKey: ["uri-search", selectedText],
+    queryKey: ["uri-search", debouncedValue],
     queryFn: () =>
       searchUriUsingSubstr({
-        data: { input: selectedText },
+        data: { input: debouncedValue },
       } as any),
-    enabled: !!selectedText,
+    enabled: debouncedValue.length >= 2,
   });
-
-  const filteredOptions = value
-    ? allOptions.filter((uri) =>
-        uri.toLowerCase().includes(value.toLowerCase())
-      )
-    : allOptions;
-
-  if (allOptions.length > 0 && !combobox.dropdownOpened && !value) {
-    combobox.openDropdown();
-  }
-
-  const openDropdown = () => {
-    combobox.openDropdown();
-  };
 
   return (
     <Combobox
@@ -71,11 +55,11 @@ export function UriAutoComplete({
           label={label}
           placeholder={placeholder}
           value={value}
-          onFocus={openDropdown}
-          onClick={openDropdown}
+          onFocus={() => combobox.openDropdown()}
+          onClick={() => combobox.openDropdown()}
           onChange={(event) => {
             onChange(event.currentTarget.value);
-            openDropdown();
+            combobox.openDropdown();
           }}
           rightSection={
             isFetching ? <Loader size="xs" /> : <Combobox.Chevron />
@@ -87,13 +71,13 @@ export function UriAutoComplete({
       <Combobox.Dropdown>
         <Combobox.Options>
           <ScrollArea.Autosize mah={200}>
-            {isFetching && filteredOptions.length === 0 ? (
+            {isFetching && options.length === 0 ? (
               <Combobox.Empty>Loading…</Combobox.Empty>
-            ) : filteredOptions.length === 0 ? (
-              <Combobox.Empty>No matching URIs</Combobox.Empty>
+            ) : options.length === 0 ? (
+              <Combobox.Empty>No URIs found</Combobox.Empty>
             ) : (
-              filteredOptions.map((option) => (
-                <Combobox.Option value={option} key={option}>
+              options.map((option) => (
+                <Combobox.Option key={option} value={option}>
                   {option}
                 </Combobox.Option>
               ))
