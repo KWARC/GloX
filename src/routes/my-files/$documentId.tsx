@@ -94,7 +94,7 @@ function RouteComponent() {
 
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
-  function handleLeftSelection() {
+  function handleLeftSelection(pageId: string) {
     setLockedByExtractId(null);
 
     if (!lockedByExtractId) {
@@ -102,19 +102,14 @@ function RouteComponent() {
       if (!ok) return;
     }
 
-    handleSelection("left", {
-      onLeftSelection: (text: string) => {
-        const pageIndex = pages.findIndex((p) =>
-          p.text.includes(text.substring(0, 50))
-        );
+    handleSelection("left");
 
-        if (pageIndex !== -1) {
-          setActivePage({
-            id: pages[pageIndex].id,
-            pageNumber: pages[pageIndex].pageNumber,
-          });
-        }
-      },
+    const page = pages.find((p) => p.id === pageId);
+    if (!page) return;
+
+    setActivePage({
+      id: page.id,
+      pageNumber: page.pageNumber,
     });
   }
 

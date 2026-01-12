@@ -3,7 +3,7 @@ import { DocumentPage } from "generated/prisma/browser";
 
 interface DocumentPagesPanelProps {
   pages: DocumentPage[];
-  onSelection: () => void;
+  onSelection: (pageId: string) => void;
 }
 
 export function DocumentPagesPanel({
@@ -12,7 +12,7 @@ export function DocumentPagesPanel({
 }: DocumentPagesPanelProps) {
   return (
     <Paper withBorder h="100%" radius="md">
-      <ScrollArea h="100%" onMouseUp={onSelection}>
+      <ScrollArea h="100%">
         <Stack p="lg" gap="lg">
           {pages.map((page) => (
             <Box key={page.id}>
@@ -28,12 +28,14 @@ export function DocumentPagesPanel({
                   userSelect: "text",
                   cursor: "text",
                 }}
-                onMouseUp={onSelection}
+                onMouseUp={() => onSelection(page.id)}
               >
                 {page.text}
               </Text>
 
-              {page.id !== pages[pages.length - 1]?.id && <Divider mt="lg" />}
+              {page.id !== pages[pages.length - 1]?.id && (
+                <Divider mt="lg" />
+              )}
             </Box>
           ))}
         </Stack>
