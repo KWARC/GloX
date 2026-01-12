@@ -6,6 +6,18 @@ export type LatexDraft = {
   savedAt: string;
 };
 
+export type FinalizedLatexDocument = {
+  id: number;
+  documentId: string;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
+  finalLatex: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 function normalizeHistory(value: unknown): LatexDraft[] {
   if (!Array.isArray(value)) return [];
 
@@ -131,4 +143,18 @@ export const getLatexHistory = createServerFn<
     finalLatex: record?.finalLatex ?? "",
     isFinal: record?.isFinal ?? false,
   };
+});
+
+export const getFinalizedDocuments = createServerFn<
+  any,
+  "GET",
+  void,
+  FinalizedLatexDocument[]
+>({ method: "GET" }).handler(async () => {
+  const finalizedDocs = await prisma.latexTable.findMany({
+    where: { isFinal: true },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return finalizedDocs;
 });
