@@ -66,9 +66,9 @@ function RouteComponent() {
     queryFn: () => listDefinition({ data: { documentId } as any }),
   });
 
-  const [futureRepo, setFutureRepo] = useState("Glox");
-  const [filePath, setFilePath] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [futureRepo, setFutureRepo] = useState("smglom/softeng");
+  const [filePath, setFilePath] = useState("mod");
+  const [fileName, setFileName] = useState("Software");
   const [language, setLanguage] = useState("en");
   const { errors, validate, clearError } = useValidation();
 

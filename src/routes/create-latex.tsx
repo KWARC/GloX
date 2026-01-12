@@ -126,6 +126,7 @@ function CreateLatexPage() {
       } as any);
 
       await refetchHistory();
+      navigate({ to: "/" });
     } finally {
       setSavingFinal(false);
     }
