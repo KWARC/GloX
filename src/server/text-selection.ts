@@ -265,20 +265,6 @@ export function buildSymbolicRefMacro(selection: string, symbol: string) {
   return sel === sym ? `\\sn{${key}}` : `\\sr{${key}}{${sel}}`;
 }
 
-export function definiendumToLatex(d: {
-  symbolName: string;
-  alias: string | null;
-  symbolDeclared: boolean;
-}) {
-  if (!d.symbolDeclared) return "";
-
-  if (d.alias) {
-    return `\\symdef{${d.symbolName}}{${d.alias}}`;
-  }
-
-  return `\\symdef{${d.symbolName}}{}`;
-}
-
 export function replaceAtOffset(
   text: string,
   start: number,
