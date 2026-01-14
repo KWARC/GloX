@@ -1,5 +1,10 @@
 import { UriAutoComplete } from "@/components/UriAutoComplete";
-import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
+import {
+  formatSymbolicUriDisplay,
+  ParsedMathHubUri,
+  parseUri,
+} from "@/server/parseUri";
+
 import {
   ActionIcon,
   Button,
@@ -8,6 +13,7 @@ import {
   Portal,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 
@@ -65,7 +71,6 @@ export function SymbolicRef({
             Search for matching URIs below:
           </Text>
           <UriAutoComplete
-            selectedText={conceptUri}
             value={selectedUri}
             onChange={onUriChange}
             label="Matching URIs"
@@ -76,9 +81,20 @@ export function SymbolicRef({
               <Text size="xs" fw={600} c="dimmed" mb={4}>
                 Selected URI:
               </Text>
-              <Text size="xs" style={{ wordBreak: "break-all" }}>
-                {selectedUri}
-              </Text>
+              <Tooltip
+                label={selectedUri}
+                withArrow
+                multiline
+                maw={360}
+                position="top"
+                zIndex={5000}
+              >
+                <span style={{ cursor: "help", display: "inline-block" }}>
+                  <Text size="xs" ff="monospace">
+                    {formatSymbolicUriDisplay(selectedUri)}
+                  </Text>
+                </span>
+              </Tooltip>
             </Paper>
           )}
           <Button
@@ -86,7 +102,7 @@ export function SymbolicRef({
               if (!selectedUri) return;
               const parsed = parseUri(selectedUri);
               console.log("[SymbolicRef] parsed URI =", parsed);
-              onSelect(parsed); 
+              onSelect(parsed);
             }}
             disabled={!selectedUri}
             fullWidth

@@ -37,7 +37,7 @@ export const createDefinition = createServerFn<
     throw new Error("Missing definition fields");
   }
 
-  const definition = await prisma.definition.create({
+  await prisma.definition.create({
     data: {
       documentId,
       documentPageId,
@@ -56,7 +56,7 @@ export const createDefinition = createServerFn<
     data: { status: "TEXT_EXTRACTED" },
   });
 
-  return definition;
+  return { success: true };
 });
 
 export const listDefinition = createServerFn({ method: "GET" }).handler(
