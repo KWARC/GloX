@@ -5,6 +5,14 @@ import type {
 } from "@/server/document/document.types";
 import { createServerFn } from "@tanstack/react-start";
 
+export type UpdateDefinitionMetaInput = {
+  id: string;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
+};
+
 export const createDefinition = createServerFn<
   any,
   "POST",
@@ -97,4 +105,36 @@ export const updateDefinition = createServerFn<
     where: { id: data.id },
     data: { statement: data.statement },
   });
+});
+
+export const updateDefinitionMeta = createServerFn<
+  any,
+  "POST",
+  UpdateDefinitionMetaInput,
+  Promise<any>
+>({ method: "POST" }).handler(async (ctx) => {
+  if (!ctx.data) throw new Error("Missing data");
+
+  const { id, futureRepo, filePath, fileName, language } = ctx.data;
+
+  return prisma.definition.update({
+    where: { id },
+    data: { futureRepo, filePath, fileName, language },
+  });
+});
+
+export const deleteDefinition = createServerFn<
+  any,
+  "POST",
+  { id: string },
+  Promise<any>
+>({ method: "POST" }).handler(async (ctx) => {
+  if (!ctx.data) throw new Error("Definition id required");
+  const { id } = ctx.data;
+
+  await prisma.definition.delete({
+    where: { id },
+  });
+
+  return { success: true };
 });

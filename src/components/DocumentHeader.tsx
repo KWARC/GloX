@@ -1,15 +1,26 @@
 import { ValidationErrors } from "@/server/text-selection";
-import { Group, Paper, Text, TextInput } from "@mantine/core";
+import {
+  ActionIcon,
+  Button,
+  Group,
+  Paper,
+  Text,
+  TextInput,
+} from "@mantine/core";
+import { IconPencil } from "@tabler/icons-react";
 interface DocumentHeaderProps {
   futureRepo: string;
   filePath: string;
   fileName: string;
   language: string;
   disabled?: boolean;
+  canEdit: boolean;
+  onEditMeta: () => void;
   onFutureRepoChange: (value: string) => void;
   onFilePathChange: (value: string) => void;
   onFileNameChange: (value: string) => void;
   onLanguageChange: (value: string) => void;
+  onSaveMeta?: () => void;
   errors: ValidationErrors;
 }
 
@@ -19,10 +30,13 @@ export function DocumentHeader({
   fileName,
   language,
   disabled,
+  canEdit,
+  onEditMeta,
   onFutureRepoChange,
   onFilePathChange,
   onFileNameChange,
   onLanguageChange,
+  onSaveMeta,
   errors,
 }: DocumentHeaderProps) {
   return (
@@ -89,6 +103,24 @@ export function DocumentHeader({
             disabled={disabled}
             styles={{ input: { fontWeight: 500 } }}
           />
+        </Group>
+        <Group gap="xs" align="flex-end">
+          {canEdit && disabled && (
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              onClick={onEditMeta}
+              title="Edit metadata"
+            >
+              <IconPencil size={16} />
+            </ActionIcon>
+          )}
+
+          {canEdit && !disabled && (
+            <Button size="sm" onClick={onSaveMeta}>
+              Save
+            </Button>
+          )}
         </Group>
       </Group>
     </Paper>
