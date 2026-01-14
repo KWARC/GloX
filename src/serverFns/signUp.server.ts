@@ -1,14 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
-import prisma from "../lib/prisma";
 import bcrypt from "bcryptjs";
+import prisma from "../lib/prisma";
 import { setSessionUser } from "../server/authSession";
 
-export const signup = createServerFn({ method: "POST" }).handler(
-  async (ctx) => {
-    const { email, password } = (ctx.data ?? {}) as {
-      email: string;
-      password: string;
-    };
+type SignupInput = {
+  email: string;
+  password: string;
+};
+
+export const signup = createServerFn({ method: "POST" })
+  .inputValidator((data: SignupInput) => data)
+  .handler(async ({ data }) => {
+    const { email, password } = data;
+
+    if (!email?.trim() || !password?.trim()) {
+      throw new Error("Email and password are required");
+    }
 
     const existing = await prisma.user.findUnique({
       where: { email },
@@ -17,7 +24,9 @@ export const signup = createServerFn({ method: "POST" }).handler(
     if (existing) {
       return { success: false, error: "User already exists" };
     }
+
     const passwordHash = await bcrypt.hash(password, 10);
+
     const user = await prisma.user.create({
       data: {
         email,
@@ -28,5 +37,4 @@ export const signup = createServerFn({ method: "POST" }).handler(
     setSessionUser(user.id);
 
     return { success: true, userId: user.id };
-  }
-);
+  });

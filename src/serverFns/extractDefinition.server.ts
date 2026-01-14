@@ -13,68 +13,49 @@ export type UpdateDefinitionMetaInput = {
   language: string;
 };
 
-export const createDefinition = createServerFn<
-  any,
-  "POST",
-  CreateDefinitionInput,
-  Promise<any>
->({ method: "POST" }).handler(async (ctx) => {
-  const {
-    documentId,
-    documentPageId,
-    pageNumber,
-    originalText,
-    statement,
-    futureRepo,
-    filePath,
-    fileName,
-    language,
-  } = (ctx.data ?? {}) as CreateDefinitionInput;
-
-  if (
-    !documentId ||
-    !documentPageId ||
-    typeof pageNumber !== "number" ||
-    !originalText?.trim() ||
-    !statement?.trim() ||
-    !futureRepo?.trim() ||
-    !filePath?.trim() ||
-    !fileName?.trim() ||
-    !language?.trim()
-  ) {
-    throw new Error("Missing definition fields");
-  }
-
-  await prisma.definition.create({
-    data: {
-      documentId,
-      documentPageId,
-      pageNumber,
-      originalText,
-      statement,
-      futureRepo,
-      filePath,
-      fileName,
-      language,
-    },
-  });
-
-  await prisma.document.update({
-    where: { id: documentId },
-    data: { status: "TEXT_EXTRACTED" },
-  });
-
-  return { success: true };
-});
-
-export const listDefinition = createServerFn({ method: "GET" }).handler(
-  async (ctx) => {
-    const data = (ctx.data ?? {}) as Partial<{ documentId: string }>;
-
-    if (!data.documentId) {
-      throw new Error("documentId is required");
+export const createDefinition = createServerFn({ method: "POST" })
+  .inputValidator((data: CreateDefinitionInput) => data) // Optional: Adds runtime validation
+  .handler(async ({ data }) => {
+    // data is now automatically typed as CreateDefinitionInput
+    if (
+      !data.documentId ||
+      !data.documentPageId ||
+      typeof data.pageNumber !== "number" ||
+      !data.originalText?.trim() ||
+      !data.statement?.trim() ||
+      !data.futureRepo?.trim() ||
+      !data.filePath?.trim() ||
+      !data.fileName?.trim() ||
+      !data.language?.trim()
+    ) {
+      throw new Error("Missing definition fields");
     }
 
+    await prisma.definition.create({
+      data: {
+        documentId: data.documentId,
+        documentPageId: data.documentPageId,
+        pageNumber: data.pageNumber,
+        originalText: data.originalText,
+        statement: data.statement,
+        futureRepo: data.futureRepo,
+        filePath: data.filePath,
+        fileName: data.fileName,
+        language: data.language,
+      },
+    });
+
+    await prisma.document.update({
+      where: { id: data.documentId },
+      data: { status: "TEXT_EXTRACTED" },
+    });
+
+    return { success: true };
+  });
+
+export const listDefinition = createServerFn({ method: "GET" })
+  .inputValidator((data: { documentId: string }) => data)
+  .handler(async ({ data }) => {
     return prisma.definition.findMany({
       where: { documentId: data.documentId },
       orderBy: { createdAt: "asc" },
@@ -86,55 +67,38 @@ export const listDefinition = createServerFn({ method: "GET" }).handler(
         },
       },
     });
-  }
-);
-
-export const updateDefinition = createServerFn<
-  any,
-  "POST",
-  UpdateDefinitionInput,
-  Promise<any>
->({ method: "POST" }).handler(async (ctx) => {
-  const data = (ctx.data ?? {}) as Partial<UpdateDefinitionInput>;
-
-  if (!data.id || !data.statement?.trim()) {
-    throw new Error("Missing update fields");
-  }
-
-  return prisma.definition.update({
-    where: { id: data.id },
-    data: { statement: data.statement },
-  });
-});
-
-export const updateDefinitionMeta = createServerFn<
-  any,
-  "POST",
-  UpdateDefinitionMetaInput,
-  Promise<any>
->({ method: "POST" }).handler(async (ctx) => {
-  if (!ctx.data) throw new Error("Missing data");
-
-  const { id, futureRepo, filePath, fileName, language } = ctx.data;
-
-  return prisma.definition.update({
-    where: { id },
-    data: { futureRepo, filePath, fileName, language },
-  });
-});
-
-export const deleteDefinition = createServerFn<
-  any,
-  "POST",
-  { id: string },
-  Promise<any>
->({ method: "POST" }).handler(async (ctx) => {
-  if (!ctx.data) throw new Error("Definition id required");
-  const { id } = ctx.data;
-
-  await prisma.definition.delete({
-    where: { id },
   });
 
-  return { success: true };
-});
+export const updateDefinition = createServerFn({ method: "POST" })
+  .inputValidator((data: UpdateDefinitionInput) => data)
+  .handler(async ({ data }) => {
+    if (!data.id || !data.statement?.trim()) {
+      throw new Error("Missing update fields");
+    }
+
+    return prisma.definition.update({
+      where: { id: data.id },
+      data: { statement: data.statement },
+    });
+  });
+
+export const updateDefinitionMeta = createServerFn({ method: "POST" })
+  .inputValidator((data: UpdateDefinitionMetaInput) => data)
+  .handler(async ({ data }) => {
+    const { id, futureRepo, filePath, fileName, language } = data;
+
+    return prisma.definition.update({
+      where: { id },
+      data: { futureRepo, filePath, fileName, language },
+    });
+  });
+
+export const deleteDefinition = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    await prisma.definition.delete({
+      where: { id: data.id },
+    });
+
+    return { success: true };
+  });

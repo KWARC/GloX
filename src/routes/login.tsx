@@ -43,7 +43,7 @@ function RouteComponent() {
     setError(null);
 
     try {
-      const res = await login({ data: { email, password } } as any);
+      const res = await login({ data: { email, password } });
 
       if (res?.success) {
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });

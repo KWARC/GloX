@@ -12,11 +12,18 @@ export const currentUser = createServerFn({ method: "GET" }).handler(
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true },
+      select: {
+        id: true,
+        email: true,
+      },
     });
 
+    if (!user) {
+      return { loggedIn: false };
+    }
+
     return {
-      loggedIn: !!user,
+      loggedIn: true,
       user,
     };
   }

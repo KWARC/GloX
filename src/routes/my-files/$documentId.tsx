@@ -69,7 +69,7 @@ function RouteComponent() {
 
   const { data: extracts = [] } = useQuery({
     queryKey: ["definitions", documentId],
-    queryFn: () => listDefinition({ data: { documentId } as any }),
+    queryFn: () => listDefinition({ data: { documentId } }),
   });
 
   const [futureRepo, setFutureRepo] = useState("smglom/softeng");
@@ -99,7 +99,7 @@ function RouteComponent() {
   async function handleDeleteDefinition(id: string) {
     if (!confirm("Delete this extracted definition?")) return;
 
-    await deleteDefinition({ data: { id } } as any);
+    await deleteDefinition({ data: { id } });
   }
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
@@ -276,7 +276,7 @@ function RouteComponent() {
         language: parsed.language,
         definiendumId: null,
       },
-    } as any);
+    });
 
     await createDefinitionSymbolicRef({
       data: {
@@ -284,7 +284,7 @@ function RouteComponent() {
         symbolicReferenceId: symbolicRef.id,
         source: "MATHHUB",
       },
-    } as any);
+    });
 
     handleCloseSymbolicRefDialog();
   }
@@ -307,7 +307,7 @@ function RouteComponent() {
         fileName: fileName.trim(),
         language: language.trim(),
       },
-    } as any);
+    });
 
     queryClient.setQueryData(
       ["definitions", documentId],

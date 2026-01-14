@@ -1,9 +1,9 @@
-import { createServerFn } from "@tanstack/react-start";
 import {
   buildSearchUriQuery,
   createSafeFlamsQuery,
   createUriParamMapping,
 } from "@/spec/uriSearch";
+import { createServerFn } from "@tanstack/react-start";
 
 type SearchUriInput = {
   input: string;
@@ -21,14 +21,12 @@ type MathHubResponse = {
   };
 };
 
-export const searchUriUsingSubstr = createServerFn({
-  method: "POST",
-}).handler(
-  async (ctx: { data?: SearchUriInput }): Promise<string[]> => {
-    const input = ctx.data?.input;
+export const searchUriUsingSubstr = createServerFn({ method: "POST" })
+  .inputValidator((data: SearchUriInput) => data)
+  .handler(async ({ data }): Promise<string[]> => {
+    const input = data.input;
 
-    if (!input || !input.trim()) {
-      console.warn("searchUriUsingSubStr called without input");
+    if (!input.trim()) {
       return [];
     }
 
@@ -57,5 +55,4 @@ export const searchUriUsingSubstr = createServerFn({
         ?.map((b) => b.uri?.value)
         .filter((v): v is string => typeof v === "string") ?? []
     );
-  }
-);
+  });
