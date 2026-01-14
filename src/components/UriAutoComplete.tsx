@@ -27,15 +27,12 @@ export function UriAutoComplete({
   });
 
   const [debouncedValue] = useDebouncedValue(value, 300);
-  const {
-    data: options = [],
-    isFetching,
-  } = useQuery({
+  const { data: options = [], isFetching } = useQuery({
     queryKey: ["uri-search", debouncedValue],
     queryFn: () =>
       searchUriUsingSubstr({
         data: { input: debouncedValue },
-      } as any),
+      }),
     enabled: debouncedValue.length >= 2,
   });
 

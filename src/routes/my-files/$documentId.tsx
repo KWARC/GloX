@@ -195,7 +195,7 @@ function RouteComponent() {
           fileName: fileName.trim(),
           language: language.trim(),
         },
-      } as any);
+      });
     }
 
     setDefDialogOpen(false);
