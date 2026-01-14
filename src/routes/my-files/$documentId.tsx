@@ -20,6 +20,7 @@ import {
 } from "@/server/text-selection";
 import { currentUser } from "@/serverFns/currentUser.server";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
+import { createDefinitionSymbolicRef } from "@/serverFns/definitionSymbolicRef.server";
 import { listDefinition } from "@/serverFns/extractDefinition.server";
 import { createSymbolicRef } from "@/serverFns/symbolicRef.server";
 import {
@@ -253,7 +254,7 @@ function RouteComponent() {
 
     await updateExtract(defExtractId, updatedStatement);
 
-    await createSymbolicRef({
+    const symbolicRef = await createSymbolicRef({
       data: {
         name: parsed.symbol,
         conceptUri: parsed.conceptUri,
@@ -261,6 +262,15 @@ function RouteComponent() {
         filePath: parsed.filePath,
         fileName: parsed.fileName,
         language: parsed.language,
+        definiendumId: null,
+      },
+    } as any);
+
+    await createDefinitionSymbolicRef({
+      data: {
+        definitionId: defExtractId,
+        symbolicReferenceId: symbolicRef.id,
+        source: "MATHHUB",
       },
     } as any);
 

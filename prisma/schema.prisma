@@ -54,6 +54,11 @@ enum DocumentStatus {
   FAILED
 }
 
+enum SymbolicRefSource {
+  MATHHUB
+  DEFINIENDUM
+}
+
 model User {
   id           String     @id @default(uuid())
   name         String?
@@ -90,16 +95,16 @@ model SymbolicReference {
 
   name String
 
-  conceptUri String @default("Glox")
-  archive    String @default("Glox")
-  filePath   String @default("Glox")
-  fileName   String @default("Glox")
+  conceptUri String
+  archive    String
+  filePath   String
+  fileName   String
   language   String @default("en")
 
   definiendumId String?
   definiendum   Definiendum? @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
 
-  definitions Definition[]
+  definitions DefinitionSymbolicRef[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -122,11 +127,10 @@ model Definition {
   originalText String @db.Text
   statement    String @db.Text
 
-  symbolicReferenceId String?
-  symbolicReference   SymbolicReference? @relation(fields: [symbolicReferenceId], references: [id])
-
   definiendumId String?
   definiendum   Definiendum? @relation(fields: [definiendumId], references: [id])
+
+  symbolicRefs DefinitionSymbolicRef[]
 
   futureRepo String @default("Glox")
   filePath   String @default("Glox")
@@ -138,8 +142,6 @@ model Definition {
 
   @@index([documentId])
   @@index([documentPageId])
-  @@index([documentId, pageNumber])
-  @@index([symbolicReferenceId])
   @@index([definiendumId])
   @@index([futureRepo, filePath, fileName, language])
 }
@@ -165,3 +167,20 @@ model LatexTable {
   @@index([documentId, futureRepo, filePath, fileName, language])
 }
 
+model DefinitionSymbolicRef {
+  id String @id @default(uuid())
+
+  definitionId String
+  definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  symbolicReferenceId String
+  symbolicReference   SymbolicReference @relation(fields: [symbolicReferenceId], references: [id], onDelete: Cascade)
+
+  source SymbolicRefSource
+
+  createdAt DateTime @default(now())
+
+  @@unique([definitionId, symbolicReferenceId])
+  @@index([definitionId])
+  @@index([symbolicReferenceId])
+}

@@ -70,6 +70,13 @@ export const listDefinition = createServerFn({ method: "GET" }).handler(
     return prisma.definition.findMany({
       where: { documentId: data.documentId },
       orderBy: { createdAt: "asc" },
+      include: {
+        symbolicRefs: {
+          include: {
+            symbolicReference: true,
+          },
+        },
+      },
     });
   }
 );
