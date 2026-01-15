@@ -1,9 +1,5 @@
 import { UriAutoComplete } from "@/components/UriAutoComplete";
-import {
-  formatSymbolicUriDisplay,
-  ParsedMathHubUri,
-  parseUri,
-} from "@/server/parseUri";
+import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
 import { ftmlSearchSymbols } from "@/spec/searchSymbols";
 
 import {
@@ -19,6 +15,7 @@ import {
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
+import { RenderSymbolicUri } from "./RenderSymbolicUri";
 
 interface SymbolicRefProps {
   conceptUri: string;
@@ -97,7 +94,7 @@ export function SymbolicRef({
                       size="xs"
                       onClick={() => onUriChange(uri)}
                     >
-                      {formatSymbolicUriDisplay(uri)}
+                      <RenderSymbolicUri uri={uri} />
                     </Button>
                   ))}
                 </Stack>
@@ -129,7 +126,7 @@ export function SymbolicRef({
               >
                 <span style={{ cursor: "help", display: "inline-block" }}>
                   <Text size="xs" ff="monospace">
-                    {formatSymbolicUriDisplay(selectedUri)}
+                    <RenderSymbolicUri uri={selectedUri} />
                   </Text>
                 </span>
               </Tooltip>

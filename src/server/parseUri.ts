@@ -48,29 +48,3 @@ export function parseUri(uri: string): ParsedMathHubUri {
 
   throw new Error("Invalid MathHub URI");
 }
-
-export function formatSymbolicUriDisplay(uri: string): string {
-  try {
-    const url = new URL(uri);
-    const params = url.searchParams;
-
-    const archive = params.get("a");
-    const symbol = params.get("s");
-    const definiens = params.get("d");
-
-    if (!archive) return uri;
-
-    if (symbol) {
-      return `${archive} ${symbol}`;
-    }
-
-    if (definiens) {
-      return `${archive} ${definiens}`;
-    }
-
-    return archive;
-  } catch {
-    // Fallback for non-URL or malformed input
-    return uri;
-  }
-}
