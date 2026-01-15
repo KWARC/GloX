@@ -4,7 +4,7 @@ import {
   ParsedMathHubUri,
   parseUri,
 } from "@/server/parseUri";
-import { searchUriUsingSubstr } from "@/serverFns/searchUriUsingSubstr";
+import { ftmlSearchSymbols } from "@/spec/searchSymbols";
 
 import {
   ActionIcon,
@@ -12,10 +12,10 @@ import {
   Group,
   Paper,
   Portal,
+  ScrollArea,
   Stack,
   Text,
   Tooltip,
-  ScrollArea,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
@@ -28,22 +28,6 @@ interface SymbolicRefProps {
   onClose: () => void;
 }
 
-function rankUris(uris: string[], word: string): string[] {
-  const w = word.toLowerCase();
-
-  return [...uris].sort((a, b) => {
-    const score = (u: string) => {
-      const s = u.toLowerCase();
-      if (s.includes(`&s=${w}`)) return 100;
-      if (s.includes(`&m=${w}`)) return 80;
-      if (s.includes(`&d=${w}`)) return 60;
-      if (s.includes(w)) return 20;
-      return 0;
-    };
-    return score(b) - score(a);
-  });
-}
-
 export function SymbolicRef({
   conceptUri,
   selectedUri,
@@ -51,15 +35,11 @@ export function SymbolicRef({
   onSelect,
   onClose,
 }: SymbolicRefProps) {
-  const { data: autoUris = [], isFetching: autoLoading } = useQuery({
-    queryKey: ["auto-uri-search", conceptUri],
-    queryFn: () =>
-      searchUriUsingSubstr({
-        data: { input: conceptUri },
-      }),
+  const { data: autoUris = [], isFetching } = useQuery({
+    queryKey: ["symbol-search", conceptUri],
+    queryFn: () => ftmlSearchSymbols(conceptUri, 15),
     enabled: !!conceptUri,
   });
-  const rankedAutoUris = rankUris(autoUris, conceptUri);
 
   return (
     <Portal>
@@ -96,13 +76,13 @@ export function SymbolicRef({
               {conceptUri}
             </Text>
           </Paper>
-          {autoLoading && (
+          {isFetching && (
             <Text size="xs" c="dimmed">
               Searching MathHub for existing symbols…
             </Text>
           )}
 
-          {rankedAutoUris.length > 0 && (
+          {autoUris.length > 0 && (
             <Paper withBorder p="sm" radius="md">
               <Text size="xs" fw={600} mb="xs">
                 Found in MathHub
@@ -110,14 +90,14 @@ export function SymbolicRef({
 
               <ScrollArea h={180} type="auto">
                 <Stack gap={4}>
-                  {rankedAutoUris.map((uri) => (
+                  {autoUris.map((uri) => (
                     <Button
                       key={uri}
                       variant="subtle"
                       size="xs"
                       onClick={() => onUriChange(uri)}
                     >
-                      {uri}
+                      {formatSymbolicUriDisplay(uri)}
                     </Button>
                   ))}
                 </Stack>

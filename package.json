@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@flexiformal/ftml": "^0.0.22",
+    "@flexiformal/ftml-backend": "^0.0.7",
     "@mantine/core": "^8.3.10",
     "@mantine/hooks": "^8.3.10",
     "@prisma/adapter-pg": "^7.2.0",
