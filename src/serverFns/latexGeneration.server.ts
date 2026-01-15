@@ -27,96 +27,89 @@ function extractSymbols(latex: string): {
   return { defined, referenced };
 }
 
-export const generateLatexWithDependencies = createServerFn<
-  any,
-  "POST",
-  {
-    documentId: string;
-    futureRepo: string;
-    filePath: string;
-    fileName: string;
-    language: string;
-  },
-  Promise<string>
->({ method: "POST" }).handler(async (ctx) => {
-  const { documentId, futureRepo, filePath, fileName, language } =
-    ctx.data ?? ({} as any);
+export type GenerateLatexInput = {
+  documentId: string;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
+};
 
-  if (!documentId || !futureRepo || !filePath || !fileName || !language) {
-    throw new Error("documentId and path info are required");
-  }
+export const generateLatexWithDependencies = createServerFn({
+  method: "POST",
+})
+  .inputValidator((data: GenerateLatexInput) => data)
+  .handler(async ({ data }) => {
+    const { documentId, futureRepo, filePath, fileName, language } = data;
 
-  const definitions = await prisma.definition.findMany({
-    where: {
-      documentId,
-      futureRepo,
-      filePath,
-      fileName,
-      language,
-    },
-    select: { statement: true },
-    orderBy: { createdAt: "asc" },
-  });
+    const definitions = await prisma.definition.findMany({
+      where: {
+        documentId,
+        futureRepo,
+        filePath,
+        fileName,
+        language,
+      },
+      select: { statement: true },
+      orderBy: { createdAt: "asc" },
+    });
 
-  const allDefined = new Set<string>();
-  const allReferenced = new Set<string>();
+    const allDefined = new Set<string>();
+    const allReferenced = new Set<string>();
 
-  for (const definition of definitions) {
-    const { defined, referenced } = extractSymbols(definition.statement);
-    defined.forEach((sym) => allDefined.add(sym));
-    referenced.forEach((sym) => allReferenced.add(sym));
-  }
-
-  const allSymbols = new Set([...allDefined, ...allReferenced]);
-
-  const definienda = await prisma.definiendum.findMany({
-    where: {
-      symbolName: { in: Array.from(allSymbols) },
-    },
-  });
-
-  const symbolicReferences = await prisma.symbolicReference.findMany({
-    where: {
-      name: { in: Array.from(allReferenced) },
-    },
-  });
-
-  const symdecls: string[] = [];
-  const declaredSymbols = new Set<string>();
-
-  for (const def of definienda) {
-    if (
-      allDefined.has(def.symbolName) &&
-      def.symbolDeclared &&
-      !declaredSymbols.has(def.symbolName)
-    ) {
-      symdecls.push(`\\symdecl*{${def.symbolName}}`);
-      declaredSymbols.add(def.symbolName);
-    }
-  }
-
-  const imports: string[] = [];
-  const importedModules = new Set<string>();
-
-  for (const symbolicReference of symbolicReferences) {
-    const moduleKey = `${symbolicReference.archive}/${symbolicReference.filePath}/${symbolicReference.fileName}`;
-
-    if (importedModules.has(moduleKey)) continue;
-
-    let importStmt: string;
-    if (symbolicReference.archive === "mod") {
-      importStmt = `\\importmodule{${symbolicReference.archive}?${symbolicReference.fileName}}`;
-    } else {
-      importStmt = `\\usemodule[${symbolicReference.archive}/${symbolicReference.filePath}]{mod?${symbolicReference.fileName}}`;
+    for (const definition of definitions) {
+      const { defined, referenced } = extractSymbols(definition.statement);
+      defined.forEach((sym) => allDefined.add(sym));
+      referenced.forEach((sym) => allReferenced.add(sym));
     }
 
-    imports.push(importStmt);
-    importedModules.add(moduleKey);
-  }
+    const allSymbols = new Set([...allDefined, ...allReferenced]);
 
-  const statements = definitions.map((e) => e.statement);
+    const definienda = await prisma.definiendum.findMany({
+      where: {
+        symbolName: { in: Array.from(allSymbols) },
+      },
+    });
 
-  return `\\documentclass{stex}
+    const symbolicReferences = await prisma.symbolicReference.findMany({
+      where: {
+        name: { in: Array.from(allReferenced) },
+      },
+    });
+
+    const symdecls: string[] = [];
+    const declaredSymbols = new Set<string>();
+
+    for (const def of definienda) {
+      if (
+        allDefined.has(def.symbolName) &&
+        def.symbolDeclared &&
+        !declaredSymbols.has(def.symbolName)
+      ) {
+        symdecls.push(`\\symdecl*{${def.symbolName}}`);
+        declaredSymbols.add(def.symbolName);
+      }
+    }
+
+    const imports: string[] = [];
+    const importedModules = new Set<string>();
+
+    for (const ref of symbolicReferences) {
+      const moduleKey = `${ref.archive}/${ref.filePath}/${ref.fileName}`;
+      if (importedModules.has(moduleKey)) continue;
+
+      const importStmt =
+        ref.archive === "mod"
+          ? `\\importmodule{${ref.archive}?${ref.fileName}}`
+          : `\\usemodule[${ref.archive}/${ref.filePath}]{mod?${ref.fileName}}`;
+
+      imports.push(importStmt);
+      importedModules.add(moduleKey);
+    }
+
+    const statements = definitions.map((e) => e.statement);
+
+    return `\\documentclass{stex}
 \\libinput{preamble}
 \\begin{document}
 \\begin{smodule}[title={${fileName}}]{${fileName}}
@@ -128,4 +121,4 @@ ${statements.join("\n\n")}
 
 \\end{smodule}
 \\end{document}`;
-});
+  });

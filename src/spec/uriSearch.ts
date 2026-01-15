@@ -1,22 +1,17 @@
 import axios from "axios";
 import { rdfEncodeUri } from "@flexiformal/ftml";
 
-
-
 const MULTIPLE_URI_PARAM_REGEX = /[<](_multiuri_[a-zA-Z0-9-_]+)[>]/g;
 const SINGLE_URI_PARAM_REGEX = /[<"](_uri_[a-zA-Z0-9-_]+)[>"]/g;
-const DEFAULT_URI_PARAM_PREFIX = '_uri_param';
+const DEFAULT_URI_PARAM_PREFIX = "_uri_param";
 
 function encodeSpecialChars(value: string) {
-  return value.replace(/ /g, '%20');
+  return value.replace(/ /g, "%20");
 }
 
 export function createUriParamMapping(parts: string[]) {
   return Object.fromEntries(
-    parts.map((part, idx) => [
-      `${DEFAULT_URI_PARAM_PREFIX}${idx}`,
-      part,
-    ])
+    parts.map((part, idx) => [`${DEFAULT_URI_PARAM_PREFIX}${idx}`, part])
   );
 }
 
@@ -68,7 +63,9 @@ export function createSafeFlamsQuery(
   result = result.replace(MULTIPLE_URI_PARAM_REGEX, (match, paramName) => {
     const value = uriParams[paramName];
     if (!Array.isArray(value) || !value.length) return match;
-    return value.map((uri) => `${match[0]}${encodeUriFn(uri)}${match.at(-1)}`).join(" ");
+    return value
+      .map((uri) => `${match[0]}${encodeUriFn(uri)}${match.at(-1)}`)
+      .join(" ");
   });
 
   result = result.replace(SINGLE_URI_PARAM_REGEX, (match, paramName) => {

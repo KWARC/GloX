@@ -11,6 +11,9 @@ importers:
       '@flexiformal/ftml':
         specifier: ^0.0.22
         version: 0.0.22
+      '@flexiformal/ftml-backend':
+        specifier: ^0.0.7
+        version: 0.0.7
       '@mantine/core':
         specifier: ^8.3.10
         version: 8.3.10(@mantine/hooks@8.3.10(react@19.2.3))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -468,6 +471,9 @@ packages:
     peerDependenciesMeta:
       '@exodus/crypto':
         optional: true
+
+  '@flexiformal/ftml-backend@0.0.7':
+    resolution: {integrity: sha512-C90rlfSvBzxfwrCbAzDTLmsoNvPi1WVCUEbU+rjPhiaJCFt3bblzTxk7gGFC+iXWrtwyH+KxlOIsxDthbLtcEA==}
 
   '@flexiformal/ftml@0.0.22':
     resolution: {integrity: sha512-DcNc2lrcVHS0kjl1LmjK8sTLNS/TLzR/egKqTIMUYMTuyJmdW2lbtDl8/BCUVT30ktlEgnIUptV7ktVTsQj2vw==}
@@ -3195,6 +3201,8 @@ snapshots:
     optional: true
 
   '@exodus/bytes@1.8.0': {}
+
+  '@flexiformal/ftml-backend@0.0.7': {}
 
   '@flexiformal/ftml@0.0.22': {}
 

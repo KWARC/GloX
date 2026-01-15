@@ -8,13 +8,14 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
-import { IconPencil } from "@tabler/icons-react";
+import { IconPencil, IconTrash } from "@tabler/icons-react";
 
 interface ExtractedTextPanelProps {
   extracts: ExtractedItem[];
   editingId: string | null;
   onToggleEdit: (id: string) => void;
   onUpdate: (id: string, statement: string) => Promise<void>;
+  onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
 }
 
@@ -23,6 +24,7 @@ export function ExtractedTextPanel({
   editingId,
   onToggleEdit,
   onUpdate,
+  onDelete,
   onSelection,
 }: ExtractedTextPanelProps) {
   return (
@@ -37,19 +39,25 @@ export function ExtractedTextPanel({
             extracts.map((item) => (
               <Paper key={item.id} withBorder p="sm" radius="md">
                 <Group justify="space-between" mb={4}>
-                  <Text size="xs" c="dark">
-                    Page {item.pageNumber}
-                  </Text>
-
-                  <ActionIcon
-                    size="sm"
-                    variant="subtle"
-                    onClick={() => onToggleEdit(item.id)}
-                  >
-                    <IconPencil size={16} />
-                  </ActionIcon>
+                  <Text size="xs">Page {item.pageNumber}</Text>
+                  <Group gap="xs">
+                    <ActionIcon
+                      size="sm"
+                      color="red"
+                      onClick={() => onDelete(item.id)}
+                    >
+                      <IconTrash size={14} />
+                    </ActionIcon>
+                    <ActionIcon
+                      size="sm"
+                      variant="subtle"
+                      onClick={() => onToggleEdit(item.id)}
+                      color="red"
+                    >
+                      <IconPencil size={16} />
+                    </ActionIcon>
+                  </Group>
                 </Group>
-
                 {editingId === item.id ? (
                   <Textarea
                     defaultValue={item.statement}
@@ -68,6 +76,7 @@ export function ExtractedTextPanel({
                     {item.statement}
                   </Text>
                 )}
+
                 <Text size="10px" c="dimmed" ff="monospace" mt={6}>
                   {item.futureRepo}/{item.filePath}/{item.fileName}/
                   {item.language}

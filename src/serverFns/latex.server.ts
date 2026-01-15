@@ -6,6 +6,14 @@ export type LatexDraft = {
   savedAt: string;
 };
 
+export type LatexKey = {
+  documentId: string;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
+};
+
 export type FinalizedLatexDocument = {
   id: number;
   documentId: string;
@@ -32,129 +40,101 @@ function normalizeHistory(value: unknown): LatexDraft[] {
   );
 }
 
-type LatexKey = {
-  documentId: string;
-  futureRepo: string;
-  filePath: string;
-  fileName: string;
-  language: string;
-};
+export const saveLatexDraft = createServerFn({ method: "POST" })
+  .inputValidator((data: LatexKey & { latex: string }) => data)
+  .handler(async ({ data }) => {
+    const { latex, documentId, futureRepo, filePath, fileName, language } =
+      data;
 
-export const saveLatexDraft = createServerFn<
-  any,
-  "POST",
-  LatexKey & { latex: string },
-  void
->({ method: "POST" }).handler(async (ctx) => {
-  if (!ctx.data) throw new Error("Missing data");
+    const existing = await prisma.latexTable.findFirst({
+      where: { documentId, futureRepo, filePath, fileName, language },
+    });
 
-  const { latex, documentId, futureRepo, filePath, fileName, language } =
-    ctx.data;
+    const history = normalizeHistory(existing?.history);
 
-  const existing = await prisma.latexTable.findFirst({
-    where: { documentId, futureRepo, filePath, fileName, language },
+    const nextHistory = [
+      ...history,
+      { latex, savedAt: new Date().toISOString() },
+    ];
+
+    if (!existing) {
+      await prisma.latexTable.create({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+          finalLatex: "",
+          history: nextHistory,
+          isFinal: false,
+        },
+      });
+    } else {
+      await prisma.latexTable.update({
+        where: { id: existing.id },
+        data: {
+          history: nextHistory,
+          isFinal: false,
+        },
+      });
+    }
   });
 
-  const history = normalizeHistory(existing?.history);
+export const saveLatexFinal = createServerFn({ method: "POST" })
+  .inputValidator((data: LatexKey & { latex: string }) => data)
+  .handler(async ({ data }) => {
+    const { latex, documentId, futureRepo, filePath, fileName, language } =
+      data;
 
-  const nextHistory = [
-    ...history,
-    { latex, savedAt: new Date().toISOString() },
-  ];
-
-  if (!existing) {
-    await prisma.latexTable.create({
-      data: {
-        documentId,
-        futureRepo,
-        filePath,
-        fileName,
-        language,
-        finalLatex: "",
-        history: nextHistory,
-        isFinal: false,
-      },
+    const existing = await prisma.latexTable.findFirst({
+      where: { documentId, futureRepo, filePath, fileName, language },
     });
-  } else {
-    await prisma.latexTable.update({
-      where: { id: existing.id },
-      data: {
-        history: nextHistory,
-        isFinal: false,
-      },
+
+    if (!existing) {
+      await prisma.latexTable.create({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+          finalLatex: latex,
+          history: [],
+          isFinal: true,
+        },
+      });
+    } else {
+      await prisma.latexTable.update({
+        where: { id: existing.id },
+        data: {
+          finalLatex: latex,
+          isFinal: true,
+        },
+      });
+    }
+  });
+
+export const getLatexHistory = createServerFn({ method: "GET" })
+  .inputValidator((data: LatexKey) => data)
+  .handler(async ({ data }) => {
+    const record = await prisma.latexTable.findFirst({
+      where: data,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      history: normalizeHistory(record?.history),
+      finalLatex: record?.finalLatex ?? "",
+      isFinal: record?.isFinal ?? false,
+    };
+  });
+
+export const getFinalizedDocuments = createServerFn({ method: "GET" }).handler(
+  async () => {
+    return prisma.latexTable.findMany({
+      where: { isFinal: true },
+      orderBy: { updatedAt: "desc" },
     });
   }
-});
-
-export const saveLatexFinal = createServerFn<
-  any,
-  "POST",
-  LatexKey & { latex: string },
-  void
->({ method: "POST" }).handler(async (ctx) => {
-  if (!ctx.data) throw new Error("Missing data");
-
-  const { latex, documentId, futureRepo, filePath, fileName, language } =
-    ctx.data;
-
-  const existing = await prisma.latexTable.findFirst({
-    where: { documentId, futureRepo, filePath, fileName, language },
-  });
-
-  if (!existing) {
-    await prisma.latexTable.create({
-      data: {
-        documentId,
-        futureRepo,
-        filePath,
-        fileName,
-        language,
-        finalLatex: latex,
-        history: [],
-        isFinal: true,
-      },
-    });
-  } else {
-    await prisma.latexTable.update({
-      where: { id: existing.id },
-      data: {
-        finalLatex: latex,
-        isFinal: true,
-      },
-    });
-  }
-});
-
-export const getLatexHistory = createServerFn<
-  any,
-  "GET",
-  LatexKey,
-  { history: LatexDraft[]; finalLatex: string; isFinal: boolean }
->({ method: "GET" }).handler(async (ctx) => {
-  if (!ctx.data) throw new Error("Missing data");
-
-  const record = await prisma.latexTable.findFirst({
-    where: ctx.data,
-    orderBy: { createdAt: "desc" },
-  });
-
-  return {
-    history: normalizeHistory(record?.history),
-    finalLatex: record?.finalLatex ?? "",
-    isFinal: record?.isFinal ?? false,
-  };
-});
-
-export const getFinalizedDocuments = createServerFn<
-  any,
-  "GET",
-  void,
-  FinalizedLatexDocument[]
->({ method: "GET" }).handler(async () => {
-  const finalizedDocs = await prisma.latexTable.findMany({
-    where: { isFinal: true },
-    orderBy: { updatedAt: "desc" },
-  });
-
-  return finalizedDocs;
-});
+);

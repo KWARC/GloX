@@ -137,7 +137,7 @@ export function useExtractionActions(documentId: string) {
         fileName: params.fileName,
         language: params.language,
       },
-    } as any);
+    });
 
     await queryClient.invalidateQueries({
       queryKey: ["definitions", documentId],
@@ -160,7 +160,7 @@ export function useExtractionActions(documentId: string) {
         fileName: params.fileName,
         language: params.language,
       },
-    } as any);
+    });
 
     await queryClient.invalidateQueries({
       queryKey: ["definienda", documentId],
@@ -170,7 +170,7 @@ export function useExtractionActions(documentId: string) {
   async function updateExtract(id: string, statement: string) {
     await updateDefinition({
       data: { id, statement },
-    } as any);
+    });
 
     await queryClient.invalidateQueries({
       queryKey: ["definitions", documentId],

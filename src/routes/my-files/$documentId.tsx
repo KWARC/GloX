@@ -7,6 +7,7 @@ import { SelectionPopup } from "@/components/SelectionPopup";
 import { SymbolicRef } from "@/components/SymbolicRef";
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
+import { queryClient } from "@/queryClient";
 import { ParsedMathHubUri } from "@/server/parseUri";
 import {
   ActivePage,
@@ -18,9 +19,14 @@ import {
   useTextSelection,
   useValidation,
 } from "@/server/text-selection";
-import { currentUser } from "@/serverFns/currentUser.server";
+import { currentUser } from "@/server/auth/currentUser";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
-import { listDefinition } from "@/serverFns/extractDefinition.server";
+import { createDefinitionSymbolicRef } from "@/serverFns/definitionSymbolicRef.server";
+import {
+  deleteDefinition,
+  listDefinition,
+  updateDefinitionMeta,
+} from "@/serverFns/extractDefinition.server";
 import { createSymbolicRef } from "@/serverFns/symbolicRef.server";
 import {
   ActionIcon,
@@ -63,7 +69,7 @@ function RouteComponent() {
 
   const { data: extracts = [] } = useQuery({
     queryKey: ["definitions", documentId],
-    queryFn: () => listDefinition({ data: { documentId } as any }),
+    queryFn: () => listDefinition({ data: { documentId } }),
   });
 
   const [futureRepo, setFutureRepo] = useState("smglom/softeng");
@@ -88,7 +94,13 @@ function RouteComponent() {
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
+  const [isEditingMeta, setIsEditingMeta] = useState(false);
 
+  async function handleDeleteDefinition(id: string) {
+    if (!confirm("Delete this extracted definition?")) return;
+
+    await deleteDefinition({ data: { id } });
+  }
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
 
@@ -123,6 +135,7 @@ function RouteComponent() {
     setLanguage(extract.language);
 
     setLockedByExtractId(extractId);
+    setIsEditingMeta(false);
 
     clearError("futureRepo");
     clearError("filePath");
@@ -182,7 +195,7 @@ function RouteComponent() {
           fileName: fileName.trim(),
           language: language.trim(),
         },
-      } as any);
+      });
     }
 
     setDefDialogOpen(false);
@@ -253,7 +266,7 @@ function RouteComponent() {
 
     await updateExtract(defExtractId, updatedStatement);
 
-    await createSymbolicRef({
+    const symbolicRef = await createSymbolicRef({
       data: {
         name: parsed.symbol,
         conceptUri: parsed.conceptUri,
@@ -261,14 +274,61 @@ function RouteComponent() {
         filePath: parsed.filePath,
         fileName: parsed.fileName,
         language: parsed.language,
+        definiendumId: null,
       },
-    } as any);
+    });
+
+    await createDefinitionSymbolicRef({
+      data: {
+        definitionId: defExtractId,
+        symbolicReferenceId: symbolicRef.id,
+        source: "MATHHUB",
+      },
+    });
 
     handleCloseSymbolicRefDialog();
   }
 
   function handleToggleEdit(id: string) {
     setEditingId(editingId === id ? null : id);
+  }
+
+  async function handleSaveHeaderMeta() {
+    if (!lockedByExtractId) return;
+
+    const ok = validate(futureRepo, filePath, fileName, language);
+    if (!ok) return;
+
+    await updateDefinitionMeta({
+      data: {
+        id: lockedByExtractId,
+        futureRepo: futureRepo.trim(),
+        filePath: filePath.trim(),
+        fileName: fileName.trim(),
+        language: language.trim(),
+      },
+    });
+
+    queryClient.setQueryData(
+      ["definitions", documentId],
+      (old: any[] | undefined) => {
+        if (!old) return old;
+
+        return old.map((item) =>
+          item.id === lockedByExtractId
+            ? {
+                ...item,
+                futureRepo: futureRepo.trim(),
+                filePath: filePath.trim(),
+                fileName: fileName.trim(),
+                language: language.trim(),
+              }
+            : item
+        );
+      }
+    );
+
+    setIsEditingMeta(false);
   }
 
   async function handleUpdateExtract(id: string, statement: string) {
@@ -335,23 +395,14 @@ function RouteComponent() {
             filePath={filePath}
             fileName={fileName}
             language={language}
-            disabled={!!lockedByExtractId}
-            onFutureRepoChange={(value) => {
-              setFutureRepo(value);
-              clearError("futureRepo");
-            }}
-            onFilePathChange={(value) => {
-              setFilePath(value);
-              clearError("filePath");
-            }}
-            onFileNameChange={(value) => {
-              setFileName(value);
-              clearError("fileName");
-            }}
-            onLanguageChange={(value) => {
-              setLanguage(value);
-              clearError("language");
-            }}
+            disabled={lockedByExtractId ? !isEditingMeta : false}
+            canEdit={!!lockedByExtractId}
+            onEditMeta={() => setIsEditingMeta(true)}
+            onSaveMeta={handleSaveHeaderMeta}
+            onFutureRepoChange={setFutureRepo}
+            onFilePathChange={setFilePath}
+            onFileNameChange={setFileName}
+            onLanguageChange={setLanguage}
             errors={errors}
           />
         </Paper>
@@ -410,9 +461,10 @@ function RouteComponent() {
                 <ExtractedTextPanel
                   extracts={extracts}
                   editingId={editingId}
-                  onToggleEdit={handleToggleEdit}
                   onUpdate={handleUpdateExtract}
+                  onDelete={handleDeleteDefinition}
                   onSelection={handleRightSelection}
+                  onToggleEdit={handleToggleEdit}
                 />
               </Tabs.Panel>
             </Tabs>
@@ -454,9 +506,10 @@ function RouteComponent() {
               <ExtractedTextPanel
                 extracts={extracts}
                 editingId={editingId}
-                onToggleEdit={handleToggleEdit}
                 onUpdate={handleUpdateExtract}
+                onDelete={handleDeleteDefinition}
                 onSelection={handleRightSelection}
+                onToggleEdit={handleToggleEdit}
               />
             </Paper>
           </Flex>

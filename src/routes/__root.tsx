@@ -7,6 +7,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { queryClient } from "@/queryClient";
 import Header from "../components/Header";
 import { MainLayout } from "@/components/MainLayout";
+import { initFtmlClient } from "@/lib/ftmlClient";
 
 function NotFound() {
   return (
@@ -18,6 +19,10 @@ function NotFound() {
 }
 
 export const Route = createRootRoute({
+  loader: async () => {
+    await initFtmlClient();
+    return null;
+  },
   shellComponent: RootDocument,
   notFoundComponent: NotFound,
 });

@@ -1,4 +1,4 @@
-import { currentUser } from "@/serverFns/currentUser.server";
+import { currentUser } from "@/server/auth/currentUser";
 import { logout } from "@/serverFns/logout.server";
 import {
   Burger,

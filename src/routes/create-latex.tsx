@@ -1,4 +1,4 @@
-import { currentUser } from "@/serverFns/currentUser.server";
+import { currentUser } from "@/server/auth/currentUser";
 import {
   getLatexHistory,
   saveLatexDraft,
@@ -31,11 +31,11 @@ export const Route = createFileRoute("/create-latex")({
     if (!user?.loggedIn) throw redirect({ to: "/login" });
   },
   validateSearch: (search: {
-    documentId?: string;
-    futureRepo?: string;
-    filePath?: string;
-    fileName?: string;
-    language?: string;
+    documentId: string;
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
   }) => search,
   component: CreateLatexPage,
 });
@@ -54,10 +54,13 @@ function CreateLatexPage() {
   const { data: generatedLatex, isLoading } = useQuery({
     queryKey: ["latex-with-deps", documentId],
     queryFn: async () => {
-      if (!documentId) return "";
+      if (!documentId || !futureRepo || !filePath || !fileName || !language) {
+        return "";
+      }
+
       return generateLatexWithDependencies({
         data: { documentId, futureRepo, filePath, fileName, language },
-      } as any);
+      });
     },
     enabled: !!documentId,
   });
@@ -101,7 +104,7 @@ function CreateLatexPage() {
           language,
           latex: displayLatex,
         },
-      } as any);
+      });
 
       await refetchHistory();
     } finally {
@@ -123,7 +126,7 @@ function CreateLatexPage() {
           language,
           latex: displayLatex,
         },
-      } as any);
+      });
 
       await refetchHistory();
       navigate({ to: "/" });
@@ -154,7 +157,7 @@ function CreateLatexPage() {
           fileName,
           language,
         },
-      } as any),
+      }),
     enabled:
       !!documentId && !!futureRepo && !!filePath && !!fileName && !!language,
   });

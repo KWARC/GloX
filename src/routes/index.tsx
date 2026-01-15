@@ -1,5 +1,5 @@
 import UploadDialog from "@/components/UploadDialog";
-import { currentUser } from "@/serverFns/currentUser.server";
+import { currentUser } from "@/server/auth/currentUser";
 import { getFinalizedDocuments } from "@/serverFns/latex.server";
 import {
   Badge,

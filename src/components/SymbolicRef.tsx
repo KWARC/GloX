@@ -1,15 +1,21 @@
 import { UriAutoComplete } from "@/components/UriAutoComplete";
 import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
+import { ftmlSearchSymbols } from "@/spec/searchSymbols";
+
 import {
   ActionIcon,
   Button,
   Group,
   Paper,
   Portal,
+  ScrollArea,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
+import { useQuery } from "@tanstack/react-query";
+import { RenderSymbolicUri } from "./RenderSymbolicUri";
 
 interface SymbolicRefProps {
   conceptUri: string;
@@ -26,6 +32,12 @@ export function SymbolicRef({
   onSelect,
   onClose,
 }: SymbolicRefProps) {
+  const { data: autoUris = [], isFetching } = useQuery({
+    queryKey: ["symbol-search", conceptUri],
+    queryFn: () => ftmlSearchSymbols(conceptUri, 15),
+    enabled: !!conceptUri,
+  });
+
   return (
     <Portal>
       <Paper
@@ -61,11 +73,39 @@ export function SymbolicRef({
               {conceptUri}
             </Text>
           </Paper>
+          {isFetching && (
+            <Text size="xs" c="dimmed">
+              Searching MathHub for existing symbols…
+            </Text>
+          )}
+
+          {autoUris.length > 0 && (
+            <Paper withBorder p="sm" radius="md">
+              <Text size="xs" fw={600} mb="xs">
+                Found in MathHub
+              </Text>
+
+              <ScrollArea h={180} type="auto">
+                <Stack gap={4}>
+                  {autoUris.map((uri) => (
+                    <Button
+                      key={uri}
+                      variant="subtle"
+                      size="xs"
+                      onClick={() => onUriChange(uri)}
+                    >
+                      <RenderSymbolicUri uri={uri} />
+                    </Button>
+                  ))}
+                </Stack>
+              </ScrollArea>
+            </Paper>
+          )}
+
           <Text size="sm" c="dimmed" lh={1.6}>
             Search for matching URIs below:
           </Text>
           <UriAutoComplete
-            selectedText={conceptUri}
             value={selectedUri}
             onChange={onUriChange}
             label="Matching URIs"
@@ -76,9 +116,20 @@ export function SymbolicRef({
               <Text size="xs" fw={600} c="dimmed" mb={4}>
                 Selected URI:
               </Text>
-              <Text size="xs" style={{ wordBreak: "break-all" }}>
-                {selectedUri}
-              </Text>
+              <Tooltip
+                label={selectedUri}
+                withArrow
+                multiline
+                maw={360}
+                position="top"
+                zIndex={5000}
+              >
+                <span style={{ cursor: "help", display: "inline-block" }}>
+                  <Text size="xs" ff="monospace">
+                    <RenderSymbolicUri uri={selectedUri} />
+                  </Text>
+                </span>
+              </Tooltip>
             </Paper>
           )}
           <Button
@@ -86,7 +137,7 @@ export function SymbolicRef({
               if (!selectedUri) return;
               const parsed = parseUri(selectedUri);
               console.log("[SymbolicRef] parsed URI =", parsed);
-              onSelect(parsed); 
+              onSelect(parsed);
             }}
             disabled={!selectedUri}
             fullWidth
