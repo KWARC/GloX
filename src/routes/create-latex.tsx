@@ -1,4 +1,4 @@
-import { currentUser } from "@/serverFns/currentUser.server";
+import { currentUser } from "@/server/auth/currentUser";
 import {
   getLatexHistory,
   saveLatexDraft,

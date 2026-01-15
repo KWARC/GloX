@@ -19,7 +19,7 @@ import {
   useTextSelection,
   useValidation,
 } from "@/server/text-selection";
-import { currentUser } from "@/serverFns/currentUser.server";
+import { currentUser } from "@/server/auth/currentUser";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
 import { createDefinitionSymbolicRef } from "@/serverFns/definitionSymbolicRef.server";
 import {

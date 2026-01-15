@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import prisma from "../lib/prisma";
-import { getSessionUser } from "../server/authSession";
+import prisma from "../../lib/prisma";
+import { getSessionUser } from "./authSession";
 
 export const currentUser = createServerFn({ method: "GET" }).handler(
   async () => {

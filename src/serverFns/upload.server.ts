@@ -1,6 +1,6 @@
 import { uploadDocument } from "@/server/document/document.service";
 import { createServerFn } from "@tanstack/react-start";
-import { getSessionUser } from "@/server/authSession";
+import { getSessionUser } from "@/server/auth/authSession";
 import type { UploadDocumentResult } from "@/server/document/document.types";
 
 export const uploadPdf = createServerFn({ method: "POST" })

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import bcrypt from "bcryptjs";
 import prisma from "../lib/prisma";
-import { setSessionUser } from "../server/authSession";
+import { setSessionUser } from "../server/auth/authSession";
 
 export type LoginInput = {
   email: string;
