@@ -18,11 +18,10 @@ export function RenderSymbolicUri({ uri }: { uri: string }) {
       return (
         <Group gap={6} wrap="nowrap">
           <IconSchool size={14} stroke={1.8} />
-         
-            <Text size="xs" c="dimmed">
+          <Text size="xs" c="dimmed">
             {archive}
           </Text>
-           <Text size="xs" fw={500}>
+          <Text size="xs" fw={500}>
             {symbol}
           </Text>
         </Group>
@@ -33,10 +32,10 @@ export function RenderSymbolicUri({ uri }: { uri: string }) {
       return (
         <Group gap={6} wrap="nowrap">
           <IconBook size={14} stroke={1.8} />
-          <Text size="xs" fw={500}>
+          <Text size="xs" c="dimmed">
             {archive}
           </Text>
-          <Text size="xs" c="dimmed">
+          <Text size="xs" fw={500}>
             {definiens}
           </Text>
         </Group>
