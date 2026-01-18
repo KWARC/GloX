@@ -1,5 +1,9 @@
 import { Group, Text } from "@mantine/core";
-import { IconBook, IconSchool } from "@tabler/icons-react";
+import {
+  IconBook,
+  IconSchool,
+  IconArchive,
+} from "@tabler/icons-react";
 
 export function RenderSymbolicUri({ uri }: { uri: string }) {
   try {
@@ -14,35 +18,28 @@ export function RenderSymbolicUri({ uri }: { uri: string }) {
       return <Text size="xs">{uri}</Text>;
     }
 
-    if (symbol) {
-      return (
-        <Group gap={6} wrap="nowrap">
-          <IconSchool size={14} stroke={1.8} />
+    const RightIcon = symbol ? IconSchool : IconBook;
+    const RightLabel = symbol ?? definiens;
+
+    return (
+      <Group justify="space-between" wrap="nowrap" w="100%">
+        <Group gap={4} wrap="nowrap">
+          <IconArchive size={14} stroke={1.6} />
           <Text size="xs" c="dimmed">
             {archive}
           </Text>
-          <Text size="xs" fw={500}>
-            {symbol}
-          </Text>
         </Group>
-      );
-    }
 
-    if (definiens) {
-      return (
-        <Group gap={6} wrap="nowrap">
-          <IconBook size={14} stroke={1.8} />
-          <Text size="xs" c="dimmed">
-            {archive}
-          </Text>
-          <Text size="xs" fw={500}>
-            {definiens}
-          </Text>
-        </Group>
-      );
-    }
-
-    return <Text size="xs">{archive}</Text>;
+        {RightLabel && (
+          <Group gap={4} wrap="nowrap">
+            <RightIcon size={14} stroke={1.8} />
+            <Text size="xs" fw={500}>
+              {RightLabel}
+            </Text>
+          </Group>
+        )}
+      </Group>
+    );
   } catch {
     return <Text size="xs">{uri}</Text>;
   }

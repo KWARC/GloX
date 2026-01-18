@@ -1,7 +1,5 @@
-import { UriAutoComplete } from "@/components/UriAutoComplete";
 import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
 import { ftmlSearchSymbols } from "@/spec/searchSymbols";
-
 import {
   ActionIcon,
   Button,
@@ -11,8 +9,10 @@ import {
   ScrollArea,
   Stack,
   Text,
+  TextInput,
   Tooltip,
 } from "@mantine/core";
+import { useState } from "react";
 import { IconX } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { RenderSymbolicUri } from "./RenderSymbolicUri";
@@ -32,10 +32,13 @@ export function SymbolicRef({
   onSelect,
   onClose,
 }: SymbolicRefProps) {
+  const [symbolSearch, setSymbolSearch] = useState(conceptUri);
+  const [showMathHubResults, setShowMathHubResults] = useState(true);
+
   const { data: autoUris = [], isFetching } = useQuery({
-    queryKey: ["symbol-search", conceptUri],
-    queryFn: () => ftmlSearchSymbols(conceptUri, 15),
-    enabled: !!conceptUri,
+    queryKey: ["symbol-search", symbolSearch],
+    queryFn: () => ftmlSearchSymbols(symbolSearch, 15),
+    enabled: symbolSearch.trim().length >= 2,
   });
 
   return (
@@ -73,6 +76,20 @@ export function SymbolicRef({
               {conceptUri}
             </Text>
           </Paper>
+
+          <TextInput
+            label="Search MathHub symbols"
+            value={symbolSearch}
+            onChange={(e) => setSymbolSearch(e.currentTarget.value)}
+            placeholder="Edit to search for another definition…"
+          />
+
+          {isFetching && (
+            <Text size="xs" c="dimmed">
+              Searching MathHub…
+            </Text>
+          )}
+
           {isFetching && (
             <Text size="xs" c="dimmed">
               Searching MathHub for existing symbols…
@@ -81,28 +98,41 @@ export function SymbolicRef({
 
           {autoUris.length > 0 && (
             <Paper withBorder p="sm" radius="md">
-              <Text size="xs" fw={600} mb="xs">
-                Found in MathHub
-              </Text>
+              <Group justify="space-between" mb="xs">
+                <Text size="xs" fw={600}>
+                  Found in MathHub
+                </Text>
 
-              <ScrollArea h={180} type="auto">
-                <Stack gap={4}>
-                  {autoUris.map((uri) => (
-                    <Button
-                      key={uri}
-                      variant="subtle"
-                      size="xs"
-                      onClick={() => onUriChange(uri)}
-                    >
-                      <RenderSymbolicUri uri={uri} />
-                    </Button>
-                  ))}
-                </Stack>
-              </ScrollArea>
+                <ActionIcon
+                  size="sm"
+                  variant="subtle"
+                  onClick={() => setShowMathHubResults((v) => !v)}
+                >
+                  {showMathHubResults ? "−" : "+"}
+                </ActionIcon>
+              </Group>
+
+              {showMathHubResults && (
+                <ScrollArea h={180}>
+                  <Stack gap={4}>
+                    {autoUris.map((uri) => (
+                      <Button
+                        key={uri}
+                        variant="subtle"
+                        size="xs"
+                        justify="space-between"
+                        onClick={() => onUriChange(uri)}
+                      >
+                        <RenderSymbolicUri uri={uri} />
+                      </Button>
+                    ))}
+                  </Stack>
+                </ScrollArea>
+              )}
             </Paper>
           )}
 
-          <Text size="sm" c="dimmed" lh={1.6}>
+          {/* <Text size="sm" c="dimmed" lh={1.6}>
             Search for matching URIs below:
           </Text>
           <UriAutoComplete
@@ -110,7 +140,7 @@ export function SymbolicRef({
             onChange={onUriChange}
             label="Matching URIs"
             placeholder="Click here to see matching URIs..."
-          />
+          /> */}
           {selectedUri && (
             <Paper withBorder p="sm" bg="green.0" radius="md">
               <Text size="xs" fw={600} c="dimmed" mb={4}>
@@ -120,7 +150,7 @@ export function SymbolicRef({
                 label={selectedUri}
                 withArrow
                 multiline
-                maw={360}
+                maw={400}
                 position="top"
                 zIndex={5000}
               >
