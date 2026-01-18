@@ -88,3 +88,18 @@ export const listDefiniendaByDocument = createServerFn({ method: "POST" })
       orderBy: { createdAt: "asc" },
     });
   });
+
+export const searchDefiniendum = createServerFn({ method: "POST" })
+  .inputValidator((query: string) => query)
+  .handler(async ({ data: query }) => {
+    console.log({query})
+    return prisma.definiendum.findMany({
+      where: {
+        symbolName: {
+          contains: query,
+          mode: "insensitive",
+        },
+      },
+      take: 10,
+    });
+  });

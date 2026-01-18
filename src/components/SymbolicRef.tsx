@@ -1,4 +1,5 @@
-import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
+import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
+import { searchDefiniendum } from "@/serverFns/definiendum.server";
 import { ftmlSearchSymbols } from "@/spec/searchSymbols";
 import {
   ActionIcon,
@@ -12,33 +13,41 @@ import {
   TextInput,
   Tooltip,
 } from "@mantine/core";
-import { useState } from "react";
 import { IconX } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
-import { RenderSymbolicUri } from "./RenderSymbolicUri";
+import { useState } from "react";
+import { RenderDbSymbol, RenderSymbolicUri } from "./RenderSymbolicUri";
 
 interface SymbolicRefProps {
   conceptUri: string;
-  selectedUri: string;
-  onUriChange: (value: string) => void;
-  onSelect: (parsed: ParsedMathHubUri) => void;
+  onSelect: (symRef: UnifiedSymbolicReference) => void;
   onClose: () => void;
 }
 
 export function SymbolicRef({
   conceptUri,
-  selectedUri,
-  onUriChange,
   onSelect,
   onClose,
 }: SymbolicRefProps) {
   const [symbolSearch, setSymbolSearch] = useState(conceptUri);
-  const [showMathHubResults, setShowMathHubResults] = useState(true);
+  const [activeTab, setActiveTab] = useState<"MATHHUB" | "DB">("MATHHUB");
 
-  const { data: autoUris = [], isFetching } = useQuery({
+  const [selectedSymRef, setSelectedSymRef] =
+    useState<UnifiedSymbolicReference | null>(null);
+
+  const { data: autoUris = [], isFetching: isFetchingMathHub } = useQuery({
     queryKey: ["symbol-search", symbolSearch],
     queryFn: () => ftmlSearchSymbols(symbolSearch, 15),
-    enabled: symbolSearch.trim().length >= 2,
+    enabled: activeTab === "MATHHUB" && symbolSearch.trim().length >= 2,
+  });
+
+  const { data: dbSymbols = [], isFetching: isFetchingDb } = useQuery({
+    queryKey: ["db-symbol-search", symbolSearch],
+    queryFn: () =>
+      searchDefiniendum({
+        data: symbolSearch,
+      }),
+    enabled: activeTab === "DB" && symbolSearch.trim().length >= 2,
   });
 
   return (
@@ -76,59 +85,112 @@ export function SymbolicRef({
               {conceptUri}
             </Text>
           </Paper>
+          <Group gap={0} grow>
+            <Button
+              size="xs"
+              variant={activeTab === "MATHHUB" ? "filled" : "light"}
+              onClick={() => {
+                setActiveTab("MATHHUB");
+                setSelectedSymRef(null);
+              }}
+            >
+              MathHub
+            </Button>
+
+            <Button
+              size="xs"
+              variant={activeTab === "DB" ? "filled" : "light"}
+              onClick={() => {
+                setActiveTab("DB");
+                setSelectedSymRef(null);
+              }}
+            >
+              DB
+            </Button>
+          </Group>
 
           <TextInput
-            label="Search MathHub symbols"
+            label="Search in MathHub"
             value={symbolSearch}
             onChange={(e) => setSymbolSearch(e.currentTarget.value)}
             placeholder="Edit to search for another definition…"
           />
 
-          {isFetching && (
+          {activeTab === "MATHHUB" && isFetchingMathHub && (
             <Text size="xs" c="dimmed">
               Searching MathHub…
             </Text>
           )}
 
-          {isFetching && (
+          {activeTab === "DB" && isFetchingDb && (
             <Text size="xs" c="dimmed">
-              Searching MathHub for existing symbols…
+              Searching Database…
             </Text>
           )}
 
-          {autoUris.length > 0 && (
+          {((activeTab === "MATHHUB" && autoUris.length > 0) ||
+            (activeTab === "DB" && dbSymbols.length > 0)) && (
             <Paper withBorder p="sm" radius="md">
               <Group justify="space-between" mb="xs">
                 <Text size="xs" fw={600}>
-                  Found in MathHub
+                  {activeTab === "MATHHUB"
+                    ? "Found in MathHub"
+                    : "Found in Database"}
                 </Text>
-
-                <ActionIcon
-                  size="sm"
-                  variant="subtle"
-                  onClick={() => setShowMathHubResults((v) => !v)}
-                >
-                  {showMathHubResults ? "−" : "+"}
-                </ActionIcon>
               </Group>
 
-              {showMathHubResults && (
-                <ScrollArea h={180}>
-                  <Stack gap={4}>
-                    {autoUris.map((uri) => (
+              <ScrollArea h={240}>
+                <Stack gap={4}>
+                  {activeTab === "MATHHUB" &&
+                    autoUris.map((uri, i) => (
                       <Button
-                        key={uri}
+                        key={i}
                         variant="subtle"
                         size="xs"
                         justify="space-between"
-                        onClick={() => onUriChange(uri)}
+                        onClick={() =>
+                          setSelectedSymRef({
+                            source: "MATHHUB",
+                            uri,
+                          })
+                        }
                       >
                         <RenderSymbolicUri uri={uri} />
                       </Button>
                     ))}
-                  </Stack>
-                </ScrollArea>
-              )}
+
+                  {activeTab === "DB" &&
+                    dbSymbols.map((d) => (
+                      <Button
+                        key={d.id}
+                        variant="subtle"
+                        size="xs"
+                        justify="space-between"
+                        onClick={() =>
+                          setSelectedSymRef({
+                            source: "DB",
+                            symbolName: d.symbolName,
+                            futureRepo: d.futureRepo,
+                            filePath: d.filePath,
+                            fileName: d.fileName,
+                            language: d.language,
+                          })
+                        }
+                      >
+                        <RenderDbSymbol
+                          symbol={{
+                            source: "DB",
+                            symbolName: d.symbolName,
+                            futureRepo: d.futureRepo,
+                            filePath: d.filePath,
+                            fileName: d.fileName,
+                            language: d.language,
+                          }}
+                        />
+                      </Button>
+                    ))}
+                </Stack>
+              </ScrollArea>
             </Paper>
           )}
 
@@ -141,13 +203,13 @@ export function SymbolicRef({
             label="Matching URIs"
             placeholder="Click here to see matching URIs..."
           /> */}
-          {selectedUri && (
+          {selectedSymRef?.source === "MATHHUB" && (
             <Paper withBorder p="sm" bg="green.0" radius="md">
               <Text size="xs" fw={600} c="dimmed" mb={4}>
-                Selected URI:
+                Selected Symbol:
               </Text>
               <Tooltip
-                label={selectedUri}
+                label={selectedSymRef.uri}
                 withArrow
                 multiline
                 maw={400}
@@ -156,23 +218,41 @@ export function SymbolicRef({
               >
                 <span style={{ cursor: "help", display: "inline-block" }}>
                   <Text size="xs" ff="monospace">
-                    <RenderSymbolicUri uri={selectedUri} />
+                    <RenderSymbolicUri uri={selectedSymRef.uri} />
                   </Text>
                 </span>
               </Tooltip>
             </Paper>
           )}
+
+          {selectedSymRef?.source === "DB" && (
+            <Paper withBorder p="sm" bg="green.0" radius="md">
+              <Text size="xs" fw={600} c="dimmed" mb={4}>
+                Selected Symbol (Database):
+              </Text>
+
+              <RenderDbSymbol
+                symbol={{
+                  source: "DB",
+                  symbolName: selectedSymRef.symbolName,
+                  futureRepo: selectedSymRef.futureRepo,
+                  filePath: selectedSymRef.filePath,
+                  fileName: selectedSymRef.fileName,
+                  language: selectedSymRef.language,
+                }}
+              />
+            </Paper>
+          )}
+
           <Button
             onClick={() => {
-              if (!selectedUri) return;
-              const parsed = parseUri(selectedUri);
-              console.log("[SymbolicRef] parsed URI =", parsed);
-              onSelect(parsed);
+              if (!selectedSymRef) return;
+              onSelect(selectedSymRef);
             }}
-            disabled={!selectedUri}
+            disabled={!selectedSymRef}
             fullWidth
           >
-            Select URI
+            Select Symbol
           </Button>
         </Stack>
       </Paper>

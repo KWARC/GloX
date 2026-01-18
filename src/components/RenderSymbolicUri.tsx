@@ -1,9 +1,6 @@
-import { Group, Text } from "@mantine/core";
-import {
-  IconBook,
-  IconSchool,
-  IconArchive,
-} from "@tabler/icons-react";
+import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
+import { Group, Text, Badge } from "@mantine/core";
+import { IconBook, IconSchool, IconArchive } from "@tabler/icons-react";
 
 export function RenderSymbolicUri({ uri }: { uri: string }) {
   try {
@@ -43,4 +40,26 @@ export function RenderSymbolicUri({ uri }: { uri: string }) {
   } catch {
     return <Text size="xs">{uri}</Text>;
   }
+}
+
+export function RenderDbSymbol({
+  symbol,
+}: {
+  symbol: Extract<UnifiedSymbolicReference, { source: "DB" }>;
+}) {
+  return (
+    <Group justify="space-between" w="100%">
+      <Text size="xs" fw={500}>
+        {symbol.symbolName}
+      </Text>
+      <Group gap={4}>
+        <Badge size="xs" color="green">
+          DB
+        </Badge>
+        <Text size="xs" c="dimmed">
+          {symbol.futureRepo}/{symbol.filePath}/{symbol.fileName}
+        </Text>
+      </Group>
+    </Group>
+  );
 }

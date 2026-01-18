@@ -8,26 +8,23 @@ import { SymbolicRef } from "@/components/SymbolicRef";
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { queryClient } from "@/queryClient";
-import { ParsedMathHubUri } from "@/server/parseUri";
+import { currentUser } from "@/server/auth/currentUser";
+import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import {
   ActivePage,
   buildDefiniendumMacro,
-  buildSymbolicRefMacro,
   replaceAllUnwrapped,
-  replaceAtOffset,
   useExtractionActions,
   useTextSelection,
   useValidation,
 } from "@/server/text-selection";
-import { currentUser } from "@/server/auth/currentUser";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
-import { createDefinitionSymbolicRef } from "@/serverFns/definitionSymbolicRef.server";
 import {
   deleteDefinition,
   listDefinition,
   updateDefinitionMeta,
 } from "@/serverFns/extractDefinition.server";
-import { createSymbolicRef } from "@/serverFns/symbolicRef.server";
+import { resolveSymbolicRef } from "@/serverFns/resolveSymbolicRef.server";
 import {
   ActionIcon,
   Box,
@@ -83,7 +80,6 @@ function RouteComponent() {
 
   const [mode, setMode] = useState<"SymbolicRef" | null>(null);
   const [conceptUri, setConceptUri] = useState<string>("");
-  const [selectedUri, setSelectedUri] = useState<string>("");
 
   const [defDialogOpen, setDefDialogOpen] = useState(false);
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
@@ -220,69 +216,22 @@ function RouteComponent() {
 
   function handleCloseSymbolicRefDialog() {
     setMode(null);
-    setSelectedUri("");
     setDefExtractId(null);
     clearAll();
   }
 
-  async function handleSaveSymbolicRef(parsed: ParsedMathHubUri) {
-    if (!defExtractId) {
-      console.log("[Route] defExtractId is null, aborting");
-      return;
-    }
+  async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
+    if (!defExtractId || !selection) return;
 
-    const isValid = validate(
-      parsed.archive,
-      parsed.filePath,
-      parsed.fileName,
-      parsed.language
-    );
-
-    console.log("[Route] validation result =", isValid);
-
-    if (!isValid) {
-      console.warn("[Route] validation failed", {
-        archive: parsed.archive,
-        filePath: parsed.filePath,
-        fileName: parsed.fileName,
-        language: parsed.language,
-      });
-      return;
-    }
-
-    const extract = extracts.find((e) => e.id === defExtractId);
-    console.log("[Route] matched extract =", extract);
-    if (!extract) return;
-    if (!selection) return;
-    console.log({ extract }, { selection });
-    const macro = buildSymbolicRefMacro(selection.text, parsed.symbol);
-
-    const updatedStatement = replaceAtOffset(
-      extract.statement,
-      selection.startOffset,
-      selection.endOffset,
-      macro
-    );
-
-    await updateExtract(defExtractId, updatedStatement);
-
-    const symbolicRef = await createSymbolicRef({
-      data: {
-        name: parsed.symbol,
-        conceptUri: parsed.conceptUri,
-        archive: parsed.archive,
-        filePath: parsed.filePath,
-        fileName: parsed.fileName,
-        language: parsed.language,
-        definiendumId: null,
-      },
-    });
-
-    await createDefinitionSymbolicRef({
+    await resolveSymbolicRef({
       data: {
         definitionId: defExtractId,
-        symbolicReferenceId: symbolicRef.id,
-        source: "MATHHUB",
+        selection: {
+          text: selection.text,
+          startOffset: selection.startOffset,
+          endOffset: selection.endOffset,
+        },
+        symRef,
       },
     });
 
@@ -557,8 +506,6 @@ function RouteComponent() {
       {mode === "SymbolicRef" && (
         <SymbolicRef
           conceptUri={conceptUri}
-          selectedUri={selectedUri}
-          onUriChange={setSelectedUri}
           onSelect={handleSaveSymbolicRef}
           onClose={handleCloseSymbolicRefDialog}
         />

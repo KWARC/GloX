@@ -4,7 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 export type CreateDefinitionSymbolicRefInput = {
   definitionId: string;
   symbolicReferenceId: string;
-  source: "MATHHUB";
+  source: "MATHHUB" | "DEFINIENDUM";
 };
 
 export const createDefinitionSymbolicRef = createServerFn({ method: "POST" })
