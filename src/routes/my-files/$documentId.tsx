@@ -234,6 +234,9 @@ function RouteComponent() {
         symRef,
       },
     });
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
+    });
 
     handleCloseSymbolicRefDialog();
   }

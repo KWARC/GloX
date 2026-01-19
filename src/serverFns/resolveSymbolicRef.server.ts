@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
+import { buildSymbolicRefMacro } from "@/server/text-selection";
 import { createServerFn } from "@tanstack/react-start";
 
 type ResolveSymbolicRefInput = {
@@ -41,7 +42,7 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
       throw new Error("Definition not found");
     }
 
-    const macro = `\\symref{${parsed.symbol}}`;
+    const macro = buildSymbolicRefMacro(selection.text, parsed.symbol);
 
     const updatedStatement =
       definition.statement.slice(0, selection.startOffset) +
