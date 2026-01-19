@@ -24,8 +24,8 @@ const SEARCH_MODAL_TOP_OFFSET = 80;
 const SEARCH_RESULTS_HEIGHT = 240;
 const MIN_SEARCH_LENGTH = 2;
 const MATHHUB_RESULTS_LIMIT = 15;
-
-type TabType = "MATHHUB" | "DB";
+const MATHHUB_SECTION_HEIGHT = Math.floor(SEARCH_RESULTS_HEIGHT * 0.7);
+const DB_SECTION_HEIGHT = Math.floor(SEARCH_RESULTS_HEIGHT * 0.3);
 
 interface SymbolicRefProps {
   conceptUri: string;
@@ -39,7 +39,6 @@ export function SymbolicRef({
   onClose,
 }: SymbolicRefProps) {
   const [searchQuery, setSearchQuery] = useState(conceptUri);
-  const [activeTab, setActiveTab] = useState<TabType>("MATHHUB");
   const [selectedSymbol, setSelectedSymbol] =
     useState<UnifiedSymbolicReference | null>(null);
 
@@ -49,36 +48,15 @@ export function SymbolicRef({
     useQuery({
       queryKey: ["symbol-search", searchQuery],
       queryFn: () => ftmlSearchSymbols(searchQuery, MATHHUB_RESULTS_LIMIT),
-      enabled: activeTab === "MATHHUB" && isSearchValid,
+      enabled: isSearchValid,
     });
 
   const { data: databaseResults = [], isFetching: isSearchingDatabase } =
     useQuery({
       queryKey: ["db-symbol-search", searchQuery],
       queryFn: () => searchDefiniendum({ data: searchQuery }),
-      enabled: activeTab === "DB" && isSearchValid,
+      enabled: isSearchValid,
     });
-
-  const showNoMathHubResults =
-    activeTab === "MATHHUB" &&
-    isSearchValid &&
-    !isSearchingMathHub &&
-    mathHubResults.length === 0;
-
-  const showNoDatabaseResults =
-    activeTab === "DB" &&
-    isSearchValid &&
-    !isSearchingDatabase &&
-    databaseResults.length === 0;
-
-  const hasResults =
-    (activeTab === "MATHHUB" && mathHubResults.length > 0) ||
-    (activeTab === "DB" && databaseResults.length > 0);
-
-  const handleTabChange = (tab: TabType) => {
-    setActiveTab(tab);
-    setSelectedSymbol(null);
-  };
 
   const handleSymbolSelect = () => {
     if (selectedSymbol) {
@@ -86,23 +64,15 @@ export function SymbolicRef({
     }
   };
 
-  const handleMathHubSymbolClick = (uri: string) => {
-    setSelectedSymbol({
-      source: "MATHHUB",
-      uri,
-    });
-  };
+  const isReady = !isSearchingMathHub && !isSearchingDatabase;
 
-  const handleDatabaseSymbolClick = (symbol: (typeof databaseResults)[0]) => {
-    setSelectedSymbol({
-      source: "DB",
-      symbolName: symbol.symbolName,
-      futureRepo: symbol.futureRepo,
-      filePath: symbol.filePath,
-      fileName: symbol.fileName,
-      language: symbol.language,
-    });
-  };
+  const hasResults = mathHubResults.length > 0 || databaseResults.length > 0;
+
+  const showNoResults =
+    isSearchValid &&
+    isReady &&
+    mathHubResults.length === 0 &&
+    databaseResults.length === 0;
 
   return (
     <Portal>
@@ -141,24 +111,6 @@ export function SymbolicRef({
             </Text>
           </Paper>
 
-          <Group gap={0} grow>
-            <Button
-              size="xs"
-              variant={activeTab === "MATHHUB" ? "filled" : "light"}
-              onClick={() => handleTabChange("MATHHUB")}
-            >
-              MathHub
-            </Button>
-
-            <Button
-              size="xs"
-              variant={activeTab === "DB" ? "filled" : "light"}
-              onClick={() => handleTabChange("DB")}
-            >
-              DB
-            </Button>
-          </Group>
-
           <TextInput
             label="Search in MathHub"
             value={searchQuery}
@@ -166,90 +118,107 @@ export function SymbolicRef({
             placeholder="Edit to search for another definition…"
           />
 
-          {activeTab === "MATHHUB" && isSearchingMathHub && (
-            <Text size="xs" c="dimmed">
-              Searching MathHub…
-            </Text>
-          )}
-
-          {activeTab === "DB" && isSearchingDatabase && (
-            <Text size="xs" c="dimmed">
-              Searching Database…
-            </Text>
-          )}
-
-          {showNoMathHubResults && (
+          {showNoResults && (
             <Paper withBorder p="sm" radius="md" bg="gray.0">
               <Text size="xs" c="dimmed">
-                No matching symbols found in MathHub.
+                No matching symbols found.
               </Text>
             </Paper>
           )}
 
-          {showNoDatabaseResults && (
-            <Paper withBorder p="sm" radius="md" bg="gray.0">
-              <Text size="xs" c="dimmed">
-                No matching symbols found in the database.
-              </Text>
-            </Paper>
-          )}
-
-          {hasResults && (
+          {isReady && hasResults && (
             <Paper withBorder p="sm" radius="md">
               <Group justify="space-between" mb="xs">
                 <Text size="xs" fw={600}>
-                  {activeTab === "MATHHUB"
-                    ? "Found in MathHub"
-                    : "Found in Database"}
+                  Found Symbols
                 </Text>
               </Group>
 
-              <ScrollArea h={SEARCH_RESULTS_HEIGHT}>
-                <Stack gap={4}>
-                  {activeTab === "MATHHUB" &&
-                    mathHubResults.map((uri, index) => (
+              <Stack gap={4}>
+                <Text size="xs" fw={500} c="dimmed">
+                  MathHub
+                </Text>
+
+                <ScrollArea h={MATHHUB_SECTION_HEIGHT}>
+                  <Stack gap={4}>
+                    {mathHubResults.map((uri) => (
                       <Button
-                        key={index}
+                        key={`mh:${uri}`}
                         variant="subtle"
                         size="xs"
                         justify="space-between"
-                        onClick={() => handleMathHubSymbolClick(uri)}
+                        onClick={() =>
+                          setSelectedSymbol({
+                            source: "MATHHUB",
+                            uri,
+                          })
+                        }
                       >
                         <RenderSymbolicUri uri={uri} />
                       </Button>
                     ))}
 
-                  {activeTab === "DB" &&
-                    databaseResults.map((dbSymbol) => (
+                    {!mathHubResults.length && (
+                      <Text size="xs" c="dimmed" ta="center">
+                        No MathHub results
+                      </Text>
+                    )}
+                  </Stack>
+                </ScrollArea>
+              </Stack>
+
+              <Stack gap={4} mt="sm">
+                <Group justify="space-between">
+                  <Text size="xs" fw={500} c="dimmed">
+                    Local / Temporary
+                  </Text>
+
+                  {databaseResults.length > 0 && (
+                    <Text size="xs" c="dimmed">
+                      {databaseResults.length} local
+                    </Text>
+                  )}
+                </Group>
+
+                <ScrollArea h={DB_SECTION_HEIGHT}>
+                  <Stack gap={4}>
+                    {databaseResults.map((db) => (
                       <Button
-                        key={dbSymbol.id}
+                        key={`db:${db.id}`}
                         variant="subtle"
                         size="xs"
                         justify="space-between"
-                        onClick={() => handleDatabaseSymbolClick(dbSymbol)}
+                        onClick={() =>
+                          setSelectedSymbol({
+                            source: "DB",
+                            symbolName: db.symbolName,
+                            futureRepo: db.futureRepo,
+                            filePath: db.filePath,
+                            fileName: db.fileName,
+                            language: db.language,
+                          })
+                        }
                       >
                         <RenderDbSymbol
                           symbol={{
                             source: "DB",
-                            symbolName: dbSymbol.symbolName,
-                            futureRepo: dbSymbol.futureRepo,
+                            symbolName: db.symbolName,
+                            futureRepo: db.futureRepo,
                           }}
                         />
                       </Button>
                     ))}
-                </Stack>
-              </ScrollArea>
+
+                    {!databaseResults.length && (
+                      <Text size="xs" c="dimmed" ta="center">
+                        No local symbols
+                      </Text>
+                    )}
+                  </Stack>
+                </ScrollArea>
+              </Stack>
             </Paper>
           )}
-          {/* <Text size="sm" c="dimmed" lh={1.6}>
-            Search for matching URIs below:
-          </Text>
-          <UriAutoComplete
-            value={selectedUri}
-            onChange={onUriChange}
-            label="Matching URIs"
-            placeholder="Click here to see matching URIs..."
-          /> */}
 
           {selectedSymbol?.source === "MATHHUB" && (
             <Paper withBorder p="sm" bg="green.0" radius="md">

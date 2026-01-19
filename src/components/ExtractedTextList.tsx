@@ -13,6 +13,7 @@ import { IconPencil, IconTrash } from "@tabler/icons-react";
 interface ExtractedTextPanelProps {
   extracts: ExtractedItem[];
   editingId: string | null;
+  selectedId: string | null;
   onToggleEdit: (id: string) => void;
   onUpdate: (id: string, statement: string) => Promise<void>;
   onDelete: (id: string) => void;
@@ -22,6 +23,7 @@ interface ExtractedTextPanelProps {
 export function ExtractedTextPanel({
   extracts,
   editingId,
+  selectedId,
   onToggleEdit,
   onUpdate,
   onDelete,
@@ -36,53 +38,76 @@ export function ExtractedTextPanel({
               No extracted text yet
             </Text>
           ) : (
-            extracts.map((item) => (
-              <Paper key={item.id} withBorder p="sm" radius="md">
-                <Group justify="space-between" mb={4}>
-                  <Text size="xs">Page {item.pageNumber}</Text>
-                  <Group gap="xs">
-                    <ActionIcon
-                      size="sm"
-                      color="red"
-                      onClick={() => onDelete(item.id)}
-                    >
-                      <IconTrash size={14} />
-                    </ActionIcon>
-                    <ActionIcon
-                      size="sm"
-                      variant="subtle"
-                      onClick={() => onToggleEdit(item.id)}
-                      color="red"
-                    >
-                      <IconPencil size={16} />
-                    </ActionIcon>
-                  </Group>
-                </Group>
-                {editingId === item.id ? (
-                  <Textarea
-                    defaultValue={item.statement}
-                    autosize
-                    onBlur={async (e) => {
-                      await onUpdate(item.id, e.currentTarget.value);
-                    }}
-                  />
-                ) : (
-                  <Text
-                    size="sm"
-                    lh={1.6}
-                    style={{ userSelect: "text", cursor: "text" }}
-                    onMouseUp={() => onSelection(item.id)}
-                  >
-                    {item.statement}
-                  </Text>
-                )}
+            extracts.map((item) => {
+              const isSelected = item.id === selectedId;
+              const isEditing = item.id === editingId;
 
-                <Text size="10px" c="dimmed" ff="monospace" mt={6}>
-                  {item.futureRepo}/{item.filePath}/{item.fileName}/
-                  {item.language}
-                </Text>
-              </Paper>
-            ))
+              return (
+                <Paper
+                  key={item.id}
+                  withBorder
+                  p="sm"
+                  radius="md"
+                  bg={
+                    isEditing ? "yellow.0" : isSelected ? "blue.1" : undefined
+                  }
+                  style={{
+                    borderColor: isEditing
+                      ? "var(--mantine-color-yellow-6)"
+                      : isSelected
+                        ? "var(--mantine-color-blue-6)"
+                        : undefined,
+                  }}
+                >
+                  <Group justify="space-between" mb={4}>
+                    <Text size="xs">Page {item.pageNumber}</Text>
+
+                    <Group gap="xs">
+                      <ActionIcon
+                        size="sm"
+                        color="red"
+                        onClick={() => onDelete(item.id)}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+
+                      <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        onClick={() => onToggleEdit(item.id)}
+                        color="red"
+                      >
+                        <IconPencil size={16} />
+                      </ActionIcon>
+                    </Group>
+                  </Group>
+
+                  {isEditing ? (
+                    <Textarea
+                      defaultValue={item.statement}
+                      autosize
+                      onBlur={async (e) => {
+                        await onUpdate(item.id, e.currentTarget.value);
+                      }}
+                    />
+                  ) : (
+                    <Text
+                      size="sm"
+                      lh={1.6}
+                      style={{ userSelect: "text", cursor: "text" }}
+                      onMouseUp={() => onSelection(item.id)}
+                    >
+                      {item.statement}
+                    </Text>
+                  )}
+
+                  <Text size="10px" c="dimmed" ff="monospace" mt={6}>
+                    {item.futureRepo}/{item.filePath}/{item.fileName}/
+                    {item.language}
+                  </Text>
+                </Paper>
+              );
+            })
           )}
         </Stack>
       </ScrollArea>

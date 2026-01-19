@@ -413,6 +413,7 @@ function RouteComponent() {
                 <ExtractedTextPanel
                   extracts={extracts}
                   editingId={editingId}
+                  selectedId={lockedByExtractId}
                   onUpdate={handleUpdateExtract}
                   onDelete={handleDeleteDefinition}
                   onSelection={handleRightSelection}
@@ -458,6 +459,7 @@ function RouteComponent() {
               <ExtractedTextPanel
                 extracts={extracts}
                 editingId={editingId}
+                selectedId={lockedByExtractId}
                 onUpdate={handleUpdateExtract}
                 onDelete={handleDeleteDefinition}
                 onSelection={handleRightSelection}
