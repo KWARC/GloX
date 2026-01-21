@@ -48,15 +48,14 @@ export function ExtractedTextPanel({
                   withBorder
                   p="sm"
                   radius="md"
-                  bg={
-                    isEditing ? "yellow.0" : isSelected ? "blue.1" : undefined
-                  }
+                  bg={isEditing ? "yellow.0" : undefined}
                   style={{
                     borderColor: isEditing
                       ? "var(--mantine-color-yellow-6)"
                       : isSelected
                         ? "var(--mantine-color-blue-6)"
                         : undefined,
+                    borderWidth: isEditing || isSelected ? 2 : undefined,
                   }}
                 >
                   <Group justify="space-between" mb={4}>

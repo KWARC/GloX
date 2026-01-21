@@ -112,7 +112,7 @@ export function SymbolicRef({
           </Paper>
 
           <TextInput
-            label="Search in MathHub"
+            label="Search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.currentTarget.value)}
             placeholder="Edit to search for another definition…"
@@ -133,40 +133,6 @@ export function SymbolicRef({
                   Found Symbols
                 </Text>
               </Group>
-
-              <Stack gap={4}>
-                <Text size="xs" fw={500} c="dimmed">
-                  MathHub
-                </Text>
-
-                <ScrollArea h={MATHHUB_SECTION_HEIGHT}>
-                  <Stack gap={4}>
-                    {mathHubResults.map((uri) => (
-                      <Button
-                        key={`mh:${uri}`}
-                        variant="subtle"
-                        size="xs"
-                        justify="space-between"
-                        onClick={() =>
-                          setSelectedSymbol({
-                            source: "MATHHUB",
-                            uri,
-                          })
-                        }
-                      >
-                        <RenderSymbolicUri uri={uri} />
-                      </Button>
-                    ))}
-
-                    {!mathHubResults.length && (
-                      <Text size="xs" c="dimmed" ta="center">
-                        No MathHub results
-                      </Text>
-                    )}
-                  </Stack>
-                </ScrollArea>
-              </Stack>
-
               <Stack gap={4} mt="sm">
                 <Group justify="space-between">
                   <Text size="xs" fw={500} c="dimmed">
@@ -212,6 +178,39 @@ export function SymbolicRef({
                     {!databaseResults.length && (
                       <Text size="xs" c="dimmed" ta="center">
                         No local symbols
+                      </Text>
+                    )}
+                  </Stack>
+                </ScrollArea>
+              </Stack>
+
+              <Stack gap={4}>
+                <Text size="xs" fw={500} c="dimmed">
+                  MathHub
+                </Text>
+
+                <ScrollArea h={MATHHUB_SECTION_HEIGHT}>
+                  <Stack gap={4}>
+                    {mathHubResults.map((uri) => (
+                      <Button
+                        key={`mh:${uri}`}
+                        variant="subtle"
+                        size="xs"
+                        justify="space-between"
+                        onClick={() =>
+                          setSelectedSymbol({
+                            source: "MATHHUB",
+                            uri,
+                          })
+                        }
+                      >
+                        <RenderSymbolicUri uri={uri} />
+                      </Button>
+                    ))}
+
+                    {!mathHubResults.length && (
+                      <Text size="xs" c="dimmed" ta="center">
+                        No MathHub results
                       </Text>
                     )}
                   </Stack>
