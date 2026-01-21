@@ -14,9 +14,8 @@ export type UpdateDefinitionMetaInput = {
 };
 
 export const createDefinition = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateDefinitionInput) => data) // Optional: Adds runtime validation
+  .inputValidator((data: CreateDefinitionInput) => data) 
   .handler(async ({ data }) => {
-    // data is now automatically typed as CreateDefinitionInput
     if (
       !data.documentId ||
       !data.documentPageId ||

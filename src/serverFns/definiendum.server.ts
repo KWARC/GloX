@@ -47,44 +47,17 @@ export const createDefiniendum = createServerFn({ method: "POST" })
     });
   });
 
-export const listDefinienda = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const searchDefiniendum = createServerFn({ method: "POST" })
+  .inputValidator((query: string) => query)
+  .handler(async ({ data: query }) => {
+    console.log({query})
     return prisma.definiendum.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-  }
-);
-
-export const listDefiniendaByDocument = createServerFn({ method: "POST" })
-  .inputValidator((data: { documentId: string }) => data)
-  .handler(async ({ data }) => {
-    const { documentId } = data;
-
-    const extracts = await prisma.definition.findMany({
-      where: { documentId },
-      select: {
-        futureRepo: true,
-        filePath: true,
-        fileName: true,
-        language: true,
-      },
-    });
-
-    if (extracts.length === 0) return [];
-
-    const ors = extracts.map((e) => ({
-      definitions: {
-        some: {
-          archive: e.futureRepo,
-          filePath: e.filePath,
-          fileName: e.fileName,
-          language: e.language,
+      where: {
+        symbolName: {
+          contains: query,
+          mode: "insensitive",
         },
       },
-    }));
-
-    return prisma.definiendum.findMany({
-      where: { OR: ors },
-      orderBy: { createdAt: "asc" },
+      take: 10,
     });
   });
