@@ -8,7 +8,11 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
-import { IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconEye, IconPencil, IconTrash } from "@tabler/icons-react";
+import { useState } from "react";
+import { FtmlPreview } from "./FtmlPreview";
+import { useQuery } from "@tanstack/react-query";
+import { getDefinitionFtml } from "@/serverFns/definitionFtml.server";
 
 interface ExtractedTextPanelProps {
   extracts: ExtractedItem[];
@@ -29,6 +33,19 @@ export function ExtractedTextPanel({
   onDelete,
   onSelection,
 }: ExtractedTextPanelProps) {
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewQuery = useQuery({
+    queryKey: ["definition-ftml", previewId],
+    queryFn: () => {
+      if (!previewId) throw new Error("No preview id");
+      
+      return getDefinitionFtml({ data: previewId });
+    },
+
+    enabled: !!previewId,
+  });
+  console.log(previewQuery.data);
+
   return (
     <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
       <ScrollArea h="100%">
@@ -78,10 +95,23 @@ export function ExtractedTextPanel({
                       >
                         <IconPencil size={16} />
                       </ActionIcon>
+                      <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        color="blue"
+                        onClick={() =>
+                          setPreviewId(previewId === item.id ? null : item.id)
+                        }
+                        title="Preview semantic rendering"
+                      >
+                        <IconEye size={16} />
+                      </ActionIcon>
                     </Group>
                   </Group>
 
-                  {isEditing ? (
+                  {previewId === item.id && previewQuery.data?.ftml ? (
+                    <FtmlPreview ftml={previewQuery.data.ftml} />
+                  ) : isEditing ? (
                     <Textarea
                       defaultValue={item.statement}
                       autosize

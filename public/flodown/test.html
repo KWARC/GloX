@@ -1,0 +1,43 @@
+<html>
+    <head>
+        <script src="./flodown.js"></script>
+    </head>
+    <body>
+        <p>Henlo</p>
+        <div id="foobar" style="display:contents;">
+            test
+        </div>
+        <script type="text/javascript">
+            floDown().then(() => {
+                // by default: https://mathhub.info
+                floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
+                // alternatively: floDown.FloDown.fromPath
+                const fd = floDown.FloDown.fromUri("http://test?a=test&d=test&l=en");
+                // add a paragraph
+                fd.addElement({ type:"paragraph", content:[{type: "text",text:"this is a test"}] });
+                // render it to the div above
+                fd.mountTo(document.getElementById("foobar"));
+                // add another paragraph; will rerender automatically
+                fd.addElement({ type:"paragraph", content:[
+                    {type: "text",text:"this is another test: "},
+                    {type:"symref",uri:"http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra",content:[
+                        {type:"text",text:"this is a symbol reference"}
+                    ]}
+                ]});
+                // log the stex source for the block
+                console.log(fd.getStex());
+                // log the raw ftml string
+                console.log(fd.getFtml());
+                // erase all content (will not rerender!)
+                fd.clear();
+                // add an element again
+                fd.addElement({ type:"paragraph", content:[
+                    {type: "text",text:"new test: "},
+                    {type:"symref",uri:"http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra",content:[
+                        {type:"text",text:"A reference to Boolean algebras"}
+                    ]}
+                ]});
+            });
+        </script>
+    </body>
+</html>

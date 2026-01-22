@@ -38,6 +38,7 @@ export interface ExtractedItem {
   filePath: string;
   fileName: string;
   language: string;
+  ftml?: unknown;
 }
 
 export type TextSelection = {
