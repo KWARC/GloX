@@ -40,7 +40,7 @@ export default function Header() {
   const handleLogout = async () => {
     try {
       await logout();
-      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      queryClient.setQueryData(["currentUser"], { loggedIn: false });
       setOpened(false);
       navigate({ to: "/login" });
     } catch (err) {

@@ -61,9 +61,11 @@ enum SymbolicRefSource {
 
 model User {
   id           String     @id @default(uuid())
-  name         String?
+  Firstname    String?
+  LastName     String?
   email        String     @unique
-  passwordHash String
+  passwordHash String?
+  isFauUser    Boolean    @default(false)
   createdAt    DateTime   @default(now())
   documents    Document[]
 }

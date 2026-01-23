@@ -1,6 +1,6 @@
 import { uploadDocument } from "@/server/document/document.service";
 import { createServerFn } from "@tanstack/react-start";
-import { getSessionUser } from "@/server/auth/authSession";
+import { requireUserId } from "@/server/auth/authSession";
 import type { UploadDocumentResult } from "@/server/document/document.types";
 
 export const uploadPdf = createServerFn({ method: "POST" })
@@ -11,17 +11,13 @@ export const uploadPdf = createServerFn({ method: "POST" })
     }
 
     const file = data.get("file");
-
     if (!(file instanceof File)) {
       throw new Error("No file provided");
     }
 
-    const userId = getSessionUser();
-    if (!userId) {
-      throw new Error("User not logged in");
-    }
+    const userId = requireUserId();
 
-    console.log("Uploading document:", file.name);
+    console.log("Uploading document:", file.name, "for user", userId);
 
     return uploadDocument({ file, userId });
   });
