@@ -94,7 +94,7 @@ export function buildDefinitionFtml(def: NonNullDefinition) {
       });
     } else if (match[3] && usesDefinition) {
       paragraphContent.push({
-        type: "definiens",
+        type: "definiendum",
         uri: definiendumUri,
         content: [match[3]],
       });
