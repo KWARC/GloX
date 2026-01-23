@@ -15,7 +15,7 @@ export const localFakeLogin = createServerFn({ method: "POST" })
       update: {},
       create: {
         id: fakeId,
-        email: `${fakeId}@fake.local`,
+        email: `${fakeId}@fake`,
         Firstname: `fake_${fakeId}`,
       },
     });

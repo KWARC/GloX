@@ -22,6 +22,7 @@ import { createDefiniendum } from "@/serverFns/definiendum.server";
 import {
   deleteDefinition,
   listDefinition,
+  updateDefinition,
   updateDefinitionMeta,
 } from "@/serverFns/extractDefinition.server";
 import { resolveSymbolicRef } from "@/serverFns/resolveSymbolicRef.server";
@@ -57,11 +58,11 @@ function RouteComponent() {
   const isTablet = useMediaQuery("(max-width: 1024px)");
 
   const { data: document, isLoading: docLoading } = useQuery(
-    documentByIdQuery(documentId)
+    documentByIdQuery(documentId),
   );
 
   const { data: pages = [], isLoading: pagesLoading } = useQuery(
-    documentPagesQuery(documentId)
+    documentPagesQuery(documentId),
   );
 
   const { data: extracts = [] } = useQuery({
@@ -85,7 +86,7 @@ function RouteComponent() {
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
   const [defExtractText, setDefExtractText] = useState("");
   const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(
-    null
+    null,
   );
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
@@ -175,13 +176,13 @@ function RouteComponent() {
     const updatedStatement = replaceAllUnwrapped(
       extract.statement,
       defExtractText,
-      macro
+      macro,
     );
 
     await updateExtract(defExtractId, updatedStatement);
 
     if (params.symdecl) {
-      await createDefiniendum({
+      const defin = await createDefiniendum({
         data: {
           symbolName: params.symbolName.trim(),
           alias: params.alias?.trim() || null,
@@ -190,6 +191,14 @@ function RouteComponent() {
           filePath: filePath.trim(),
           fileName: fileName.trim(),
           language: language.trim(),
+        },
+      });
+
+      // 🔴 THIS LINE IS THE FIX
+      await updateDefinition({
+        data: {
+          id: defExtractId,
+          definiendumId: defin.id,
         },
       });
     }
@@ -275,9 +284,9 @@ function RouteComponent() {
                 fileName: fileName.trim(),
                 language: language.trim(),
               }
-            : item
+            : item,
         );
-      }
+      },
     );
 
     setIsEditingMeta(false);
@@ -479,7 +488,7 @@ function RouteComponent() {
               ? () => {
                   if (!selection) return;
                   const extract = extracts.find(
-                    (e) => e.id === selection.extractId
+                    (e) => e.id === selection.extractId,
                   );
                   if (!extract) return;
 
@@ -495,7 +504,7 @@ function RouteComponent() {
               ? () => {
                   if (!selection) return;
                   const extract = extracts.find(
-                    (e) => e.id === selection.extractId
+                    (e) => e.id === selection.extractId,
                   );
 
                   if (!extract) return;

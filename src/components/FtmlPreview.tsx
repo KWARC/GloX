@@ -2,29 +2,42 @@ import { useEffect, useRef } from "react";
 import { initFloDown } from "@/lib/flodown-client";
 
 export function FtmlPreview({ ftml }: { ftml: unknown }) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const fdRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!ftml || !containerRef.current) return;
+    if (!ftml) return;
 
-    let fd: any | null = null;
-    let cancelled = false;
+    const container = containerRef.current;
+    if (!container) return; // ⬅ narrows type for TS
+
+    let disposed = false;
 
     (async () => {
       const floDown = await initFloDown();
-      if (cancelled) return;
+      if (disposed) return;
 
       floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
-      const fd = floDown.FloDown.fromUri("http://test?a=test&d=test&l=en");
+      // destroy previous block
+      if (fdRef.current) {
+        fdRef.current = null;
+        container.innerHTML = "";
+      }
 
-      fd.addElement(ftml);
-      fd.mountTo(containerRef.current);
+      // create fresh block
+      const fd = floDown.FloDown.fromUri(
+        "http://test?a=test&d=test&l=en"
+      );
+
+      fd.addElement(structuredClone(ftml));
+      fd.mountTo(container);
+
+      fdRef.current = fd;
     })();
 
     return () => {
-      cancelled = true;
-      fd?.clear();
+      disposed = true;
     };
   }, [ftml]);
 

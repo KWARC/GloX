@@ -1,5 +1,4 @@
 // src/lib/flodown-client.ts
-
 let floDownPromise: Promise<any> | null = null;
 
 export function initFloDown(): Promise<any> {
@@ -11,7 +10,6 @@ export function initFloDown(): Promise<any> {
     floDownPromise = new Promise((resolve, reject) => {
       // @ts-ignore
       if (window.floDown?.FloDown) {
-        // already initialized
         // @ts-ignore
         resolve(window.floDown);
         return;
@@ -23,11 +21,8 @@ export function initFloDown(): Promise<any> {
 
       script.onload = async () => {
         try {
-          // IMPORTANT: initialize WASM
           // @ts-ignore
           await window.floDown();
-
-          // return namespace, not initializer result
           // @ts-ignore
           resolve(window.floDown);
         } catch (e) {

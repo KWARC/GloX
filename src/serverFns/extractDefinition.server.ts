@@ -14,7 +14,7 @@ export type UpdateDefinitionMetaInput = {
 };
 
 export const createDefinition = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateDefinitionInput) => data) 
+  .inputValidator((data: CreateDefinitionInput) => data)
   .handler(async ({ data }) => {
     if (
       !data.documentId ||
@@ -71,13 +71,18 @@ export const listDefinition = createServerFn({ method: "GET" })
 export const updateDefinition = createServerFn({ method: "POST" })
   .inputValidator((data: UpdateDefinitionInput) => data)
   .handler(async ({ data }) => {
-    if (!data.id || !data.statement?.trim()) {
-      throw new Error("Missing update fields");
+    if (!data.id) {
+      throw new Error("Missing definition id");
     }
 
     return prisma.definition.update({
       where: { id: data.id },
-      data: { statement: data.statement },
+      data: {
+        ...(data.statement !== undefined && { statement: data.statement }),
+        ...(data.definiendumId !== undefined && {
+          definiendumId: data.definiendumId,
+        }),
+      },
     });
   });
 
