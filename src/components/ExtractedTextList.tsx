@@ -110,7 +110,7 @@ export function ExtractedTextPanel({
                   </Group>
 
                   {previewId === item.id && previewQuery.data?.ftml ? (
-                    <FtmlPreview ftml={previewQuery.data.ftml} />
+                    <FtmlPreview data={{ ftml: previewQuery.data.ftml }} />
                   ) : isEditing ? (
                     <Textarea
                       defaultValue={item.statement}
