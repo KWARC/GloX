@@ -1,13 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
-import { setResponseHeader } from "@tanstack/react-start/server";
+import { getResponse } from "@tanstack/react-start/server";
 
-export const logout = createServerFn({ method: "POST" })
-  .handler(async () => {
-    setResponseHeader("Set-Cookie", [
-      // MUST match original cookie attributes
-      "access_token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0",
-      "is_logged_in=; Path=/; SameSite=Lax; Max-Age=0",
-    ]);
+export const logout = createServerFn({ method: "POST" }).handler(async () => {
+  const res = getResponse();
 
-    return { redirectTo: "/login" };
-  });
+  res.headers.append(
+    "Set-Cookie",
+    "access_token=; Path=/; Max-Age=0; SameSite=Lax",
+  );
+
+  res.headers.append(
+    "Set-Cookie",
+    "is_logged_in=; Path=/; Max-Age=0; SameSite=Lax",
+  );
+
+  return { success: true };
+});

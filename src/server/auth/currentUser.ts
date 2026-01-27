@@ -1,45 +1,52 @@
+import prisma from "@/lib/prisma";
+import { parseCookies } from "@/server/auth/cookies";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-
-function parseCookies(cookieHeader: string | null): Record<string, string> {
-  if (!cookieHeader) return {};
-  return Object.fromEntries(
-    cookieHeader.split(";").map((c) => {
-      const [k, ...v] = c.trim().split("=");
-      return [k, decodeURIComponent(v.join("="))];
-    })
-  );
-}
+import jwt from "jsonwebtoken";
 
 export const currentUser = createServerFn({ method: "GET" }).handler(
   async () => {
-    const request = getRequest();
-    const cookies = parseCookies(request.headers.get("cookie"));
+    try {
+      const JWT_SECRET = process.env.JWT_SECRET;
+      if (!JWT_SECRET) return { loggedIn: false };
+      const req = getRequest();
+      const cookies = parseCookies(req.headers.get("cookie"));
+      const token = cookies["access_token"];
 
-    const token = cookies["access_token"];
-    if (!token) {
-      return { loggedIn: false };
-    }
+      if (!token) {
+        return { loggedIn: false };
+      }
 
-    // Fake login
-    if (token.startsWith("fake-")) {
-      const fakeId = token.replace("fake-", "");
+      const decoded = jwt.verify(token, JWT_SECRET) as {
+        userId: string;
+        email: string;
+      };
+
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          email: true,
+          Firstname: true,
+          LastName: true,
+        },
+      });
+
+      if (!user) {
+        return { loggedIn: false };
+      }
 
       return {
         loggedIn: true,
         user: {
-          id: fakeId,
-          email: `${fakeId}@fake.local`,
+          id: user.id,
+          email: user.email,
+          firstName: user.Firstname ?? undefined,
+          lastName: user.LastName ?? undefined,
         },
       };
+    } catch {
+      return { loggedIn: false };
     }
-
-    // Real login (placeholder — adapt later)
-    return {
-      loggedIn: true,
-      user: {
-        email: "unknown",
-      },
-    };
-  }
+  },
 );

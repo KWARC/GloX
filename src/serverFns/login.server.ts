@@ -1,88 +1,93 @@
 import prisma from "@/lib/prisma";
 import { createServerFn } from "@tanstack/react-start";
-import { setResponseHeader } from "@tanstack/react-start/server";
-import axios from "axios";
+import { getResponse } from "@tanstack/react-start/server";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
-type LoginInput = {
+const JWT_EXPIRES_IN = "7d";
+
+interface LoginInput {
   email: string;
   password: string;
-};
+}
 
-type LoginResult =
-  | { success: true }
-  | { success: false; code: "NOT_SIGNED_UP" }
-  | {
-      success: false;
-      error: "INVALID_PASSWORD" | "PASSWORD_LOGIN_DISABLED" | string;
-    };
-
-async function getAccessToken(
-  email: string,
-  firstName?: string,
-  lastName?: string,
-): Promise<string> {
-  const lmpUrl = process.env.VITE_LMP_URL || process.env.NEXT_PUBLIC_LMP_URL;
-  const serverSecret = process.env.SERVER_SECRET;
-
-  if (!lmpUrl || !serverSecret) {
-    throw new Error("Missing LMP configuration");
-  }
-
-  const res = await axios.get(`${lmpUrl}/get-email-access-token`, {
-    params: {
-      email,
-      givenName: firstName ?? "",
-      sn: lastName ?? "",
-    },
-    headers: {
-      Authorization: serverSecret,
-    },
-  });
-
-  return res.data;
+interface LoginResult {
+  success: boolean;
+  error?: string;
 }
 
 export const login = createServerFn({ method: "POST" })
-  .inputValidator((data: LoginInput) => data)
+  .inputValidator((data: LoginInput): LoginInput => {
+    if (
+      !data ||
+      typeof data.email !== "string" ||
+      typeof data.password !== "string"
+    ) {
+      throw new Error("Invalid input");
+    }
+
+    return {
+      email: data.email.toLowerCase().trim(),
+      password: data.password,
+    };
+  })
   .handler(async ({ data }): Promise<LoginResult> => {
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      throw new Error("Server misconfiguration");
+    }
+
     const { email, password } = data;
 
-    // Find user in database
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+      },
     });
 
-    if (!user) {
-      return { success: false, code: "NOT_SIGNED_UP" };
+    if (!user || !user.passwordHash) {
+      return { success: false, error: "Invalid email or password" };
     }
 
-    // Check if password login is allowed
-    if (!user.passwordHash) {
-      return { success: false, error: "PASSWORD_LOGIN_DISABLED" };
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+      return { success: false, error: "Invalid email or password" };
     }
 
-    // Verify password
-    const passwordMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!passwordMatch) {
-      return { success: false, error: "INVALID_PASSWORD" };
-    }
+    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
 
-    // Get access token from LMP
-    const accessToken = await getAccessToken(
-      email,
-      user.Firstname ?? undefined,
-      user.LastName ?? undefined,
+    const res = getResponse();
+
+    res.headers.append(
+      "Set-Cookie",
+      [
+        `access_token=${token}`,
+        "HttpOnly",
+        "Path=/",
+        "SameSite=Lax",
+        process.env.NODE_ENV === "production" ? "Secure" : "",
+        "Max-Age=604800",
+      ]
+        .filter(Boolean)
+        .join("; "),
     );
 
-    // Set cookies (ALeA-compatible)
-    setResponseHeader(
+    res.headers.append(
       "Set-Cookie",
-      `access_token=${accessToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=86400`,
-    );
-    setResponseHeader(
-      "Set-Cookie",
-      `is_logged_in=true; Path=/; SameSite=Lax; Max-Age=86400`,
+      [
+        "is_logged_in=true",
+        "Path=/",
+        "SameSite=Lax",
+        process.env.NODE_ENV === "production" ? "Secure" : "",
+        "Max-Age=604800",
+      ]
+        .filter(Boolean)
+        .join("; "),
     );
 
     return { success: true };
