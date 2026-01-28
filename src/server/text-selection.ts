@@ -11,12 +11,11 @@ export interface PopupState {
   y: number;
   source: "left" | "right";
 }
- export type ActivePage = {
+export type ActivePage = {
   id: string;
   pageNumber: number;
 };
 
-// ✅ FIX 5: Removed all offset tracking
 export type TextSelection = {
   text: string;
   extractId?: string;
@@ -25,13 +24,12 @@ export type TextSelection = {
 export type ExtractedItem = {
   id: string;
   pageNumber: number;
-  statement: any; // FTML AST (FtmlStatement)
+  statement: any;
   futureRepo: string;
   filePath: string;
   fileName: string;
   language: string;
 };
-
 
 export function useTextSelection() {
   const [selection, setSelection] = useState<TextSelection | null>(null);
@@ -85,13 +83,6 @@ export function useTextSelection() {
     clearAll,
   };
 }
-
-// ✅ FIX 5: DELETED FUNCTIONS (LaTeX-era code):
-// - buildDefiniendumMacro
-// - replaceAllUnwrapped
-// - buildSymbolicRefMacro
-// - replaceAtOffset
-// - normalize
 
 export function useExtractionActions(documentId: string) {
   async function extractText(params: {

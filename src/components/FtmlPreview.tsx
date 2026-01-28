@@ -45,7 +45,6 @@ export function FtmlPreview({ ftmlAst, editable = false }: FtmlPreviewProps) {
 
       fd.mountTo(containerRef.current);
       floDownRef.current = fd;
-       console.log(fd.getStex());
     });
 
     return () => {

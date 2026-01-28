@@ -92,10 +92,8 @@ model Definiendum {
 }
 
 model SymbolicReference {
-  id String @id @default(uuid())
-
-  name String
-
+  id         String @id @default(uuid())
+  name       String
   conceptUri String
   archive    String
   filePath   String
@@ -128,7 +126,7 @@ model Definition {
   originalText String @db.Text
   statement    Json
 
-  definienda DefinitionDefiniendum[]
+  definienda   DefinitionDefiniendum[]
   symbolicRefs DefinitionSymbolicRef[]
 
   futureRepo String @default("Glox")

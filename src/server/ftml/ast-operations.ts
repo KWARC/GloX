@@ -78,7 +78,7 @@ export function findNodesByType<T extends FtmlNode>(
 }
 
 /**
- * ✅ FIX 3: Check if path traverses semantic nodes
+ * FIX 3: Check if path traverses semantic nodes
  * CRITICAL: Prevents nested semantic corruption
  */
 export function pathTraversesSemanticNode(
@@ -104,7 +104,7 @@ export function pathTraversesSemanticNode(
 }
 
 /**
- * ✅ FIX 2: Find text node with occurrence index
+ * FIX 2: Find text node with occurrence index
  * CRITICAL: Handles duplicate text
  */
 export interface TextLocation {

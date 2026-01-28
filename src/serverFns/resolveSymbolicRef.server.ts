@@ -22,7 +22,6 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { definitionId, selection, symRef } = data;
 
-    // Parse URI
     let parsed: ParsedMathHubUri;
     if (symRef.source === "MATHHUB") {
       parsed = parseUri(symRef.uri);
@@ -37,7 +36,6 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
       };
     }
 
-    // Load current definition
     const definition = await prisma.definition.findUnique({
       where: { id: definitionId },
     });
@@ -46,10 +44,8 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
       throw new Error("Definition not found");
     }
 
-    // ✅ FIX 1: Normalize to root
     const currentAst = normalizeToRoot(definition.statement as any);
 
-    // ✅ FIX 2: Find unique text location
     let location;
     try {
       location = findUniqueTextLocation(currentAst, selection.text);
@@ -59,7 +55,6 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
       );
     }
 
-    // ✅ FIX 3: Check if selection is inside semantic node
     const targetPath = [location.paragraphIndex, location.contentIndex];
     if (pathTraversesSemanticNode(currentAst, targetPath)) {
       throw new Error(
@@ -67,14 +62,12 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
       );
     }
 
-    // Create symref node
     const symrefNode: SymrefNode = {
       type: "symref",
       uri: parsed.conceptUri,
       content: [selection.text],
     };
 
-    // Replace text with symref node
     const updatedAst = replaceTextWithNode(
       currentAst,
       location,
@@ -82,16 +75,13 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
       symrefNode,
     );
 
-    // ✅ FIX 1: Unwrap before storing
     const statementToStore = unwrapRoot(updatedAst);
 
-    // Update database
     await prisma.definition.update({
       where: { id: definitionId },
       data: { statement: statementToStore },
     });
 
-    // Create symbolic reference record
     const symbolicRef = await prisma.symbolicReference.create({
       data: {
         name: parsed.symbol,
