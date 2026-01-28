@@ -13,50 +13,21 @@ interface UpdateProfileResult {
 }
 
 export const updateProfile = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown): UpdateProfileInput => {
-    if (
-      typeof data !== "object" ||
-      data === null ||
-      !("data" in data) ||
-      typeof data.data !== "object" ||
-      data.data === null
-    ) {
-      throw new Error("Invalid input");
-    }
-
-    const { firstName, lastName } = data.data as any;
-
-    if (!firstName || typeof firstName !== "string") {
-      throw new Error("First name is required");
-    }
-
-    if (firstName.trim().length === 0) {
-      throw new Error("First name cannot be empty");
-    }
-
-    if (firstName.length > 100) {
-      throw new Error("First name is too long");
-    }
-
-    if (!lastName || typeof lastName !== "string") {
-      throw new Error("Last name is required");
-    }
-
-    if (lastName.trim().length === 0) {
-      throw new Error("Last name cannot be empty");
-    }
-
-    if (lastName.length > 100) {
-      throw new Error("Last name is too long");
-    }
+  .inputValidator((data): UpdateProfileInput => {
+    const input = data as UpdateProfileInput;
 
     return {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
+      firstName: String(input?.firstName ?? "").trim(),
+      lastName: String(input?.lastName ?? "").trim(),
     };
   })
+
   .handler(async ({ data }): Promise<UpdateProfileResult> => {
     try {
+      if (!data.firstName || !data.lastName) {
+        return { success: false, error: "Invalid input" };
+      }
+
       const userId = requireUserId();
 
       await prisma.user.update({

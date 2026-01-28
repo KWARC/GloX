@@ -154,11 +154,7 @@ export default function Header() {
       <Drawer
         opened={opened}
         onClose={() => setOpened(false)}
-        title={
-          <Title order={4} fw={600}>
-            Navigation
-          </Title>
-        }
+        title={<Text fw={600}>Navigation</Text>}
         padding="lg"
         size="sm"
       >

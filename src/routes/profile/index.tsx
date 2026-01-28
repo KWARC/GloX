@@ -235,7 +235,7 @@ function RouteComponent() {
                   </Group>
                   <Text fw={500}>
                     {user?.firstName || (
-                      <Text c="dimmed" fs="italic">
+                      <Text component="span" c="dimmed" fs="italic">
                         Not set
                       </Text>
                     )}
