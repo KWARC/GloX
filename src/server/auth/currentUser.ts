@@ -9,6 +9,7 @@ export const currentUser = createServerFn({ method: "GET" }).handler(
     try {
       const JWT_SECRET = process.env.JWT_SECRET;
       if (!JWT_SECRET) return { loggedIn: false };
+
       const req = getRequest();
       const cookies = parseCookies(req.headers.get("cookie"));
       const token = cookies["access_token"];
@@ -27,8 +28,8 @@ export const currentUser = createServerFn({ method: "GET" }).handler(
         select: {
           id: true,
           email: true,
-          Firstname: true,
-          LastName: true,
+          firstName: true,
+          lastName: true,
         },
       });
 
@@ -41,8 +42,8 @@ export const currentUser = createServerFn({ method: "GET" }).handler(
         user: {
           id: user.id,
           email: user.email,
-          firstName: user.Firstname ?? undefined,
-          lastName: user.LastName ?? undefined,
+          firstName: user.firstName ?? undefined,
+          lastName: user.lastName ?? undefined,
         },
       };
     } catch {

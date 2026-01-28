@@ -36,6 +36,8 @@ export default function Header() {
   const { data: user } = useQuery({
     queryKey: ["currentUser"],
     queryFn: currentUser,
+    retry: false,
+    staleTime: 60_000,
   });
 
   const loggedIn = user?.loggedIn;

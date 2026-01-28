@@ -62,8 +62,8 @@ export const updateProfile = createServerFn({ method: "POST" })
       await prisma.user.update({
         where: { id: userId },
         data: {
-          Firstname: data.firstName,
-          LastName: data.lastName,
+          firstName: data.firstName,
+          lastName: data.lastName,
         },
       });
 

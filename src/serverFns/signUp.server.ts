@@ -47,7 +47,7 @@ export const signup = createServerFn({ method: "POST" })
     const NODEMAILER_EMAIL_ID = process.env.NODEMAILER_EMAIL_ID;
     const NODEMAILER_EMAIL_PASSWORD = process.env.NODEMAILER_EMAIL_PASSWORD;
     const APP_URL = process.env.APP_URL || "http://localhost:3000";
-    
+
     if (!JWT_SECRET || !NODEMAILER_EMAIL_ID || !NODEMAILER_EMAIL_PASSWORD) {
       throw new Error("Server misconfiguration");
     }
@@ -78,9 +78,8 @@ export const signup = createServerFn({ method: "POST" })
         data: {
           email,
           passwordHash,
-          Firstname: firstName,
-          LastName: lastName,
-          isFauUser: false,
+          firstName,
+          lastName,
         },
       });
 
