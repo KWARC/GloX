@@ -1,6 +1,6 @@
+import { requireUserId } from "@/server/auth/requireUser";
 import { createServerFn } from "@tanstack/react-start";
 import prisma from "../lib/prisma";
-import { requireUserId } from "../server/auth/authSession";
 
 export const getMyDocuments = createServerFn({ method: "GET" }).handler(
   async () => {

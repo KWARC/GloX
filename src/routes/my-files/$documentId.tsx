@@ -12,8 +12,6 @@ import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import {
   ActivePage,
-  buildDefiniendumMacro,
-  replaceAllUnwrapped,
   useExtractionActions,
   useTextSelection,
   useValidation,
@@ -22,7 +20,6 @@ import { createDefiniendum } from "@/serverFns/definiendum.server";
 import {
   deleteDefinition,
   listDefinition,
-  updateDefinition,
   updateDefinitionMeta,
 } from "@/serverFns/extractDefinition.server";
 import { resolveSymbolicRef } from "@/serverFns/resolveSymbolicRef.server";
@@ -171,30 +168,19 @@ function RouteComponent() {
     const extract = extracts.find((e) => e.id === defExtractId);
     if (!extract) return;
 
-    const macro = buildDefiniendumMacro(params.symbolName, params.alias);
-
-    const updatedStatement = replaceAllUnwrapped(
-      extract.statement,
-      defExtractText,
-      macro,
-    );
-
-    await updateExtract(defExtractId, updatedStatement);
-
-    if (params.symdecl) {
-      await createDefiniendum({
-        data: {
-          definitionId: defExtractId,
-          symbolName: params.symbolName.trim(),
-          alias: params.alias?.trim() || null,
-          symbolDeclared: params.symdecl,
-          futureRepo: futureRepo.trim(),
-          filePath: filePath.trim(),
-          fileName: fileName.trim(),
-          language: language.trim(),
-        },
-      });
-    }
+    await createDefiniendum({
+      data: {
+        definitionId: defExtractId,
+        symbolName: params.symbolName.trim(),
+        alias: params.alias?.trim() || null,
+        selectedText: defExtractText,
+        symbolDeclared: params.symdecl,
+        futureRepo: futureRepo.trim(),
+        filePath: filePath.trim(),
+        fileName: fileName.trim(),
+        language: language.trim(),
+      },
+    });
 
     setDefDialogOpen(false);
     setDefExtractId(null);
@@ -203,11 +189,6 @@ function RouteComponent() {
 
   function handleOpenSymbolicRef(extractId: string) {
     if (!selection) return;
-
-    if (selection.isWholeStatement) {
-      console.warn("[SymbolicRef] Invalid selection");
-      return;
-    }
 
     setDefExtractId(extractId);
     setConceptUri(selection.text);
@@ -230,9 +211,8 @@ function RouteComponent() {
         definitionId: defExtractId,
         selection: {
           text: selection.text,
-          startOffset: selection.startOffset,
-          endOffset: selection.endOffset,
         },
+
         symRef,
       },
     });

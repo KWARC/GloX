@@ -3,63 +3,67 @@ import {
   collectLocalSymbols,
   replaceLocalUris,
 } from "@/server/ftml/normalizeFtml";
+import { normalizeToRoot } from "@/types/ftml.types";
 import { useEffect, useRef } from "react";
 
-interface FtmlData {
-  ftml: any;
+interface FtmlPreviewProps {
+  ftmlAst: any;
+  editable?: boolean;
 }
 
-export function FtmlPreview({ data }: { data: FtmlData }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const fdRef = useRef<any>(null);
+export function FtmlPreview({ ftmlAst, editable = false }: FtmlPreviewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const floDownRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!data?.ftml || !ref.current) return;
+    if (!ftmlAst || !containerRef.current) return;
 
     let disposed = false;
 
     initFloDown().then((floDown) => {
-      if (disposed) return;
+      if (disposed || !containerRef.current) return;
 
       floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
-      if (fdRef.current) {
-        fdRef.current = null;
-        ref.current!.innerHTML = "";
-      }
+      containerRef.current.innerHTML = "";
 
-      const fd = floDown.FloDown.fromUri("http://test?a=test&d=test&l=en");
+      const fd = floDown.FloDown.fromUri("http://temp?a=temp&d=temp&l=en");
 
-      // 1️⃣ discover symbols from BOTH defininame + definiendum
-      const symbols = collectLocalSymbols(data.ftml);
+      const normalized = normalizeToRoot(ftmlAst);
+      const symbols = collectLocalSymbols(normalized);
 
-      // 2️⃣ declare symbols once
       const uriMap = new Map<string, string>();
       for (const name of symbols) {
-        const uri = fd.addSymbolDeclaration(name);
-        uriMap.set(name, uri);
+        uriMap.set(name, fd.addSymbolDeclaration(name));
       }
 
-      // 3️⃣ normalize FTML
-      const resolved = replaceLocalUris(structuredClone(data.ftml), uriMap);
+      const resolved = replaceLocalUris(structuredClone(normalized), uriMap);
 
-      // 4️⃣ add elements
-      if (Array.isArray(resolved)) {
-        for (const el of resolved) fd.addElement(el);
-      } else if (resolved.type === "root") {
-        for (const el of resolved.content ?? []) fd.addElement(el);
-      } else {
-        fd.addElement(resolved);
+      for (const element of resolved.content) {
+        fd.addElement(element);
       }
 
-      fd.mountTo(ref.current!);
-      fdRef.current = fd;
+      fd.mountTo(containerRef.current);
+      floDownRef.current = fd;
     });
 
     return () => {
       disposed = true;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+      floDownRef.current = null;
     };
-  }, [data]);
+  }, [ftmlAst, editable]);
 
-  return <div ref={ref} style={{ display: "contents" }} />;
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        display: "contents",
+        userSelect: editable ? "text" : "auto",
+        cursor: editable ? "text" : "auto",
+      }}
+    />
+  );
 }

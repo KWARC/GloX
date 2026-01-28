@@ -8,11 +8,8 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
-import { IconEye, IconPencil, IconTrash } from "@tabler/icons-react";
-import { useState } from "react";
+import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { FtmlPreview } from "./FtmlPreview";
-import { useQuery } from "@tanstack/react-query";
-import { getDefinitionFtml } from "@/serverFns/definitionFtml.server";
 
 interface ExtractedTextPanelProps {
   extracts: ExtractedItem[];
@@ -22,6 +19,7 @@ interface ExtractedTextPanelProps {
   onUpdate: (id: string, statement: string) => Promise<void>;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
+  floDownEnabled?: boolean;
 }
 
 export function ExtractedTextPanel({
@@ -32,20 +30,8 @@ export function ExtractedTextPanel({
   onUpdate,
   onDelete,
   onSelection,
+  floDownEnabled = true,
 }: ExtractedTextPanelProps) {
-  const [previewId, setPreviewId] = useState<string | null>(null);
-  const previewQuery = useQuery({
-    queryKey: ["definition-ftml", previewId],
-    queryFn: () => {
-      if (!previewId) throw new Error("No preview id");
-      
-      return getDefinitionFtml({ data: previewId });
-    },
-
-    enabled: !!previewId,
-  });
-  console.log(previewQuery.data);
-
   return (
     <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
       <ScrollArea h="100%">
@@ -90,44 +76,40 @@ export function ExtractedTextPanel({
                       <ActionIcon
                         size="sm"
                         variant="subtle"
-                        onClick={() => onToggleEdit(item.id)}
                         color="red"
+                        onClick={() => onToggleEdit(item.id)}
                       >
                         <IconPencil size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        size="sm"
-                        variant="subtle"
-                        color="blue"
-                        onClick={() =>
-                          setPreviewId(previewId === item.id ? null : item.id)
-                        }
-                        title="Preview semantic rendering"
-                      >
-                        <IconEye size={16} />
                       </ActionIcon>
                     </Group>
                   </Group>
 
-                  {previewId === item.id && previewQuery.data?.ftml ? (
-                    <FtmlPreview data={{ ftml: previewQuery.data.ftml }} />
-                  ) : isEditing ? (
+                  {isEditing ? (
                     <Textarea
-                      defaultValue={item.statement}
+                      defaultValue={JSON.stringify(item.statement, null, 2)}
                       autosize
+                      minRows={4}
+                      styles={{
+                        input: { fontFamily: "monospace", fontSize: 11 },
+                      }}
                       onBlur={async (e) => {
-                        await onUpdate(item.id, e.currentTarget.value);
+                        try {
+                          const parsed = JSON.parse(e.currentTarget.value);
+                          await onUpdate(item.id, parsed);
+                        } catch {
+                          alert("Invalid FTML JSON");
+                        }
                       }}
                     />
                   ) : (
-                    <Text
-                      size="sm"
-                      lh={1.6}
+                    <div
                       style={{ userSelect: "text", cursor: "text" }}
                       onMouseUp={() => onSelection(item.id)}
                     >
-                      {item.statement}
-                    </Text>
+                      {floDownEnabled && (
+                        <FtmlPreview ftmlAst={item.statement} />
+                      )}
+                    </div>
                   )}
 
                   <Text size="10px" c="dimmed" ff="monospace" mt={6}>

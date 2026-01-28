@@ -126,10 +126,9 @@ model Definition {
   pageNumber Int
 
   originalText String @db.Text
-  statement    String @db.Text
+  statement    Json
 
   definienda DefinitionDefiniendum[]
-
   symbolicRefs DefinitionSymbolicRef[]
 
   futureRepo String @default("Glox")
