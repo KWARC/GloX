@@ -46,7 +46,6 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       language,
     } = data;
 
-    // Load current definition
     const definition = await prisma.definition.findUnique({
       where: { id: definitionId },
       include: {
@@ -60,7 +59,6 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       throw new Error("Definition not found");
     }
 
-    // Create definiendum record
     const defin = await prisma.definiendum.create({
       data: {
         symbolName,
@@ -80,20 +78,16 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       },
     });
 
-    // ✅ FIX 1: Normalize to root
     const currentAst = normalizeToRoot(definition.statement as any);
 
-    // Get the URI
     const definiendumUri = `LOCAL:${symbolName}`;
 
-    // Create definiendum node factory
     const createDefiniendumNode = (text: string): DefiniendumNode => ({
       type: "definiendum",
       uri: definiendumUri,
       content: [alias || text],
     });
 
-    // ✅ FIX 4: Check if already a definition block
     const isAlreadyDefinition =
       currentAst.content.length === 1 &&
       currentAst.content[0].type === "definition";
@@ -101,7 +95,6 @@ export const createDefiniendum = createServerFn({ method: "POST" })
     let updatedAst;
 
     if (isAlreadyDefinition) {
-      // ✅ FIX 4: Merge symbols, update inner paragraph
       const existingDef = currentAst.content[0] as DefinitionNode;
       const innerParagraph = existingDef.content[0] as ParagraphNode;
 
@@ -133,7 +126,6 @@ export const createDefiniendum = createServerFn({ method: "POST" })
         ],
       };
     } else {
-      // Convert paragraph to definition block
       const paragraph = currentAst.content[0] as ParagraphNode;
 
       const updatedContent = insertDefiniendum(
@@ -165,10 +157,8 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       };
     }
 
-    // ✅ FIX 1: Unwrap before storing
     const statementToStore = unwrapRoot(updatedAst);
 
-    // Update database
     await prisma.definition.update({
       where: { id: definitionId },
       data: { statement: statementToStore },

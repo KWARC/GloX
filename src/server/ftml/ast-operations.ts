@@ -170,7 +170,7 @@ export function findAllTextOccurrences(
 }
 
 /**
- * ✅ FIX 2: Find UNIQUE text occurrence
+ * FIX 2: Find UNIQUE text occurrence
  * Throws if text is not unique
  */
 export function findUniqueTextLocation(

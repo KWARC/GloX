@@ -182,6 +182,14 @@ function RouteComponent() {
       },
     });
 
+     await queryClient.invalidateQueries({
+    queryKey: ["definitions", documentId],
+  });
+
+  await queryClient.invalidateQueries({
+    queryKey: ["definition-ftml", defExtractId],
+  });
+
     setDefDialogOpen(false);
     setDefExtractId(null);
     setDefExtractText("");
@@ -446,6 +454,7 @@ function RouteComponent() {
                 onDelete={handleDeleteDefinition}
                 onSelection={handleRightSelection}
                 onToggleEdit={handleToggleEdit}
+                floDownEnabled={mode !== "SymbolicRef"} 
               />
             </Paper>
           </Flex>

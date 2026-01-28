@@ -29,7 +29,6 @@ export const createDefinition = createServerFn({ method: "POST" })
       throw new Error("Missing definition fields");
     }
 
-    // ✅ CORRECT: Initial AST = simple paragraph with plain text
     const statement: ParagraphNode = {
       type: "paragraph",
       content: [data.originalText.trim()],
@@ -41,7 +40,7 @@ export const createDefinition = createServerFn({ method: "POST" })
         documentPageId: data.documentPageId,
         pageNumber: data.pageNumber,
         originalText: data.originalText,
-        statement, // Stored as JSON
+        statement,
         futureRepo: data.futureRepo,
         filePath: data.filePath,
         fileName: data.fileName,
