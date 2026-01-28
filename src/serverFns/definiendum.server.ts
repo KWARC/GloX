@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { createServerFn } from "@tanstack/react-start";
 
 export type CreateDefiniendumInput = {
+  definitionId: string;
   symbolName: string;
   alias?: string | null;
   symbolDeclared?: boolean;
@@ -15,6 +16,7 @@ export const createDefiniendum = createServerFn({ method: "POST" })
   .inputValidator((data: CreateDefiniendumInput) => data)
   .handler(async ({ data }) => {
     const {
+      definitionId,
       symbolName,
       alias,
       symbolDeclared = true,
@@ -34,7 +36,7 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       throw new Error("Missing definiendum fields");
     }
 
-    return prisma.definiendum.create({
+    const defin = await prisma.definiendum.create({
       data: {
         symbolName,
         alias,
@@ -45,12 +47,21 @@ export const createDefiniendum = createServerFn({ method: "POST" })
         language,
       },
     });
+
+    await prisma.definitionDefiniendum.create({
+      data: {
+        definitionId,
+        definiendumId: defin.id,
+      },
+    });
+
+    return defin;
   });
 
 export const searchDefiniendum = createServerFn({ method: "POST" })
   .inputValidator((query: string) => query)
   .handler(async ({ data: query }) => {
-    console.log({query})
+    console.log({ query });
     return prisma.definiendum.findMany({
       where: {
         symbolName: {

@@ -59,6 +59,11 @@ export const listDefinition = createServerFn({ method: "GET" })
       where: { documentId: data.documentId },
       orderBy: { createdAt: "asc" },
       include: {
+        definienda: {
+          include: {
+            definiendum: true,
+          },
+        },
         symbolicRefs: {
           include: {
             symbolicReference: true,
@@ -79,9 +84,6 @@ export const updateDefinition = createServerFn({ method: "POST" })
       where: { id: data.id },
       data: {
         ...(data.statement !== undefined && { statement: data.statement }),
-        ...(data.definiendumId !== undefined && {
-          definiendumId: data.definiendumId,
-        }),
       },
     });
   });

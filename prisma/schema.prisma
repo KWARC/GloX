@@ -82,7 +82,7 @@ model Definiendum {
   language   String @default("en")
 
   symbolicReferences SymbolicReference[]
-  definitions        Definition[]
+  definitions        DefinitionDefiniendum[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -128,8 +128,7 @@ model Definition {
   originalText String @db.Text
   statement    String @db.Text
 
-  definiendumId String?
-  definiendum   Definiendum? @relation(fields: [definiendumId], references: [id])
+  definienda DefinitionDefiniendum[]
 
   symbolicRefs DefinitionSymbolicRef[]
 
@@ -141,9 +140,8 @@ model Definition {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([documentId])
   @@index([documentPageId])
-  @@index([definiendumId])
+  @@index([documentId])
   @@index([futureRepo, filePath, fileName, language])
 }
 
@@ -184,4 +182,20 @@ model DefinitionSymbolicRef {
   @@unique([definitionId, symbolicReferenceId])
   @@index([definitionId])
   @@index([symbolicReferenceId])
+}
+
+model DefinitionDefiniendum {
+  id String @id @default(uuid())
+
+  definitionId String
+  definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  definiendumId String
+  definiendum   Definiendum @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([definitionId, definiendumId])
+  @@index([definitionId])
+  @@index([definiendumId])
 }

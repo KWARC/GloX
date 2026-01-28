@@ -58,7 +58,7 @@ export function useTextSelection() {
     options?: {
       extractId?: string;
       onLeftSelection?: (text: string) => void;
-    }
+    },
   ) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
@@ -146,6 +146,7 @@ export function useExtractionActions(documentId: string) {
   }
 
   async function saveDefiniendum(params: {
+    definitionId: string;
     symbolName: string;
     futureRepo: string;
     filePath: string;
@@ -154,6 +155,7 @@ export function useExtractionActions(documentId: string) {
   }) {
     await createDefiniendum({
       data: {
+        definitionId: params.definitionId,
         symbolName: params.symbolName,
         symbolDeclared: true,
         futureRepo: params.futureRepo,
@@ -193,7 +195,7 @@ export function useValidation() {
     futureRepo: string,
     filePath: string,
     fileName: string,
-    language: string
+    language: string,
   ): boolean {
     const newErrors: ValidationErrors = {
       futureRepo: null,
@@ -246,13 +248,13 @@ export function buildDefiniendumMacro(symbol: string, alias?: string) {
 export function replaceAllUnwrapped(
   text: string,
   word: string,
-  replacement: string
+  replacement: string,
 ) {
   const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   const regex = new RegExp(
     `(?<!\\\\definame\\{|\\\\definiendum\\{)\\b${escaped}\\b`,
-    "g"
+    "g",
   );
 
   return text.replace(regex, replacement);
@@ -270,7 +272,7 @@ export function replaceAtOffset(
   text: string,
   start: number,
   end: number,
-  replacement: string
+  replacement: string,
 ): string {
   return text.slice(0, start) + replacement + text.slice(end);
 }

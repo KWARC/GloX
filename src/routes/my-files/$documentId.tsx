@@ -182,8 +182,9 @@ function RouteComponent() {
     await updateExtract(defExtractId, updatedStatement);
 
     if (params.symdecl) {
-      const defin = await createDefiniendum({
+      await createDefiniendum({
         data: {
+          definitionId: defExtractId,
           symbolName: params.symbolName.trim(),
           alias: params.alias?.trim() || null,
           symbolDeclared: params.symdecl,
@@ -191,14 +192,6 @@ function RouteComponent() {
           filePath: filePath.trim(),
           fileName: fileName.trim(),
           language: language.trim(),
-        },
-      });
-
-      // 🔴 THIS LINE IS THE FIX
-      await updateDefinition({
-        data: {
-          id: defExtractId,
-          definiendumId: defin.id,
         },
       });
     }

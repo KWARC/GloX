@@ -36,5 +36,4 @@ export type CreateDefinitionInput = {
 export type UpdateDefinitionInput = {
   id: string;
   statement?: string;
-  definiendumId?: string;
 };
