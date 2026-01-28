@@ -1,11 +1,14 @@
 import { uploadDocument } from "@/server/document/document.service";
 import { createServerFn } from "@tanstack/react-start";
-import { requireUserId } from "@/server/auth/authSession";
+
 import type { UploadDocumentResult } from "@/server/document/document.types";
+import { requireUserId } from "@/server/auth/requireUser";
 
 export const uploadPdf = createServerFn({ method: "POST" })
   .inputValidator((data: FormData) => data)
   .handler(async ({ data }): Promise<UploadDocumentResult> => {
+
+    const userId = requireUserId();  
     if (!(data instanceof FormData)) {
       throw new Error("Invalid upload payload");
     }
@@ -14,8 +17,6 @@ export const uploadPdf = createServerFn({ method: "POST" })
     if (!(file instanceof File)) {
       throw new Error("No file provided");
     }
-
-    const userId = requireUserId();
 
     console.log("Uploading document:", file.name, "for user", userId);
 

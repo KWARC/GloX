@@ -1,6 +1,6 @@
-import { createServerFn } from "@tanstack/react-start";
 import prisma from "@/lib/prisma";
-import { requireUserId } from "@/server/auth/authSession";
+import { requireUserId } from "@/server/auth/requireUser";
+import { createServerFn } from "@tanstack/react-start";
 
 export const getDocumentById = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
