@@ -106,9 +106,10 @@ export function ExtractedTextPanel({
                       style={{ userSelect: "text", cursor: "text" }}
                       onMouseUp={() => onSelection(item.id)}
                     >
-                      {floDownEnabled && (
-                        <FtmlPreview ftmlAst={item.statement} />
-                      )}
+                      <FtmlPreview
+                        ftmlAst={item.statement}
+                        interactive={floDownEnabled}
+                      />
                     </div>
                   )}
 

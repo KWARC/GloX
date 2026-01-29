@@ -89,7 +89,8 @@ function RouteComponent() {
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
   const [isEditingMeta, setIsEditingMeta] = useState(false);
-
+  const freezeRender =
+    editingId !== null || mode === "SymbolicRef" || defDialogOpen;
   async function handleDeleteDefinition(id: string) {
     if (!confirm("Delete this extracted definition?")) return;
 
@@ -408,6 +409,7 @@ function RouteComponent() {
                   onDelete={handleDeleteDefinition}
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
+                  floDownEnabled={!freezeRender}
                 />
               </Tabs.Panel>
             </Tabs>
@@ -454,7 +456,7 @@ function RouteComponent() {
                 onDelete={handleDeleteDefinition}
                 onSelection={handleRightSelection}
                 onToggleEdit={handleToggleEdit}
-                floDownEnabled={mode !== "SymbolicRef"}
+                floDownEnabled={!freezeRender}
               />
             </Paper>
           </Flex>
