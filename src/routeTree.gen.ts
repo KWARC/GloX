@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CreateLatexRouteImport } from './routes/create-latex'
@@ -17,6 +18,11 @@ import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as MyFilesIndexRouteImport } from './routes/my-files/index'
 import { Route as MyFilesDocumentIdRouteImport } from './routes/my-files/$documentId'
 
+const VerifyRoute = VerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/create-latex': typeof CreateLatexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/verify': typeof VerifyRoute
   '/my-files/$documentId': typeof MyFilesDocumentIdRoute
   '/my-files': typeof MyFilesIndexRoute
   '/profile': typeof ProfileIndexRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/create-latex': typeof CreateLatexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/verify': typeof VerifyRoute
   '/my-files/$documentId': typeof MyFilesDocumentIdRoute
   '/my-files': typeof MyFilesIndexRoute
   '/profile': typeof ProfileIndexRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/create-latex': typeof CreateLatexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/verify': typeof VerifyRoute
   '/my-files/$documentId': typeof MyFilesDocumentIdRoute
   '/my-files/': typeof MyFilesIndexRoute
   '/profile/': typeof ProfileIndexRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/create-latex'
     | '/login'
     | '/signup'
+    | '/verify'
     | '/my-files/$documentId'
     | '/my-files'
     | '/profile'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/create-latex'
     | '/login'
     | '/signup'
+    | '/verify'
     | '/my-files/$documentId'
     | '/my-files'
     | '/profile'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/create-latex'
     | '/login'
     | '/signup'
+    | '/verify'
     | '/my-files/$documentId'
     | '/my-files/'
     | '/profile/'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   CreateLatexRoute: typeof CreateLatexRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  VerifyRoute: typeof VerifyRoute
   MyFilesDocumentIdRoute: typeof MyFilesDocumentIdRoute
   MyFilesIndexRoute: typeof MyFilesIndexRoute
   ProfileIndexRoute: typeof ProfileIndexRoute
@@ -123,6 +136,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify': {
+      id: '/verify'
+      path: '/verify'
+      fullPath: '/verify'
+      preLoaderRoute: typeof VerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreateLatexRoute: CreateLatexRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  VerifyRoute: VerifyRoute,
   MyFilesDocumentIdRoute: MyFilesDocumentIdRoute,
   MyFilesIndexRoute: MyFilesIndexRoute,
   ProfileIndexRoute: ProfileIndexRoute,

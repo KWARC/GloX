@@ -1,30 +1,53 @@
+import prisma from "@/lib/prisma";
+import { parseCookies } from "@/server/auth/cookies";
 import { createServerFn } from "@tanstack/react-start";
-import prisma from "../../lib/prisma";
-import { getSessionUser } from "./authSession";
+import { getRequest } from "@tanstack/react-start/server";
+import jwt from "jsonwebtoken";
 
 export const currentUser = createServerFn({ method: "GET" }).handler(
   async () => {
-    const userId = getSessionUser();
+    try {
+      const JWT_SECRET = process.env.JWT_SECRET;
+      if (!JWT_SECRET) return { loggedIn: false };
 
-    if (!userId) {
+      const req = getRequest();
+      const cookies = parseCookies(req.headers.get("cookie"));
+      const token = cookies["access_token"];
+
+      if (!token) {
+        return { loggedIn: false };
+      }
+
+      const decoded = jwt.verify(token, JWT_SECRET) as {
+        userId: string;
+        email: string;
+      };
+
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
+      });
+
+      if (!user) {
+        return { loggedIn: false };
+      }
+
+      return {
+        loggedIn: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName ?? undefined,
+          lastName: user.lastName ?? undefined,
+        },
+      };
+    } catch {
       return { loggedIn: false };
     }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-      },
-    });
-
-    if (!user) {
-      return { loggedIn: false };
-    }
-
-    return {
-      loggedIn: true,
-      user,
-    };
-  }
+  },
 );

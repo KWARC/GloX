@@ -9,6 +9,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
+import { FtmlPreview } from "./FtmlPreview";
 
 interface ExtractedTextPanelProps {
   extracts: ExtractedItem[];
@@ -18,6 +19,7 @@ interface ExtractedTextPanelProps {
   onUpdate: (id: string, statement: string) => Promise<void>;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
+  floDownEnabled?: boolean;
 }
 
 export function ExtractedTextPanel({
@@ -28,6 +30,7 @@ export function ExtractedTextPanel({
   onUpdate,
   onDelete,
   onSelection,
+  floDownEnabled = true,
 }: ExtractedTextPanelProps) {
   return (
     <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
@@ -73,8 +76,8 @@ export function ExtractedTextPanel({
                       <ActionIcon
                         size="sm"
                         variant="subtle"
-                        onClick={() => onToggleEdit(item.id)}
                         color="red"
+                        onClick={() => onToggleEdit(item.id)}
                       >
                         <IconPencil size={16} />
                       </ActionIcon>
@@ -83,21 +86,31 @@ export function ExtractedTextPanel({
 
                   {isEditing ? (
                     <Textarea
-                      defaultValue={item.statement}
+                      defaultValue={JSON.stringify(item.statement, null, 2)}
                       autosize
+                      minRows={4}
+                      styles={{
+                        input: { fontFamily: "monospace", fontSize: 11 },
+                      }}
                       onBlur={async (e) => {
-                        await onUpdate(item.id, e.currentTarget.value);
+                        try {
+                          const parsed = JSON.parse(e.currentTarget.value);
+                          await onUpdate(item.id, parsed);
+                        } catch {
+                          alert("Invalid FTML JSON");
+                        }
                       }}
                     />
                   ) : (
-                    <Text
-                      size="sm"
-                      lh={1.6}
+                    <div
                       style={{ userSelect: "text", cursor: "text" }}
                       onMouseUp={() => onSelection(item.id)}
                     >
-                      {item.statement}
-                    </Text>
+                      <FtmlPreview
+                        ftmlAst={item.statement}
+                        interactive={floDownEnabled}
+                      />
+                    </div>
                   )}
 
                   <Text size="10px" c="dimmed" ff="monospace" mt={6}>

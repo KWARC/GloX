@@ -12,8 +12,6 @@ import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import {
   ActivePage,
-  buildDefiniendumMacro,
-  replaceAllUnwrapped,
   useExtractionActions,
   useTextSelection,
   useValidation,
@@ -57,11 +55,11 @@ function RouteComponent() {
   const isTablet = useMediaQuery("(max-width: 1024px)");
 
   const { data: document, isLoading: docLoading } = useQuery(
-    documentByIdQuery(documentId)
+    documentByIdQuery(documentId),
   );
 
   const { data: pages = [], isLoading: pagesLoading } = useQuery(
-    documentPagesQuery(documentId)
+    documentPagesQuery(documentId),
   );
 
   const { data: extracts = [] } = useQuery({
@@ -85,13 +83,14 @@ function RouteComponent() {
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
   const [defExtractText, setDefExtractText] = useState("");
   const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(
-    null
+    null,
   );
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
   const [isEditingMeta, setIsEditingMeta] = useState(false);
-
+  const freezeRender =
+    editingId !== null || mode === "SymbolicRef" || defDialogOpen;
   async function handleDeleteDefinition(id: string) {
     if (!confirm("Delete this extracted definition?")) return;
 
@@ -170,29 +169,27 @@ function RouteComponent() {
     const extract = extracts.find((e) => e.id === defExtractId);
     if (!extract) return;
 
-    const macro = buildDefiniendumMacro(params.symbolName, params.alias);
+    await createDefiniendum({
+      data: {
+        definitionId: defExtractId,
+        symbolName: params.symbolName.trim(),
+        alias: params.alias?.trim() || null,
+        selectedText: defExtractText,
+        symbolDeclared: params.symdecl,
+        futureRepo: futureRepo.trim(),
+        filePath: filePath.trim(),
+        fileName: fileName.trim(),
+        language: language.trim(),
+      },
+    });
 
-    const updatedStatement = replaceAllUnwrapped(
-      extract.statement,
-      defExtractText,
-      macro
-    );
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
+    });
 
-    await updateExtract(defExtractId, updatedStatement);
-
-    if (params.symdecl) {
-      await createDefiniendum({
-        data: {
-          symbolName: params.symbolName.trim(),
-          alias: params.alias?.trim() || null,
-          symbolDeclared: params.symdecl,
-          futureRepo: futureRepo.trim(),
-          filePath: filePath.trim(),
-          fileName: fileName.trim(),
-          language: language.trim(),
-        },
-      });
-    }
+    await queryClient.invalidateQueries({
+      queryKey: ["definition-ftml", defExtractId],
+    });
 
     setDefDialogOpen(false);
     setDefExtractId(null);
@@ -201,11 +198,6 @@ function RouteComponent() {
 
   function handleOpenSymbolicRef(extractId: string) {
     if (!selection) return;
-
-    if (selection.isWholeStatement) {
-      console.warn("[SymbolicRef] Invalid selection");
-      return;
-    }
 
     setDefExtractId(extractId);
     setConceptUri(selection.text);
@@ -228,9 +220,8 @@ function RouteComponent() {
         definitionId: defExtractId,
         selection: {
           text: selection.text,
-          startOffset: selection.startOffset,
-          endOffset: selection.endOffset,
         },
+
         symRef,
       },
     });
@@ -275,9 +266,9 @@ function RouteComponent() {
                 fileName: fileName.trim(),
                 language: language.trim(),
               }
-            : item
+            : item,
         );
-      }
+      },
     );
 
     setIsEditingMeta(false);
@@ -298,6 +289,19 @@ function RouteComponent() {
     fileName: string;
     language: string;
   }) {
+    const extract = extracts.find(
+      (e) =>
+        e.futureRepo === config.futureRepo &&
+        e.filePath === config.filePath &&
+        e.fileName === config.fileName &&
+        e.language === config.language,
+    );
+
+    if (!extract) {
+      alert("No matching definition found");
+      return;
+    }
+
     navigate({
       to: "/create-latex",
       search: {
@@ -306,8 +310,10 @@ function RouteComponent() {
         filePath: config.filePath,
         fileName: config.fileName,
         language: config.language,
+        ftml: JSON.stringify(extract.statement),
       },
     });
+
     setLatexConfigOpen(false);
   }
 
@@ -418,6 +424,7 @@ function RouteComponent() {
                   onDelete={handleDeleteDefinition}
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
+                  floDownEnabled={!freezeRender}
                 />
               </Tabs.Panel>
             </Tabs>
@@ -464,6 +471,7 @@ function RouteComponent() {
                 onDelete={handleDeleteDefinition}
                 onSelection={handleRightSelection}
                 onToggleEdit={handleToggleEdit}
+                floDownEnabled={!freezeRender}
               />
             </Paper>
           </Flex>
@@ -479,7 +487,7 @@ function RouteComponent() {
               ? () => {
                   if (!selection) return;
                   const extract = extracts.find(
-                    (e) => e.id === selection.extractId
+                    (e) => e.id === selection.extractId,
                   );
                   if (!extract) return;
 
@@ -495,7 +503,7 @@ function RouteComponent() {
               ? () => {
                   if (!selection) return;
                   const extract = extracts.find(
-                    (e) => e.id === selection.extractId
+                    (e) => e.id === selection.extractId,
                   );
 
                   if (!extract) return;

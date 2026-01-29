@@ -1,0 +1,11 @@
+{
+  "name": "flodown-ir",
+  "version": "0.1.0",
+  "files": [
+    "flodown_bg.wasm",
+    "flodown.js",
+    "flodown.d.ts"
+  ],
+  "browser": "flodown.js",
+  "types": "flodown.d.ts"
+}

@@ -42,7 +42,6 @@ export default function UploadDialog({ opened, onClose }: Props) {
       const formData = new FormData();
       formData.append("file", file);
       const result = await uploadPdf({ data: formData });
-      console.log(result);
 
       if (
         result?.documentId &&

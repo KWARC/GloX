@@ -1,7 +1,15 @@
 import { login } from "@/serverFns/login.server";
-import { Button, PasswordInput, Stack, Text, TextInput } from "@mantine/core";
-import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  Anchor,
+  Button,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 export const Route = createFileRoute("/login")({
@@ -9,8 +17,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function RouteComponent() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const search = Route.useSearch() as { target?: string };
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,17 +32,17 @@ function RouteComponent() {
     return null;
   };
 
-  const validatePassword = (value: string) => {
-    if (!value) return "Password is required";
-    return null;
-  };
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const handleLogin = async () => {
     const emailError = validateEmail(email);
-    const passwordError = validatePassword(password);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
 
-    if (emailError || passwordError) {
-      setError(emailError || passwordError);
+    if (!password) {
+      setError("Password is required");
       return;
     }
 
@@ -45,68 +52,76 @@ function RouteComponent() {
     try {
       const res = await login({ data: { email, password } });
 
-      if (res?.success) {
-        queryClient.invalidateQueries({ queryKey: ["currentUser"] });
-        navigate({ to: "/my-files" });
+      if (res.success) {
+        window.location.replace(search.target ?? "/");
         return;
       }
 
-      if (res?.code === "NOT_SIGNED_UP") {
-        setError("Not signed up");
-        return;
-      }
-
-      setError(res?.error ?? "Login failed");
-    } catch {
-      setError("Unexpected error during login");
+      setError(res.error ?? "Login failed");
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Stack p="md" maw={400} mx="auto">
-      <TextInput
-        label="Email"
-        placeholder="you@example.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
+    <Stack p="md" maw={450} mx="auto" mt="xl">
+      <Paper shadow="sm" p="xl" withBorder>
+        <Title order={2} ta="center" mb="md">
+          Welcome Back
+        </Title>
 
-      <PasswordInput
-        label="Password"
-        placeholder="Your password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
+        <form onSubmit={handleLogin}>
+          <Stack gap="md">
+            <TextInput
+              label="Email Address"
+              placeholder="you@example.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={error && error.includes("email") ? error : undefined}
+              required
+              autoFocus
+            />
 
-      <Button
-        onClick={handleLogin}
-        loading={isSubmitting}
-        disabled={isSubmitting}
-      >
-        Login
-      </Button>
+            <PasswordInput
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={error && error.includes("Password") ? error : undefined}
+              required
+            />
 
-      <Text size="sm" ta="center">
-        Don’t have an account?{" "}
-        <Text
-          component="span"
-          c="blue"
-          style={{ cursor: "pointer", textDecoration: "underline" }}
-          onClick={() => navigate({ to: "/signup" })}
-        >
-          Sign up
-        </Text>
-      </Text>
+            {error &&
+              !error.includes("email") &&
+              !error.includes("Password") && (
+                <Text c="red" size="sm">
+                  {error}
+                </Text>
+              )}
 
-      {error && error !== "Not signed up" && (
-        <Text c="red" size="sm">
-          {error}
-        </Text>
-      )}
+            <Button
+              type="submit"
+              loading={isSubmitting}
+              disabled={isSubmitting}
+              fullWidth
+              size="lg"
+            >
+              Log In
+            </Button>
+
+            <Text size="sm" ta="center" mt="md">
+              Don't have an account?{" "}
+              <Anchor href="/signup" c="blue">
+                Sign up
+              </Anchor>
+            </Text>
+          </Stack>
+        </form>
+      </Paper>
     </Stack>
   );
 }

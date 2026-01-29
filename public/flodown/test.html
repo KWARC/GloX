@@ -1,0 +1,87 @@
+<html>
+    <head>
+        <script src="./flodown.js"></script>
+    </head>
+    <body>
+        <p>Henlo</p>
+        <div id="foobar" style="display:contents;">
+            test
+        </div>
+        <script type="text/javascript">
+            floDown().then(() => {
+                // by default: https://mathhub.info
+                floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
+                // alternatively: floDown.FloDown.fromPath
+                const fd = floDown.FloDown.fromUri("http://test?a=test&d=test&l=en");
+                // add a paragraph
+                fd.addElement({ type:"paragraph", content:["this is a test"] });
+                // render it to the div above
+                fd.mountTo(document.getElementById("foobar"));
+                // add another paragraph; will rerender automatically
+                fd.addElement({ type:"paragraph", content:[
+                    "this is another test: ",
+                    {type:"symref",uri:"http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra",content:[
+                        "this is a symbol reference"
+                    ]}
+                ]});
+                // log the stex source for the block
+                console.log(fd.getStex());
+                // log the raw ftml string
+                console.log(fd.getFtml());
+                // erase all content (will not rerender!)
+                fd.clear();
+                // add an element again
+                const newParagraph = { type:"paragraph", content:[
+                    "new test: ",
+                    {type:"symref",uri:"http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra",content:[
+                        "A reference to Boolean algebras"
+                    ]}
+                ]};
+                fd.addElement(newParagraph);
+                // the block is not a module (yet):
+                console.log("is a module 1: " + fd.isModule());
+                // add a new symbol declaration
+                const symbol = fd.addSymbolDeclaration("foobar");
+                console.log("Symbol URI: " + symbol);
+                // the block now has/is a module:
+                console.log("is a module 2: " + fd.isModule());
+                // we add a reference to newParagraph
+                newParagraph.content.push(" and one to a new symbol ");
+                newParagraph.content.push({type:"symref",uri:symbol,content:["here!"]});
+                // ^ this does *not* automatically rerender, since `fd` doesn't know that anything changed.
+                // Moreover, fd receives a *deep copy* of `newParagraph` on `addElement`, so fd *hasn't* actually changed!
+                // So we do:
+                fd.clearText();
+                fd.addElement(newParagraph);
+                // let's add a definition for foobar:
+                fd.addElement({type:"thematicbreak"});
+                fd.addElement({type:"definition",for_symbols:[symbol],content:[
+                    {type:"paragraph",content:[
+                        "A ",
+                        {type:"definiendum",uri:symbol,content:[
+                            "foobar"
+                        ]},
+                        " is ",
+                        {type:"definiens",uri:symbol,content:[
+                            "something, I guess."
+                        ]}
+                    ]}
+                ]});
+                //...which should now show on hover.
+
+                // log the stex source for the block again:
+                console.log(fd.getStex());
+                // log the raw ftml string again:
+                console.log(fd.getFtml());
+
+                // IMPORTANT! Once the last javascript reference to a FloDown Block is garbage collected,
+                // all memory held by that block will be automatically freed and the block is !!unmounted!!.
+                // This can cause rendering errors if not done intentionally.
+                // To avoid that, keep a reference alive, e.g. thusly:
+                window.FLODOWNS = [fd];
+                // of course, dropping the reference *at some point* is desired if it's not needed anymore,
+                // otherwise we have a memory leak!
+            });
+        </script>
+    </body>
+</html>

@@ -1,10 +1,10 @@
+import { requireUserId } from "@/server/auth/requireUser";
 import { createServerFn } from "@tanstack/react-start";
 import prisma from "../lib/prisma";
-import { getSessionUser } from "../server/auth/authSession";
 
 export const getMyDocuments = createServerFn({ method: "GET" }).handler(
   async () => {
-    const userId = getSessionUser();
+    const userId = requireUserId();
 
     if (!userId) {
       return {
@@ -23,5 +23,5 @@ export const getMyDocuments = createServerFn({ method: "GET" }).handler(
       success: true,
       documents: docs,
     };
-  }
+  },
 );

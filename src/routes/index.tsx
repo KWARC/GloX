@@ -29,6 +29,8 @@ function App() {
   const { data: user } = useQuery({
     queryKey: ["currentUser"],
     queryFn: currentUser,
+    retry: false,
+    staleTime: 60_000,
   });
 
   const { data: finalizedDocs, isLoading: docsLoading } = useQuery({
@@ -39,9 +41,7 @@ function App() {
 
   const isLoggedIn = user?.loggedIn;
 
-  const displayedDocs = showAll
-    ? finalizedDocs
-    : finalizedDocs?.slice(0, 4);
+  const displayedDocs = showAll ? finalizedDocs : finalizedDocs?.slice(0, 4);
 
   const hasMore = (finalizedDocs?.length ?? 0) > 4;
 
@@ -86,8 +86,8 @@ function App() {
             {!docsLoading && finalizedDocs && finalizedDocs.length === 0 && (
               <Paper p="lg" withBorder radius="md">
                 <Text c="dimmed" ta="center">
-                  No finalized documents yet. Upload a PDF and create your
-                  first LaTeX document!
+                  No finalized documents yet. Upload a PDF and create your first
+                  LaTeX document!
                 </Text>
               </Paper>
             )}

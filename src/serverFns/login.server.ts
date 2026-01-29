@@ -1,32 +1,94 @@
+import prisma from "@/lib/prisma";
 import { createServerFn } from "@tanstack/react-start";
+import { getResponse } from "@tanstack/react-start/server";
 import bcrypt from "bcryptjs";
-import prisma from "../lib/prisma";
-import { setSessionUser } from "../server/auth/authSession";
+import jwt from "jsonwebtoken";
 
-export type LoginInput = {
+const JWT_EXPIRES_IN = "7d";
+
+interface LoginInput {
   email: string;
   password: string;
-};
+}
+
+interface LoginResult {
+  success: boolean;
+  error?: string;
+}
 
 export const login = createServerFn({ method: "POST" })
-  .inputValidator((data: LoginInput) => data)
-  .handler(async ({ data }) => {
+  .inputValidator((data: LoginInput): LoginInput => {
+    if (
+      !data ||
+      typeof data.email !== "string" ||
+      typeof data.password !== "string"
+    ) {
+      throw new Error("Invalid input");
+    }
+
+    return {
+      email: data.email.toLowerCase().trim(),
+      password: data.password,
+    };
+  })
+  .handler(async ({ data }): Promise<LoginResult> => {
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      throw new Error("Server misconfiguration");
+    }
+
     const { email, password } = data;
 
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+      },
     });
 
-    if (!user) {
-      return { success: false, code: "NOT_SIGNED_UP" };
+    if (!user || !user.passwordHash) {
+      return { success: false, error: "Invalid email or password" };
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
-      return { success: false, error: "Invalid credentials" };
+      return { success: false, error: "Invalid email or password" };
     }
 
-    setSessionUser(user.id);
+    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
 
-    return { success: true, userId: user.id };
+    const res = getResponse();
+
+    res.headers.append(
+      "Set-Cookie",
+      [
+        `access_token=${token}`,
+        "HttpOnly",
+        "Path=/",
+        "SameSite=Lax",
+        process.env.NODE_ENV === "production" ? "Secure" : "",
+        "Max-Age=604800",
+      ]
+        .filter(Boolean)
+        .join("; "),
+    );
+
+    res.headers.append(
+      "Set-Cookie",
+      [
+        "is_logged_in=true",
+        "Path=/",
+        "SameSite=Lax",
+        process.env.NODE_ENV === "production" ? "Secure" : "",
+        "Max-Age=604800",
+      ]
+        .filter(Boolean)
+        .join("; "),
+    );
+
+    return { success: true };
   });

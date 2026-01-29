@@ -1,30 +1,17 @@
-import { createServerFn } from "@tanstack/react-start";
 import prisma from "@/lib/prisma";
-import { getSessionUser } from "@/server/auth/authSession";
-
-type GetDocumentPagesInput = {
-  documentId: string;
-};
+import { requireUserId } from "@/server/auth/requireUser";
+import { createServerFn } from "@tanstack/react-start";
 
 export const getDocumentPages = createServerFn({ method: "POST" })
-  .inputValidator((data: GetDocumentPagesInput) => data)
+  .inputValidator((data: { documentId: string }) => data)
   .handler(async ({ data }) => {
-    const { documentId } = data;
-
-    const userId = getSessionUser();
-    if (!userId) {
-      throw new Error("Not authenticated");
-    }
+    const userId = requireUserId();
 
     return prisma.documentPage.findMany({
       where: {
-        documentId,
-        document: {
-          userId,
-        },
+        documentId: data.documentId,
+        document: { userId },
       },
-      orderBy: {
-        pageNumber: "asc",
-      },
+      orderBy: { pageNumber: "asc" },
     });
   });

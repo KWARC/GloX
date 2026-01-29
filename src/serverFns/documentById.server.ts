@@ -1,26 +1,14 @@
-import { createServerFn } from "@tanstack/react-start";
 import prisma from "@/lib/prisma";
-import { getSessionUser } from "@/server/auth/authSession";
-
-type GetDocumentByIdInput = {
-  id: string;
-};
+import { requireUserId } from "@/server/auth/requireUser";
+import { createServerFn } from "@tanstack/react-start";
 
 export const getDocumentById = createServerFn({ method: "POST" })
-  .inputValidator((data: GetDocumentByIdInput) => data)
+  .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
-    const { id } = data;
-
-    const userId = getSessionUser();
-    if (!userId) {
-      throw new Error("Not authenticated");
-    }
+    const userId = requireUserId();
 
     const doc = await prisma.document.findFirst({
-      where: {
-        id,
-        userId,
-      },
+      where: { id: data.id, userId },
     });
 
     if (!doc) {

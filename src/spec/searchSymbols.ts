@@ -1,6 +1,6 @@
 export async function ftmlSearchSymbols(
   query: string,
-  limit = 5
+  limit = 5,
 ): Promise<string[]> {
   if (!query.trim()) return [];
 
@@ -17,8 +17,6 @@ export async function ftmlSearchSymbols(
 
   const url = `${server}/api/search_symbols`;
 
-  console.log("FTML → Calling", url, "with", params.toString());
-
   try {
     const resp = await fetch(url, {
       method: "POST",
@@ -34,8 +32,6 @@ export async function ftmlSearchSymbols(
     }
 
     const json = (await resp.json()) as [string, unknown[]][] | undefined;
-
-    console.log("FTML search result:", json);
 
     if (!Array.isArray(json)) return [];
 

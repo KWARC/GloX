@@ -1,12 +1,12 @@
 import prisma from "@/lib/prisma";
-import type {
-  CreateDefinitionInput,
-  UpdateDefinitionInput,
-} from "@/server/document/document.types";
+import { ParagraphNode } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
-export type UpdateDefinitionMetaInput = {
-  id: string;
+export type CreateDefinitionInput = {
+  documentId: string;
+  documentPageId: string;
+  pageNumber: number;
+  originalText: string;
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -14,14 +14,13 @@ export type UpdateDefinitionMetaInput = {
 };
 
 export const createDefinition = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateDefinitionInput) => data) 
+  .inputValidator((data: CreateDefinitionInput) => data)
   .handler(async ({ data }) => {
     if (
       !data.documentId ||
       !data.documentPageId ||
       typeof data.pageNumber !== "number" ||
       !data.originalText?.trim() ||
-      !data.statement?.trim() ||
       !data.futureRepo?.trim() ||
       !data.filePath?.trim() ||
       !data.fileName?.trim() ||
@@ -30,13 +29,18 @@ export const createDefinition = createServerFn({ method: "POST" })
       throw new Error("Missing definition fields");
     }
 
+    const statement: ParagraphNode = {
+      type: "paragraph",
+      content: [data.originalText.trim()],
+    };
+
     await prisma.definition.create({
       data: {
         documentId: data.documentId,
         documentPageId: data.documentPageId,
         pageNumber: data.pageNumber,
         originalText: data.originalText,
-        statement: data.statement,
+        statement,
         futureRepo: data.futureRepo,
         filePath: data.filePath,
         fileName: data.fileName,
@@ -52,43 +56,16 @@ export const createDefinition = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-export const listDefinition = createServerFn({ method: "GET" })
-  .inputValidator((data: { documentId: string }) => data)
-  .handler(async ({ data }) => {
-    return prisma.definition.findMany({
-      where: { documentId: data.documentId },
-      orderBy: { createdAt: "asc" },
-      include: {
-        symbolicRefs: {
-          include: {
-            symbolicReference: true,
-          },
-        },
-      },
-    });
-  });
-
 export const updateDefinition = createServerFn({ method: "POST" })
-  .inputValidator((data: UpdateDefinitionInput) => data)
+  .inputValidator((data: { id: string; statement: any }) => data)
   .handler(async ({ data }) => {
-    if (!data.id || !data.statement?.trim()) {
-      throw new Error("Missing update fields");
+    if (!data.id) {
+      throw new Error("Missing definition id");
     }
 
     return prisma.definition.update({
       where: { id: data.id },
       data: { statement: data.statement },
-    });
-  });
-
-export const updateDefinitionMeta = createServerFn({ method: "POST" })
-  .inputValidator((data: UpdateDefinitionMetaInput) => data)
-  .handler(async ({ data }) => {
-    const { id, futureRepo, filePath, fileName, language } = data;
-
-    return prisma.definition.update({
-      where: { id },
-      data: { futureRepo, filePath, fileName, language },
     });
   });
 
@@ -100,4 +77,47 @@ export const deleteDefinition = createServerFn({ method: "POST" })
     });
 
     return { success: true };
+  });
+
+export const updateDefinitionMeta = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      id: string;
+      futureRepo: string;
+      filePath: string;
+      fileName: string;
+      language: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    return prisma.definition.update({
+      where: { id: data.id },
+      data: {
+        futureRepo: data.futureRepo,
+        filePath: data.filePath,
+        fileName: data.fileName,
+        language: data.language,
+      },
+    });
+  });
+
+export const listDefinition = createServerFn({ method: "GET" })
+  .inputValidator((data: { documentId: string }) => data)
+  .handler(async ({ data }) => {
+    return prisma.definition.findMany({
+      where: { documentId: data.documentId },
+      orderBy: { createdAt: "asc" },
+      include: {
+        definienda: {
+          include: {
+            definiendum: true,
+          },
+        },
+        symbolicRefs: {
+          include: {
+            symbolicReference: true,
+          },
+        },
+      },
+    });
   });

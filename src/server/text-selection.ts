@@ -6,46 +6,29 @@ import {
 } from "@/serverFns/extractDefinition.server";
 import { useState } from "react";
 
-export interface DocumentPage {
-  id: string;
-  pageNumber: number;
-  text: string;
-}
-
 export interface PopupState {
   x: number;
   y: number;
   source: "left" | "right";
 }
-
-export interface ActivePage {
+export type ActivePage = {
   id: string;
   pageNumber: number;
-}
+};
 
-export interface ValidationErrors {
-  futureRepo: string | null;
-  filePath: string | null;
-  fileName: string | null;
-  language: string | null;
-}
+export type TextSelection = {
+  text: string;
+  extractId?: string;
+};
 
-export interface ExtractedItem {
+export type ExtractedItem = {
   id: string;
   pageNumber: number;
-  statement: string;
+  statement: any;
   futureRepo: string;
   filePath: string;
   fileName: string;
   language: string;
-}
-
-export type TextSelection = {
-  text: string;
-  isWholeStatement: boolean;
-  extractId?: string;
-  startOffset: number;
-  endOffset: number;
 };
 
 export function useTextSelection() {
@@ -57,31 +40,19 @@ export function useTextSelection() {
     options?: {
       extractId?: string;
       onLeftSelection?: (text: string) => void;
-    }
+    },
   ) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
 
-    const rawText = sel.toString();
-    const text = rawText.trim();
+    const text = sel.toString().trim();
     if (!text) return;
 
-    const isWholeStatement =
-      rawText.includes("\\begin") ||
-      rawText.includes("\\end") ||
-      rawText.includes("{") ||
-      rawText.includes("}");
-
     const rect = sel.getRangeAt(0).getBoundingClientRect();
-
-    const range = sel.getRangeAt(0);
 
     setSelection({
       text,
       extractId: options?.extractId,
-      isWholeStatement,
-      startOffset: range.startOffset,
-      endOffset: range.endOffset,
     });
 
     setPopup({
@@ -129,9 +100,6 @@ export function useExtractionActions(documentId: string) {
         documentPageId: params.documentPageId,
         pageNumber: params.pageNumber,
         originalText: params.text,
-        statement: `\\begin{sdefinition}
-            ${params.text}
-          \\end{sdefinition}`,
         futureRepo: params.futureRepo,
         filePath: params.filePath,
         fileName: params.fileName,
@@ -145,7 +113,11 @@ export function useExtractionActions(documentId: string) {
   }
 
   async function saveDefiniendum(params: {
+    definitionId: string;
     symbolName: string;
+    alias?: string;
+    selectedText: string;
+    symbolDeclared: boolean;
     futureRepo: string;
     filePath: string;
     fileName: string;
@@ -153,8 +125,11 @@ export function useExtractionActions(documentId: string) {
   }) {
     await createDefiniendum({
       data: {
+        definitionId: params.definitionId,
         symbolName: params.symbolName,
-        symbolDeclared: true,
+        alias: params.alias,
+        selectedText: params.selectedText,
+        symbolDeclared: params.symbolDeclared,
         futureRepo: params.futureRepo,
         filePath: params.filePath,
         fileName: params.fileName,
@@ -167,7 +142,7 @@ export function useExtractionActions(documentId: string) {
     });
   }
 
-  async function updateExtract(id: string, statement: string) {
+  async function updateExtract(id: string, statement: any) {
     await updateDefinition({
       data: { id, statement },
     });
@@ -178,6 +153,13 @@ export function useExtractionActions(documentId: string) {
   }
 
   return { extractText, saveDefiniendum, updateExtract };
+}
+
+export interface ValidationErrors {
+  futureRepo: string | null;
+  filePath: string | null;
+  fileName: string | null;
+  language: string | null;
 }
 
 export function useValidation() {
@@ -192,7 +174,7 @@ export function useValidation() {
     futureRepo: string,
     filePath: string,
     fileName: string,
-    language: string
+    language: string,
   ): boolean {
     const newErrors: ValidationErrors = {
       futureRepo: null,
@@ -226,50 +208,4 @@ export function useValidation() {
   }
 
   return { errors, validate, clearError };
-}
-
-export function normalize(s: string) {
-  return s.trim().replace(/\s+/g, " ");
-}
-
-export function buildDefiniendumMacro(symbol: string, alias?: string) {
-  const s = normalize(symbol);
-  const a = normalize(alias || "");
-
-  if (a && a !== s) {
-    return `\\definiendum{${s}}{${a}}`;
-  }
-  return `\\definame{${s}}`;
-}
-
-export function replaceAllUnwrapped(
-  text: string,
-  word: string,
-  replacement: string
-) {
-  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-  const regex = new RegExp(
-    `(?<!\\\\definame\\{|\\\\definiendum\\{)\\b${escaped}\\b`,
-    "g"
-  );
-
-  return text.replace(regex, replacement);
-}
-
-export function buildSymbolicRefMacro(selection: string, symbol: string) {
-  const sel = selection.trim();
-  const sym = symbol.trim();
-  const key = `${sym}?${sym}`;
-
-  return sel === sym ? `\\sn{${key}}` : `\\sr{${key}}{${sel}}`;
-}
-
-export function replaceAtOffset(
-  text: string,
-  start: number,
-  end: number,
-  replacement: string
-): string {
-  return text.slice(0, start) + replacement + text.slice(end);
 }

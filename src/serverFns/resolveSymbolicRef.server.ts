@@ -1,15 +1,18 @@
 import prisma from "@/lib/prisma";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
+import {
+  findUniqueTextLocation,
+  pathTraversesSemanticNode,
+  replaceTextWithNode,
+} from "@/server/ftml/ast-operations";
 import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
-import { buildSymbolicRefMacro } from "@/server/text-selection";
+import { normalizeToRoot, SymrefNode, unwrapRoot } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
 type ResolveSymbolicRefInput = {
   definitionId: string;
   selection: {
     text: string;
-    startOffset: number;
-    endOffset: number;
   };
   symRef: UnifiedSymbolicReference;
 };
@@ -20,7 +23,6 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
     const { definitionId, selection, symRef } = data;
 
     let parsed: ParsedMathHubUri;
-
     if (symRef.source === "MATHHUB") {
       parsed = parseUri(symRef.uri);
     } else {
@@ -42,16 +44,42 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
       throw new Error("Definition not found");
     }
 
-    const macro = buildSymbolicRefMacro(selection.text, parsed.symbol);
+    const currentAst = normalizeToRoot(definition.statement as any);
 
-    const updatedStatement =
-      definition.statement.slice(0, selection.startOffset) +
-      macro +
-      definition.statement.slice(selection.endOffset);
+    let location;
+    try {
+      location = findUniqueTextLocation(currentAst, selection.text);
+    } catch (error) {
+      throw new Error(
+        `Cannot add symbolic reference: ${(error as Error).message}`,
+      );
+    }
+
+    const targetPath = [location.paragraphIndex, location.contentIndex];
+    if (pathTraversesSemanticNode(currentAst, targetPath)) {
+      throw new Error(
+        "Cannot add symbolic reference inside existing definiendum or symref",
+      );
+    }
+
+    const symrefNode: SymrefNode = {
+      type: "symref",
+      uri: parsed.conceptUri,
+      content: [selection.text],
+    };
+
+    const updatedAst = replaceTextWithNode(
+      currentAst,
+      location,
+      location.offset + selection.text.length,
+      symrefNode,
+    );
+
+    const statementToStore = unwrapRoot(updatedAst);
 
     await prisma.definition.update({
       where: { id: definitionId },
-      data: { statement: updatedStatement },
+      data: { statement: statementToStore },
     });
 
     const symbolicRef = await prisma.symbolicReference.create({
@@ -62,7 +90,6 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
         filePath: parsed.filePath,
         fileName: parsed.fileName,
         language: parsed.language,
-        definiendumId: null,
       },
     });
 

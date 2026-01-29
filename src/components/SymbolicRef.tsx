@@ -233,7 +233,7 @@ export function SymbolicRef({
                 zIndex={5000}
               >
                 <span style={{ cursor: "help", display: "inline-block" }}>
-                  <Text size="xs" ff="monospace">
+                  <Text size="xs" ff="monospace" component="span">
                     <RenderSymbolicUri uri={selectedSymbol.uri} />
                   </Text>
                 </span>
