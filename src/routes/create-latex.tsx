@@ -1,10 +1,10 @@
 import { currentUser } from "@/server/auth/currentUser";
+import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
 import {
   getLatexHistory,
   saveLatexDraft,
   saveLatexFinal,
 } from "@/serverFns/latex.server";
-import { generateLatexWithDependencies } from "@/serverFns/latexGeneration.server";
 import {
   ActionIcon,
   Badge,
@@ -30,20 +30,34 @@ export const Route = createFileRoute("/create-latex")({
     const user = await currentUser();
     if (!user?.loggedIn) throw redirect({ to: "/login" });
   },
-  validateSearch: (search: {
-    documentId: string;
-    futureRepo: string;
-    filePath: string;
-    fileName: string;
-    language: string;
-  }) => search,
+  validateSearch: (search: Record<string, unknown>) => {
+    const base = {
+      documentId: search.documentId as string,
+      futureRepo: search.futureRepo as string,
+      filePath: search.filePath as string,
+      fileName: search.fileName as string,
+      language: search.language as string,
+    };
+
+    if (typeof search.ftml === "string") {
+      return { ...base, ftml: search.ftml };
+    }
+
+    return base;
+  },
+
   component: CreateLatexPage,
 });
-
 function CreateLatexPage() {
   const navigate = useNavigate();
-  const { documentId, futureRepo, filePath, fileName, language } =
-    Route.useSearch();
+  const search = Route.useSearch();
+
+  const { documentId, futureRepo, filePath, fileName, language } = search;
+
+  const ftml = "ftml" in search ? search.ftml : undefined;
+
+  const isGenerateMode = typeof ftml === "string";
+  const ftmlAst = isGenerateMode ? JSON.parse(ftml) : null;
 
   const [editedLatex, setEditedLatex] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -51,89 +65,13 @@ function CreateLatexPage() {
   const [savingFinal, setSavingFinal] = useState(false);
   const [isFromHistory, setIsFromHistory] = useState(false);
 
-  const { data: generatedLatex, isLoading } = useQuery({
-    queryKey: ["latex-with-deps", documentId],
+  const { data: stex, isLoading: stexLoading } = useQuery({
+    queryKey: ["stex", ftml],
     queryFn: async () => {
-      if (!documentId || !futureRepo || !filePath || !fileName || !language) {
-        return "";
-      }
-
-      return generateLatexWithDependencies({
-        data: { documentId, futureRepo, filePath, fileName, language },
-      });
+      return generateStexFromFtml(ftmlAst);
     },
-    enabled: !!documentId,
+    staleTime: Infinity,
   });
-
-  const displayLatex = editedLatex ?? generatedLatex ?? "";
-
-  const handleDownload = () => {
-    const safeFileName = fileName?.trim() || "document";
-    const safeLanguage = language?.trim() || "en";
-
-    const finalName = `${safeFileName}.${safeLanguage}.tex`;
-
-    const blob = new Blob([displayLatex], {
-      type: "application/x-tex",
-    });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = finalName;
-
-    document.body.appendChild(a);
-    a.click();
-
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleSaveDraft = async () => {
-    if (!documentId) return;
-
-    try {
-      setSavingDraft(true);
-      await saveLatexDraft({
-        data: {
-          documentId,
-          futureRepo,
-          filePath,
-          fileName,
-          language,
-          latex: displayLatex,
-        },
-      });
-
-      await refetchHistory();
-    } finally {
-      setSavingDraft(false);
-    }
-  };
-
-  const handleSaveFinal = async () => {
-    if (!documentId) return;
-
-    try {
-      setSavingFinal(true);
-      await saveLatexFinal({
-        data: {
-          documentId,
-          futureRepo,
-          filePath,
-          fileName,
-          language,
-          latex: displayLatex,
-        },
-      });
-
-      await refetchHistory();
-      navigate({ to: "/" });
-    } finally {
-      setSavingFinal(false);
-    }
-  };
 
   const {
     data: historyData,
@@ -158,98 +96,111 @@ function CreateLatexPage() {
           language,
         },
       }),
-    enabled:
-      !!documentId && !!futureRepo && !!filePath && !!fileName && !!language,
   });
+  const displayLatex =
+    editedLatex ?? (isGenerateMode ? stex : historyData?.finalLatex) ?? "";
 
-  if (isLoading) {
+  const handleDownload = () => {
+    const finalName = `${fileName || "document"}.${language || "en"}.tex`;
+    const blob = new Blob([displayLatex], { type: "application/x-tex" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = finalName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      setSavingDraft(true);
+      await saveLatexDraft({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+          latex: displayLatex,
+        },
+      });
+      await refetchHistory();
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handleSaveFinal = async () => {
+    try {
+      setSavingFinal(true);
+      await saveLatexFinal({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+          latex: displayLatex,
+        },
+      });
+      await refetchHistory();
+      navigate({ to: "/" });
+    } finally {
+      setSavingFinal(false);
+    }
+  };
+
+  if (isGenerateMode && stexLoading) {
     return (
-      <Box
-        p="xl"
-        h="100dvh"
-        style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        }}
-      >
+      <Box p="xl" h="100dvh">
         <Stack align="center" justify="center" h="100%">
-          <Loader size="xl" color="white" />
-          <Text size="lg" c="white" fw={500}>
-            Generating LaTeX with dependencies…
-          </Text>
+          <Loader size="xl" />
+          <Text>Generating sTeX…</Text>
         </Stack>
       </Box>
     );
   }
 
   return (
-    <Box p="xl" h="100dvh" style={{ background: "#f8f9fa" }}>
+    <Box p="xl" h="100dvh">
       <Stack h="100%" gap="lg">
-        <Paper p="lg" shadow="sm" radius="md" withBorder>
-          <Group justify="space-between" align="center">
-            <Group gap="md">
-              <Title order={2} style={{ color: "#667eea" }}>
-                LaTeX Editor
-              </Title>
-              <Badge color="violet" variant="light" size="lg">
-                sTeX
-              </Badge>
+        <Paper p="lg" withBorder>
+          <Group justify="space-between">
+            <Group>
+              <Title order={2}>LaTeX Editor</Title>
+              <Badge>sTeX</Badge>
             </Group>
-
-            <Group gap="xs">
-              <Tooltip label="View Version History">
-                <Button
-                  size="xs"
-                  variant="light"
-                  onClick={() => setHistoryOpen(true)}
-                  disabled={!historyData?.history.length}
-                >
-                  Version History
-                </Button>
-              </Tooltip>
-
-              <Tooltip label="Download LaTeX">
-                <ActionIcon
-                  variant="light"
-                  color="green"
-                  size="lg"
-                  onClick={handleDownload}
-                >
-                  <Download size={18} />
-                </ActionIcon>
-              </Tooltip>
+            <Group>
+              <Button
+                size="xs"
+                variant="light"
+                onClick={() => setHistoryOpen(true)}
+                disabled={!historyData?.history.length}
+              >
+                Version History
+              </Button>
+              <ActionIcon onClick={handleDownload}>
+                <Download size={18} />
+              </ActionIcon>
             </Group>
           </Group>
-
-          {(futureRepo || filePath || fileName || language) && (
-            <Text size="sm" c="dimmed" mt="xs" ff="monospace">
-              {[futureRepo, filePath, fileName, language]
-                .filter(Boolean)
-                .join(" / ")}
-            </Text>
-          )}
         </Paper>
+
         <Modal
           opened={historyOpen}
           onClose={() => setHistoryOpen(false)}
           title="LaTeX Version History"
-          size="lg"
         >
           <Stack>
             {historyLoading && <Loader size="sm" />}
-
-            {!historyData?.history.length && (
-              <Text size="sm" c="dimmed">
-                No drafts saved yet.
-              </Text>
-            )}
-
             {historyData?.history.map((entry, i) => (
               <Paper key={i} p="sm" withBorder>
                 <Group justify="space-between">
-                  <Text size="xs" c="dimmed">
+                  <Text size="xs">
                     {new Date(entry.savedAt).toLocaleString()}
                   </Text>
-
                   <Button
                     size="xs"
                     onClick={() => {
@@ -266,12 +217,7 @@ function CreateLatexPage() {
           </Stack>
         </Modal>
 
-        <Paper
-          withBorder
-          shadow="md"
-          radius="md"
-          style={{ flex: 1, overflow: "hidden" }}
-        >
+        <Paper withBorder style={{ flex: 1, minHeight: 0 }}>
           <Textarea
             value={displayLatex}
             onChange={(e) => {
@@ -284,25 +230,22 @@ function CreateLatexPage() {
               root: { height: "100%" },
               wrapper: { height: "100%" },
               input: {
-                height: "100%",
-                fontFamily: "'Fira Code', 'Consolas', monospace",
+                fontFamily: "monospace",
                 fontSize: 14,
-                lineHeight: 1.6,
-                backgroundColor: "white",
-                border: "none",
+                height: "100%",
+                resize: "none",
               },
             }}
           />
         </Paper>
 
-        <Paper p="md" shadow="sm" radius="md" withBorder>
+        <Paper p="md" withBorder>
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
               {displayLatex.length} characters •{" "}
               {displayLatex.split("\n").length} lines
             </Text>
-
-            <Group gap="sm">
+            <Group>
               <Button
                 variant="default"
                 onClick={() => {

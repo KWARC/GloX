@@ -289,6 +289,19 @@ function RouteComponent() {
     fileName: string;
     language: string;
   }) {
+    const extract = extracts.find(
+      (e) =>
+        e.futureRepo === config.futureRepo &&
+        e.filePath === config.filePath &&
+        e.fileName === config.fileName &&
+        e.language === config.language,
+    );
+
+    if (!extract) {
+      alert("No matching definition found");
+      return;
+    }
+
     navigate({
       to: "/create-latex",
       search: {
@@ -297,8 +310,10 @@ function RouteComponent() {
         filePath: config.filePath,
         fileName: config.fileName,
         language: config.language,
+        ftml: JSON.stringify(extract.statement),
       },
     });
+
     setLatexConfigOpen(false);
   }
 
