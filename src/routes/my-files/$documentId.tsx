@@ -17,6 +17,7 @@ import {
   useValidation,
 } from "@/server/text-selection";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
+import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import {
   deleteDefinition,
   listDefinition,
@@ -283,24 +284,21 @@ function RouteComponent() {
     setLatexConfigOpen(true);
   }
 
-  function handleLatexConfigSubmit(config: {
+  async function handleLatexConfigSubmit(config: {
     futureRepo: string;
     filePath: string;
     fileName: string;
     language: string;
   }) {
-    const extract = extracts.find(
-      (e) =>
-        e.futureRepo === config.futureRepo &&
-        e.filePath === config.filePath &&
-        e.fileName === config.fileName &&
-        e.language === config.language,
-    );
-
-    if (!extract) {
-      alert("No matching definition found");
-      return;
-    }
+    const combinedFtml = await getCombinedDefinitionFtml({
+      data: {
+        documentId,
+        futureRepo: config.futureRepo,
+        filePath: config.filePath,
+        fileName: config.fileName,
+        language: config.language,
+      },
+    });
 
     navigate({
       to: "/create-latex",
@@ -310,7 +308,7 @@ function RouteComponent() {
         filePath: config.filePath,
         fileName: config.fileName,
         language: config.language,
-        ftml: JSON.stringify(extract.statement),
+        ftml: JSON.stringify(combinedFtml),
       },
     });
 
