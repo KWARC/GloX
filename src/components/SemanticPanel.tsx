@@ -13,23 +13,39 @@ export function SemanticPanel({
   opened: boolean;
   onClose: () => void;
   definition: any | null;
-  onEditDefiniendum: (definitionId: string, def: any) => void;
-  onEditSymbolicRef: (definitionId: string, ref: any) => void;
+  onEditDefiniendum: (
+    definitionId: string,
+    def: { uri: string; text: string; definiendumId: string },
+  ) => void;
+  onEditSymbolicRef: (
+    definitionId: string,
+    ref: { uri: string; text: string; symbolicRefId: string },
+  ) => void;
   onDeleteNode: (
     definitionId: string,
-    target: { type: "definiendum" | "symref"; uri: string },
+    target:
+      | {
+          type: "definiendum";
+          uri: string;
+          definiendumId: string;
+        }
+      | {
+          type: "symref";
+          uri: string;
+          symbolicRefId: string;
+        },
   ) => void;
 }) {
   if (!definition) return null;
 
   const { definienda, symbolicRefs } = extractSemanticIndex(
     definition.statement,
+    definition,
   );
 
   return (
     <Modal opened={opened} onClose={onClose} title="Manage Semantics" size="md">
       <Stack gap="lg">
-        {/* DEFINIENDA */}
         <Stack gap="xs">
           <Text fw={600} size="sm">
             Definienda
@@ -41,7 +57,7 @@ export function SemanticPanel({
             </Text>
           ) : (
             definienda.map((def) => (
-              <Group key={def.uri} justify="space-between">
+              <Group key={def.definiendumId} justify="space-between">
                 <Text>{def.text}</Text>
 
                 <Group gap="xs">
@@ -59,6 +75,7 @@ export function SemanticPanel({
                       onDeleteNode(definition.id, {
                         type: "definiendum",
                         uri: def.uri,
+                        definiendumId: def.definiendumId,
                       })
                     }
                   >
@@ -70,7 +87,6 @@ export function SemanticPanel({
           )}
         </Stack>
 
-        {/* SYMBOLIC REFERENCES */}
         <Stack gap="xs">
           <Text fw={600} size="sm">
             Symbolic References
@@ -82,7 +98,7 @@ export function SemanticPanel({
             </Text>
           ) : (
             symbolicRefs.map((ref) => (
-              <Group key={ref.uri} justify="space-between">
+              <Group key={ref.symbolicRefId} justify="space-between">
                 <Text>{ref.text}</Text>
 
                 <Group gap="xs">
@@ -100,6 +116,7 @@ export function SemanticPanel({
                       onDeleteNode(definition.id, {
                         type: "symref",
                         uri: ref.uri,
+                        symbolicRefId: ref.symbolicRefId,
                       })
                     }
                   >

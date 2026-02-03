@@ -1,5 +1,4 @@
 import prisma from "@/lib/prisma";
-import { transform, uriToSymbolName } from "@/server/parseUri";
 import { ParagraphNode } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -120,87 +119,5 @@ export const listDefinition = createServerFn({ method: "GET" })
           },
         },
       },
-    });
-  });
-
-export const updateDefinitionAst = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      definitionId: string;
-      operation:
-        | {
-            kind: "removeSemantic";
-            target: { type: "definiendum" | "symref"; uri: string };
-          }
-        | {
-            kind: "replaceSemantic";
-            target: { type: "definiendum" | "symref"; uri: string };
-            payload: any;
-          };
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    await prisma.$transaction(async (tx) => {
-      const def = await tx.definition.findUniqueOrThrow({
-        where: { id: data.definitionId },
-        include: {
-          definienda: { include: { definiendum: true } },
-          symbolicRefs: { include: { symbolicReference: true } },
-        },
-      });
-
-      // 1. AST update
-      const newAst = transform(structuredClone(def.statement), data.operation);
-
-      await tx.definition.update({
-        where: { id: data.definitionId },
-        data: { statement: newAst },
-      });
-
-      // 2. DB update
-      if (data.operation.kind === "removeSemantic") {
-        if (data.operation.target.type === "definiendum") {
-          const symbolName = uriToSymbolName(data.operation.target.uri);
-
-          await tx.definiendum.deleteMany({
-            where: { symbolName },
-          });
-        }
-
-        if (data.operation.target.type === "symref") {
-          await tx.symbolicReference.deleteMany({
-            where: {
-              conceptUri: data.operation.target.uri,
-            },
-          });
-        }
-      }
-
-      if (data.operation.kind === "replaceSemantic") {
-        if (data.operation.target.type === "definiendum") {
-          const oldName = uriToSymbolName(data.operation.target.uri);
-          const newName = data.operation.payload?.content?.[0];
-
-          if (!newName) {
-            throw new Error("Missing new definiendum name");
-          }
-
-          await tx.definiendum.updateMany({
-            where: { symbolName: oldName },
-            data: { symbolName: newName },
-          });
-        }
-
-        if (data.operation.target.type === "symref") {
-          await tx.symbolicReference.updateMany({
-            where: {
-              conceptUri: data.operation.target.uri,
-            },
-            data: {
-              conceptUri: data.operation.payload.uri,
-            },
-          });
-        }
-      }
     });
   });
