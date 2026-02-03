@@ -1,3 +1,5 @@
+import { UnifiedSymbolicReference } from "./document/SymbolicRef.types";
+
 export interface ParsedMathHubUri {
   archive: string;
   filePath: string;
@@ -47,4 +49,67 @@ export function parseUri(uri: string): ParsedMathHubUri {
   }
 
   throw new Error("Invalid MathHub URI");
+}
+
+export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
+  uri: string;
+  text: string;
+} {
+  if (symRef.source === "MATHHUB") {
+    return {
+      uri: symRef.uri,
+      text: symRef.uri,
+    };
+  }
+
+  // DB symbol
+  const uri = `LOCAL:${symRef.symbolName}`;
+  return {
+    uri,
+    text: symRef.symbolName,
+  };
+}
+
+export function transform(
+  node: any,
+  operation: {
+    kind: "removeSemantic" | "replaceSemantic";
+    target: { type: "definiendum" | "symref"; uri: string };
+    payload?: any;
+  },
+): any {
+  if (typeof node === "string") return node;
+  if (!node || typeof node !== "object") return node;
+
+  if (
+    node.type === operation.target.type &&
+    node.uri === operation.target.uri
+  ) {
+    if (operation.kind === "removeSemantic") {
+      return Array.isArray(node.content) ? node.content.join("") : "";
+    }
+
+    if (operation.kind === "replaceSemantic") {
+      return {
+        ...node,
+        ...operation.payload,
+      };
+    }
+  }
+
+  if (Array.isArray(node.content)) {
+    return {
+      ...node,
+      content: node.content.map((c: any) => transform(c, operation)),
+    };
+  }
+
+  return node;
+}
+
+export function uriToSymbolName(uri: string): string {
+  if (!uri.startsWith("LOCAL:")) {
+    throw new Error(`Invalid definiendum URI: ${uri}`);
+  }
+  return uri.slice("LOCAL:".length);
 }

@@ -11,11 +11,11 @@ import {
   TextInput,
 } from "@mantine/core";
 import { IconCheck, IconX } from "@tabler/icons-react";
-import { useState } from "react";
+import { useForm } from "@tanstack/react-form";
 
 interface DefiniendumDialogProps {
-  extractedText: string;
   opened: boolean;
+  extractedText: string | null;
   onSubmit: (params: {
     symbolName: string;
     alias: string;
@@ -25,20 +25,25 @@ interface DefiniendumDialogProps {
 }
 
 export function DefiniendumDialog({
-  extractedText,
   opened,
+  extractedText,
   onSubmit,
   onClose,
 }: DefiniendumDialogProps) {
-  const [symbolName, setSymbolName] = useState(extractedText);
-  const [alias, setAlias] = useState("");
-  const [symdecl, setSymdecl] = useState(false);
-
-  function handleClose() {
-    setAlias("");
-    setSymdecl(false);
-    onClose();
-  }
+  const form = useForm({
+    defaultValues: {
+      symbolName: extractedText ?? "",
+      alias: "",
+      symdecl: false,
+    },
+    onSubmit: ({ value }) => {
+      onSubmit({
+        symbolName: value.symbolName.trim(),
+        alias: value.alias.trim(),
+        symdecl: value.symdecl,
+      });
+    },
+  });
 
   if (!opened) return null;
 
@@ -57,55 +62,81 @@ export function DefiniendumDialog({
           zIndex: 5000,
         }}
       >
-        <Stack gap="sm">
-          <Group justify="space-between">
-            <Text fw={600}>Add Definiendum</Text>
-            <ActionIcon variant="subtle" onClick={handleClose}>
-              <IconX size={16} />
-            </ActionIcon>
-          </Group>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            form.handleSubmit();
+          }}
+        >
+          <Stack gap="sm">
+            <Group justify="space-between">
+              <Text fw={600}>Definiendum</Text>
+              <ActionIcon
+                variant="subtle"
+                onClick={() => {
+                  form.reset();
+                  onClose();
+                }}
+              >
+                <IconX size={16} />
+              </ActionIcon>
+            </Group>
 
-          <TextInput
-            label="Symbol name"
-            placeholder="e.g. f, G, Hom(X,Y)"
-            value={symbolName}
-            onChange={(e) => setSymbolName(e.currentTarget.value)}
-            required
-            autoFocus
-          />
+            <form.Field
+              name="symbolName"
+              validators={{
+                onChange: ({ value }) =>
+                  !value.trim() ? "Symbol name required" : undefined,
+              }}
+            >
+              {(field) => (
+                <TextInput
+                  label="Symbol name"
+                  value={field.state.value}
+                  onChange={(e) =>
+                    field.handleChange(e.currentTarget.value)
+                  }
+                  error={field.state.meta.errors?.[0]}
+                  autoFocus
+                />
+              )}
+            </form.Field>
 
-          <Textarea
-            label="Alias"
-            placeholder="Optional alias or description"
-            value={alias}
-            onChange={(e) => setAlias(e.currentTarget.value)}
-            autosize
-            minRows={2}
-          />
+            <form.Field name="alias">
+              {(field) => (
+                <Textarea
+                  label="Alias"
+                  value={field.state.value}
+                  onChange={(e) =>
+                    field.handleChange(e.currentTarget.value)
+                  }
+                  autosize
+                  minRows={2}
+                />
+              )}
+            </form.Field>
 
-          <Checkbox
-            label="Symbol needs to be declared (symdecl)"
-            checked={symdecl}
-            onChange={(e) => setSymdecl(e.currentTarget.checked)}
-          />
+            <form.Field name="symdecl">
+              {(field) => (
+                <Checkbox
+                  label="Symbol needs declaration (symdecl)"
+                  checked={field.state.value}
+                  onChange={(e) =>
+                    field.handleChange(e.currentTarget.checked)
+                  }
+                />
+              )}
+            </form.Field>
 
-          <Button
-            fullWidth
-            leftSection={<IconCheck size={16} />}
-            onClick={() => {
-              onSubmit({
-                symbolName: symbolName.trim(),
-                alias: alias.trim(),
-                symdecl,
-              });
-              setAlias("");
-              setSymdecl(true);
-            }}
-            disabled={!symbolName.trim()}
-          >
-            Save Definiendum
-          </Button>
-        </Stack>
+            <Button
+              type="submit"
+              leftSection={<IconCheck size={16} />}
+              fullWidth
+            >
+              Save Definiendum
+            </Button>
+          </Stack>
+        </form>
       </Paper>
     </Portal>
   );

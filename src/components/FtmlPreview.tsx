@@ -51,6 +51,11 @@ export function FtmlPreview({
 
     return () => {
       disposed = true;
+
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+
       if (fd) {
         fd.clear();
         fd = null;
