@@ -105,6 +105,14 @@ function RouteComponent() {
     if (!confirm("Delete this extracted definition?")) return;
 
     await deleteDefinition({ data: { id } });
+    await queryClient.invalidateQueries({
+    queryKey: ["definitions", documentId],
+  });
+
+  if (lockedByExtractId === id) {
+    setLockedByExtractId(null);
+    setEditingId(null);
+  }
   }
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
