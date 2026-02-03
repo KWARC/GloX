@@ -119,6 +119,7 @@ export function ExtractedTextPanel({
                       onMouseUp={() => onSelection(item.id)}
                     >
                       <FtmlPreview
+                       key={item.id}   
                         ftmlAst={item.statement}
                         interactive={floDownEnabled}
                       />

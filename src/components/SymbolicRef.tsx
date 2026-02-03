@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderSymbolicUri";
 
 const SEARCH_MODAL_WIDTH = 440;
@@ -38,7 +38,7 @@ export function SymbolicRef({
   onSelect,
   onClose,
 }: SymbolicRefProps) {
-  const [searchQuery, setSearchQuery] = useState(conceptUri);
+  const [searchQuery, setSearchQuery] = useState(() => conceptUri);
   const [selectedSymbol, setSelectedSymbol] =
     useState<UnifiedSymbolicReference | null>(null);
 
@@ -73,6 +73,20 @@ export function SymbolicRef({
     isReady &&
     mathHubResults.length === 0 &&
     databaseResults.length === 0;
+
+  useEffect(() => {
+    const stop = (e: Event) => e.stopPropagation();
+
+    window.addEventListener("wheel", stop, true);
+    window.addEventListener("mousedown", stop, true);
+    window.addEventListener("mouseup", stop, true);
+
+    return () => {
+      window.removeEventListener("wheel", stop, true);
+      window.removeEventListener("mousedown", stop, true);
+      window.removeEventListener("mouseup", stop, true);
+    };
+  }, []);
 
   return (
     <Portal>
@@ -146,7 +160,12 @@ export function SymbolicRef({
                   )}
                 </Group>
 
-                <ScrollArea h={DB_SECTION_HEIGHT}>
+                <ScrollArea
+                  h={DB_SECTION_HEIGHT}
+                  type="always"
+                  scrollbarSize={6}
+                  onWheelCapture={(e) => e.stopPropagation()}
+                >
                   <Stack gap={4}>
                     {databaseResults.map((db) => (
                       <Button
@@ -189,7 +208,12 @@ export function SymbolicRef({
                   MathHub
                 </Text>
 
-                <ScrollArea h={MATHHUB_SECTION_HEIGHT}>
+                <ScrollArea
+                  h={MATHHUB_SECTION_HEIGHT}
+                  type="always"
+                  scrollbarSize={6}
+                  onWheelCapture={(e) => e.stopPropagation()}
+                >
                   <Stack gap={4}>
                     {mathHubResults.map((uri) => (
                       <Button

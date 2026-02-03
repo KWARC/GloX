@@ -98,24 +98,43 @@ function RouteComponent() {
   const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
     null,
   );
+  const [isBusy, setIsBusy] = useState(false);
 
-  const freezeRender =
-    editingId !== null || mode === "SymbolicRef" || defDialogOpen;
-  async function handleDeleteDefinition(id: string) {
-    if (!confirm("Delete this extracted definition?")) return;
-
-    await deleteDefinition({ data: { id } });
-    await queryClient.invalidateQueries({
-    queryKey: ["definitions", documentId],
-  });
-
-  if (lockedByExtractId === id) {
-    setLockedByExtractId(null);
-    setEditingId(null);
-  }
-  }
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
+
+  const freezeRender =
+    isBusy ||
+    editingId !== null ||
+    mode === "SymbolicRef" ||
+    defDialogOpen ||
+    semanticPanelOpen ||
+    popup !== null;
+
+  async function withFreeze(fn: () => Promise<void>) {
+    setIsBusy(true);
+    try {
+      await fn();
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleDeleteDefinition(id: string) {
+    await withFreeze(async () => {
+      if (!confirm("Delete this extracted definition?")) return;
+
+      await deleteDefinition({ data: { id } });
+      await queryClient.invalidateQueries({
+        queryKey: ["definitions", documentId],
+      });
+
+      if (lockedByExtractId === id) {
+        setLockedByExtractId(null);
+        setEditingId(null);
+      }
+    });
+  }
 
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
@@ -161,17 +180,18 @@ function RouteComponent() {
     definitionId: string,
     target: { type: "definiendum" | "symref"; uri: string },
   ) {
-    await updateDefinitionAst({
-      data: {
-        definitionId,
-        operation: { kind: "removeSemantic", target },
-      },
-    });
+    await withFreeze(async () => {
+      await updateDefinitionAst({
+        data: {
+          definitionId,
+          operation: { kind: "removeSemantic", target },
+        },
+      });
 
-    await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      await queryClient.invalidateQueries({
+        queryKey: ["definitions", documentId],
+      });
     });
-
     setSemanticPanelOpen(false);
     setSemanticPanelDefId(null);
   }
@@ -221,43 +241,43 @@ function RouteComponent() {
   }) {
     if (!defExtractId) return;
     if (!validate(futureRepo, filePath, fileName, language)) return;
+    await withFreeze(async () => {
+      if (editingNodeId) {
+        const newUri = `LOCAL:${params.symbolName}`;
 
-    if (editingNodeId) {
-      const newUri = `LOCAL:${params.symbolName}`;
-
-      await updateDefinitionAst({
-        data: {
-          definitionId: defExtractId,
-          operation: {
-            kind: "replaceSemantic",
-            target: { type: "definiendum", uri: editingNodeId },
-            payload: {
-              uri: newUri,
-              content: [params.symbolName],
+        await updateDefinitionAst({
+          data: {
+            definitionId: defExtractId,
+            operation: {
+              kind: "replaceSemantic",
+              target: { type: "definiendum", uri: editingNodeId },
+              payload: {
+                uri: newUri,
+                content: [params.symbolName],
+              },
             },
           },
-        },
-      });
-    } else {
-      await createDefiniendum({
-        data: {
-          definitionId: defExtractId,
-          symbolName: params.symbolName.trim(),
-          alias: params.alias?.trim() || null,
-          selectedText: defExtractText,
-          symbolDeclared: params.symdecl,
-          futureRepo: futureRepo.trim(),
-          filePath: filePath.trim(),
-          fileName: fileName.trim(),
-          language: language.trim(),
-        },
-      });
-    }
+        });
+      } else {
+        await createDefiniendum({
+          data: {
+            definitionId: defExtractId,
+            symbolName: params.symbolName.trim(),
+            alias: params.alias?.trim() || null,
+            selectedText: defExtractText,
+            symbolDeclared: params.symdecl,
+            futureRepo: futureRepo.trim(),
+            filePath: filePath.trim(),
+            fileName: fileName.trim(),
+            language: language.trim(),
+          },
+        });
+      }
 
-    await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      await queryClient.invalidateQueries({
+        queryKey: ["definitions", documentId],
+      });
     });
-
     setEditingNodeId(null);
     setDefDialogOpen(false);
     setDefExtractId(null);
@@ -266,36 +286,36 @@ function RouteComponent() {
 
   async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
     if (!defExtractId) return;
+    await withFreeze(async () => {
+      if (editingNodeId) {
+        const { uri, text } = normalizeSymRef(symRef);
 
-    if (editingNodeId) {
-      const { uri, text } = normalizeSymRef(symRef);
-
-      await updateDefinitionAst({
-        data: {
-          definitionId: defExtractId,
-          operation: {
-            kind: "replaceSemantic",
-            target: { type: "symref", uri: editingNodeId },
-            payload: { uri, content: [text] },
+        await updateDefinitionAst({
+          data: {
+            definitionId: defExtractId,
+            operation: {
+              kind: "replaceSemantic",
+              target: { type: "symref", uri: editingNodeId },
+              payload: { uri, content: [text] },
+            },
           },
-        },
-      });
-    } else {
-      if (!selection) return;
+        });
+      } else {
+        if (!selection) return;
 
-      await resolveSymbolicRef({
-        data: {
-          definitionId: defExtractId,
-          selection: { text: selection.text },
-          symRef,
-        },
-      });
-    }
+        await resolveSymbolicRef({
+          data: {
+            definitionId: defExtractId,
+            selection: { text: selection.text },
+            symRef,
+          },
+        });
+      }
 
-    await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      await queryClient.invalidateQueries({
+        queryKey: ["definitions", documentId],
+      });
     });
-
     setEditingNodeId(null);
     setMode(null);
     clearAll();

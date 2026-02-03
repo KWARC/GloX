@@ -25,12 +25,14 @@ export function FtmlPreview({
     let disposed = false;
     let fd: any = null;
 
-    initFloDown().then((floDown) => {
+    (async () => {
+      const floDown = await initFloDown();
       if (disposed || !containerRef.current) return;
 
       floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
       fd = floDown.FloDown.fromUri("http://temp?a=temp&d=temp&l=en");
+
       containerRef.current.innerHTML = "";
       fd.mountTo(containerRef.current);
 
@@ -47,18 +49,21 @@ export function FtmlPreview({
       for (const element of resolved.content) {
         fd.addElement(element);
       }
-    });
+    })();
 
     return () => {
       disposed = true;
 
-      if (containerRef.current) {
-        containerRef.current.innerHTML = "";
+      if (fd) {
+        try {
+          fd.clear(); 
+        } catch {
+        }
+        fd = null;
       }
 
-      if (fd) {
-        fd.clear();
-        fd = null;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
       }
     };
   }, [ftmlAst]);
