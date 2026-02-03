@@ -102,14 +102,14 @@ function RouteComponent() {
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
+  const { extractText, updateExtract } = useExtractionActions(documentId);
 
   const freezeRender =
     isBusy ||
     editingId !== null ||
     mode === "SymbolicRef" ||
     defDialogOpen ||
-    semanticPanelOpen ||
-    popup !== null;
+    semanticPanelOpen;
 
   async function withFreeze(fn: () => Promise<void>) {
     setIsBusy(true);
@@ -135,8 +135,6 @@ function RouteComponent() {
       }
     });
   }
-
-  const { extractText, updateExtract } = useExtractionActions(documentId);
 
   function handleLeftSelection(pageId: string) {
     setLockedByExtractId(null);

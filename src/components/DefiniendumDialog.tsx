@@ -12,6 +12,7 @@ import {
 } from "@mantine/core";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useForm } from "@tanstack/react-form";
+import { useEffect } from "react";
 
 interface DefiniendumDialogProps {
   opened: boolean;
@@ -44,6 +45,16 @@ export function DefiniendumDialog({
       });
     },
   });
+
+  useEffect(() => {
+    if (opened) {
+      form.reset({
+        symbolName: extractedText ?? "",
+        alias: "",
+        symdecl: false,
+      });
+    }
+  }, [opened, extractedText]);
 
   if (!opened) return null;
 
@@ -93,9 +104,7 @@ export function DefiniendumDialog({
                 <TextInput
                   label="Symbol name"
                   value={field.state.value}
-                  onChange={(e) =>
-                    field.handleChange(e.currentTarget.value)
-                  }
+                  onChange={(e) => field.handleChange(e.currentTarget.value)}
                   error={field.state.meta.errors?.[0]}
                   autoFocus
                 />
@@ -107,9 +116,7 @@ export function DefiniendumDialog({
                 <Textarea
                   label="Alias"
                   value={field.state.value}
-                  onChange={(e) =>
-                    field.handleChange(e.currentTarget.value)
-                  }
+                  onChange={(e) => field.handleChange(e.currentTarget.value)}
                   autosize
                   minRows={2}
                 />
@@ -121,9 +128,7 @@ export function DefiniendumDialog({
                 <Checkbox
                   label="Symbol needs declaration (symdecl)"
                   checked={field.state.value}
-                  onChange={(e) =>
-                    field.handleChange(e.currentTarget.checked)
-                  }
+                  onChange={(e) => field.handleChange(e.currentTarget.checked)}
                 />
               )}
             </form.Field>
