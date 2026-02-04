@@ -1,4 +1,3 @@
-// src/lib/flodown-client.ts
 let floDownPromise: Promise<any> | null = null;
 
 export function initFloDown(): Promise<any> {
@@ -30,8 +29,7 @@ export function initFloDown(): Promise<any> {
         }
       };
 
-      script.onerror = () =>
-        reject(new Error("Failed to load flodown.js"));
+      script.onerror = () => reject(new Error("Failed to load flodown.js"));
 
       document.head.appendChild(script);
     });

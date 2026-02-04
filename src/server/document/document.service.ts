@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import prisma from "../../lib/prisma";
 import { UploadDocumentInput, UploadDocumentResult } from "./document.types";
-import { extractPdfPages } from "./text-extractor";
+import { extractPdfPages } from "./textExtractor";
 
 export async function uploadDocument(
   input: UploadDocumentInput,

@@ -1,4 +1,4 @@
-import { initFloDown } from "@/lib/flodown-client";
+import { initFloDown } from "@/lib/flodownClient";
 import {
   collectLocalSymbols,
   replaceLocalUris,

@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { insertDefiniendum } from "@/server/ftml/ast-operations";
+import { insertDefiniendum } from "@/server/ftml/astOperations";
 import {
   DefiniendumNode,
   DefinitionNode,

@@ -1,6 +1,6 @@
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { searchDefiniendum } from "@/serverFns/definiendum.server";
-import { ftmlSearchSymbols } from "@/spec/searchSymbols";
+import { ftmlSearchSymbols } from "@/server/ftml/searchSymbols";
 import {
   ActionIcon,
   Button,
