@@ -4,12 +4,14 @@ import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { LatexConfigModel } from "@/components/LatexConfigModel";
 import { SelectionPopup } from "@/components/SelectionPopup";
+import { SemanticPanel } from "@/components/SemanticPanel";
 import { SymbolicRef } from "@/components/SymbolicRef";
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { queryClient } from "@/queryClient";
 import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
+import { normalizeSymRef } from "@/server/parseUri";
 import {
   ActivePage,
   useExtractionActions,
@@ -17,12 +19,14 @@ import {
   useValidation,
 } from "@/server/text-selection";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
+import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import {
   deleteDefinition,
   listDefinition,
   updateDefinitionMeta,
 } from "@/serverFns/extractDefinition.server";
 import { resolveSymbolicRef } from "@/serverFns/resolveSymbolicRef.server";
+import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import {
   ActionIcon,
   Box,
@@ -89,17 +93,48 @@ function RouteComponent() {
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
   const [isEditingMeta, setIsEditingMeta] = useState(false);
-  const freezeRender =
-    editingId !== null || mode === "SymbolicRef" || defDialogOpen;
-  async function handleDeleteDefinition(id: string) {
-    if (!confirm("Delete this extracted definition?")) return;
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
+  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
+    null,
+  );
+  const [isBusy, setIsBusy] = useState(false);
 
-    await deleteDefinition({ data: { id } });
-  }
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
-
   const { extractText, updateExtract } = useExtractionActions(documentId);
+
+  const freezeRender =
+    isBusy ||
+    editingId !== null ||
+    mode === "SymbolicRef" ||
+    defDialogOpen ||
+    semanticPanelOpen;
+
+  async function withFreeze(fn: () => Promise<void>) {
+    setIsBusy(true);
+    try {
+      await fn();
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleDeleteDefinition(id: string) {
+    await withFreeze(async () => {
+      if (!confirm("Delete this extracted definition?")) return;
+
+      await deleteDefinition({ data: { id } });
+      await queryClient.invalidateQueries({
+        queryKey: ["definitions", documentId],
+      });
+
+      if (lockedByExtractId === id) {
+        setLockedByExtractId(null);
+        setEditingId(null);
+      }
+    });
+  }
 
   function handleLeftSelection(pageId: string) {
     setLockedByExtractId(null);
@@ -118,6 +153,45 @@ function RouteComponent() {
       id: page.id,
       pageNumber: page.pageNumber,
     });
+  }
+
+  function handleOpenSemanticPanel(definitionId: string) {
+    setSemanticPanelDefId(definitionId);
+    setSemanticPanelOpen(true);
+  }
+
+  function handleEditDefiniendum(definitionId: string, def: any) {
+    setDefExtractId(definitionId);
+    setEditingNodeId(def.uri);
+    setDefExtractText(def.text);
+    setDefDialogOpen(true);
+  }
+
+  function handleEditSymbolicRef(definitionId: string, ref: any) {
+    setDefExtractId(definitionId);
+    setEditingNodeId(ref.uri);
+    setConceptUri(ref.text);
+    setMode("SymbolicRef");
+  }
+
+  async function handleDeleteNode(
+    definitionId: string,
+    target: { type: "definiendum" | "symref"; uri: string },
+  ) {
+    await withFreeze(async () => {
+      await updateDefinitionAst({
+        data: {
+          definitionId,
+          operation: { kind: "removeSemantic", target },
+        },
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["definitions", documentId],
+      });
+    });
+    setSemanticPanelOpen(false);
+    setSemanticPanelDefId(null);
   }
 
   function handleRightSelection(extractId: string) {
@@ -165,35 +239,84 @@ function RouteComponent() {
   }) {
     if (!defExtractId) return;
     if (!validate(futureRepo, filePath, fileName, language)) return;
+    await withFreeze(async () => {
+      if (editingNodeId) {
+        const newUri = `LOCAL:${params.symbolName}`;
 
-    const extract = extracts.find((e) => e.id === defExtractId);
-    if (!extract) return;
+        await updateDefinitionAst({
+          data: {
+            definitionId: defExtractId,
+            operation: {
+              kind: "replaceSemantic",
+              target: { type: "definiendum", uri: editingNodeId },
+              payload: {
+                uri: newUri,
+                content: [params.symbolName],
+              },
+            },
+          },
+        });
+      } else {
+        await createDefiniendum({
+          data: {
+            definitionId: defExtractId,
+            symbolName: params.symbolName.trim(),
+            alias: params.alias?.trim() || null,
+            selectedText: defExtractText,
+            symbolDeclared: params.symdecl,
+            futureRepo: futureRepo.trim(),
+            filePath: filePath.trim(),
+            fileName: fileName.trim(),
+            language: language.trim(),
+          },
+        });
+      }
 
-    await createDefiniendum({
-      data: {
-        definitionId: defExtractId,
-        symbolName: params.symbolName.trim(),
-        alias: params.alias?.trim() || null,
-        selectedText: defExtractText,
-        symbolDeclared: params.symdecl,
-        futureRepo: futureRepo.trim(),
-        filePath: filePath.trim(),
-        fileName: fileName.trim(),
-        language: language.trim(),
-      },
+      await queryClient.invalidateQueries({
+        queryKey: ["definitions", documentId],
+      });
     });
-
-    await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
-    });
-
-    await queryClient.invalidateQueries({
-      queryKey: ["definition-ftml", defExtractId],
-    });
-
+    setEditingNodeId(null);
     setDefDialogOpen(false);
     setDefExtractId(null);
     setDefExtractText("");
+  }
+
+  async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
+    if (!defExtractId) return;
+    await withFreeze(async () => {
+      if (editingNodeId) {
+        const { uri, text } = normalizeSymRef(symRef);
+
+        await updateDefinitionAst({
+          data: {
+            definitionId: defExtractId,
+            operation: {
+              kind: "replaceSemantic",
+              target: { type: "symref", uri: editingNodeId },
+              payload: { uri, content: [text] },
+            },
+          },
+        });
+      } else {
+        if (!selection) return;
+
+        await resolveSymbolicRef({
+          data: {
+            definitionId: defExtractId,
+            selection: { text: selection.text },
+            symRef,
+          },
+        });
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey: ["definitions", documentId],
+      });
+    });
+    setEditingNodeId(null);
+    setMode(null);
+    clearAll();
   }
 
   function handleOpenSymbolicRef(extractId: string) {
@@ -210,26 +333,6 @@ function RouteComponent() {
     setMode(null);
     setDefExtractId(null);
     clearAll();
-  }
-
-  async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
-    if (!defExtractId || !selection) return;
-
-    await resolveSymbolicRef({
-      data: {
-        definitionId: defExtractId,
-        selection: {
-          text: selection.text,
-        },
-
-        symRef,
-      },
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
-    });
-
-    handleCloseSymbolicRefDialog();
   }
 
   function handleToggleEdit(id: string) {
@@ -283,24 +386,21 @@ function RouteComponent() {
     setLatexConfigOpen(true);
   }
 
-  function handleLatexConfigSubmit(config: {
+  async function handleLatexConfigSubmit(config: {
     futureRepo: string;
     filePath: string;
     fileName: string;
     language: string;
   }) {
-    const extract = extracts.find(
-      (e) =>
-        e.futureRepo === config.futureRepo &&
-        e.filePath === config.filePath &&
-        e.fileName === config.fileName &&
-        e.language === config.language,
-    );
-
-    if (!extract) {
-      alert("No matching definition found");
-      return;
-    }
+    const combinedFtml = await getCombinedDefinitionFtml({
+      data: {
+        documentId,
+        futureRepo: config.futureRepo,
+        filePath: config.filePath,
+        fileName: config.fileName,
+        language: config.language,
+      },
+    });
 
     navigate({
       to: "/create-latex",
@@ -310,7 +410,7 @@ function RouteComponent() {
         filePath: config.filePath,
         fileName: config.fileName,
         language: config.language,
-        ftml: JSON.stringify(extract.statement),
+        ftml: JSON.stringify(combinedFtml),
       },
     });
 
@@ -425,6 +525,7 @@ function RouteComponent() {
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
                   floDownEnabled={!freezeRender}
+                  onOpenSemanticPanel={handleOpenSemanticPanel}
                 />
               </Tabs.Panel>
             </Tabs>
@@ -472,6 +573,7 @@ function RouteComponent() {
                 onSelection={handleRightSelection}
                 onToggleEdit={handleToggleEdit}
                 floDownEnabled={!freezeRender}
+                onOpenSemanticPanel={handleOpenSemanticPanel}
               />
             </Paper>
           </Flex>
@@ -525,7 +627,6 @@ function RouteComponent() {
       )}
 
       <DefiniendumDialog
-        key={defExtractText}
         opened={defDialogOpen}
         extractedText={defExtractText}
         onClose={() => setDefDialogOpen(false)}
@@ -537,6 +638,15 @@ function RouteComponent() {
         onClose={() => setLatexConfigOpen(false)}
         onSubmit={handleLatexConfigSubmit}
         extracts={extracts}
+      />
+
+      <SemanticPanel
+        opened={semanticPanelOpen}
+        onClose={() => setSemanticPanelOpen(false)}
+        definition={extracts.find((e) => e.id === semanticPanelDefId) ?? null}
+        onEditDefiniendum={handleEditDefiniendum}
+        onEditSymbolicRef={handleEditSymbolicRef}
+        onDeleteNode={handleDeleteNode}
       />
 
       <Portal>

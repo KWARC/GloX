@@ -4,7 +4,7 @@ import {
   findUniqueTextLocation,
   pathTraversesSemanticNode,
   replaceTextWithNode,
-} from "@/server/ftml/ast-operations";
+} from "@/server/ftml/astOperations";
 import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
 import { normalizeToRoot, SymrefNode, unwrapRoot } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";

@@ -8,7 +8,7 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
-import { IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconPencil, IconSettings, IconTrash } from "@tabler/icons-react";
 import { FtmlPreview } from "./FtmlPreview";
 
 interface ExtractedTextPanelProps {
@@ -20,6 +20,7 @@ interface ExtractedTextPanelProps {
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
   floDownEnabled?: boolean;
+  onOpenSemanticPanel: (definitionId: string) => void;
 }
 
 export function ExtractedTextPanel({
@@ -31,6 +32,7 @@ export function ExtractedTextPanel({
   onDelete,
   onSelection,
   floDownEnabled = true,
+  onOpenSemanticPanel,
 }: ExtractedTextPanelProps) {
   return (
     <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
@@ -61,6 +63,7 @@ export function ExtractedTextPanel({
                     borderWidth: isEditing || isSelected ? 2 : undefined,
                   }}
                 >
+                  {/* HEADER */}
                   <Group justify="space-between" mb={4}>
                     <Text size="xs">Page {item.pageNumber}</Text>
 
@@ -76,14 +79,23 @@ export function ExtractedTextPanel({
                       <ActionIcon
                         size="sm"
                         variant="subtle"
-                        color="red"
                         onClick={() => onToggleEdit(item.id)}
                       >
                         <IconPencil size={16} />
                       </ActionIcon>
+
+                      {/* SETTINGS */}
+                      <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        onClick={() => onOpenSemanticPanel(item.id)}
+                      >
+                        <IconSettings size={16} />
+                      </ActionIcon>
                     </Group>
                   </Group>
 
+                  {/* PREVIEW / JSON */}
                   {isEditing ? (
                     <Textarea
                       defaultValue={JSON.stringify(item.statement, null, 2)}
@@ -107,6 +119,7 @@ export function ExtractedTextPanel({
                       onMouseUp={() => onSelection(item.id)}
                     >
                       <FtmlPreview
+                       key={item.id}   
                         ftmlAst={item.statement}
                         interactive={floDownEnabled}
                       />

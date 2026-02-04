@@ -1,10 +1,10 @@
-import { initFloDown } from "@/lib/flodown-client";
+import { initFloDown } from "@/lib/flodownClient";
 import {
   collectLocalSymbols,
   replaceLocalUris,
 } from "@/server/ftml/normalizeFtml";
 import { normalizeToRoot } from "@/types/ftml.types";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 interface FtmlPreviewProps {
   ftmlAst: any;
@@ -18,99 +18,55 @@ export function FtmlPreview({
   interactive = true,
 }: FtmlPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const floDownRef = useRef<any>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (!containerRef.current || isInitialized) return;
+    if (!containerRef.current || !ftmlAst) return;
 
     let disposed = false;
+    let fd: any = null;
 
-    initFloDown().then((floDown) => {
+    (async () => {
+      const floDown = await initFloDown();
       if (disposed || !containerRef.current) return;
 
       floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
-      const fd = floDown.FloDown.fromUri("http://temp?a=temp&d=temp&l=en");
+      fd = floDown.FloDown.fromUri("http://temp?a=temp&d=temp&l=en");
+
+      containerRef.current.innerHTML = "";
       fd.mountTo(containerRef.current);
 
-      floDownRef.current = fd;
-      setIsInitialized(true);
+      const normalized = normalizeToRoot(ftmlAst);
+      const symbols = collectLocalSymbols(normalized);
 
-      (window as any).__FLODOWNS = (window as any).__FLODOWNS || [];
-      (window as any).__FLODOWNS.push(fd);
-    });
+      const uriMap = new Map<string, string>();
+      for (const name of symbols) {
+        uriMap.set(name, fd.addSymbolDeclaration(name));
+      }
+
+      const resolved = replaceLocalUris(structuredClone(normalized), uriMap);
+
+      for (const element of resolved.content) {
+        fd.addElement(element);
+      }
+    })();
 
     return () => {
       disposed = true;
-      if (floDownRef.current) {
-        floDownRef.current.clear();
-        floDownRef.current = null;
+
+      if (fd) {
+        try {
+          fd.clear(); 
+        } catch {
+        }
+        fd = null;
       }
-      setIsInitialized(false);
+
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
     };
-  }, []);
-
-  useEffect(() => {
-    if (!isInitialized || !floDownRef.current || !ftmlAst) return;
-
-    const fd = floDownRef.current;
-
-    fd.clearText();
-
-    const normalized = normalizeToRoot(ftmlAst);
-    const symbols = collectLocalSymbols(normalized);
-
-    const uriMap = new Map<string, string>();
-    for (const name of symbols) {
-      uriMap.set(name, fd.addSymbolDeclaration(name));
-    }
-
-    const resolved = replaceLocalUris(structuredClone(normalized), uriMap);
-
-    for (const element of resolved.content) {
-      fd.addElement(element);
-    }
-  }, [ftmlAst, isInitialized]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const container = containerRef.current;
-
-    if (!interactive) {
-      const stopEvent = (e: Event) => {
-        e.stopPropagation();
-        e.preventDefault();
-      };
-
-      const events = [
-        "mousedown",
-        "mouseup",
-        "click",
-        "dblclick",
-        "mousemove",
-        "mouseover",
-        "mouseout",
-        "mouseenter",
-        "mouseleave",
-        "contextmenu",
-        "touchstart",
-        "touchend",
-        "touchmove",
-      ];
-
-      events.forEach((eventName) => {
-        container.addEventListener(eventName, stopEvent, true);
-      });
-
-      return () => {
-        events.forEach((eventName) => {
-          container.removeEventListener(eventName, stopEvent, true);
-        });
-      };
-    }
-  }, [interactive]);
+  }, [ftmlAst]);
 
   return (
     <div
