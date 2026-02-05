@@ -4,30 +4,35 @@ import {
   replaceUris,
   removeSymdeclForFloDown,
 } from "@/server/ftml/normalizeFtml";
-import { normalizeToRoot } from "@/types/ftml.types";
+import { FtmlStatement, RootNode, normalizeToRoot } from "@/types/ftml.types";
 
-export async function generateStexFromFtml(ftmlAst: any): Promise<string> {
+export async function generateStexFromFtml(
+  ftmlAst: FtmlStatement,
+): Promise<string> {
   const floDown = await initFloDown();
   floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
   const fd = floDown.FloDown.fromUri("http://temp?a=temp&d=temp&l=en");
 
-  const normalized = normalizeToRoot(ftmlAst);
+  const normalized: RootNode = normalizeToRoot(ftmlAst);
 
   const symbols = addSymbols(normalized);
 console.log({symbols})
   const uriMap = new Map<string, string>();
   for (const name of symbols) {
-    uriMap.set(name, fd.addSymbolDeclaration(name));
+    const uri = fd.addSymbolDeclaration(name);
+    if (uri) {
+      uriMap.set(name, uri);
+    }
   }
 
 
   const resolved = replaceUris(structuredClone(normalized), uriMap);
 
-  const sanitized = removeSymdeclForFloDown(resolved);
+  const sanitized = removeSymdeclForFloDown(resolved) as RootNode;
 console.log("URI Map:", uriMap);
   for (const element of sanitized.content) {
-    console.log({element})
+    console.log({ element });
     fd.addElement(element);
   }
 

@@ -16,7 +16,7 @@ interface ExtractedTextPanelProps {
   editingId: string | null;
   selectedId: string | null;
   onToggleEdit: (id: string) => void;
-  onUpdate: (id: string, statement: string) => Promise<void>;
+  onUpdate: (id: string, statement: ExtractedItem["statement"]) => Promise<void>;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
   floDownEnabled?: boolean;
@@ -103,7 +103,9 @@ export function ExtractedTextPanel({
                       }}
                       onBlur={async (e) => {
                         try {
-                          const parsed = JSON.parse(e.currentTarget.value);
+                          const parsed = JSON.parse(
+                            e.currentTarget.value,
+                          ) as ExtractedTextPanelProps["extracts"][number]["statement"];
                           await onUpdate(item.id, parsed);
                         } catch {
                           alert("Invalid FTML JSON");

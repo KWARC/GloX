@@ -1,5 +1,10 @@
 import prisma from "@/lib/prisma";
-import { ParagraphNode } from "@/types/ftml.types";
+import { ExtractedItem } from "@/server/text-selection";
+import {
+  FtmlStatement,
+  ParagraphNode,
+  assertFtmlStatement,
+} from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export type CreateDefinitionInput = {
@@ -40,7 +45,7 @@ export const createDefinition = createServerFn({ method: "POST" })
         documentPageId: data.documentPageId,
         pageNumber: data.pageNumber,
         originalText: data.originalText,
-        statement,
+        statement: JSON.parse(JSON.stringify(statement)),
         futureRepo: data.futureRepo,
         filePath: data.filePath,
         fileName: data.fileName,
@@ -57,7 +62,7 @@ export const createDefinition = createServerFn({ method: "POST" })
   });
 
 export const updateDefinition = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string; statement: any }) => data)
+  .inputValidator((data: { id: string; statement: FtmlStatement }) => data)
   .handler(async ({ data }) => {
     if (!data.id) {
       throw new Error("Missing definition id");
@@ -65,7 +70,7 @@ export const updateDefinition = createServerFn({ method: "POST" })
 
     return prisma.definition.update({
       where: { id: data.id },
-      data: { statement: data.statement },
+      data: { statement: JSON.parse(JSON.stringify(data.statement)) },
     });
   });
 
@@ -104,7 +109,7 @@ export const updateDefinitionMeta = createServerFn({ method: "POST" })
 export const listDefinition = createServerFn({ method: "GET" })
   .inputValidator((data: { documentId: string }) => data)
   .handler(async ({ data }) => {
-    return prisma.definition.findMany({
+    const defs = await prisma.definition.findMany({
       where: { documentId: data.documentId },
       orderBy: { createdAt: "asc" },
       include: {
@@ -120,4 +125,26 @@ export const listDefinition = createServerFn({ method: "GET" })
         },
       },
     });
+
+    const items: ExtractedItem[] = defs.map((def) => {
+      if (!def.statement) {
+        throw new Error("Definition has no FTML statement");
+      }
+
+      const statement = assertFtmlStatement(def.statement) as FtmlStatement;
+
+      return {
+        id: def.id,
+        pageNumber: def.pageNumber,
+        statement,
+        futureRepo: def.futureRepo,
+        filePath: def.filePath,
+        fileName: def.fileName,
+        language: def.language,
+        definienda: def.definienda,
+        symbolicRefs: def.symbolicRefs,
+      };
+    });
+
+    return items;
   });

@@ -4,11 +4,11 @@ import {
   removeSymdeclForFloDown,
   replaceUris,
 } from "@/server/ftml/normalizeFtml";
-import { normalizeToRoot } from "@/types/ftml.types";
+import { FtmlStatement, RootNode, normalizeToRoot } from "@/types/ftml.types";
 import { useEffect, useRef } from "react";
 
 interface FtmlPreviewProps {
-  ftmlAst: any;
+  ftmlAst: FtmlStatement;
   docId: string;
   editable?: boolean;
   interactive?: boolean;
@@ -38,17 +38,20 @@ export function FtmlPreview({
       containerRef.current.innerHTML = "";
       fd.mountTo(containerRef.current);
 
-      const normalized = normalizeToRoot(ftmlAst);
+      const normalized: RootNode = normalizeToRoot(ftmlAst);
       const symbols = addSymbols(normalized);
 
       const uriMap = new Map<string, string>();
       for (const name of symbols) {
-        uriMap.set(name, fd.addSymbolDeclaration(name));
+        const uri = fd.addSymbolDeclaration(name);
+        if (uri) {
+          uriMap.set(name, uri);
+        }
       }
 
       const resolved = replaceUris(structuredClone(normalized), uriMap);
 
-      const sanitized = removeSymdeclForFloDown(resolved);
+      const sanitized = removeSymdeclForFloDown(resolved) as RootNode;
 
       for (const element of sanitized.content) {
         fd.addElement(element);

@@ -1,3 +1,11 @@
+import {
+  FtmlContent,
+  FtmlNode,
+  FtmlRoot,
+  normalizeToRoot,
+} from "@/types/ftml.types";
+import { extractTextContent } from "./astOperations";
+
 export type DefiniendumInfo = {
   uri: string;
   text: string;
@@ -10,32 +18,45 @@ export type SymbolicRefInfo = {
   symbolicRefId: string;
 };
 
-type AstNode = string | { type?: string; uri?: string; content?: AstNode[] };
+type SemanticAstNode = FtmlContent | FtmlContent[];
 
 function walkAst(
-  node: AstNode,
+  node: SemanticAstNode,
   acc: {
     definienda: { uri: string; text: string }[];
     symbolicRefs: { uri: string; text: string }[];
   },
 ) {
+  if (Array.isArray(node)) {
+    node.forEach((child) => walkAst(child, acc));
+    return;
+  }
+
   if (typeof node === "string") return;
   if (!node || typeof node !== "object") return;
 
-  if (node.type === "definiendum" && node.uri && node.content) {
-    acc.definienda.push({ uri: node.uri, text: node.content.join("") });
+  const ftmlNode = node as FtmlNode;
+
+  if (ftmlNode.type === "definiendum" && ftmlNode.uri && ftmlNode.content) {
+    acc.definienda.push({
+      uri: ftmlNode.uri,
+      text: extractTextContent(ftmlNode.content),
+    });
   }
-  if (node.type === "symref" && node.uri && node.content) {
-    acc.symbolicRefs.push({ uri: node.uri, text: node.content.join("") });
+  if (ftmlNode.type === "symref" && ftmlNode.uri && ftmlNode.content) {
+    acc.symbolicRefs.push({
+      uri: ftmlNode.uri,
+      text: extractTextContent(ftmlNode.content),
+    });
   }
 
-  if (Array.isArray(node.content)) {
-    node.content.forEach((child) => walkAst(child, acc));
+  if (Array.isArray(ftmlNode.content)) {
+    ftmlNode.content.forEach((child) => walkAst(child, acc));
   }
 }
 
 export function extractSemanticIndex(
-  statement: any,
+  statement: FtmlRoot,
   definition: {
     definienda?: { definiendum: { id: string; symbolName: string } }[];
     symbolicRefs?: { symbolicReference: { id: string; conceptUri: string } }[];
@@ -44,12 +65,14 @@ export function extractSemanticIndex(
   definienda: DefiniendumInfo[];
   symbolicRefs: SymbolicRefInfo[];
 } {
+  const root = normalizeToRoot(statement);
+
   const collected = {
     definienda: [] as { uri: string; text: string }[],
     symbolicRefs: [] as { uri: string; text: string }[],
   };
 
-  walkAst(statement, collected);
+  walkAst(root.content, collected);
 
   const definienda: DefiniendumInfo[] = collected.definienda.map((d) => {
     const match = definition.definienda?.find(

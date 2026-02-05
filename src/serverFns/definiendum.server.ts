@@ -1,10 +1,12 @@
 import prisma from "@/lib/prisma";
 import { insertDefiniendum } from "@/server/ftml/astOperations";
 import {
+  assertFtmlStatement,
   DefiniendumNode,
   DefinitionNode,
   normalizeToRoot,
   ParagraphNode,
+  RootNode,
   unwrapRoot,
 } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
@@ -78,7 +80,13 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       },
     });
 
-    const currentAst = normalizeToRoot(definition.statement as any);
+    if (!definition.statement) {
+      throw new Error("Definition has no FTML statement");
+    }
+
+    const currentAst: RootNode = normalizeToRoot(
+      assertFtmlStatement(definition.statement),
+    );
 
     const definiendumUri = `LOCAL:${symbolName}`;
 
@@ -162,7 +170,7 @@ export const createDefiniendum = createServerFn({ method: "POST" })
 
     await prisma.definition.update({
       where: { id: definitionId },
-      data: { statement: statementToStore },
+      data: { statement: JSON.parse(JSON.stringify(statementToStore)) },
     });
 
     return defin;

@@ -14,6 +14,7 @@ import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef } from "@/server/parseUri";
 import {
   ActivePage,
+  ExtractedItem,
   useExtractionActions,
   useTextSelection,
   useValidation,
@@ -26,6 +27,7 @@ import {
 } from "@/serverFns/extractDefinition.server";
 import { resolveSymbolicRef } from "@/serverFns/resolveSymbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
+import { FtmlStatement } from "@/types/ftml.types";
 import {
   ActionIcon,
   Box,
@@ -159,14 +161,20 @@ function RouteComponent() {
     setSemanticPanelOpen(true);
   }
 
-  function handleEditDefiniendum(definitionId: string, def: any) {
+  function handleEditDefiniendum(
+    definitionId: string,
+    def: { uri: string; text: string; definiendumId: string },
+  ) {
     setDefExtractId(definitionId);
     setEditingNodeId(def.uri);
     setDefExtractText(def.text);
     setDefDialogOpen(true);
   }
 
-  function handleEditSymbolicRef(definitionId: string, ref: any) {
+  function handleEditSymbolicRef(
+    definitionId: string,
+    ref: { uri: string; text: string; symbolicRefId: string },
+  ) {
     setDefExtractId(definitionId);
     setEditingNodeId(ref.uri);
     setConceptUri(ref.text);
@@ -249,6 +257,7 @@ function RouteComponent() {
               kind: "replaceSemantic",
               target: { type: "definiendum", uri: editingNodeId },
               payload: {
+                type: "definiendum",
                 uri: newUri,
                 content: [params.symbolName],
               },
@@ -293,7 +302,11 @@ function RouteComponent() {
             operation: {
               kind: "replaceSemantic",
               target: { type: "symref", uri: editingNodeId },
-              payload: { uri, content: [text] },
+              payload: {
+                type: "symref",
+                uri,
+                content: [text],
+              },
             },
           },
         });
@@ -356,7 +369,7 @@ function RouteComponent() {
 
     queryClient.setQueryData(
       ["definitions", documentId],
-      (old: any[] | undefined) => {
+      (old: ExtractedItem[] | undefined) => {
         if (!old) return old;
 
         return old.map((item) =>
@@ -376,7 +389,7 @@ function RouteComponent() {
     setIsEditingMeta(false);
   }
 
-  async function handleUpdateExtract(id: string, statement: string) {
+  async function handleUpdateExtract(id: string, statement: FtmlStatement) {
     await updateExtract(id, statement);
     setEditingId(null);
   }

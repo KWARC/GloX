@@ -15,7 +15,7 @@ export type LatexKey = {
 };
 
 export type FinalizedLatexDocument = {
-  id: number;
+  id: string;
   documentId: string;
   futureRepo: string;
   filePath: string;
@@ -29,15 +29,16 @@ export type FinalizedLatexDocument = {
 function normalizeHistory(value: unknown): LatexDraft[] {
   if (!Array.isArray(value)) return [];
 
-  return value.filter(
-    (e): e is LatexDraft =>
-      typeof e === "object" &&
-      e !== null &&
-      "latex" in e &&
-      "savedAt" in e &&
-      typeof (e as any).latex === "string" &&
-      typeof (e as any).savedAt === "string"
-  );
+  return value.filter((e): e is LatexDraft => {
+    if (typeof e !== "object" || e === null) return false;
+    if (!("latex" in e) || !("savedAt" in e)) return false;
+
+    const candidate = e as { latex: unknown; savedAt: unknown };
+    return (
+      typeof candidate.latex === "string" &&
+      typeof candidate.savedAt === "string"
+    );
+  });
 }
 
 export const saveLatexDraft = createServerFn({ method: "POST" })
@@ -66,7 +67,7 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
           fileName,
           language,
           finalLatex: "",
-          history: nextHistory,
+          history: JSON.parse(JSON.stringify(nextHistory)),
           isFinal: false,
         },
       });
@@ -74,7 +75,7 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
       await prisma.latexTable.update({
         where: { id: existing.id },
         data: {
-          history: nextHistory,
+          history: JSON.parse(JSON.stringify(nextHistory)),
           isFinal: false,
         },
       });
@@ -100,7 +101,7 @@ export const saveLatexFinal = createServerFn({ method: "POST" })
           fileName,
           language,
           finalLatex: latex,
-          history: [],
+          history: JSON.parse(JSON.stringify([] as LatexDraft[])),
           isFinal: true,
         },
       });
@@ -136,5 +137,5 @@ export const getFinalizedDocuments = createServerFn({ method: "GET" }).handler(
       where: { isFinal: true },
       orderBy: { updatedAt: "desc" },
     });
-  }
+  },
 );
