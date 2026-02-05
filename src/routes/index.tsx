@@ -36,13 +36,11 @@ function App() {
     staleTime: 60_000,
   });
 
-  const { data: finalizedDocs, isLoading: docsLoading } = useQuery<
-    FinalizedLatexDocument[] | undefined
-  >({
-    queryKey: ["finalizedDocuments"],
-    queryFn: getFinalizedDocuments,
-    enabled: !!user?.loggedIn,
-  });
+ const { data: finalizedDocs = [], isLoading: docsLoading } = useQuery({
+  queryKey: ["finalizedDocuments"],
+  queryFn: getFinalizedDocuments,
+  enabled: !!user?.loggedIn,
+});
 
   const isLoggedIn = user?.loggedIn;
 
