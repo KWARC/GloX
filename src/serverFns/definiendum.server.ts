@@ -86,6 +86,7 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       type: "definiendum",
       uri: definiendumUri,
       content: [alias || text],
+      symdecl: symbolDeclared,
     });
 
     const isAlreadyDefinition =

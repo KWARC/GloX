@@ -40,7 +40,7 @@ export function normalizeSymRef(symRef: any): { uri: string; text: string } {
 
 export function transform(ast: any, operation: any): any {
   if (operation.kind === "removeSemantic") {
-    return removeSemanticNode(ast, operation.target);
+    return removeSemanticNodeWithIndex(ast, operation.target);
   }
   if (operation.kind === "replaceSemantic") {
     return replaceSemanticNode(ast, operation.target, operation.payload);
@@ -73,6 +73,24 @@ function removeSemanticNode(
   const copy = { ...node };
   if (copy.content) copy.content = removeSemanticNode(copy.content, target);
   return copy;
+}
+function removeSemanticNodeWithIndex(
+  node: any,
+  target: { type: string; uri: string },
+): any {
+  if (!node || typeof node !== "object") return node;
+
+  if (node.type === "definition") {
+    return {
+      ...node,
+      for_symbols: Array.isArray(node.for_symbols)
+        ? node.for_symbols.filter((s: string) => s !== target.uri)
+        : node.for_symbols,
+      content: removeSemanticNode(node.content, target),
+    };
+  }
+
+  return removeSemanticNode(node, target);
 }
 
 function replaceSemanticNode(

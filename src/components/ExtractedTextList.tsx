@@ -63,7 +63,6 @@ export function ExtractedTextPanel({
                     borderWidth: isEditing || isSelected ? 2 : undefined,
                   }}
                 >
-                  {/* HEADER */}
                   <Group justify="space-between" mb={4}>
                     <Text size="xs">Page {item.pageNumber}</Text>
 
@@ -84,7 +83,6 @@ export function ExtractedTextPanel({
                         <IconPencil size={16} />
                       </ActionIcon>
 
-                      {/* SETTINGS */}
                       <ActionIcon
                         size="sm"
                         variant="subtle"
@@ -95,7 +93,6 @@ export function ExtractedTextPanel({
                     </Group>
                   </Group>
 
-                  {/* PREVIEW / JSON */}
                   {isEditing ? (
                     <Textarea
                       defaultValue={JSON.stringify(item.statement, null, 2)}
@@ -119,7 +116,8 @@ export function ExtractedTextPanel({
                       onMouseUp={() => onSelection(item.id)}
                     >
                       <FtmlPreview
-                       key={item.id}   
+                        key={item.id}
+                        docId={item.id}
                         ftmlAst={item.statement}
                         interactive={floDownEnabled}
                       />

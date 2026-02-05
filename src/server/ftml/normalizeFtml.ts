@@ -1,41 +1,49 @@
 const INTRODUCING_NODES = new Set(["definiendum", "definame"]);
 
-export function collectLocalSymbols(
+export function addSymbols(
   node: any,
   out = new Set<string>(),
 ): Set<string> {
   if (Array.isArray(node)) {
-    for (const n of node) collectLocalSymbols(n, out);
+    for (const n of node) addSymbols(n, out);
     return out;
   }
 
   if (!node || typeof node !== "object") return out;
 
-  // 🔑 collect symbols introduced by definiendum / defininame
   if (
     INTRODUCING_NODES.has(node.type) &&
     typeof node.uri === "string" &&
     node.uri.startsWith("LOCAL:")
   ) {
-    out.add(node.uri.slice("LOCAL:".length));
+
+
+    if (node.symdecl === true) {
+      const name = node.uri.slice("LOCAL:".length);
+      // console.log("[collectLocalSymbols] → DECLARE", name);
+      out.add(name);
+    } else {
+      // console.log("[collectLocalSymbols] → SKIP declaration (symdecl !== true)");
+    }
   }
 
-  // 🔑 also collect symbols used in definition headers
   if (Array.isArray(node.for_symbols)) {
     for (const u of node.for_symbols) {
       if (typeof u === "string" && u.startsWith("LOCAL:")) {
-        out.add(u.slice("LOCAL:".length));
+        const name = u.slice("LOCAL:".length);
+        // console.log("[collectLocalSymbols] for_symbols reference", name);
+        out.add(name);
       }
     }
   }
 
-  if (node.content) collectLocalSymbols(node.content, out);
+  if (node.content) addSymbols(node.content, out);
   return out;
 }
 
-export function replaceLocalUris(node: any, map: Map<string, string>): any {
+export function replaceUris(node: any, map: Map<string, string>): any {
   if (Array.isArray(node)) {
-    return node.map((n) => replaceLocalUris(n, map));
+    return node.map((n) => replaceUris(n, map));
   }
 
   if (!node || typeof node !== "object") return node;
@@ -54,8 +62,25 @@ export function replaceLocalUris(node: any, map: Map<string, string>): any {
   }
 
   if (copy.content) {
-    copy.content = replaceLocalUris(copy.content, map);
+    copy.content = replaceUris(copy.content, map);
   }
 
   return copy;
+}
+
+
+export function removeSymdeclForFloDown(node: any): any {
+  if (Array.isArray(node)) {
+    return node.map(n => removeSymdeclForFloDown(n));
+  }
+
+  if (!node || typeof node !== "object") return node;
+
+  const { symdecl, ...rest } = node;
+  
+  if (rest.content) {
+    rest.content = removeSymdeclForFloDown(rest.content);
+  }
+
+  return rest;
 }

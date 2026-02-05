@@ -1,7 +1,8 @@
 import { initFloDown } from "@/lib/flodownClient";
 import {
-  collectLocalSymbols,
-  replaceLocalUris,
+  addSymbols,
+  replaceUris,
+  removeSymdeclForFloDown,
 } from "@/server/ftml/normalizeFtml";
 import { normalizeToRoot } from "@/types/ftml.types";
 
@@ -12,16 +13,21 @@ export async function generateStexFromFtml(ftmlAst: any): Promise<string> {
   const fd = floDown.FloDown.fromUri("http://temp?a=temp&d=temp&l=en");
 
   const normalized = normalizeToRoot(ftmlAst);
-  const symbols = collectLocalSymbols(normalized);
 
+  const symbols = addSymbols(normalized);
+console.log({symbols})
   const uriMap = new Map<string, string>();
   for (const name of symbols) {
     uriMap.set(name, fd.addSymbolDeclaration(name));
   }
 
-  const resolved = replaceLocalUris(structuredClone(normalized), uriMap);
 
-  for (const element of resolved.content) {
+  const resolved = replaceUris(structuredClone(normalized), uriMap);
+
+  const sanitized = removeSymdeclForFloDown(resolved);
+console.log("URI Map:", uriMap);
+  for (const element of sanitized.content) {
+    console.log({element})
     fd.addElement(element);
   }
 

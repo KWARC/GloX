@@ -1,19 +1,22 @@
 import { initFloDown } from "@/lib/flodownClient";
 import {
-  collectLocalSymbols,
-  replaceLocalUris,
+  addSymbols,
+  removeSymdeclForFloDown,
+  replaceUris,
 } from "@/server/ftml/normalizeFtml";
 import { normalizeToRoot } from "@/types/ftml.types";
 import { useEffect, useRef } from "react";
 
 interface FtmlPreviewProps {
   ftmlAst: any;
+  docId: string;
   editable?: boolean;
   interactive?: boolean;
 }
 
 export function FtmlPreview({
   ftmlAst,
+  docId,
   editable = false,
   interactive = true,
 }: FtmlPreviewProps) {
@@ -31,22 +34,23 @@ export function FtmlPreview({
 
       floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
-      fd = floDown.FloDown.fromUri("http://temp?a=temp&d=temp&l=en");
-
+      fd = floDown.FloDown.fromUri(`http://temp?a=temp&d=${docId}&l=en`);
       containerRef.current.innerHTML = "";
       fd.mountTo(containerRef.current);
 
       const normalized = normalizeToRoot(ftmlAst);
-      const symbols = collectLocalSymbols(normalized);
+      const symbols = addSymbols(normalized);
 
       const uriMap = new Map<string, string>();
       for (const name of symbols) {
         uriMap.set(name, fd.addSymbolDeclaration(name));
       }
 
-      const resolved = replaceLocalUris(structuredClone(normalized), uriMap);
+      const resolved = replaceUris(structuredClone(normalized), uriMap);
 
-      for (const element of resolved.content) {
+      const sanitized = removeSymdeclForFloDown(resolved);
+
+      for (const element of sanitized.content) {
         fd.addElement(element);
       }
     })();
@@ -56,9 +60,8 @@ export function FtmlPreview({
 
       if (fd) {
         try {
-          fd.clear(); 
-        } catch {
-        }
+          fd.clear();
+        } catch {}
         fd = null;
       }
 
