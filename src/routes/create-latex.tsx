@@ -1,5 +1,6 @@
 import { currentUser } from "@/server/auth/currentUser";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
+import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import {
   getLatexHistory,
   saveLatexDraft,
@@ -25,39 +26,37 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 import { useState } from "react";
 
+type CreateLatexSearch = {
+  documentId: string;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
+};
+
 export const Route = createFileRoute("/create-latex")({
   beforeLoad: async () => {
     const user = await currentUser();
     if (!user?.loggedIn) throw redirect({ to: "/login" });
   },
-  validateSearch: (search: Record<string, unknown>) => {
-    const base = {
+
+  validateSearch: (search: Record<string, unknown>): CreateLatexSearch => {
+    return {
       documentId: search.documentId as string,
       futureRepo: search.futureRepo as string,
       filePath: search.filePath as string,
       fileName: search.fileName as string,
       language: search.language as string,
     };
-
-    if (typeof search.ftml === "string") {
-      return { ...base, ftml: search.ftml };
-    }
-
-    return base;
   },
 
   component: CreateLatexPage,
 });
+
 function CreateLatexPage() {
   const navigate = useNavigate();
-  const search = Route.useSearch();
-
-  const { documentId, futureRepo, filePath, fileName, language } = search;
-
-  const ftml = "ftml" in search ? search.ftml : undefined;
-
-  const isGenerateMode = typeof ftml === "string";
-  const ftmlAst = isGenerateMode ? JSON.parse(ftml) : null;
+  const { documentId, futureRepo, filePath, fileName, language } =
+    Route.useSearch();
 
   const [editedLatex, setEditedLatex] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -65,11 +64,31 @@ function CreateLatexPage() {
   const [savingFinal, setSavingFinal] = useState(false);
   const [isFromHistory, setIsFromHistory] = useState(false);
 
+  const { data: ftmlAst, isLoading: ftmlLoading } = useQuery({
+    queryKey: [
+      "combined-ftml",
+      documentId,
+      futureRepo,
+      filePath,
+      fileName,
+      language,
+    ],
+    queryFn: () =>
+      getCombinedDefinitionFtml({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+        },
+      }),
+  });
+
   const { data: stex, isLoading: stexLoading } = useQuery({
-    queryKey: ["stex", ftml],
-    queryFn: async () => {
-      return generateStexFromFtml(ftmlAst);
-    },
+    queryKey: ["stex", ftmlAst],
+    queryFn: () => generateStexFromFtml(ftmlAst),
+    enabled: !!ftmlAst,
     staleTime: Infinity,
   });
 
@@ -97,19 +116,30 @@ function CreateLatexPage() {
         },
       }),
   });
-  const displayLatex =
-    editedLatex ?? (isGenerateMode ? stex : historyData?.finalLatex) ?? "";
+
+  const displayLatex = editedLatex ?? stex ?? historyData?.finalLatex ?? "";
+
+  if (ftmlLoading || stexLoading) {
+    return (
+      <Box p="xl" h="100dvh">
+        <Stack align="center" justify="center" h="100%">
+          <Loader size="xl" />
+          <Text>Generating sTeX…</Text>
+        </Stack>
+      </Box>
+    );
+  }
 
   const handleDownload = () => {
-    const finalName = `${fileName || "document"}.${language || "en"}.tex`;
+    const name = `${fileName}.${language}.tex`;
     const blob = new Blob([displayLatex], { type: "application/x-tex" });
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
-    a.download = finalName;
-    document.body.appendChild(a);
+    a.download = name;
     a.click();
-    document.body.removeChild(a);
+
     URL.revokeObjectURL(url);
   };
 
@@ -152,7 +182,7 @@ function CreateLatexPage() {
     }
   };
 
-  if (isGenerateMode && stexLoading) {
+  if (stexLoading) {
     return (
       <Box p="xl" h="100dvh">
         <Stack align="center" justify="center" h="100%">
@@ -248,13 +278,12 @@ function CreateLatexPage() {
             <Group>
               <Button
                 variant="default"
-                onClick={() => {
-                  if (!documentId) return;
+                onClick={() =>
                   navigate({
                     to: "/my-files/$documentId",
                     params: { documentId },
-                  });
-                }}
+                  })
+                }
               >
                 Back
               </Button>
@@ -263,7 +292,7 @@ function CreateLatexPage() {
                 <Tooltip
                   label={
                     isFromHistory
-                      ? "Drafts are disabled for restored history. Edit or save final."
+                      ? "Drafts disabled for restored history."
                       : undefined
                   }
                 >

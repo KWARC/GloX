@@ -8,7 +8,6 @@ export interface FtmlNode {
   [key: string]: any;
 }
 
-// Specific node types
 export interface SymrefNode extends FtmlNode {
   type: "symref";
   uri: string;
@@ -48,16 +47,10 @@ export interface RootNode extends FtmlNode {
   content: FtmlNode[];
 }
 
-// FIX 1: Explicit root modeling
 export type FtmlRoot = RootNode | FtmlNode | FtmlNode[];
 
-// The database statement field stores this
 export type FtmlStatement = FtmlRoot;
 
-/**
- * FIX 1: Normalize any FTML input to root node
- * This MUST be called before rendering or processing
- */
 export function normalizeToRoot(ast: FtmlRoot): RootNode {
   if (Array.isArray(ast)) {
     return { type: "root", content: ast };
@@ -70,10 +63,6 @@ export function normalizeToRoot(ast: FtmlRoot): RootNode {
   return { type: "root", content: [ast] };
 }
 
-/**
- * Unwrap root if it contains a single node
- * Useful for storage optimization
- */
 export function unwrapRoot(root: RootNode): FtmlStatement {
   if (root.content.length === 1) {
     return root.content[0];

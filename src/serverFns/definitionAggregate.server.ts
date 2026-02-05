@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { FtmlStatement, RootNode, normalizeToRoot } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export const getCombinedDefinitionFtml = createServerFn({ method: "GET" })
@@ -12,7 +13,7 @@ export const getCombinedDefinitionFtml = createServerFn({ method: "GET" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const defs = await prisma.definition.findMany({
+    const defs = (await prisma.definition.findMany({
       where: {
         documentId: data.documentId,
         futureRepo: data.futureRepo,
@@ -22,17 +23,19 @@ export const getCombinedDefinitionFtml = createServerFn({ method: "GET" })
       },
       orderBy: { pageNumber: "asc" },
       select: { statement: true },
-    });
+    })) as { statement: FtmlStatement | null }[];
 
-    const combined = {
+    const combined: RootNode = {
       type: "root",
-      content: defs.flatMap((d: any) => {
-        const s = d.statement;
-        if (!s) return [];
-        if (s.type === "root") return s.content ?? [];
-        return [s];
-      }),
+      content: [],
     };
+
+    for (const row of defs) {
+      if (!row.statement) continue;
+
+      const root = normalizeToRoot(row.statement);
+      combined.content.push(...root.content);
+    }
 
     return combined;
   });

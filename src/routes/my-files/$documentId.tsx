@@ -19,7 +19,6 @@ import {
   useValidation,
 } from "@/server/text-selection";
 import { createDefiniendum } from "@/serverFns/definiendum.server";
-import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import {
   deleteDefinition,
   listDefinition,
@@ -392,16 +391,6 @@ function RouteComponent() {
     fileName: string;
     language: string;
   }) {
-    const combinedFtml = await getCombinedDefinitionFtml({
-      data: {
-        documentId,
-        futureRepo: config.futureRepo,
-        filePath: config.filePath,
-        fileName: config.fileName,
-        language: config.language,
-      },
-    });
-
     navigate({
       to: "/create-latex",
       search: {
@@ -410,7 +399,6 @@ function RouteComponent() {
         filePath: config.filePath,
         fileName: config.fileName,
         language: config.language,
-        ftml: JSON.stringify(combinedFtml),
       },
     });
 
