@@ -1,5 +1,5 @@
 import { initFloDown } from "@/lib/flodownClient";
-import { rewriteForFloDown } from "@/server/parseUri";
+import { finalFloDown } from "@/server/parseUri";
 import { FtmlStatement, normalizeToRoot } from "@/types/ftml.types";
 import { useEffect, useRef } from "react";
 
@@ -46,7 +46,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
 
       const symbol = fd.addSymbolDeclaration(symbolName);
 
-      const finalizedFTML = rewriteForFloDown(block, symbol);
+      const finalizedFTML = finalFloDown(block, symbol);
 
       fd.addElement(finalizedFTML);
     })();

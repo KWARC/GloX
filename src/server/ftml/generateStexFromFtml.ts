@@ -1,6 +1,6 @@
 import { initFloDown } from "@/lib/flodownClient";
 import { FtmlStatement, normalizeToRoot } from "@/types/ftml.types";
-import { rewriteForFloDown } from "../parseUri";
+import { finalFloDown } from "../parseUri";
 
 export async function generateStexFromFtml(
   ftmlAst: FtmlStatement,
@@ -26,7 +26,7 @@ export async function generateStexFromFtml(
 
   const symbol = fd.addSymbolDeclaration(symbolName);
 
-  const finalizedFTML = rewriteForFloDown(block, symbol);
+  const finalizedFTML = finalFloDown(block, symbol);
 
   fd.addElement(finalizedFTML);
 

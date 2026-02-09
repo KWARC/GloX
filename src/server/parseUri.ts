@@ -38,9 +38,14 @@ export function parseUri(uri: string): ParsedMathHubUri {
   };
 }
 
-export function rewriteForFloDown(node: any, symbol: string): any {
+type finalFTML = FtmlNode | FtmlContent | FtmlContent[] | FtmlRoot;
+
+export function finalFloDown(
+  node: finalFTML,
+  symbol: string,
+): finalFTML {
   if (Array.isArray(node)) {
-    return node.map((n) => rewriteForFloDown(n, symbol));
+    return node.map((n) => finalFloDown(n, symbol)) as FtmlContent[];
   }
 
   if (!node || typeof node !== "object") return node;
@@ -49,7 +54,7 @@ export function rewriteForFloDown(node: any, symbol: string): any {
     return {
       ...node,
       for_symbols: [symbol],
-      content: rewriteForFloDown(node.content, symbol),
+      content: node.content ? (finalFloDown(node.content, symbol) as FtmlContent[]) : undefined,
     };
   }
 
@@ -63,7 +68,7 @@ export function rewriteForFloDown(node: any, symbol: string): any {
   if (node.content) {
     return {
       ...node,
-      content: rewriteForFloDown(node.content, symbol),
+      content: finalFloDown(node.content, symbol) as FtmlContent[],
     };
   }
 
