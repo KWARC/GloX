@@ -1,10 +1,5 @@
-import {
-  FtmlContent,
-  FtmlNode,
-  FtmlRoot,
-  normalizeToRoot,
-} from "@/types/ftml.types";
-import { extractTextContent } from "./astOperations";
+import { extractTextContent } from "@/server/ftml/astOperations";
+import { FtmlRoot, normalizeToRoot } from "@/types/ftml.types";
 
 export type DefiniendumInfo = {
   uri: string;
@@ -18,76 +13,90 @@ export type SymbolicRefInfo = {
   symbolicRefId: string;
 };
 
-type SemanticAstNode = FtmlContent | FtmlContent[];
-
-function walkAst(
-  node: SemanticAstNode,
+function walk(
+  node: any,
   acc: {
     definienda: { uri: string; text: string }[];
-    symbolicRefs: { uri: string; text: string }[];
+    symrefs: { uri: string; text: string }[];
   },
 ) {
   if (Array.isArray(node)) {
-    node.forEach((child) => walkAst(child, acc));
+    node.forEach((n) => walk(n, acc));
     return;
   }
-
-  if (typeof node === "string") return;
   if (!node || typeof node !== "object") return;
 
-  const ftmlNode = node as FtmlNode;
-
-  if (ftmlNode.type === "definiendum" && ftmlNode.uri && ftmlNode.content) {
+  if (node.type === "definiendum") {
     acc.definienda.push({
-      uri: ftmlNode.uri,
-      text: extractTextContent(ftmlNode.content),
-    });
-  }
-  if (ftmlNode.type === "symref" && ftmlNode.uri && ftmlNode.content) {
-    acc.symbolicRefs.push({
-      uri: ftmlNode.uri,
-      text: extractTextContent(ftmlNode.content),
+      uri: node.uri,
+      text: extractTextContent(node.content),
     });
   }
 
-  if (Array.isArray(ftmlNode.content)) {
-    ftmlNode.content.forEach((child) => walkAst(child, acc));
+  if (node.type === "symref") {
+    acc.symrefs.push({
+      uri: node.uri,
+      text: extractTextContent(node.content),
+    });
   }
+
+  if (node.content) walk(node.content, acc);
 }
 
 export function extractSemanticIndex(
   statement: FtmlRoot,
   definition: {
-    definienda?: { definiendum: { id: string; symbolName: string } }[];
-    symbolicRefs?: { symbolicReference: { id: string; conceptUri: string } }[];
+    definienda?: {
+      definiendum: { id: string; symbolName: string };
+    }[];
+    symbolicRefs?: {
+      symbolicReference: { id: string; conceptUri: string };
+    }[];
   },
 ): {
   definienda: DefiniendumInfo[];
   symbolicRefs: SymbolicRefInfo[];
 } {
   const root = normalizeToRoot(statement);
-
+  const dbDefinienda = definition.definienda ?? [];
+  const dbSymbolicRefs = definition.symbolicRefs ?? [];
   const collected = {
     definienda: [] as { uri: string; text: string }[],
-    symbolicRefs: [] as { uri: string; text: string }[],
+    symrefs: [] as { uri: string; text: string }[],
   };
 
-  walkAst(root.content, collected);
+  walk(root.content, collected);
 
-  const definienda: DefiniendumInfo[] = collected.definienda.map((d) => {
-    const match = definition.definienda?.find(
-      (x) => `LOCAL:${x.definiendum.symbolName}` === d.uri,
-    );
-    if (!match) throw new Error(`Definiendum DB row not found for ${d.uri}`);
-    return { ...d, definiendumId: match.definiendum.id };
+  const definienda = collected.definienda.map((d) => {
+    const match = dbDefinienda.find((x) => x.definiendum.symbolName === d.uri);
+
+    if (!match) {
+      throw new Error(
+        `Definiendum "${d.uri}" exists in AST but is not linked to this definition`,
+      );
+    }
+
+    return {
+      ...d,
+      definiendumId: match.definiendum.id,
+    };
   });
 
-  const symbolicRefs: SymbolicRefInfo[] = collected.symbolicRefs.map((r) => {
-    const match = definition.symbolicRefs?.find(
+  const symbolicRefs = collected.symrefs.map((r) => {
+    const match = dbSymbolicRefs.find(
       (x) => x.symbolicReference.conceptUri === r.uri,
     );
-    if (!match) throw new Error(`SymbolicRef DB row not found for ${r.uri}`);
-    return { ...r, symbolicRefId: match.symbolicReference.id };
+
+    if (!match) {
+      throw new Error(
+        `SymbolicRef "${r.uri}" exists in AST but is not linked to this definition`,
+      );
+    }
+
+    return {
+      ...r,
+      symbolicRefId: match.symbolicReference.id,
+    };
   });
 
   return { definienda, symbolicRefs };
