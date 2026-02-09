@@ -1,4 +1,5 @@
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
+import type { ExtractedItem } from "@/server/text-selection";
 import { ActionIcon, Group, Modal, Stack, Text } from "@mantine/core";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 
@@ -12,7 +13,7 @@ export function SemanticPanel({
 }: {
   opened: boolean;
   onClose: () => void;
-  definition: any | null;
+  definition: ExtractedItem | null;
   onEditDefiniendum: (
     definitionId: string,
     def: { uri: string; text: string; definiendumId: string },

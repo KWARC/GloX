@@ -5,7 +5,6 @@ export interface FtmlNode {
   content?: FtmlContent[];
   uri?: string;
   for_symbols?: string[];
-  [key: string]: any;
 }
 
 export interface SymrefNode extends FtmlNode {
@@ -68,4 +67,11 @@ export function unwrapRoot(root: RootNode): FtmlStatement {
     return root.content[0];
   }
   return root;
+}
+
+export function assertFtmlStatement(value: unknown): FtmlRoot {
+  if (typeof value !== "object" || value === null) {
+    throw new Error("Invalid FTML statement: not an object");
+  }
+  return value as FtmlRoot;
 }

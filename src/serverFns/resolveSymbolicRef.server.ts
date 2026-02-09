@@ -6,7 +6,13 @@ import {
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
 import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
-import { normalizeToRoot, SymrefNode, unwrapRoot } from "@/types/ftml.types";
+import {
+  RootNode,
+  SymrefNode,
+  assertFtmlStatement,
+  normalizeToRoot,
+  unwrapRoot,
+} from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
 type ResolveSymbolicRefInput = {
@@ -44,7 +50,9 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
       throw new Error("Definition not found");
     }
 
-    const currentAst = normalizeToRoot(definition.statement as any);
+    const currentAst: RootNode = normalizeToRoot(
+      assertFtmlStatement(definition.statement),
+    );
 
     let location;
     try {
@@ -79,7 +87,9 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
 
     await prisma.definition.update({
       where: { id: definitionId },
-      data: { statement: statementToStore },
+      data: {
+        statement: JSON.parse(JSON.stringify(statementToStore)),
+      },
     });
 
     const symbolicRef = await prisma.symbolicReference.create({

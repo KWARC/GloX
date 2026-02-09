@@ -76,10 +76,11 @@ model Definiendum {
   alias          String?
   symbolDeclared Boolean @default(false)
 
-  futureRepo String
-  filePath   String
-  fileName   String
-  language   String @default("en")
+  futureRepo  String
+  filePath    String
+  fileName    String
+  language    String @default("en")
+  resolvedUri String?
 
   symbolicReferences SymbolicReference[]
   definitions        DefinitionDefiniendum[]
@@ -89,6 +90,7 @@ model Definiendum {
 
   @@index([symbolName])
   @@index([futureRepo])
+  @@index([resolvedUri])
 }
 
 model SymbolicReference {

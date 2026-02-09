@@ -1,3 +1,11 @@
+import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
+import type {
+  DefinitionNode,
+  FtmlContent,
+  FtmlNode,
+  FtmlRoot,
+} from "@/types/ftml.types";
+
 export function uriToSymbolName(uri: string): string {
   if (uri.startsWith("LOCAL:")) return uri.slice("LOCAL:".length);
   try {
@@ -30,7 +38,47 @@ export function parseUri(uri: string): ParsedMathHubUri {
   };
 }
 
-export function normalizeSymRef(symRef: any): { uri: string; text: string } {
+type finalFTML = FtmlNode | FtmlContent | FtmlContent[] | FtmlRoot;
+
+export function finalFloDown(
+  node: finalFTML,
+  symbol: string,
+): finalFTML {
+  if (Array.isArray(node)) {
+    return node.map((n) => finalFloDown(n, symbol)) as FtmlContent[];
+  }
+
+  if (!node || typeof node !== "object") return node;
+
+  if (node.type === "definition") {
+    return {
+      ...node,
+      for_symbols: [symbol],
+      content: node.content ? (finalFloDown(node.content, symbol) as FtmlContent[]) : undefined,
+    };
+  }
+
+  if (node.type === "definiendum") {
+    return {
+      ...node,
+      uri: symbol,
+    };
+  }
+
+  if (node.content) {
+    return {
+      ...node,
+      content: finalFloDown(node.content, symbol) as FtmlContent[],
+    };
+  }
+
+  return node;
+}
+
+export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
+  uri: string;
+  text: string;
+} {
   if (symRef.source === "MATHHUB") {
     const parsed = parseUri(symRef.uri);
     return { uri: parsed.conceptUri, text: parsed.symbol };
@@ -38,7 +86,27 @@ export function normalizeSymRef(symRef: any): { uri: string; text: string } {
   return { uri: `LOCAL:${symRef.symbolName}`, text: symRef.symbolName };
 }
 
-export function transform(ast: any, operation: any): any {
+type RemoveSemanticOperation = {
+  kind: "removeSemantic";
+  target: { type: "definiendum" | "symref"; uri: string };
+};
+
+type ReplaceSemanticOperation = {
+  kind: "replaceSemantic";
+  target: { type: "definiendum" | "symref"; uri: string };
+  payload: Partial<FtmlNode> & { uri?: string };
+};
+
+export type SemanticOperation =
+  | RemoveSemanticOperation
+  | ReplaceSemanticOperation;
+
+type FtmlTree = FtmlRoot | FtmlNode | FtmlContent | FtmlContent[];
+
+export function transform(
+  ast: FtmlTree,
+  operation: SemanticOperation,
+): FtmlTree {
   if (operation.kind === "removeSemantic") {
     return removeSemanticNodeWithIndex(ast, operation.target);
   }
@@ -49,20 +117,26 @@ export function transform(ast: any, operation: any): any {
 }
 
 function removeSemanticNode(
-  node: any,
-  target: { type: string; uri: string },
-): any {
+  node: FtmlTree,
+  target: { type: "definiendum" | "symref"; uri: string },
+): FtmlTree {
   if (Array.isArray(node)) {
-    const result: any[] = [];
+    const result: FtmlContent[] = [];
     for (const child of node) {
       if (
         typeof child === "object" &&
-        child?.type === target.type &&
-        child?.uri === target.uri
+        child &&
+        (child as FtmlNode).type === target.type &&
+        (child as FtmlNode).uri === target.uri
       ) {
-        if (child.content) result.push(...child.content);
+        const childNode = child as FtmlNode;
+        if (childNode.content) {
+          result.push(...(childNode.content as FtmlContent[]));
+        }
       } else {
-        result.push(removeSemanticNode(child, target));
+        result.push(
+          removeSemanticNode(child as FtmlTree, target) as FtmlContent,
+        );
       }
     }
     return result;
@@ -70,23 +144,32 @@ function removeSemanticNode(
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return node;
 
-  const copy = { ...node };
-  if (copy.content) copy.content = removeSemanticNode(copy.content, target);
+  const copy: FtmlNode = { ...(node as FtmlNode) };
+  if (copy.content) {
+    copy.content = removeSemanticNode(
+      copy.content as FtmlContent[],
+      target,
+    ) as FtmlContent[];
+  }
   return copy;
 }
 function removeSemanticNodeWithIndex(
-  node: any,
-  target: { type: string; uri: string },
-): any {
+  node: FtmlTree,
+  target: { type: "definiendum" | "symref"; uri: string },
+): FtmlTree {
   if (!node || typeof node !== "object") return node;
 
-  if (node.type === "definition") {
+  if ((node as FtmlNode).type === "definition") {
+    const definitionNode = node as DefinitionNode;
     return {
-      ...node,
-      for_symbols: Array.isArray(node.for_symbols)
-        ? node.for_symbols.filter((s: string) => s !== target.uri)
-        : node.for_symbols,
-      content: removeSemanticNode(node.content, target),
+      ...definitionNode,
+      for_symbols: Array.isArray(definitionNode.for_symbols)
+        ? definitionNode.for_symbols.filter((s: string) => s !== target.uri)
+        : definitionNode.for_symbols,
+      content: removeSemanticNode(
+        definitionNode.content as FtmlContent[],
+        target,
+      ) as FtmlContent[],
     };
   }
 
@@ -94,39 +177,52 @@ function removeSemanticNodeWithIndex(
 }
 
 function replaceSemanticNode(
-  node: any,
-  target: { type: string; uri: string },
-  payload: any,
-): any {
+  node: FtmlTree,
+  target: { type: "definiendum" | "symref"; uri: string },
+  payload: ReplaceSemanticOperation["payload"],
+): FtmlTree {
   if (Array.isArray(node)) {
-    return node.map((child) => replaceSemanticNode(child, target, payload));
+    return node.map((child) =>
+      replaceSemanticNode(child as FtmlTree, target, payload),
+    ) as typeof node;
   }
 
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return node;
 
-  if (node.type === target.type && node.uri === target.uri) {
-    if (node.type === "symref") {
+  const current = node as FtmlNode;
+
+  if (current.type === target.type && current.uri === target.uri) {
+    if (current.type === "symref") {
       return {
-        ...node,
+        ...current,
         uri: payload.uri,
       };
     }
-    if (node.type === "definition" && node.for_symbols) {
+    if (target.type === "definiendum" && current.for_symbols) {
+      const definitionNode = current as DefinitionNode;
       return {
-        ...node,
-        for_symbols: node.for_symbols.map((s: string) =>
-          s === target.uri ? payload.uri : s,
-        ),
-        content: replaceSemanticNode(node.content, target, payload),
+        ...definitionNode,
+        for_symbols: definitionNode.for_symbols
+          .map((s: string) => (s === target.uri ? payload.uri : s))
+          .filter((s): s is string => s !== undefined),
+        content: replaceSemanticNode(
+          definitionNode.content as FtmlContent[],
+          target,
+          payload,
+        ) as FtmlContent[],
       };
     }
-    return { ...node, ...payload };
+    return { ...current, ...payload };
   }
 
-  const copy = { ...node };
+  const copy: FtmlNode = { ...(current as FtmlNode) };
   if (copy.content) {
-    copy.content = replaceSemanticNode(copy.content, target, payload);
+    copy.content = replaceSemanticNode(
+      copy.content as FtmlContent[],
+      target,
+      payload,
+    ) as FtmlContent[];
   }
   return copy;
 }

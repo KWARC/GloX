@@ -1,38 +1,31 @@
 import { initFloDown } from "@/lib/flodownClient";
-import {
-  addSymbols,
-  replaceUris,
-  removeSymdeclForFloDown,
-} from "@/server/ftml/normalizeFtml";
-import { normalizeToRoot } from "@/types/ftml.types";
+import { FtmlStatement, normalizeToRoot } from "@/types/ftml.types";
+import { finalFloDown } from "../parseUri";
 
-export async function generateStexFromFtml(ftmlAst: any): Promise<string> {
+export async function generateStexFromFtml(
+  ftmlAst: FtmlStatement,
+): Promise<string> {
   const floDown = await initFloDown();
   floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
   const fd = floDown.FloDown.fromUri("http://temp?a=temp&d=temp&l=en");
 
-  const normalized = normalizeToRoot(ftmlAst);
+  const root = normalizeToRoot(ftmlAst);
+  for (const block of root.content) {
+    if (block.type === "paragraph") {
+      fd.addElement(block);
+      continue;
+    }
 
-  const symbols = addSymbols(normalized);
-console.log({symbols})
-  const uriMap = new Map<string, string>();
-  for (const name of symbols) {
-    uriMap.set(name, fd.addSymbolDeclaration(name));
+    if (block.type !== "definition") continue;
+
+    const symbolName = block.for_symbols?.[0];
+    if (!symbolName) continue;
+
+    const symbol = fd.addSymbolDeclaration(symbolName);
+    const finalizedFTML = finalFloDown(block, symbol);
+    fd.addElement(finalizedFTML);
   }
-
-
-  const resolved = replaceUris(structuredClone(normalized), uriMap);
-
-  const sanitized = removeSymdeclForFloDown(resolved);
-console.log("URI Map:", uriMap);
-  for (const element of sanitized.content) {
-    console.log({element})
-    fd.addElement(element);
-  }
-
-  (window as any).__FLODOWNS ??= [];
-  (window as any).__FLODOWNS.push(fd);
 
   return fd.getStex();
 }

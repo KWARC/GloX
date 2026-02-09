@@ -1,6 +1,9 @@
 import UploadDialog from "@/components/UploadDialog";
 import { currentUser } from "@/server/auth/currentUser";
-import { getFinalizedDocuments } from "@/serverFns/latex.server";
+import {
+  FinalizedLatexDocument,
+  getFinalizedDocuments,
+} from "@/serverFns/latex.server";
 import {
   Badge,
   Button,
@@ -33,11 +36,11 @@ function App() {
     staleTime: 60_000,
   });
 
-  const { data: finalizedDocs, isLoading: docsLoading } = useQuery({
-    queryKey: ["finalizedDocuments"],
-    queryFn: getFinalizedDocuments,
-    enabled: !!user?.loggedIn,
-  });
+ const { data: finalizedDocs = [], isLoading: docsLoading } = useQuery({
+  queryKey: ["finalizedDocuments"],
+  queryFn: getFinalizedDocuments,
+  enabled: !!user?.loggedIn,
+});
 
   const isLoggedIn = user?.loggedIn;
 
@@ -45,7 +48,7 @@ function App() {
 
   const hasMore = (finalizedDocs?.length ?? 0) > 4;
 
-  const handleDocumentClick = (doc: any) => {
+  const handleDocumentClick = (doc: FinalizedLatexDocument) => {
     navigate({
       to: "/create-latex",
       search: {

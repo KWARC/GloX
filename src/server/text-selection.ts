@@ -4,6 +4,7 @@ import {
   createDefinition,
   updateDefinition,
 } from "@/serverFns/extractDefinition.server";
+import { FtmlStatement } from "@/types/ftml.types";
 import { useState } from "react";
 
 export interface PopupState {
@@ -24,11 +25,24 @@ export type TextSelection = {
 export type ExtractedItem = {
   id: string;
   pageNumber: number;
-  statement: any;
+  statement: FtmlStatement;
   futureRepo: string;
   filePath: string;
   fileName: string;
   language: string;
+  definienda?: {
+    definiendum: {
+      id: string;
+      symbolName: string;
+      symdecl?:boolean;
+    };
+  }[];
+  symbolicRefs?: {
+    symbolicReference: {
+      id: string;
+      conceptUri: string;
+    };
+  }[];
 };
 
 export function useTextSelection() {
@@ -142,7 +156,7 @@ export function useExtractionActions(documentId: string) {
     });
   }
 
-  async function updateExtract(id: string, statement: any) {
+  async function updateExtract(id: string, statement: FtmlStatement) {
     await updateDefinition({
       data: { id, statement },
     });
