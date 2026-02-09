@@ -1,10 +1,6 @@
 import { initFloDown } from "@/lib/flodownClient";
-import {
-  addSymbols,
-  removeSymdeclForFloDown,
-  replaceUris,
-} from "@/server/ftml/normalizeFtml";
-import { FtmlStatement, RootNode, normalizeToRoot } from "@/types/ftml.types";
+import { rewriteForFloDown } from "@/server/parseUri";
+import { FtmlStatement, normalizeToRoot } from "@/types/ftml.types";
 import { useEffect, useRef } from "react";
 
 interface FtmlPreviewProps {
@@ -14,16 +10,11 @@ interface FtmlPreviewProps {
   interactive?: boolean;
 }
 
-export function FtmlPreview({
-  ftmlAst,
-  docId,
-  editable = false,
-  interactive = true,
-}: FtmlPreviewProps) {
+export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current || !ftmlAst) return;
+    if (!containerRef.current) return;
 
     let disposed = false;
     let fd: any = null;
@@ -35,54 +26,43 @@ export function FtmlPreview({
       floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
       fd = floDown.FloDown.fromUri(`http://temp?a=temp&d=${docId}&l=en`);
+
       containerRef.current.innerHTML = "";
       fd.mountTo(containerRef.current);
 
-      const normalized: RootNode = normalizeToRoot(ftmlAst);
-      const symbols = addSymbols(normalized);
+      const root = normalizeToRoot(ftmlAst);
+      const block = root.content[0];
+      if (!block) return;
 
-      const uriMap = new Map<string, string>();
-      for (const name of symbols) {
-        const uri = fd.addSymbolDeclaration(name);
-        if (uri) {
-          uriMap.set(name, uri);
-        }
+      if (block.type === "paragraph") {
+        fd.addElement(block);
+        return;
       }
 
-      const resolved = replaceUris(structuredClone(normalized), uriMap);
+      if (block.type !== "definition") return;
 
-      const sanitized = removeSymdeclForFloDown(resolved) as RootNode;
+      const symbolName = block.for_symbols?.[0];
+      if (!symbolName) return;
 
-      for (const element of sanitized.content) {
-        fd.addElement(element);
-      }
+      const symbol = fd.addSymbolDeclaration(symbolName);
+
+      const finalizedFTML = rewriteForFloDown(block, symbol);
+
+      fd.addElement(finalizedFTML);
     })();
 
     return () => {
       disposed = true;
-
       if (fd) {
         try {
           fd.clear();
         } catch {}
-        fd = null;
       }
-
       if (containerRef.current) {
         containerRef.current.innerHTML = "";
       }
     };
-  }, [ftmlAst]);
+  }, [ftmlAst, docId]);
 
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        userSelect: interactive ? (editable ? "text" : "auto") : "none",
-        cursor: interactive ? (editable ? "text" : "auto") : "default",
-        pointerEvents: interactive ? "auto" : "none",
-        opacity: interactive ? 1 : 0.7,
-      }}
-    />
-  );
+  return <div ref={containerRef} />;
 }

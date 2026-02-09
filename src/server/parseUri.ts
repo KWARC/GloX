@@ -38,9 +38,42 @@ export function parseUri(uri: string): ParsedMathHubUri {
   };
 }
 
-export function normalizeSymRef(
-  symRef: UnifiedSymbolicReference,
-): { uri: string; text: string } {
+export function rewriteForFloDown(node: any, symbol: string): any {
+  if (Array.isArray(node)) {
+    return node.map((n) => rewriteForFloDown(n, symbol));
+  }
+
+  if (!node || typeof node !== "object") return node;
+
+  if (node.type === "definition") {
+    return {
+      ...node,
+      for_symbols: [symbol],
+      content: rewriteForFloDown(node.content, symbol),
+    };
+  }
+
+  if (node.type === "definiendum") {
+    return {
+      ...node,
+      uri: symbol,
+    };
+  }
+
+  if (node.content) {
+    return {
+      ...node,
+      content: rewriteForFloDown(node.content, symbol),
+    };
+  }
+
+  return node;
+}
+
+export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
+  uri: string;
+  text: string;
+} {
   if (symRef.source === "MATHHUB") {
     const parsed = parseUri(symRef.uri);
     return { uri: parsed.conceptUri, text: parsed.symbol };
@@ -59,11 +92,16 @@ type ReplaceSemanticOperation = {
   payload: Partial<FtmlNode> & { uri?: string };
 };
 
-export type SemanticOperation = RemoveSemanticOperation | ReplaceSemanticOperation;
+export type SemanticOperation =
+  | RemoveSemanticOperation
+  | ReplaceSemanticOperation;
 
 type FtmlTree = FtmlRoot | FtmlNode | FtmlContent | FtmlContent[];
 
-export function transform(ast: FtmlTree, operation: SemanticOperation): FtmlTree {
+export function transform(
+  ast: FtmlTree,
+  operation: SemanticOperation,
+): FtmlTree {
   if (operation.kind === "removeSemantic") {
     return removeSemanticNodeWithIndex(ast, operation.target);
   }
@@ -160,9 +198,9 @@ function replaceSemanticNode(
       const definitionNode = current as DefinitionNode;
       return {
         ...definitionNode,
-        for_symbols: definitionNode.for_symbols.map((s: string) =>
-          s === target.uri ? payload.uri : s,
-        ).filter((s): s is string => s !== undefined),
+        for_symbols: definitionNode.for_symbols
+          .map((s: string) => (s === target.uri ? payload.uri : s))
+          .filter((s): s is string => s !== undefined),
         content: replaceSemanticNode(
           definitionNode.content as FtmlContent[],
           target,

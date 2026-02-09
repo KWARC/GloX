@@ -31,7 +31,8 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       !data.futureRepo.trim() ||
       !data.filePath.trim() ||
       !data.fileName.trim() ||
-      !data.language.trim()
+      !data.language.trim() ||
+      typeof data.symbolDeclared !== "boolean"
     ) {
       throw new Error("Missing definiendum fields");
     }
@@ -41,7 +42,7 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       symbolName,
       alias,
       selectedText,
-      symbolDeclared = true,
+      symbolDeclared,
       futureRepo,
       filePath,
       fileName,
@@ -88,11 +89,9 @@ export const createDefiniendum = createServerFn({ method: "POST" })
       assertFtmlStatement(definition.statement),
     );
 
-    const definiendumUri = `LOCAL:${symbolName}`;
-
     const createDefiniendumNode = (text: string): DefiniendumNode => ({
       type: "definiendum",
-      uri: definiendumUri,
+      uri: symbolName,
       content: [alias || text],
       symdecl: symbolDeclared,
     });
@@ -124,7 +123,7 @@ export const createDefiniendum = createServerFn({ method: "POST" })
         content: [
           {
             ...existingDef,
-            for_symbols: [...(existingDef.for_symbols || []), definiendumUri],
+            for_symbols: [...(existingDef.for_symbols || []), symbolName],
             content: [
               {
                 ...innerParagraph,
@@ -151,7 +150,7 @@ export const createDefiniendum = createServerFn({ method: "POST" })
 
       const definitionNode: DefinitionNode = {
         type: "definition",
-        for_symbols: [definiendumUri],
+        for_symbols: [symbolName],
         content: [
           {
             type: "paragraph",

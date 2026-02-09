@@ -5,7 +5,6 @@ import {
   RootNode,
 } from "@/types/ftml.types";
 
-
 export function cloneAst<T>(ast: T): T {
   return structuredClone(ast);
 }
@@ -83,7 +82,7 @@ export function pathTraversesSemanticNode(
 
       if (isAncestor && SEMANTIC_TYPES.has(node.type)) {
         traversesSemanticNode = true;
-        return false; 
+        return false;
       }
     }
   });
@@ -92,7 +91,7 @@ export function pathTraversesSemanticNode(
 }
 
 export interface TextLocation {
-  paragraphIndex: number; 
+  paragraphIndex: number;
   contentIndex: number;
   offset: number;
   occurrence: number;
@@ -223,41 +222,34 @@ export function insertDefiniendum(
   selectedText: string,
   createNode: (text: string) => DefiniendumNode,
 ): FtmlContent[] {
-  const pattern = new RegExp(
-    `(${selectedText.trim().split(/\s+/).join("\\s+")})`,
-  );
-
+  const needle = selectedText.trim();
   const result: FtmlContent[] = [];
   let inserted = false;
 
-  for (const item of content) {
-    if (typeof item !== "string" || inserted) {
-      result.push(item);
-      continue;
-    }
+  for (let i = content.length - 1; i >= 0; i--) {
+    const item = content[i];
 
-    const match = item.match(pattern);
-    if (!match) {
-      result.push(item);
-      continue;
-    }
+    if (typeof item !== "string") continue;
 
-    const [matchedText] = match;
-    const index = item.indexOf(matchedText);
-
-    if (index === -1) {
-      result.push(item);
-      continue;
-    }
+    const index = item.lastIndexOf(needle);
+    if (index === -1) continue;
 
     const before = item.slice(0, index);
-    const after = item.slice(index + matchedText.length);
+    const after = item.slice(index + needle.length);
 
+    // rebuild content
+    result.push(...content.slice(0, i));
     if (before) result.push(before);
-    result.push(createNode(matchedText));
+    result.push(createNode(needle));
     if (after) result.push(after);
+    result.push(...content.slice(i + 1));
 
     inserted = true;
+    break;
+  }
+
+  if (!inserted) {
+    return content;
   }
 
   return result;
