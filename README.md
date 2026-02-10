@@ -2,8 +2,6 @@
 
 See the [GloX blue note](blue/workflow/note.en.pdf) for the ideas. 
 
-Welcome to your new TanStack app! 
-
 # Getting Started
 
 GloX — Updated Setup Instructions
@@ -13,7 +11,6 @@ GloX — Updated Setup Instructions
 	•	pnpm ≥ 9
 	•	PostgreSQL ≥ 14
 
-⸻
 
 2. Environment Configuration
 
@@ -43,7 +40,6 @@ This installs:
 	•	FTML frontend and backend libraries
 	•	Mantine UI + Tailwind v4
 
-⸻
 
 4. Database Setup (Prisma)
 
@@ -54,8 +50,6 @@ pnpm prisma migrate dev
 ```
 
 
-⸻
-
 5. Development Server
 ```bash
 pnpm dev
@@ -63,7 +57,6 @@ pnpm dev
 	•	App runs at http://localhost:3000
 	•	Vite dev server with HMR
 
-⸻
 
 6. Production Build
 ```bash
@@ -71,11 +64,9 @@ pnpm build
 pnpm preview
 ```
 
-⸻
 
 7. Testing
 ```bash
 pnpm test
 ```
-⸻
 
