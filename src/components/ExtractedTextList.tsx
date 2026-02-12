@@ -16,10 +16,12 @@ interface ExtractedTextPanelProps {
   editingId: string | null;
   selectedId: string | null;
   onToggleEdit: (id: string) => void;
-  onUpdate: (id: string, statement: ExtractedItem["statement"]) => Promise<void>;
+  onUpdate: (
+    id: string,
+    statement: ExtractedItem["statement"],
+  ) => Promise<void>;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
-  floDownEnabled?: boolean;
   onOpenSemanticPanel: (definitionId: string) => void;
 }
 
@@ -31,7 +33,6 @@ export function ExtractedTextPanel({
   onUpdate,
   onDelete,
   onSelection,
-  floDownEnabled = true,
   onOpenSemanticPanel,
 }: ExtractedTextPanelProps) {
   return (
@@ -121,7 +122,6 @@ export function ExtractedTextPanel({
                         key={item.id}
                         docId={item.id}
                         ftmlAst={item.statement}
-                        interactive={floDownEnabled}
                       />
                     </div>
                   )}

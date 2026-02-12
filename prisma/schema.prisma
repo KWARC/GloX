@@ -71,7 +71,6 @@ model User {
 
 model Symbol {
   id String @id @default(uuid())
-
   symbolName String
   alias      String?
 
@@ -80,9 +79,6 @@ model Symbol {
   fileName   String
   language   String @default("en")
 
-  resolvedUri String?
-
-  definitionSymbols  DefinitionSymbol[]
   symbolicReferences SymbolicReference[]
 
   createdAt DateTime @default(now())
@@ -90,7 +86,6 @@ model Symbol {
 
   @@unique([symbolName, futureRepo, filePath, fileName, language])
   @@index([symbolName])
-  @@index([resolvedUri])
 }
 
 model SymbolicReference {
@@ -128,7 +123,6 @@ model Definition {
   originalText String @db.Text
   statement    Json
 
-  definitionSymbols DefinitionSymbol[]
   symbolicRefs      DefinitionSymbolicRef[]
 
   futureRepo String @default("Glox")
@@ -183,20 +177,3 @@ model DefinitionSymbolicRef {
   @@index([symbolicReferenceId])
 }
 
-model DefinitionSymbol {
-  id String @id @default(uuid())
-
-  definitionId String
-  definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
-
-  symbolId String
-  symbol   Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
-
-  isDeclared Boolean @default(false)
-
-  createdAt DateTime @default(now())
-
-  @@unique([definitionId, symbolId])
-  @@index([definitionId])
-  @@index([symbolId])
-}

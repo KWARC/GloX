@@ -1,13 +1,45 @@
 import { initFloDown } from "@/lib/flodownClient";
-import { finalFloDown } from "@/server/parseUri";
 import { FtmlStatement, normalizeToRoot } from "@/types/ftml.types";
 import { useEffect, useRef } from "react";
 
 interface FtmlPreviewProps {
   ftmlAst: FtmlStatement;
   docId: string;
-  editable?: boolean;
-  interactive?: boolean;
+}
+
+function rewriteUris(node: any, uriMap: Map<string, string>): any {
+  if (Array.isArray(node)) {
+    return node.map((n) => rewriteUris(n, uriMap));
+  }
+
+  if (!node || typeof node !== "object") return node;
+
+  if (node.type === "definition") {
+    return {
+      ...node,
+      for_symbols: Array.isArray(node.for_symbols)
+        ? node.for_symbols.map((s: string) => uriMap.get(s) ?? s)
+        : [],
+      content: rewriteUris(node.content, uriMap),
+    };
+  }
+
+  if (node.type === "definiendum" || node.type === "symref") {
+    return {
+      ...node,
+      uri: uriMap.get(node.uri) ?? node.uri,
+      content: rewriteUris(node.content, uriMap),
+    };
+  }
+
+  if (node.content) {
+    return {
+      ...node,
+      content: rewriteUris(node.content, uriMap),
+    };
+  }
+
+  return node;
 }
 
 export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
@@ -25,7 +57,9 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
 
       floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
-      fd = floDown.FloDown.fromUri(`http://temp?a=temp&d=${docId}&l=en`);
+      fd = floDown.FloDown.fromUri(
+        `http://temp?a=temp&d=${docId}&l=en`
+      );
 
       containerRef.current.innerHTML = "";
       fd.mountTo(containerRef.current);
@@ -41,14 +75,20 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
 
       if (block.type !== "definition") return;
 
-      const symbolName = block.for_symbols?.[0];
-      if (!symbolName) return;
+      const uriMap = new Map<string, string>();
 
-      const symbol = fd.addSymbolDeclaration(symbolName);
+      if (Array.isArray(block.for_symbols)) {
+        for (const symbolName of block.for_symbols) {
+          if (!symbolName.startsWith("http")) {
+            const declaredUri = fd.addSymbolDeclaration(symbolName);
+            uriMap.set(symbolName, declaredUri);
+          }
+        }
+      }
 
-      const finalizedFTML = finalFloDown(block, symbol);
+      const rewritten = rewriteUris(block, uriMap);
 
-      fd.addElement(finalizedFTML);
+      fd.addElement(rewritten);
     })();
 
     return () => {
@@ -62,7 +102,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
         containerRef.current.innerHTML = "";
       }
     };
-  }, [ftmlAst, docId]);
+  }, [ftmlAst]);
 
   return <div ref={containerRef} />;
 }

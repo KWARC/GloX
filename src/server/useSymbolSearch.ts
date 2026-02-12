@@ -11,7 +11,6 @@ export type SymbolSearchResult =
       filePath: string;
       fileName: string;
       language: string;
-      resolvedUri?: string | null;
     }
   | { source: "MATHHUB"; uri: string };
 
@@ -45,7 +44,6 @@ export function useSymbolSearch(query: string, enabled: boolean = true) {
         filePath: s.filePath,
         fileName: s.fileName,
         language: s.language,
-        resolvedUri: s.resolvedUri,
       }),
     ),
     ...mathHubResults.map(

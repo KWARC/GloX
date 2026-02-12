@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { transform, uriToSymbolName } from "@/server/parseUri";
+import { transform } from "@/server/parseUri";
 import { FtmlNode, FtmlRoot } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -18,7 +18,7 @@ type SemanticOperation = RemoveSemanticOp | ReplaceSemanticOp;
 
 function assertFtmlRoot(value: unknown): asserts value is FtmlRoot {
   if (!value || typeof value !== "object") {
-    throw new Error("Invalid FTML AST: expected non-null object");
+    throw new Error("Invalid FTML AST");
   }
 }
 
@@ -32,11 +32,9 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
         where: { id: data.definitionId },
       });
 
-      const rawStatement = def.statement;
+      assertFtmlRoot(def.statement);
 
-      assertFtmlRoot(rawStatement);
-
-      const newAst = transform(structuredClone(rawStatement), data.operation);
+      const newAst = transform(structuredClone(def.statement), data.operation);
 
       await tx.definition.update({
         where: { id: data.definitionId },
@@ -46,84 +44,18 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
       });
 
       if (data.operation.kind === "removeSemantic") {
-        if (data.operation.target.type === "definiendum") {
-
-          const symbols = await tx.symbol.findMany({
-            where: {
-              OR: [
-                { symbolName: uriToSymbolName(data.operation.target.uri) },
-                { resolvedUri: data.operation.target.uri },
-              ],
-            },
-          });
-
-          if (symbols.length > 0) {
-            await tx.definitionSymbol.deleteMany({
-              where: {
-                definitionId: data.definitionId,
-                symbolId: { in: symbols.map((s) => s.id) },
-              },
-            });
-          }
-        }
-
         if (data.operation.target.type === "symref") {
           await tx.symbolicReference.deleteMany({
-            where: {
-              conceptUri: data.operation.target.uri,
-            },
+            where: { conceptUri: data.operation.target.uri },
           });
         }
       }
 
       if (data.operation.kind === "replaceSemantic") {
-        if (data.operation.target.type === "definiendum") {
-          const oldSymbols = await tx.symbol.findMany({
-            where: {
-              OR: [
-                { symbolName: uriToSymbolName(data.operation.target.uri) },
-                { resolvedUri: data.operation.target.uri },
-              ],
-            },
-          });
-
-          if (oldSymbols.length > 0 && data.operation.payload.uri) {
-            const newSymbols = await tx.symbol.findMany({
-              where: {
-                OR: [
-                  { symbolName: uriToSymbolName(data.operation.payload.uri) },
-                  { resolvedUri: data.operation.payload.uri },
-                ],
-              },
-            });
-
-            if (newSymbols.length > 0) {
-              await tx.definitionSymbol.deleteMany({
-                where: {
-                  definitionId: data.definitionId,
-                  symbolId: { in: oldSymbols.map((s) => s.id) },
-                },
-              });
-
-              await tx.definitionSymbol.create({
-                data: {
-                  definitionId: data.definitionId,
-                  symbolId: newSymbols[0].id,
-                  isDeclared: false,
-                },
-              });
-            }
-          }
-        }
-
         if (data.operation.target.type === "symref") {
           await tx.symbolicReference.updateMany({
-            where: {
-              conceptUri: data.operation.target.uri,
-            },
-            data: {
-              conceptUri: data.operation.payload.uri!,
-            },
+            where: { conceptUri: data.operation.target.uri },
+            data: { conceptUri: data.operation.payload.uri! },
           });
         }
       }
