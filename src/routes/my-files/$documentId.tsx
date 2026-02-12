@@ -6,12 +6,13 @@ import { LatexConfigModel } from "@/components/LatexConfigModel";
 import { SelectionPopup } from "@/components/SelectionPopup";
 import { SemanticPanel } from "@/components/SemanticPanel";
 import { SymbolicRef } from "@/components/SymbolicRef";
+
 import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { queryClient } from "@/queryClient";
 import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
-import { normalizeSymRef } from "@/server/parseUri";
+import { normalizeSymRef, parseUri } from "@/server/parseUri";
 import {
   ActivePage,
   ExtractedItem,
@@ -19,15 +20,16 @@ import {
   useTextSelection,
   useValidation,
 } from "@/server/text-selection";
-import { createDefiniendum } from "@/serverFns/definiendum.server";
+import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import {
   deleteDefinition,
   listDefinition,
   updateDefinitionMeta,
 } from "@/serverFns/extractDefinition.server";
 import { resolveSymbolicRef } from "@/serverFns/resolveSymbolicRef.server";
+import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
-import { FtmlStatement } from "@/types/ftml.types";
+import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
 import {
   ActionIcon,
   Box,
@@ -163,7 +165,7 @@ function RouteComponent() {
 
   function handleEditDefiniendum(
     definitionId: string,
-    def: { uri: string; text: string; definiendumId: string },
+    def: { uri: string; text: string; symbolId: string },
   ) {
     setDefExtractId(definitionId);
     setEditingNodeId(def.uri);
@@ -239,16 +241,48 @@ function RouteComponent() {
     clearAll();
   }
 
-  async function handleDefiniendumSubmit(params: {
-    symbolName: string;
-    alias: string;
-    symdecl: boolean;
-  }) {
+  async function handleDefiniendumSubmit(
+    params:
+      | { mode: "CREATE"; symbolName: string; alias: string; symdecl: true }
+      | { mode: "PICK_EXISTING"; selectedSymbol: SymbolSearchResult },
+  ) {
     if (!defExtractId) return;
     if (!validate(futureRepo, filePath, fileName, language)) return;
+
     await withFreeze(async () => {
       if (editingNodeId) {
-        const newUri = `LOCAL:${params.symbolName}`;
+        let newUri: string;
+
+        if (params.mode === "CREATE") {
+          newUri = params.symbolName;
+        } else if (params.selectedSymbol.source === "DB") {
+          newUri =
+            params.selectedSymbol.resolvedUri ||
+            params.selectedSymbol.symbolName;
+        } else {
+          const parsed = parseUri(params.selectedSymbol.uri);
+          newUri = parsed.conceptUri;
+        }
+        let isDeclared: boolean;
+
+        if (params.mode === "CREATE") {
+          isDeclared = true;
+        } else {
+          isDeclared = false;
+        }
+
+        const payload: DefiniendumNode = {
+          type: "definiendum",
+          uri: newUri,
+          content: [
+            params.mode === "CREATE"
+              ? params.alias || params.symbolName
+              : params.selectedSymbol.source === "DB"
+                ? params.selectedSymbol.symbolName
+                : parseUri(params.selectedSymbol.uri).symbol,
+          ],
+          symdecl: isDeclared,
+        };
 
         await updateDefinitionAst({
           data: {
@@ -256,34 +290,73 @@ function RouteComponent() {
             operation: {
               kind: "replaceSemantic",
               target: { type: "definiendum", uri: editingNodeId },
-              payload: {
-                type: "definiendum",
-                uri: newUri,
-                content: [params.symbolName],
-              },
+              payload,
             },
           },
         });
       } else {
-        await createDefiniendum({
-          data: {
-            definitionId: defExtractId,
-            symbolName: params.symbolName.trim(),
-            alias: params.alias?.trim() || null,
-            selectedText: defExtractText,
-            symbolDeclared: params.symdecl,
-            futureRepo: futureRepo.trim(),
-            filePath: filePath.trim(),
-            fileName: fileName.trim(),
-            language: language.trim(),
-          },
+        if (params.mode === "CREATE") {
+          await createSymbolDefiniendum({
+            data: {
+              definitionId: defExtractId,
+              selectedText: defExtractText,
+              symdecl: true,
+
+              futureRepo: futureRepo.trim(),
+              filePath: filePath.trim(),
+              fileName: fileName.trim(),
+              language: language.trim(),
+
+              symbolName: params.symbolName,
+              alias: params.alias || null,
+            },
+          });
+        } else {
+          if (params.selectedSymbol.source === "DB") {
+            await createSymbolDefiniendum({
+              data: {
+                definitionId: defExtractId,
+                selectedText: defExtractText,
+                symdecl: false,
+
+                futureRepo: futureRepo.trim(),
+                filePath: filePath.trim(),
+                fileName: fileName.trim(),
+                language: language.trim(),
+
+                symbolName: "",
+
+                selectedSymbolSource: "DB",
+                selectedSymbolId: params.selectedSymbol.id,
+              },
+            });
+          } else {
+            await createSymbolDefiniendum({
+              data: {
+                definitionId: defExtractId,
+                selectedText: defExtractText,
+                symdecl: false,
+
+                futureRepo: futureRepo.trim(),
+                filePath: filePath.trim(),
+                fileName: fileName.trim(),
+                language: language.trim(),
+
+                symbolName: "",
+
+                selectedSymbolSource: "MATHHUB",
+                selectedSymbolUri: params.selectedSymbol.uri,
+              },
+            });
+          }
+        }
+
+        await queryClient.invalidateQueries({
+          queryKey: ["definitions", documentId],
         });
       }
-
-      await queryClient.invalidateQueries({
-        queryKey: ["definitions", documentId],
-      });
     });
+
     setEditingNodeId(null);
     setDefDialogOpen(false);
     setDefExtractId(null);

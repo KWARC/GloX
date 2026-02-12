@@ -17,7 +17,7 @@ export interface DefiniendumNode extends FtmlNode {
   type: "definiendum";
   uri: string;
   content: FtmlContent[];
-  symdecl?: boolean;
+  symdecl: boolean;
 }
 
 export interface DefiniensNode extends FtmlNode {

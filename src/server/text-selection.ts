@@ -1,5 +1,4 @@
 import { queryClient } from "@/queryClient";
-import { createDefiniendum } from "@/serverFns/definiendum.server";
 import {
   createDefinition,
   updateDefinition,
@@ -12,6 +11,7 @@ export interface PopupState {
   y: number;
   source: "left" | "right";
 }
+
 export type ActivePage = {
   id: string;
   pageNumber: number;
@@ -30,12 +30,12 @@ export type ExtractedItem = {
   filePath: string;
   fileName: string;
   language: string;
-  definienda?: {
-    definiendum: {
+  definitionSymbols?: {
+    symbol: {
       id: string;
       symbolName: string;
-      symdecl?:boolean;
     };
+    isDeclared: boolean;
   }[];
   symbolicRefs?: {
     symbolicReference: {
@@ -126,36 +126,6 @@ export function useExtractionActions(documentId: string) {
     });
   }
 
-  async function saveDefiniendum(params: {
-    definitionId: string;
-    symbolName: string;
-    alias?: string;
-    selectedText: string;
-    symbolDeclared: boolean;
-    futureRepo: string;
-    filePath: string;
-    fileName: string;
-    language: string;
-  }) {
-    await createDefiniendum({
-      data: {
-        definitionId: params.definitionId,
-        symbolName: params.symbolName,
-        alias: params.alias,
-        selectedText: params.selectedText,
-        symbolDeclared: params.symbolDeclared,
-        futureRepo: params.futureRepo,
-        filePath: params.filePath,
-        fileName: params.fileName,
-        language: params.language,
-      },
-    });
-
-    await queryClient.invalidateQueries({
-      queryKey: ["definienda", documentId],
-    });
-  }
-
   async function updateExtract(id: string, statement: FtmlStatement) {
     await updateDefinition({
       data: { id, statement },
@@ -166,7 +136,7 @@ export function useExtractionActions(documentId: string) {
     });
   }
 
-  return { extractText, saveDefiniendum, updateExtract };
+  return { extractText, updateExtract };
 }
 
 export interface ValidationErrors {

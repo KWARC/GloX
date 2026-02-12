@@ -16,7 +16,7 @@ export function SemanticPanel({
   definition: ExtractedItem | null;
   onEditDefiniendum: (
     definitionId: string,
-    def: { uri: string; text: string; definiendumId: string },
+    def: { uri: string; text: string; symbolId: string },
   ) => void;
   onEditSymbolicRef: (
     definitionId: string,
@@ -28,7 +28,7 @@ export function SemanticPanel({
       | {
           type: "definiendum";
           uri: string;
-          definiendumId: string;
+          symbolId: string;
         }
       | {
           type: "symref";
@@ -58,7 +58,7 @@ export function SemanticPanel({
             </Text>
           ) : (
             definienda.map((def) => (
-              <Group key={def.definiendumId} justify="space-between">
+              <Group key={def.symbolId} justify="space-between">
                 <Text>{def.text}</Text>
 
                 <Group gap="xs">
@@ -76,7 +76,7 @@ export function SemanticPanel({
                       onDeleteNode(definition.id, {
                         type: "definiendum",
                         uri: def.uri,
-                        definiendumId: def.definiendumId,
+                        symbolId: def.symbolId,
                       })
                     }
                   >

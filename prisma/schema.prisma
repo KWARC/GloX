@@ -69,27 +69,27 @@ model User {
   documents    Document[]
 }
 
-model Definiendum {
+model Symbol {
   id String @id @default(uuid())
 
-  symbolName     String
-  alias          String?
-  symbolDeclared Boolean @default(false)
+  symbolName String
+  alias      String?
 
-  futureRepo  String
-  filePath    String
-  fileName    String
-  language    String @default("en")
+  futureRepo String
+  filePath   String
+  fileName   String
+  language   String @default("en")
+
   resolvedUri String?
 
+  definitionSymbols  DefinitionSymbol[]
   symbolicReferences SymbolicReference[]
-  definitions        DefinitionDefiniendum[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([symbolName, futureRepo, filePath, fileName, language])
   @@index([symbolName])
-  @@index([futureRepo])
   @@index([resolvedUri])
 }
 
@@ -103,7 +103,7 @@ model SymbolicReference {
   language   String @default("en")
 
   definiendumId String?
-  definiendum   Definiendum? @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
+  definiendum   Symbol? @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
 
   definitions DefinitionSymbolicRef[]
 
@@ -128,8 +128,8 @@ model Definition {
   originalText String @db.Text
   statement    Json
 
-  definienda   DefinitionDefiniendum[]
-  symbolicRefs DefinitionSymbolicRef[]
+  definitionSymbols DefinitionSymbol[]
+  symbolicRefs      DefinitionSymbolicRef[]
 
   futureRepo String @default("Glox")
   filePath   String @default("Glox")
@@ -183,18 +183,20 @@ model DefinitionSymbolicRef {
   @@index([symbolicReferenceId])
 }
 
-model DefinitionDefiniendum {
+model DefinitionSymbol {
   id String @id @default(uuid())
 
   definitionId String
   definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
 
-  definiendumId String
-  definiendum   Definiendum @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
+  symbolId String
+  symbol   Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+
+  isDeclared Boolean @default(false)
 
   createdAt DateTime @default(now())
 
-  @@unique([definitionId, definiendumId])
+  @@unique([definitionId, symbolId])
   @@index([definitionId])
-  @@index([definiendumId])
+  @@index([symbolId])
 }

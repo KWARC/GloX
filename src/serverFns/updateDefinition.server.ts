@@ -47,11 +47,24 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
 
       if (data.operation.kind === "removeSemantic") {
         if (data.operation.target.type === "definiendum") {
-          await tx.definiendum.deleteMany({
+
+          const symbols = await tx.symbol.findMany({
             where: {
-              symbolName: uriToSymbolName(data.operation.target.uri),
+              OR: [
+                { symbolName: uriToSymbolName(data.operation.target.uri) },
+                { resolvedUri: data.operation.target.uri },
+              ],
             },
           });
+
+          if (symbols.length > 0) {
+            await tx.definitionSymbol.deleteMany({
+              where: {
+                definitionId: data.definitionId,
+                symbolId: { in: symbols.map((s) => s.id) },
+              },
+            });
+          }
         }
 
         if (data.operation.target.type === "symref") {
@@ -65,14 +78,42 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
 
       if (data.operation.kind === "replaceSemantic") {
         if (data.operation.target.type === "definiendum") {
-          await tx.definiendum.updateMany({
+          const oldSymbols = await tx.symbol.findMany({
             where: {
-              symbolName: uriToSymbolName(data.operation.target.uri),
-            },
-            data: {
-              symbolName: data.operation.payload.content?.[0] as string,
+              OR: [
+                { symbolName: uriToSymbolName(data.operation.target.uri) },
+                { resolvedUri: data.operation.target.uri },
+              ],
             },
           });
+
+          if (oldSymbols.length > 0 && data.operation.payload.uri) {
+            const newSymbols = await tx.symbol.findMany({
+              where: {
+                OR: [
+                  { symbolName: uriToSymbolName(data.operation.payload.uri) },
+                  { resolvedUri: data.operation.payload.uri },
+                ],
+              },
+            });
+
+            if (newSymbols.length > 0) {
+              await tx.definitionSymbol.deleteMany({
+                where: {
+                  definitionId: data.definitionId,
+                  symbolId: { in: oldSymbols.map((s) => s.id) },
+                },
+              });
+
+              await tx.definitionSymbol.create({
+                data: {
+                  definitionId: data.definitionId,
+                  symbolId: newSymbols[0].id,
+                  isDeclared: false,
+                },
+              });
+            }
+          }
         }
 
         if (data.operation.target.type === "symref") {

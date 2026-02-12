@@ -42,12 +42,13 @@
                 console.log("is a module 1: " + fd.isModule());
                 // add a new symbol declaration
                 const symbol = fd.addSymbolDeclaration("foobar");
+                 const symbol1 = fd.addSymbolDeclaration("representatives");
                 console.log("Symbol URI: " + symbol);
                 // the block now has/is a module:
                 console.log("is a module 2: " + fd.isModule());
                 // we add a reference to newParagraph
                 newParagraph.content.push(" and one to a new symbol ");
-                newParagraph.content.push({type:"symref",uri:symbol,content:["here!"]});
+                newParagraph.content.push({type:"symref",uri:symbol1,content:["here!"]});
                 // ^ this does *not* automatically rerender, since `fd` doesn't know that anything changed.
                 // Moreover, fd receives a *deep copy* of `newParagraph` on `addElement`, so fd *hasn't* actually changed!
                 // So we do:
@@ -67,13 +68,46 @@
                         ]}
                     ]}
                 ]});
+ fd.addElement({type:"thematicbreak"});
+                fd.addElement({type: "definition",content: [
+    {
+      type: "paragraph",
+      content: [
+        "seventeen ",
+        {
+          uri: symbol1,
+          type: "definiendum",
+          content: [
+            "representatives"
+          ],
+          symdecl: true
+        },
+        " of different agile software engineering techniques met for three days to socialize and brainstorm"
+      ]
+    }
+  ],
+  for_symbols: [
+   symbol1
+  ]
+})
+
+  fd.addElement({type: "definition",content: [
+    {
+  type: "paragraph",
+  content: [
+    "Process models  Agile model  User Developer  User-Stories"
+  ]}
+   ],
+  for_symbols: [
+  ]
+})
                 //...which should now show on hover.
 
                 // log the stex source for the block again:
                 console.log(fd.getStex());
                 // log the raw ftml string again:
                 console.log(fd.getFtml());
-
+              
                 // IMPORTANT! Once the last javascript reference to a FloDown Block is garbage collected,
                 // all memory held by that block will be automatically freed and the block is !!unmounted!!.
                 // This can cause rendering errors if not done intentionally.

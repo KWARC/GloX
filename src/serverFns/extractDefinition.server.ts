@@ -113,9 +113,9 @@ export const listDefinition = createServerFn({ method: "GET" })
       where: { documentId: data.documentId },
       orderBy: { createdAt: "asc" },
       include: {
-        definienda: {
+        definitionSymbols: {
           include: {
-            definiendum: true,
+            symbol: true,
           },
         },
         symbolicRefs: {
@@ -141,7 +141,7 @@ export const listDefinition = createServerFn({ method: "GET" })
         filePath: def.filePath,
         fileName: def.fileName,
         language: def.language,
-        definienda: def.definienda,
+        definitionSymbols: def.definitionSymbols,
         symbolicRefs: def.symbolicRefs,
       };
     });

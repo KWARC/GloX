@@ -4,7 +4,7 @@ import { FtmlRoot, normalizeToRoot } from "@/types/ftml.types";
 export type DefiniendumInfo = {
   uri: string;
   text: string;
-  definiendumId: string;
+  symbolId: string;
 };
 
 export type SymbolicRefInfo = {
@@ -46,8 +46,9 @@ function walk(
 export function extractSemanticIndex(
   statement: FtmlRoot,
   definition: {
-    definienda?: {
-      definiendum: { id: string; symbolName: string };
+    definitionSymbols?: {
+      symbol: { id: string; symbolName: string };
+      isDeclared: boolean;
     }[];
     symbolicRefs?: {
       symbolicReference: { id: string; conceptUri: string };
@@ -58,8 +59,9 @@ export function extractSemanticIndex(
   symbolicRefs: SymbolicRefInfo[];
 } {
   const root = normalizeToRoot(statement);
-  const dbDefinienda = definition.definienda ?? [];
+  const dbDefinitionSymbols = definition.definitionSymbols ?? [];
   const dbSymbolicRefs = definition.symbolicRefs ?? [];
+  
   const collected = {
     definienda: [] as { uri: string; text: string }[],
     symrefs: [] as { uri: string; text: string }[],
@@ -68,7 +70,10 @@ export function extractSemanticIndex(
   walk(root.content, collected);
 
   const definienda = collected.definienda.map((d) => {
-    const match = dbDefinienda.find((x) => x.definiendum.symbolName === d.uri);
+    const match = dbDefinitionSymbols.find(
+      (x) => x.symbol.symbolName === d.uri || 
+             (x.symbol as any).resolvedUri === d.uri
+    );
 
     if (!match) {
       throw new Error(
@@ -78,7 +83,7 @@ export function extractSemanticIndex(
 
     return {
       ...d,
-      definiendumId: match.definiendum.id,
+      symbolId: match.symbol.id,
     };
   });
 
