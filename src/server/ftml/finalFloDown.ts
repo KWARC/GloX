@@ -1,41 +1,38 @@
 import {
-    DefiniendumNode,
-    DefinitionNode,
-    FtmlContent,
-    FtmlRoot
+  DefiniendumNode,
+  DefinitionNode,
+  FtmlContent,
+  FtmlNode,
+  FtmlRoot,
+  RootNode,
 } from "@/types/ftml.types";
+
+function isDefinitionNode(node: FtmlNode): node is DefinitionNode {
+  return node.type === "definition";
+}
+
+function isDefiniendumNode(node: FtmlNode): node is DefiniendumNode {
+  return node.type === "definiendum";
+}
 
 type FloDownInstance = {
   addSymbolDeclaration: (symbol: string) => string;
 };
 
-export function finalFloDown(
-  ast: FtmlRoot,
-  fd: FloDownInstance,
-): FtmlRoot {
-  const clone = structuredClone(ast);
+export function finalFloDown(ast: FtmlRoot, fd: FloDownInstance): FtmlRoot {
+  const clone: FtmlRoot = structuredClone(ast);
 
-  function transformNode(node: any): any {
-    if (Array.isArray(node)) {
-      return node.map(transformNode);
+  function transformNode(node: FtmlNode): FtmlNode {
+    if (isDefinitionNode(node)) {
+      return transformDefinition(node);
     }
 
-    if (!node || typeof node !== "object") {
-      return node;
-    }
+    if (!node.content) return node;
 
-    if (node.type === "definition") {
-      return transformDefinition(node as DefinitionNode);
-    }
-
-    if (node.content) {
-      return {
-        ...node,
-        content: transformNode(node.content),
-      };
-    }
-
-    return node;
+    return {
+      ...node,
+      content: transformContent(node.content),
+    };
   }
 
   function transformDefinition(def: DefinitionNode): DefinitionNode {
@@ -43,7 +40,6 @@ export function finalFloDown(
 
     const declaredSymbols = def.for_symbols ?? [];
 
-    // 1. Create runtime declarations
     for (const symbol of declaredSymbols) {
       if (isMathHubUri(symbol)) continue;
 
@@ -51,45 +47,43 @@ export function finalFloDown(
       symbolMap.set(symbol, runtimeUri);
     }
 
-    // 2. Rewrite content
-    const rewrittenContent = rewriteContent(def.content, symbolMap);
-
     return {
       ...def,
-      for_symbols: declaredSymbols.map((s) =>
-        symbolMap.get(s) ?? s,
-      ),
-      content: rewrittenContent,
+      for_symbols: declaredSymbols.map((s) => symbolMap.get(s) ?? s),
+      content: transformContent(def.content, symbolMap),
     };
   }
 
-  function rewriteContent(
-    content: FtmlContent[] | undefined,
-    symbolMap: Map<string, string>,
+  function transformContent(
+    content: FtmlContent[],
+    symbolMap?: Map<string, string>,
   ): FtmlContent[] {
-    if (!content) return [];
-
     return content.map((item) => {
       if (typeof item === "string") return item;
 
-      if (item.type === "definiendum") {
-        const uri = symbolMap.get(item.uri!) ?? item.uri;
-
+      if (symbolMap && isDefiniendumNode(item)) {
         return {
           ...item,
-          uri,
-        } as DefiniendumNode;
+          uri: symbolMap.get(item.uri) ?? item.uri,
+        };
       }
 
       if (item.content) {
         return {
           ...item,
-          content: rewriteContent(item.content, symbolMap),
+          content: transformContent(item.content, symbolMap),
         };
       }
 
       return item;
     });
+  }
+
+  function transformRoot(root: RootNode): RootNode {
+    return {
+      ...root,
+      content: root.content.map(transformNode),
+    };
   }
 
   function isMathHubUri(uri: string): boolean {
@@ -99,6 +93,14 @@ export function finalFloDown(
     } catch {
       return false;
     }
+  }
+
+  if (Array.isArray(clone)) {
+    return clone.map((n) => transformNode(n));
+  }
+
+  if (clone.type === "root") {
+    return transformRoot(clone as RootNode);
   }
 
   return transformNode(clone);

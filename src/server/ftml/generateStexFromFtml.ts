@@ -2,51 +2,53 @@ import { initFloDown } from "@/lib/flodownClient";
 import {
   FtmlStatement,
   normalizeToRoot,
+  DefinitionNode,
+  FtmlContent,
   FtmlNode,
 } from "@/types/ftml.types";
 
-function rewriteUris(
-  node: unknown,
+function finalFTML(
+  node: FtmlNode,
   uriMap: Map<string, string>,
-): unknown {
-  if (Array.isArray(node)) {
-    return node.map((n) => rewriteUris(n, uriMap));
-  }
+): FtmlNode {
+  if (node.type === "definition") {
+    const def = node as DefinitionNode;
 
-  if (!node || typeof node !== "object") return node;
-
-  const current = node as FtmlNode;
-
-  if (
-    (current.type === "definiendum" ||
-      current.type === "symref") &&
-    current.uri
-  ) {
     return {
-      ...current,
-      uri: uriMap.get(current.uri) ?? current.uri,
-      content: rewriteUris(current.content, uriMap),
-    };
-  }
-
-  if (current.type === "definition") {
-    return {
-      ...current,
-      for_symbols: current.for_symbols?.map(
+      ...def,
+      for_symbols: def.for_symbols.map(
         (s) => uriMap.get(s) ?? s,
       ),
-      content: rewriteUris(current.content, uriMap),
+      content: rewriteContent(def.content, uriMap),
     };
   }
 
-  if (current.content) {
+  if (node.type === "definiendum" || node.type === "symref") {
     return {
-      ...current,
-      content: rewriteUris(current.content, uriMap),
+      ...node,
+      uri: uriMap.get(node.uri!) ?? node.uri,
+      content: rewriteContent(node.content ?? [], uriMap),
     };
   }
 
-  return current;
+  if (node.content) {
+    return {
+      ...node,
+      content: rewriteContent(node.content, uriMap),
+    };
+  }
+
+  return node;
+}
+
+function rewriteContent(
+  content: FtmlContent[],
+  uriMap: Map<string, string>,
+): FtmlContent[] {
+  return content.map((item) => {
+    if (typeof item === "string") return item;
+    return finalFTML(item, uriMap);
+  });
 }
 
 export async function generateStexFromFtml(
@@ -69,20 +71,19 @@ export async function generateStexFromFtml(
 
     if (block.type !== "definition") continue;
 
+    const def = block as DefinitionNode;
     const uriMap = new Map<string, string>();
 
-    if (Array.isArray(block.for_symbols)) {
-      for (const symbolName of block.for_symbols) {
-        if (!symbolName.startsWith("http")) {
-          const declaredUri =
-            fd.addSymbolDeclaration(symbolName);
-          uriMap.set(symbolName, declaredUri);
-        }
+    for (const symbolName of def.for_symbols) {
+      if (!symbolName.startsWith("http")) {
+        const declaredUri =
+          fd.addSymbolDeclaration(symbolName);
+        uriMap.set(symbolName, declaredUri);
       }
     }
 
-    const rewritten = rewriteUris(block, uriMap);
-    fd.addElement(rewritten);
+    const ftmlEle = finalFTML(block, uriMap);
+    fd.addElement(ftmlEle);
   }
 
   return fd.getStex();
