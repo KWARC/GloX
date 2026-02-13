@@ -1,8 +1,8 @@
 import prisma from "@/lib/prisma";
 import { ExtractedItem } from "@/server/text-selection";
 import {
+  DefinitionNode,
   FtmlStatement,
-  ParagraphNode,
   assertFtmlStatement,
 } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
@@ -34,9 +34,15 @@ export const createDefinition = createServerFn({ method: "POST" })
       throw new Error("Missing definition fields");
     }
 
-    const statement: ParagraphNode = {
-      type: "paragraph",
-      content: [data.originalText.trim()],
+    const statement: DefinitionNode = {
+      type: "definition",
+      for_symbols: [],
+      content: [
+        {
+          type: "paragraph",
+          content: [data.originalText.trim()],
+        },
+      ],
     };
 
     await prisma.definition.create({
@@ -113,11 +119,6 @@ export const listDefinition = createServerFn({ method: "GET" })
       where: { documentId: data.documentId },
       orderBy: { createdAt: "asc" },
       include: {
-        definienda: {
-          include: {
-            definiendum: true,
-          },
-        },
         symbolicRefs: {
           include: {
             symbolicReference: true,
@@ -141,7 +142,6 @@ export const listDefinition = createServerFn({ method: "GET" })
         filePath: def.filePath,
         fileName: def.fileName,
         language: def.language,
-        definienda: def.definienda,
         symbolicRefs: def.symbolicRefs,
       };
     });

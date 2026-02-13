@@ -15,7 +15,7 @@ import {
 } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
-type ResolveSymbolicRefInput = {
+type SymbolicRefInput = {
   definitionId: string;
   selection: {
     text: string;
@@ -23,12 +23,13 @@ type ResolveSymbolicRefInput = {
   symRef: UnifiedSymbolicReference;
 };
 
-export const resolveSymbolicRef = createServerFn({ method: "POST" })
-  .inputValidator((data: ResolveSymbolicRefInput) => data)
+export const symbolicRef = createServerFn({ method: "POST" })
+  .inputValidator((data: SymbolicRefInput) => data)
   .handler(async ({ data }) => {
     const { definitionId, selection, symRef } = data;
 
     let parsed: ParsedMathHubUri;
+
     if (symRef.source === "MATHHUB") {
       parsed = parseUri(symRef.uri);
     } else {
@@ -82,6 +83,18 @@ export const resolveSymbolicRef = createServerFn({ method: "POST" })
       location.offset + selection.text.length,
       symrefNode,
     );
+
+    if (symRef.source === "DB") {
+      const defNode = updatedAst.content[0];
+
+      if (defNode && defNode.type === "definition") {
+        const existing = defNode.for_symbols ?? [];
+
+        if (!existing.includes(parsed.conceptUri)) {
+          defNode.for_symbols = [...existing, parsed.conceptUri];
+        }
+      }
+    }
 
     const statementToStore = unwrapRoot(updatedAst);
 

@@ -1,10 +1,10 @@
 import { extractTextContent } from "@/server/ftml/astOperations";
-import { FtmlRoot, normalizeToRoot } from "@/types/ftml.types";
+import { FtmlNode, FtmlRoot, normalizeToRoot } from "@/types/ftml.types";
 
 export type DefiniendumInfo = {
   uri: string;
   text: string;
-  definiendumId: string;
+  symbolId: string;
 };
 
 export type SymbolicRefInfo = {
@@ -14,52 +14,50 @@ export type SymbolicRefInfo = {
 };
 
 function walk(
-  node: any,
+  node: FtmlNode | FtmlNode[],
   acc: {
     definienda: { uri: string; text: string }[];
     symrefs: { uri: string; text: string }[];
   },
-) {
+): void {
   if (Array.isArray(node)) {
     node.forEach((n) => walk(n, acc));
     return;
   }
-  if (!node || typeof node !== "object") return;
 
   if (node.type === "definiendum") {
     acc.definienda.push({
-      uri: node.uri,
-      text: extractTextContent(node.content),
+      uri: node.uri!,
+      text: extractTextContent(node.content ?? []),
     });
   }
 
   if (node.type === "symref") {
     acc.symrefs.push({
-      uri: node.uri,
-      text: extractTextContent(node.content),
+      uri: node.uri!,
+      text: extractTextContent(node.content ?? []),
     });
   }
 
-  if (node.content) walk(node.content, acc);
+  if (node.content) {
+    node.content.forEach((c) => {
+      if (typeof c !== "string") {
+        walk(c, acc);
+      }
+    });
+  }
 }
 
 export function extractSemanticIndex(
   statement: FtmlRoot,
   definition: {
-    definienda?: {
-      definiendum: { id: string; symbolName: string };
-    }[];
     symbolicRefs?: {
       symbolicReference: { id: string; conceptUri: string };
     }[];
   },
-): {
-  definienda: DefiniendumInfo[];
-  symbolicRefs: SymbolicRefInfo[];
-} {
+) {
   const root = normalizeToRoot(statement);
-  const dbDefinienda = definition.definienda ?? [];
-  const dbSymbolicRefs = definition.symbolicRefs ?? [];
+
   const collected = {
     definienda: [] as { uri: string; text: string }[],
     symrefs: [] as { uri: string; text: string }[],
@@ -67,30 +65,18 @@ export function extractSemanticIndex(
 
   walk(root.content, collected);
 
-  const definienda = collected.definienda.map((d) => {
-    const match = dbDefinienda.find((x) => x.definiendum.symbolName === d.uri);
-
-    if (!match) {
-      throw new Error(
-        `Definiendum "${d.uri}" exists in AST but is not linked to this definition`,
-      );
-    }
-
-    return {
-      ...d,
-      definiendumId: match.definiendum.id,
-    };
-  });
+  const definienda = collected.definienda.map((d) => ({
+    ...d,
+    symbolId: d.uri,
+  }));
 
   const symbolicRefs = collected.symrefs.map((r) => {
-    const match = dbSymbolicRefs.find(
+    const match = definition.symbolicRefs?.find(
       (x) => x.symbolicReference.conceptUri === r.uri,
     );
 
     if (!match) {
-      throw new Error(
-        `SymbolicRef "${r.uri}" exists in AST but is not linked to this definition`,
-      );
+      throw new Error(`SymbolicRef "${r.uri}" exists in AST but not linked`);
     }
 
     return {

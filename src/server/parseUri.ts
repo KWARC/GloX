@@ -38,43 +38,6 @@ export function parseUri(uri: string): ParsedMathHubUri {
   };
 }
 
-type finalFTML = FtmlNode | FtmlContent | FtmlContent[] | FtmlRoot;
-
-export function finalFloDown(
-  node: finalFTML,
-  symbol: string,
-): finalFTML {
-  if (Array.isArray(node)) {
-    return node.map((n) => finalFloDown(n, symbol)) as FtmlContent[];
-  }
-
-  if (!node || typeof node !== "object") return node;
-
-  if (node.type === "definition") {
-    return {
-      ...node,
-      for_symbols: [symbol],
-      content: node.content ? (finalFloDown(node.content, symbol) as FtmlContent[]) : undefined,
-    };
-  }
-
-  if (node.type === "definiendum") {
-    return {
-      ...node,
-      uri: symbol,
-    };
-  }
-
-  if (node.content) {
-    return {
-      ...node,
-      content: finalFloDown(node.content, symbol) as FtmlContent[],
-    };
-  }
-
-  return node;
-}
-
 export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
   uri: string;
   text: string;

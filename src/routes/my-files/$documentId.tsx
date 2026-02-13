@@ -11,7 +11,7 @@ import { documentPagesQuery } from "@/queries/documentPages";
 import { queryClient } from "@/queryClient";
 import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
-import { normalizeSymRef } from "@/server/parseUri";
+import { normalizeSymRef, parseUri } from "@/server/parseUri";
 import {
   ActivePage,
   ExtractedItem,
@@ -19,15 +19,16 @@ import {
   useTextSelection,
   useValidation,
 } from "@/server/text-selection";
-import { createDefiniendum } from "@/serverFns/definiendum.server";
+import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import {
   deleteDefinition,
   listDefinition,
   updateDefinitionMeta,
 } from "@/serverFns/extractDefinition.server";
-import { resolveSymbolicRef } from "@/serverFns/resolveSymbolicRef.server";
+import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
+import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
-import { FtmlStatement } from "@/types/ftml.types";
+import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
 import {
   ActionIcon,
   Box,
@@ -99,42 +100,23 @@ function RouteComponent() {
   const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
     null,
   );
-  const [isBusy, setIsBusy] = useState(false);
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
-  const freezeRender =
-    isBusy ||
-    editingId !== null ||
-    mode === "SymbolicRef" ||
-    defDialogOpen ||
-    semanticPanelOpen;
-
-  async function withFreeze(fn: () => Promise<void>) {
-    setIsBusy(true);
-    try {
-      await fn();
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
   async function handleDeleteDefinition(id: string) {
-    await withFreeze(async () => {
-      if (!confirm("Delete this extracted definition?")) return;
+    if (!confirm("Delete this extracted definition?")) return;
 
-      await deleteDefinition({ data: { id } });
-      await queryClient.invalidateQueries({
-        queryKey: ["definitions", documentId],
-      });
-
-      if (lockedByExtractId === id) {
-        setLockedByExtractId(null);
-        setEditingId(null);
-      }
+    await deleteDefinition({ data: { id } });
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
     });
+
+    if (lockedByExtractId === id) {
+      setLockedByExtractId(null);
+      setEditingId(null);
+    }
   }
 
   function handleLeftSelection(pageId: string) {
@@ -163,7 +145,7 @@ function RouteComponent() {
 
   function handleEditDefiniendum(
     definitionId: string,
-    def: { uri: string; text: string; definiendumId: string },
+    def: { uri: string; text: string; symbolId: string },
   ) {
     setDefExtractId(definitionId);
     setEditingNodeId(def.uri);
@@ -185,17 +167,15 @@ function RouteComponent() {
     definitionId: string,
     target: { type: "definiendum" | "symref"; uri: string },
   ) {
-    await withFreeze(async () => {
-      await updateDefinitionAst({
-        data: {
-          definitionId,
-          operation: { kind: "removeSemantic", target },
-        },
-      });
+    await updateDefinitionAst({
+      data: {
+        definitionId,
+        operation: { kind: "removeSemantic", target },
+      },
+    });
 
-      await queryClient.invalidateQueries({
-        queryKey: ["definitions", documentId],
-      });
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
     });
     setSemanticPanelOpen(false);
     setSemanticPanelDefId(null);
@@ -239,51 +219,118 @@ function RouteComponent() {
     clearAll();
   }
 
-  async function handleDefiniendumSubmit(params: {
-    symbolName: string;
-    alias: string;
-    symdecl: boolean;
-  }) {
+  async function handleDefiniendumSubmit(
+    params:
+      | { mode: "CREATE"; symbolName: string; alias: string; symdecl: true }
+      | { mode: "PICK_EXISTING"; selectedSymbol: SymbolSearchResult },
+  ) {
     if (!defExtractId) return;
     if (!validate(futureRepo, filePath, fileName, language)) return;
-    await withFreeze(async () => {
-      if (editingNodeId) {
-        const newUri = `LOCAL:${params.symbolName}`;
 
-        await updateDefinitionAst({
-          data: {
-            definitionId: defExtractId,
-            operation: {
-              kind: "replaceSemantic",
-              target: { type: "definiendum", uri: editingNodeId },
-              payload: {
-                type: "definiendum",
-                uri: newUri,
-                content: [params.symbolName],
-              },
-            },
-          },
-        });
+    if (editingNodeId) {
+      let newUri: string;
+
+      if (params.mode === "CREATE") {
+        newUri = params.symbolName;
+      } else if (params.selectedSymbol.source === "DB") {
+        newUri = params.selectedSymbol.symbolName;
       } else {
-        await createDefiniendum({
+        const parsed = parseUri(params.selectedSymbol.uri);
+        newUri = parsed.conceptUri;
+      }
+      let isDeclared: boolean;
+
+      if (params.mode === "CREATE") {
+        isDeclared = true;
+      } else {
+        isDeclared = false;
+      }
+
+      const payload: DefiniendumNode = {
+        type: "definiendum",
+        uri: newUri,
+        content: [
+          params.mode === "CREATE"
+            ? params.alias || params.symbolName
+            : params.selectedSymbol.source === "DB"
+              ? params.selectedSymbol.symbolName
+              : parseUri(params.selectedSymbol.uri).symbol,
+        ],
+        symdecl: isDeclared,
+      };
+
+      await updateDefinitionAst({
+        data: {
+          definitionId: defExtractId,
+          operation: {
+            kind: "replaceSemantic",
+            target: { type: "definiendum", uri: editingNodeId },
+            payload,
+          },
+        },
+      });
+    } else {
+      if (params.mode === "CREATE") {
+        await createSymbolDefiniendum({
           data: {
             definitionId: defExtractId,
-            symbolName: params.symbolName.trim(),
-            alias: params.alias?.trim() || null,
             selectedText: defExtractText,
-            symbolDeclared: params.symdecl,
+            symdecl: true,
+
             futureRepo: futureRepo.trim(),
             filePath: filePath.trim(),
             fileName: fileName.trim(),
             language: language.trim(),
+
+            symbolName: params.symbolName,
+            alias: params.alias || null,
           },
         });
+      } else {
+        if (params.selectedSymbol.source === "DB") {
+          await createSymbolDefiniendum({
+            data: {
+              definitionId: defExtractId,
+              selectedText: defExtractText,
+              symdecl: false,
+
+              futureRepo: futureRepo.trim(),
+              filePath: filePath.trim(),
+              fileName: fileName.trim(),
+              language: language.trim(),
+
+              symbolName: "",
+
+              selectedSymbolSource: "DB",
+              selectedSymbolId: params.selectedSymbol.id,
+            },
+          });
+        } else {
+          await createSymbolDefiniendum({
+            data: {
+              definitionId: defExtractId,
+              selectedText: defExtractText,
+              symdecl: false,
+
+              futureRepo: futureRepo.trim(),
+              filePath: filePath.trim(),
+              fileName: fileName.trim(),
+              language: language.trim(),
+
+              symbolName: "",
+
+              selectedSymbolSource: "MATHHUB",
+              selectedSymbolUri: params.selectedSymbol.uri,
+            },
+          });
+        }
       }
 
       await queryClient.invalidateQueries({
         queryKey: ["definitions", documentId],
       });
-    });
+    }
+
     setEditingNodeId(null);
     setDefDialogOpen(false);
     setDefExtractId(null);
@@ -292,39 +339,37 @@ function RouteComponent() {
 
   async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
     if (!defExtractId) return;
-    await withFreeze(async () => {
-      if (editingNodeId) {
-        const { uri, text } = normalizeSymRef(symRef);
+    if (editingNodeId) {
+      const { uri, text } = normalizeSymRef(symRef);
 
-        await updateDefinitionAst({
-          data: {
-            definitionId: defExtractId,
-            operation: {
-              kind: "replaceSemantic",
-              target: { type: "symref", uri: editingNodeId },
-              payload: {
-                type: "symref",
-                uri,
-                content: [text],
-              },
+      await updateDefinitionAst({
+        data: {
+          definitionId: defExtractId,
+          operation: {
+            kind: "replaceSemantic",
+            target: { type: "symref", uri: editingNodeId },
+            payload: {
+              type: "symref",
+              uri,
+              content: [text],
             },
           },
-        });
-      } else {
-        if (!selection) return;
-
-        await resolveSymbolicRef({
-          data: {
-            definitionId: defExtractId,
-            selection: { text: selection.text },
-            symRef,
-          },
-        });
-      }
-
-      await queryClient.invalidateQueries({
-        queryKey: ["definitions", documentId],
+        },
       });
+    } else {
+      if (!selection) return;
+
+      await symbolicRef({
+        data: {
+          definitionId: defExtractId,
+          selection: { text: selection.text },
+          symRef,
+        },
+      });
+    }
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
     });
     setEditingNodeId(null);
     setMode(null);
@@ -525,7 +570,6 @@ function RouteComponent() {
                   onDelete={handleDeleteDefinition}
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
-                  floDownEnabled={!freezeRender}
                   onOpenSemanticPanel={handleOpenSemanticPanel}
                 />
               </Tabs.Panel>
@@ -573,7 +617,6 @@ function RouteComponent() {
                 onDelete={handleDeleteDefinition}
                 onSelection={handleRightSelection}
                 onToggleEdit={handleToggleEdit}
-                floDownEnabled={!freezeRender}
                 onOpenSemanticPanel={handleOpenSemanticPanel}
               />
             </Paper>

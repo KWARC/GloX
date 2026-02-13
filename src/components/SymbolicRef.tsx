@@ -1,31 +1,23 @@
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
-import { searchDefiniendum } from "@/serverFns/definiendum.server";
-import { ftmlSearchSymbols } from "@/server/ftml/searchSymbols";
+import { parseUri } from "@/server/parseUri";
+import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import {
   ActionIcon,
   Button,
   Group,
   Paper,
   Portal,
-  ScrollArea,
   Stack,
   Text,
-  TextInput,
   Tooltip,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { RenderDbSymbol, RenderSymbolicUri } from "./RenderSymbolicUri";
+import { SymbolResult } from "./SymbolResult";
 
 const SEARCH_MODAL_WIDTH = 440;
 const SEARCH_MODAL_RIGHT_OFFSET = 60;
 const SEARCH_MODAL_TOP_OFFSET = 80;
-const SEARCH_RESULTS_HEIGHT = 240;
-const MIN_SEARCH_LENGTH = 2;
-const MATHHUB_RESULTS_LIMIT = 15;
-const MATHHUB_SECTION_HEIGHT = Math.floor(SEARCH_RESULTS_HEIGHT * 0.7);
-const DB_SECTION_HEIGHT = Math.floor(SEARCH_RESULTS_HEIGHT * 0.3);
 
 interface SymbolicRefProps {
   conceptUri: string;
@@ -40,39 +32,27 @@ export function SymbolicRef({
 }: SymbolicRefProps) {
   const [searchQuery, setSearchQuery] = useState(() => conceptUri);
   const [selectedSymbol, setSelectedSymbol] =
-    useState<UnifiedSymbolicReference | null>(null);
-
-  const isSearchValid = searchQuery.trim().length >= MIN_SEARCH_LENGTH;
-
-  const { data: mathHubResults = [], isFetching: isSearchingMathHub } =
-    useQuery({
-      queryKey: ["symbol-search", searchQuery],
-      queryFn: () => ftmlSearchSymbols(searchQuery, MATHHUB_RESULTS_LIMIT),
-      enabled: isSearchValid,
-    });
-
-  const { data: databaseResults = [], isFetching: isSearchingDatabase } =
-    useQuery({
-      queryKey: ["db-symbol-search", searchQuery],
-      queryFn: () => searchDefiniendum({ data: searchQuery }),
-      enabled: isSearchValid,
-    });
+    useState<SymbolSearchResult | null>(null);
 
   const handleSymbolSelect = () => {
-    if (selectedSymbol) {
-      onSelect(selectedSymbol);
+    if (!selectedSymbol) return;
+
+    if (selectedSymbol.source === "DB") {
+      onSelect({
+        source: "DB",
+        symbolName: selectedSymbol.symbolName,
+        futureRepo: selectedSymbol.futureRepo,
+        filePath: selectedSymbol.filePath,
+        fileName: selectedSymbol.fileName,
+        language: selectedSymbol.language,
+      });
+    } else {
+      onSelect({
+        source: "MATHHUB",
+        uri: selectedSymbol.uri,
+      });
     }
   };
-
-  const isReady = !isSearchingMathHub && !isSearchingDatabase;
-
-  const hasResults = mathHubResults.length > 0 || databaseResults.length > 0;
-
-  const showNoResults =
-    isSearchValid &&
-    isReady &&
-    mathHubResults.length === 0 &&
-    databaseResults.length === 0;
 
   useEffect(() => {
     const stop = (e: Event) => e.stopPropagation();
@@ -125,123 +105,12 @@ export function SymbolicRef({
             </Text>
           </Paper>
 
-          <TextInput
-            label="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.currentTarget.value)}
-            placeholder="Edit to search for another definition…"
+          <SymbolResult
+            initialQuery={searchQuery}
+            onQueryChange={setSearchQuery}
+            selectedSymbol={selectedSymbol}
+            onSelectSymbol={setSelectedSymbol}
           />
-
-          {showNoResults && (
-            <Paper withBorder p="sm" radius="md" bg="gray.0">
-              <Text size="xs" c="dimmed">
-                No matching symbols found.
-              </Text>
-            </Paper>
-          )}
-
-          {isReady && hasResults && (
-            <Paper withBorder p="sm" radius="md">
-              <Group justify="space-between" mb="xs">
-                <Text size="xs" fw={600}>
-                  Found Symbols
-                </Text>
-              </Group>
-              <Stack gap={4} mt="sm">
-                <Group justify="space-between">
-                  <Text size="xs" fw={500} c="dimmed">
-                    Local / Temporary
-                  </Text>
-
-                  {databaseResults.length > 0 && (
-                    <Text size="xs" c="dimmed">
-                      {databaseResults.length} local
-                    </Text>
-                  )}
-                </Group>
-
-                <ScrollArea
-                  h={DB_SECTION_HEIGHT}
-                  type="always"
-                  scrollbarSize={6}
-                  onWheelCapture={(e) => e.stopPropagation()}
-                >
-                  <Stack gap={4}>
-                    {databaseResults.map((db) => (
-                      <Button
-                        key={`db:${db.id}`}
-                        variant="subtle"
-                        size="xs"
-                        justify="space-between"
-                        onClick={() =>
-                          setSelectedSymbol({
-                            source: "DB",
-                            symbolName: db.symbolName,
-                            futureRepo: db.futureRepo,
-                            filePath: db.filePath,
-                            fileName: db.fileName,
-                            language: db.language,
-                          })
-                        }
-                      >
-                        <RenderDbSymbol
-                          symbol={{
-                            source: "DB",
-                            symbolName: db.symbolName,
-                            futureRepo: db.futureRepo,
-                          }}
-                        />
-                      </Button>
-                    ))}
-
-                    {!databaseResults.length && (
-                      <Text size="xs" c="dimmed" ta="center">
-                        No local symbols
-                      </Text>
-                    )}
-                  </Stack>
-                </ScrollArea>
-              </Stack>
-
-              <Stack gap={4}>
-                <Text size="xs" fw={500} c="dimmed">
-                  MathHub
-                </Text>
-
-                <ScrollArea
-                  h={MATHHUB_SECTION_HEIGHT}
-                  type="always"
-                  scrollbarSize={6}
-                  onWheelCapture={(e) => e.stopPropagation()}
-                >
-                  <Stack gap={4}>
-                    {mathHubResults.map((uri) => (
-                      <Button
-                        key={`mh:${uri}`}
-                        variant="subtle"
-                        size="xs"
-                        justify="space-between"
-                        onClick={() =>
-                          setSelectedSymbol({
-                            source: "MATHHUB",
-                            uri,
-                          })
-                        }
-                      >
-                        <RenderSymbolicUri uri={uri} />
-                      </Button>
-                    ))}
-
-                    {!mathHubResults.length && (
-                      <Text size="xs" c="dimmed" ta="center">
-                        No MathHub results
-                      </Text>
-                    )}
-                  </Stack>
-                </ScrollArea>
-              </Stack>
-            </Paper>
-          )}
 
           {selectedSymbol?.source === "MATHHUB" && (
             <Paper withBorder p="sm" bg="green.0" radius="md">
@@ -258,7 +127,7 @@ export function SymbolicRef({
               >
                 <span style={{ cursor: "help", display: "inline-block" }}>
                   <Text size="xs" ff="monospace" component="span">
-                    <RenderSymbolicUri uri={selectedSymbol.uri} />
+                    {parseUri(selectedSymbol.uri).symbol}
                   </Text>
                 </span>
               </Tooltip>
@@ -270,14 +139,9 @@ export function SymbolicRef({
               <Text size="xs" fw={600} c="dimmed" mb={4}>
                 Selected Symbol (Database):
               </Text>
-
-              <RenderDbSymbol
-                symbol={{
-                  source: "DB",
-                  symbolName: selectedSymbol.symbolName,
-                  futureRepo: selectedSymbol.futureRepo,
-                }}
-              />
+              <Text size="xs" ff="monospace">
+                {selectedSymbol.symbolName}
+              </Text>
             </Paper>
           )}
 
