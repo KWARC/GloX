@@ -13,7 +13,7 @@ import {
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
-import { RenderDbSymbol, RenderSymbolicUri } from "./RenderSymbolicUri";
+import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { SymbolResult } from "./SymbolResult";
 
 type DefiniendumMode = "CREATE" | "PICK_EXISTING";

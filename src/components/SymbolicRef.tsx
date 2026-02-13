@@ -12,7 +12,7 @@ import {
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import { RenderDbSymbol, RenderSymbolicUri } from "./RenderSymbolicUri";
+import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { SymbolResult } from "./SymbolResult";
 
 const SEARCH_MODAL_WIDTH = 440;
