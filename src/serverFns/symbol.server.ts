@@ -2,10 +2,9 @@ import prisma from "@/lib/prisma";
 import { insertDefiniendum } from "@/server/ftml/astOperations";
 import {
   assertFtmlStatement,
-  DefinitionNode,
-  FtmlNode,
+  isDefinitionNode,
+  isParagraphNode,
   normalizeToRoot,
-  ParagraphNode,
   RootNode,
   unwrapRoot,
 } from "@/types/ftml.types";
@@ -28,22 +27,6 @@ export type CreateSymbolDefiniendumInput = {
   selectedSymbolId?: string;
   selectedSymbolUri?: string;
 };
-
-function isDefinitionNode(node: unknown): node is DefinitionNode {
-  return (
-    typeof node === "object" &&
-    node !== null &&
-    (node as FtmlNode).type === "definition"
-  );
-}
-
-function isParagraphNode(node: unknown): node is ParagraphNode {
-  return (
-    typeof node === "object" &&
-    node !== null &&
-    (node as FtmlNode).type === "paragraph"
-  );
-}
 
 export const createSymbolDefiniendum = createServerFn({ method: "POST" })
   .inputValidator((data: CreateSymbolDefiniendumInput) => data)
@@ -136,7 +119,11 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
 
       const firstContent = definitionNode.content?.[0];
 
-      if (!isParagraphNode(firstContent)) {
+      if (
+        !firstContent ||
+        typeof firstContent === "string" ||
+        !isParagraphNode(firstContent)
+      ) {
         throw new Error("Expected paragraph node inside definition");
       }
 

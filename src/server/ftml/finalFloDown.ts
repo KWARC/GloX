@@ -1,19 +1,12 @@
 import {
-  DefiniendumNode,
   DefinitionNode,
   FtmlContent,
   FtmlNode,
   FtmlRoot,
+  isDefiniendumNode,
+  isDefinitionNode,
   RootNode,
 } from "@/types/ftml.types";
-
-function isDefinitionNode(node: FtmlNode): node is DefinitionNode {
-  return node.type === "definition";
-}
-
-function isDefiniendumNode(node: FtmlNode): node is DefiniendumNode {
-  return node.type === "definiendum";
-}
 
 type FloDownInstance = {
   addSymbolDeclaration: (symbol: string) => string;
