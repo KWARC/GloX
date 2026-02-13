@@ -1,5 +1,4 @@
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
-import { parseUri } from "@/server/parseUri";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import {
   ActionIcon,
@@ -13,6 +12,7 @@ import {
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { RenderDbSymbol, RenderSymbolicUri } from "./RenderSymbolicUri";
 import { SymbolResult } from "./SymbolResult";
 
 const SEARCH_MODAL_WIDTH = 440;
@@ -126,9 +126,7 @@ export function SymbolicRef({
                 zIndex={5000}
               >
                 <span style={{ cursor: "help", display: "inline-block" }}>
-                  <Text size="xs" ff="monospace" component="span">
-                    {parseUri(selectedSymbol.uri).symbol}
-                  </Text>
+                  <RenderSymbolicUri uri={selectedSymbol.uri} />
                 </span>
               </Tooltip>
             </Paper>
@@ -137,11 +135,15 @@ export function SymbolicRef({
           {selectedSymbol?.source === "DB" && (
             <Paper withBorder p="sm" bg="green.0" radius="md">
               <Text size="xs" fw={600} c="dimmed" mb={4}>
-                Selected Symbol (Database):
+                Selected Symbol:
               </Text>
-              <Text size="xs" ff="monospace">
-                {selectedSymbol.symbolName}
-              </Text>
+              <RenderDbSymbol
+                symbol={{
+                  symbolName: selectedSymbol.symbolName,
+                  source: "DB",
+                  futureRepo: selectedSymbol.futureRepo,
+                }}
+              />
             </Paper>
           )}
 

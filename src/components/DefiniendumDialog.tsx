@@ -12,7 +12,8 @@ import {
 } from "@mantine/core";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useForm } from "@tanstack/react-form";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { RenderDbSymbol, RenderSymbolicUri } from "./RenderSymbolicUri";
 import { SymbolResult } from "./SymbolResult";
 
 type DefiniendumMode = "CREATE" | "PICK_EXISTING";
@@ -34,8 +35,8 @@ export function DefiniendumDialog({
   onSubmit,
   onClose,
 }: DefiniendumDialogProps) {
-  const [mode, setMode] = useState<DefiniendumMode>("CREATE");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [mode, setMode] = useState<DefiniendumMode>("PICK_EXISTING");
+  const [searchQuery, setSearchQuery] = useState(extractedText ?? "");
   const [selectedSymbol, setSelectedSymbol] =
     useState<SymbolSearchResult | null>(null);
 
@@ -57,19 +58,6 @@ export function DefiniendumDialog({
     },
   });
 
-  useEffect(() => {
-    if (opened) {
-      setMode("CREATE");
-      setSearchQuery(extractedText ?? "");
-      setSelectedSymbol(null);
-      form.reset({
-        symbolName: extractedText ?? "",
-        alias: "",
-        symdecl: true,
-      });
-    }
-  }, [opened, extractedText]);
-
   const handlePickExisting = () => {
     if (!selectedSymbol) return;
     onSubmit({
@@ -83,6 +71,7 @@ export function DefiniendumDialog({
   return (
     <Portal>
       <Paper
+        key={`${opened}-${extractedText}`}
         withBorder
         shadow="xl"
         p="lg"
@@ -204,11 +193,18 @@ export function DefiniendumDialog({
                   <Text size="xs" fw={600} c="dimmed" mb={4}>
                     Selected Symbol:
                   </Text>
-                  <Text size="xs" ff="monospace">
-                    {selectedSymbol.source === "DB"
-                      ? selectedSymbol.symbolName
-                      : selectedSymbol.uri}
-                  </Text>
+
+                  {selectedSymbol.source === "DB" ? (
+                    <RenderDbSymbol
+                      symbol={{
+                        symbolName: selectedSymbol.symbolName,
+                        source: "DB",
+                        futureRepo: selectedSymbol.futureRepo,
+                      }}
+                    />
+                  ) : (
+                    <RenderSymbolicUri uri={selectedSymbol.uri} />
+                  )}
                 </Paper>
               )}
 
