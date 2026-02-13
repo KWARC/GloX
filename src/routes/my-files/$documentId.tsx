@@ -2,6 +2,7 @@ import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { DocumentHeader } from "@/components/DocumentHeader";
 import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
+import { ExtractTextDialog } from "@/components/ExtractTextDialog";
 import { LatexConfigModel } from "@/components/LatexConfigModel";
 import { SelectionPopup } from "@/components/SelectionPopup";
 import { SemanticPanel } from "@/components/SemanticPanel";
@@ -100,6 +101,8 @@ function RouteComponent() {
   const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
     null,
   );
+  const [extractDialogOpen, setExtractDialogOpen] = useState(false);
+  const [pendingExtractText, setPendingExtractText] = useState("");
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
@@ -199,24 +202,6 @@ function RouteComponent() {
     clearError("language");
 
     handleSelection("right", { extractId });
-  }
-
-  async function handleExtractToRight() {
-    if (!activePage) return;
-    if (!validate(futureRepo, filePath, fileName, language)) return;
-    if (!selection) return;
-
-    await extractText({
-      documentPageId: activePage.id,
-      pageNumber: activePage.pageNumber,
-      text: selection.text,
-      futureRepo: futureRepo.trim(),
-      filePath: filePath.trim(),
-      fileName: fileName.trim(),
-      language: language.trim(),
-    });
-
-    clearAll();
   }
 
   async function handleDefiniendumSubmit(
@@ -443,6 +428,25 @@ function RouteComponent() {
     setLatexConfigOpen(true);
   }
 
+  async function handleExtractSubmit(editedText: string) {
+    if (!activePage) return;
+    if (!validate(futureRepo, filePath, fileName, language)) return;
+
+    await extractText({
+      documentPageId: activePage.id,
+      pageNumber: activePage.pageNumber,
+      text: editedText,
+      futureRepo: futureRepo.trim(),
+      filePath: filePath.trim(),
+      fileName: fileName.trim(),
+      language: language.trim(),
+    });
+
+    setExtractDialogOpen(false);
+    setPendingExtractText("");
+    clearAll();
+  }
+
   async function handleLatexConfigSubmit(config: {
     futureRepo: string;
     filePath: string;
@@ -627,7 +631,16 @@ function RouteComponent() {
       {popup && (
         <SelectionPopup
           popup={popup}
-          onExtract={popup.source === "left" ? handleExtractToRight : undefined}
+          onExtract={
+            popup.source === "left"
+              ? () => {
+                  if (!selection) return;
+                  setPendingExtractText(selection.text);
+                  setExtractDialogOpen(true);
+                  clearAll();
+                }
+              : undefined
+          }
           onDefiniendum={
             popup.source === "right"
               ? () => {
@@ -691,6 +704,13 @@ function RouteComponent() {
         onEditDefiniendum={handleEditDefiniendum}
         onEditSymbolicRef={handleEditSymbolicRef}
         onDeleteNode={handleDeleteNode}
+      />
+
+      <ExtractTextDialog
+        opened={extractDialogOpen}
+        initialText={pendingExtractText}
+        onClose={() => setExtractDialogOpen(false)}
+        onSubmit={handleExtractSubmit}
       />
 
       <Portal>

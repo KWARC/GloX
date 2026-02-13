@@ -1,5 +1,20 @@
 export type FtmlContent = string | FtmlNode;
 
+export function isNode(value: FtmlContent): value is FtmlNode {
+  return typeof value !== "string";
+}
+
+export function isDefinitionNode(node: FtmlNode): node is DefinitionNode {
+  return node.type === "definition";
+}
+
+export function isParagraphNode(node: FtmlNode): node is ParagraphNode {
+  return node.type === "paragraph";
+}
+
+export function isDefiniendumNode(node: FtmlNode): node is DefiniendumNode {
+  return node.type === "definiendum";
+}
 export interface FtmlNode {
   type: string;
   content?: FtmlContent[];
