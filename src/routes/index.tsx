@@ -1,4 +1,4 @@
-import { CurationSection } from "@/components/curationSection";
+import { CurationSection } from "@/components/CurationSection";
 import { FinalizedDocumentsSection } from "@/components/FinalizedDocumentsSection";
 import UploadDialog from "@/components/UploadDialog";
 import { currentUser } from "@/server/auth/currentUser";
