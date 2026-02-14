@@ -1,7 +1,7 @@
 import { getFileIdentities } from "@/serverFns/latex.server";
 import { Group, Loader, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { StexCuration } from "./stexCuration";
+import { StexCuration } from "./StexCuration";
 
 export function CurationSection() {
   const { data: identities = [], isLoading } = useQuery({
