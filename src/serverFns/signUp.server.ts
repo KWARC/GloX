@@ -46,7 +46,7 @@ export const signup = createServerFn({ method: "POST" })
     const JWT_SECRET = process.env.JWT_SECRET;
     const NODEMAILER_EMAIL_ID = process.env.NODEMAILER_EMAIL_ID;
     const NODEMAILER_EMAIL_PASSWORD = process.env.NODEMAILER_EMAIL_PASSWORD;
-    const APP_URL = process.env.APP_URL || "http://localhost:3000";
+    const APP_URL = process.env.APP_ORIGIN || "http://localhost:3000";
 
     if (!JWT_SECRET || !NODEMAILER_EMAIL_ID || !NODEMAILER_EMAIL_PASSWORD) {
       throw new Error("Server misconfiguration");
@@ -98,7 +98,7 @@ export const signup = createServerFn({ method: "POST" })
         to: email,
         subject: "Verify Your Email Address",
         text: `Verify your email: ${verificationLink}`,
-        html: `<p>Verify your email: <a href="${verificationLink}">${verificationLink}</a></p>`,
+        html: `<p>Verify your to sign up for GloX: <a href="${verificationLink}">${verificationLink}</a></p>`,
       });
 
       return {
