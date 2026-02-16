@@ -8,7 +8,7 @@ export async function uploadDocument(
 ): Promise<UploadDocumentResult> {
   const { file, userId } = input;
 
-  if (!(file instanceof File)) {
+  if (!file || typeof file.arrayBuffer !== "function") {
     throw new Error("INVALID_FILE");
   }
 
@@ -39,16 +39,16 @@ export async function uploadDocument(
   });
 
   try {
-    console.log("EXTRACTION: start", document.id);
+    console.log("EXTRACTION START:", document.id);
+    console.log("File size:", buffer.length);
 
     const pages = await extractPdfPages(buffer);
+    console.log("Pages extracted:", pages.length);
 
     await prisma.$transaction([
       prisma.document.update({
         where: { id: document.id },
-        data: {
-          status: "TEXT_EXTRACTED",
-        },
+        data: { status: "TEXT_EXTRACTED" },
       }),
       prisma.documentPage.createMany({
         data: pages.map((p) => ({
@@ -59,7 +59,7 @@ export async function uploadDocument(
       }),
     ]);
 
-    console.log("EXTRACTION: success", document.id);
+    console.log("EXTRACTION SUCCESS:", document.id);
 
     return {
       status: "OK",
@@ -70,9 +70,7 @@ export async function uploadDocument(
 
     await prisma.document.update({
       where: { id: document.id },
-      data: {
-        status: "FAILED",
-      },
+      data: { status: "FAILED" },
     });
 
     throw error;
