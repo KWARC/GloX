@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { ExtractedItem } from "@/server/text-selection";
 import {
   assertFtmlStatement,
   FtmlNode,
@@ -191,12 +192,18 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
       orderBy: { createdAt: "asc" },
     });
 
-    const typedDefinitions = defs.map((def) => {
+    const typedDefinitions: ExtractedItem[] = defs.map((def) => {
       const statement = assertFtmlStatement(def.statement) as FtmlStatement;
 
       return {
         id: def.id,
+        pageNumber: def.pageNumber,
         statement,
+        futureRepo: def.futureRepo,
+        filePath: def.filePath,
+        fileName: def.fileName,
+        language: def.language,
+        symbolicRefs: [],
       };
     });
 

@@ -9,6 +9,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { IconPencil, IconSettings, IconTrash } from "@tabler/icons-react";
+import { FolderSymlink } from "lucide-react";
 import { FtmlPreview } from "./FtmlPreview";
 
 interface ExtractedTextPanelProps {
@@ -23,6 +24,10 @@ interface ExtractedTextPanelProps {
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
   onOpenSemanticPanel: (definitionId: string) => void;
+  showPageNumber?: boolean;
+  showIdentityPerItem?: boolean;
+  onEditIdentity?: (item: ExtractedItem) => void;
+  showIdentityIconOnly?: boolean;
 }
 
 export function ExtractedTextPanel({
@@ -34,6 +39,10 @@ export function ExtractedTextPanel({
   onDelete,
   onSelection,
   onOpenSemanticPanel,
+  showPageNumber = true,
+  showIdentityPerItem = true,
+  showIdentityIconOnly = false,
+  onEditIdentity,
 }: ExtractedTextPanelProps) {
   return (
     <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
@@ -65,7 +74,11 @@ export function ExtractedTextPanel({
                   }}
                 >
                   <Group justify="space-between" mb={4}>
-                    <Text size="xs">Page {item.pageNumber}</Text>
+                    {showPageNumber ? (
+                      <Text size="xs">Page {item.pageNumber}</Text>
+                    ) : (
+                      <div />
+                    )}
 
                     <Group gap="xs">
                       <ActionIcon
@@ -126,10 +139,28 @@ export function ExtractedTextPanel({
                     </div>
                   )}
 
-                  <Text size="10px" c="dimmed" ff="monospace" mt={6}>
-                    {item.futureRepo}/{item.filePath}/{item.fileName}/
-                    {item.language}
-                  </Text>
+                  {showIdentityPerItem && (
+                    <Group
+                      gap={6}
+                      mt={6}
+                      style={{ cursor: onEditIdentity ? "pointer" : "default" }}
+                      onClick={() => onEditIdentity?.(item)}
+                    >
+                      <FolderSymlink size={14} />
+                      {!showIdentityIconOnly && (
+                        <Text size="10px" c="dimmed" ff="monospace">
+                          {[
+                            item.futureRepo,
+                            item.filePath,
+                            item.fileName,
+                            item.language,
+                          ]
+                            .filter(Boolean)
+                            .join(" / ")}
+                        </Text>
+                      )}
+                    </Group>
+                  )}
                 </Paper>
               );
             })
