@@ -1,4 +1,5 @@
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
+import { DefinitionIdentityDialog } from "@/components/DefinitionFilePathDialog";
 import { DocumentHeader } from "@/components/DocumentHeader";
 import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
@@ -24,7 +25,7 @@ import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import {
   deleteDefinition,
   listDefinition,
-  updateDefinitionMeta,
+  updateDefinitionFilePath,
 } from "@/serverFns/extractDefinition.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
@@ -103,6 +104,10 @@ function RouteComponent() {
   );
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
   const [pendingExtractText, setPendingExtractText] = useState("");
+  const [identityEditOpen, setIdentityEditOpen] = useState(false);
+  const [identityTarget, setIdentityTarget] = useState<ExtractedItem | null>(
+    null,
+  );
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
@@ -164,6 +169,15 @@ function RouteComponent() {
     setEditingNodeId(ref.uri);
     setConceptUri(ref.text);
     setMode("SymbolicRef");
+  }
+
+  function handleEditIdentity(item: ExtractedItem) {
+    setIdentityTarget(item);
+    setFutureRepo(item.futureRepo);
+    setFilePath(item.filePath);
+    setFileName(item.fileName);
+    setLanguage(item.language);
+    setIdentityEditOpen(true);
   }
 
   async function handleDeleteNode(
@@ -387,7 +401,7 @@ function RouteComponent() {
     const ok = validate(futureRepo, filePath, fileName, language);
     if (!ok) return;
 
-    await updateDefinitionMeta({
+    await updateDefinitionFilePath({
       data: {
         id: lockedByExtractId,
         futureRepo: futureRepo.trim(),
@@ -575,6 +589,7 @@ function RouteComponent() {
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
                   onOpenSemanticPanel={handleOpenSemanticPanel}
+                  onEditIdentity={handleEditIdentity}
                 />
               </Tabs.Panel>
             </Tabs>
@@ -622,6 +637,7 @@ function RouteComponent() {
                 onSelection={handleRightSelection}
                 onToggleEdit={handleToggleEdit}
                 onOpenSemanticPanel={handleOpenSemanticPanel}
+                onEditIdentity={handleEditIdentity}
               />
             </Paper>
           </Flex>
@@ -713,6 +729,15 @@ function RouteComponent() {
         onSubmit={handleExtractSubmit}
       />
 
+      <DefinitionIdentityDialog
+        opened={identityEditOpen}
+        onClose={() => {
+          setIdentityEditOpen(false);
+          setIdentityTarget(null);
+        }}
+        definition={identityTarget}
+        invalidateKey={["definitions", documentId]}
+      />
       <Portal>
         <ActionIcon
           size={isMobile ? "lg" : "xl"}

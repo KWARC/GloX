@@ -6,6 +6,7 @@ import {
   assertFtmlStatement,
 } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
+import { FileIdentity } from "./latex.server";
 
 export type CreateDefinitionInput = {
   documentId: string;
@@ -90,7 +91,7 @@ export const deleteDefinition = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-export const updateDefinitionMeta = createServerFn({ method: "POST" })
+export const updateDefinitionFilePath = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       id: string;
@@ -110,6 +111,37 @@ export const updateDefinitionMeta = createServerFn({ method: "POST" })
         language: data.language,
       },
     });
+  });
+
+export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      identity: FileIdentity;
+      futureRepo: string;
+      filePath: string;
+      fileName: string;
+      language: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const { identity, futureRepo, filePath, fileName, language } = data;
+
+    await prisma.definition.updateMany({
+      where: {
+        futureRepo: identity.futureRepo,
+        filePath: identity.filePath,
+        fileName: identity.fileName,
+        language: identity.language,
+      },
+      data: {
+        futureRepo,
+        filePath,
+        fileName,
+        language,
+      },
+    });
+
+    return { success: true };
   });
 
 export const listDefinition = createServerFn({ method: "GET" })

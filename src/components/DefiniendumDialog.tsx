@@ -12,7 +12,7 @@ import {
 } from "@mantine/core";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useForm } from "@tanstack/react-form";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { SymbolResult } from "./SymbolResult";
 
@@ -57,6 +57,20 @@ export function DefiniendumDialog({
       }
     },
   });
+
+  useEffect(() => {
+    if (!opened) return;
+
+    setMode("PICK_EXISTING");
+    setSearchQuery(extractedText ?? "");
+    setSelectedSymbol(null);
+
+    form.reset({
+      symbolName: extractedText ?? "",
+      alias: "",
+      symdecl: true,
+    });
+  }, [opened, extractedText]);
 
   const handlePickExisting = () => {
     if (!selectedSymbol) return;
