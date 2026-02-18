@@ -21,7 +21,9 @@ function RouteComponent() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateEmail = (value: string) => {
@@ -35,19 +37,22 @@ function RouteComponent() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const emailError = validateEmail(email);
-    if (emailError) {
-      setError(emailError);
+    setEmailError(null);
+    setPasswordError(null);
+    setFormError(null);
+
+    const emailValidation = validateEmail(email);
+    if (emailValidation) {
+      setEmailError(emailValidation);
       return;
     }
 
     if (!password) {
-      setError("Password is required");
+      setPasswordError("Password is required");
       return;
     }
 
     setIsSubmitting(true);
-    setError(null);
 
     try {
       const res = await login({ data: { email, password } });
@@ -57,10 +62,19 @@ function RouteComponent() {
         return;
       }
 
-      setError(res.error ?? "Login failed");
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("An unexpected error occurred");
+      if (res.error) {
+        if (res.error.code === "INVALID_CREDENTIALS") {
+          setPasswordError(res.error.message);
+        } else if (res.error.code === "UNVERIFIED_EMAIL") {
+          setFormError(res.error.message);
+        } else {
+          setFormError("Login failed");
+        }
+      } else {
+        setFormError("Login failed");
+      }
+    } catch {
+      setFormError("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
     }
@@ -81,7 +95,7 @@ function RouteComponent() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              error={error && error.includes("email") ? error : undefined}
+              error={emailError ?? undefined}
               required
               autoFocus
             />
@@ -91,17 +105,15 @@ function RouteComponent() {
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              error={error && error.includes("Password") ? error : undefined}
+              error={passwordError ?? undefined}
               required
             />
 
-            {error &&
-              !error.includes("email") &&
-              !error.includes("Password") && (
-                <Text c="red" size="sm">
-                  {error}
-                </Text>
-              )}
+            {formError && (
+              <Text c="red" size="sm">
+                {formError}
+              </Text>
+            )}
 
             <Button
               type="submit"

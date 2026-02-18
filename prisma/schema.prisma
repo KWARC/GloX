@@ -13,6 +13,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  ADMIN
+  USER
+}
+
 model Document {
   id       String @id @default(uuid())
   filename String
@@ -60,17 +65,23 @@ enum SymbolicRefSource {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  firstName    String?
-  lastName     String?
-  email        String     @unique
-  passwordHash String?
-  createdAt    DateTime   @default(now())
-  documents    Document[]
+  id            String   @id @default(uuid())
+  firstName     String?
+  lastName      String?
+  email         String   @unique
+  passwordHash  String?
+  emailVerified Boolean  @default(false)
+  role          UserRole @default(USER)
+
+  createdAt          DateTime            @default(now())
+  documents          Document[]
+  DefinitionsHistory DefinitionVersion[]
+  createdDefinitions Definition[]        @relation("DefinitionCreatedBy")
+  updatedDefinitions Definition[]        @relation("DefinitionUpdatedBy")
 }
 
 model Symbol {
-  id String @id @default(uuid())
+  id         String  @id @default(uuid())
   symbolName String
   alias      String?
 
@@ -123,12 +134,21 @@ model Definition {
   originalText String @db.Text
   statement    Json
 
-  symbolicRefs      DefinitionSymbolicRef[]
+  symbolicRefs DefinitionSymbolicRef[]
 
   futureRepo String @default("Glox")
   filePath   String @default("Glox")
   fileName   String @default("Glox")
   language   String @default("en")
+
+  createdById String
+  createdBy   User   @relation("DefinitionCreatedBy", fields: [createdById], references: [id])
+
+  updatedById String?
+  updatedBy   User?   @relation("DefinitionUpdatedBy", fields: [updatedById], references: [id])
+
+  currentVersion Int                 @default(1)
+  versionHistory DefinitionVersion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -177,3 +197,22 @@ model DefinitionSymbolicRef {
   @@index([symbolicReferenceId])
 }
 
+model DefinitionVersion {
+  id String @id @default(uuid())
+
+  definitionId String
+  definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  versionNumber Int
+
+  originalText String @db.Text
+  statement    Json
+
+  editedById String
+  editedBy   User   @relation(fields: [editedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([definitionId, versionNumber])
+  @@index([definitionId])
+}
