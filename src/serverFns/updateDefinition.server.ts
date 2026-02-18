@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { currentUser } from "@/server/auth/currentUser";
 import { transform } from "@/server/parseUri";
 import { FtmlNode, FtmlRoot } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
@@ -27,6 +28,10 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
     (data: { definitionId: string; operation: SemanticOperation }) => data,
   )
   .handler(async ({ data }) => {
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
+
+    const userId = userRes.user.id;
     await prisma.$transaction(async (tx) => {
       const def = await tx.definition.findUniqueOrThrow({
         where: { id: data.definitionId },
@@ -35,11 +40,23 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
       assertFtmlRoot(def.statement);
 
       const newAst = transform(structuredClone(def.statement), data.operation);
+      const nextVersion = def.currentVersion + 1;
+      await tx.definitionVersion.create({
+        data: {
+          definitionId: def.id,
+          versionNumber: nextVersion,
+          originalText: def.originalText,
+          statement: JSON.parse(JSON.stringify(newAst)),
+          editedById: userId,
+        },
+      });
 
       await tx.definition.update({
-        where: { id: data.definitionId },
+        where: { id: def.id },
         data: {
           statement: JSON.parse(JSON.stringify(newAst)),
+          updatedById: userId,
+          currentVersion: nextVersion,
         },
       });
 
