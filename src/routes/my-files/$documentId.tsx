@@ -103,10 +103,9 @@ function RouteComponent() {
   );
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
   const [pendingExtractText, setPendingExtractText] = useState("");
-  const [identityEditOpen, setIdentityEditOpen] = useState(false);
-  const [identityTarget, setIdentityTarget] = useState<ExtractedItem | null>(
-    null,
-  );
+  const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
+  const [definitionMetaTarget, setDefinitionMetaTarget] =
+    useState<ExtractedItem | null>(null);
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
@@ -170,13 +169,13 @@ function RouteComponent() {
     setMode("SymbolicRef");
   }
 
-  function handleEditIdentity(item: ExtractedItem) {
-    setIdentityTarget(item);
+  function handleEditDefinitionMeta(item: ExtractedItem) {
+    setDefinitionMetaTarget(item);
     setFutureRepo(item.futureRepo);
     setFilePath(item.filePath);
     setFileName(item.fileName);
     setLanguage(item.language);
-    setIdentityEditOpen(true);
+    setDefinitionMetaEditOpen(true);
   }
 
   async function handleDeleteNode(
@@ -545,7 +544,7 @@ function RouteComponent() {
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
                   onOpenSemanticPanel={handleOpenSemanticPanel}
-                  onEditIdentity={handleEditIdentity}
+                  onEditDefinitionMeta={handleEditDefinitionMeta}
                 />
               </Tabs.Panel>
             </Tabs>
@@ -593,7 +592,7 @@ function RouteComponent() {
                 onSelection={handleRightSelection}
                 onToggleEdit={handleToggleEdit}
                 onOpenSemanticPanel={handleOpenSemanticPanel}
-                onEditIdentity={handleEditIdentity}
+                onEditDefinitionMeta={handleEditDefinitionMeta}
               />
             </Paper>
           </Flex>
@@ -686,14 +685,15 @@ function RouteComponent() {
       />
 
       <DefinitionIdentityDialog
-        opened={identityEditOpen}
+        opened={definitionMetaEditOpen}
         onClose={() => {
-          setIdentityEditOpen(false);
-          setIdentityTarget(null);
+          setDefinitionMetaEditOpen(false);
+          setDefinitionMetaTarget(null);
         }}
-        definition={identityTarget}
+        definition={definitionMetaTarget}
         invalidateKey={["definitions", documentId]}
       />
+
       <Portal>
         <ActionIcon
           size={isMobile ? "lg" : "xl"}

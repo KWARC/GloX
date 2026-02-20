@@ -13,7 +13,7 @@ interface Props {
   opened: boolean;
   onClose: () => void;
   definition: ExtractedItem | null;
-  bulkIdentity?: FileIdentity;
+  bulkDefinition?: FileIdentity; 
   invalidateKey: QueryKey;
 }
 
@@ -22,7 +22,7 @@ export function DefinitionIdentityDialog({
   onClose,
   definition,
   invalidateKey,
-  bulkIdentity,
+  bulkDefinition,
 }: Props) {
   const [futureRepo, setFutureRepo] = useState("");
   const [filePath, setFilePath] = useState("");
@@ -35,19 +35,19 @@ export function DefinitionIdentityDialog({
       setFilePath(definition.filePath);
       setFileName(definition.fileName);
       setLanguage(definition.language);
-    } else if (bulkIdentity) {
-      setFutureRepo(bulkIdentity.futureRepo);
-      setFilePath(bulkIdentity.filePath);
-      setFileName(bulkIdentity.fileName);
-      setLanguage(bulkIdentity.language);
+    } else if (bulkDefinition) {
+      setFutureRepo(bulkDefinition.futureRepo);
+      setFilePath(bulkDefinition.filePath);
+      setFileName(bulkDefinition.fileName);
+      setLanguage(bulkDefinition.language);
     }
-  }, [definition, bulkIdentity]);
+  }, [definition, bulkDefinition]);
 
   async function handleSave() {
-    if (bulkIdentity) {
+    if (bulkDefinition) {
       await updateDefinitionsFilePath({
         data: {
-          identity: bulkIdentity,
+          identity: bulkDefinition,
           futureRepo: futureRepo.trim(),
           filePath: filePath.trim(),
           fileName: fileName.trim(),
@@ -67,7 +67,6 @@ export function DefinitionIdentityDialog({
     }
 
     await queryClient.invalidateQueries({ queryKey: invalidateKey });
-
     onClose();
   }
 
@@ -80,29 +79,29 @@ export function DefinitionIdentityDialog({
     >
       <Stack>
         <TextInput
-          label="Future Repo"
+          label="Archive"
+          placeholder="e.g. smglom/algebra"
           value={futureRepo}
           onChange={(e) => setFutureRepo(e.currentTarget.value)}
         />
-
         <TextInput
-          label="File Path"
+          label="Module Path"
+          placeholder="e.g. mod"
           value={filePath}
           onChange={(e) => setFilePath(e.currentTarget.value)}
         />
-
         <TextInput
-          label="File Name"
+          label="Module"
+          placeholder="e.g. group-theory"
           value={fileName}
           onChange={(e) => setFileName(e.currentTarget.value)}
         />
-
         <TextInput
           label="Language"
+          placeholder="e.g. en, de, fr"
           value={language}
           onChange={(e) => setLanguage(e.currentTarget.value)}
         />
-
         <Button onClick={handleSave}>Save</Button>
       </Stack>
     </Modal>

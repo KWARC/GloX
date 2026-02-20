@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { StexCuration } from "./StexCuration";
 
 export function CurationSection() {
-  const { data: identities = [], isLoading } = useQuery({
+  const { data: fileGroups = [], isLoading } = useQuery({
     queryKey: ["fileIdentities"],
     queryFn: getFileIdentities,
   });
@@ -21,17 +21,17 @@ export function CurationSection() {
         {isLoading && <Loader size="sm" />}
       </Group>
 
-      {!isLoading && identities.length === 0 && (
+      {!isLoading && fileGroups.length === 0 && (
         <Text c="dimmed" ta="center" py="xl">
           No FTML definitions found
         </Text>
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-        {identities.map((identity) => (
+        {fileGroups.map((definition) => (
           <StexCuration
-            key={`${identity.futureRepo}-${identity.filePath}-${identity.fileName}-${identity.language}`}
-            identity={identity}
+            key={`${definition.futureRepo}-${definition.filePath}-${definition.fileName}-${definition.language}`}
+            identity={definition}
           />
         ))}
       </SimpleGrid>

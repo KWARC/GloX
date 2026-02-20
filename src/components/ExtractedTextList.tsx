@@ -25,9 +25,9 @@ interface ExtractedTextPanelProps {
   onSelection: (extractId: string) => void;
   onOpenSemanticPanel: (definitionId: string) => void;
   showPageNumber?: boolean;
-  showIdentityPerItem?: boolean;
-  onEditIdentity?: (item: ExtractedItem) => void;
-  showIdentityIconOnly?: boolean;
+  showDefinitionMeta?: boolean;
+  onEditDefinitionMeta?: (item: ExtractedItem) => void; 
+  showDefinitionMetaIconOnly?: boolean; 
 }
 
 export function ExtractedTextPanel({
@@ -40,9 +40,9 @@ export function ExtractedTextPanel({
   onSelection,
   onOpenSemanticPanel,
   showPageNumber = true,
-  showIdentityPerItem = true,
-  showIdentityIconOnly = false,
-  onEditIdentity,
+  showDefinitionMeta = true,
+  showDefinitionMetaIconOnly = false,
+  onEditDefinitionMeta,
 }: ExtractedTextPanelProps) {
   return (
     <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
@@ -139,24 +139,21 @@ export function ExtractedTextPanel({
                     </div>
                   )}
 
-                  {showIdentityPerItem && (
+                  {showDefinitionMeta && (
                     <Group
                       gap={6}
                       mt={6}
-                      style={{ cursor: onEditIdentity ? "pointer" : "default" }}
-                      onClick={() => onEditIdentity?.(item)}
+                      title={`Archive: ${item.futureRepo} | Module Path: ${item.filePath} | Module: ${item.fileName} | Lang: ${item.language}`}
+                      style={{
+                        cursor: onEditDefinitionMeta ? "pointer" : "default",
+                      }}
+                      onClick={() => onEditDefinitionMeta?.(item)}
                     >
                       <FolderSymlink size={14} />
-                      {!showIdentityIconOnly && (
+                      {!showDefinitionMetaIconOnly && (
                         <Text size="10px" c="dimmed" ff="monospace">
-                          {[
-                            item.futureRepo,
-                            item.filePath,
-                            item.fileName,
-                            item.language,
-                          ]
-                            .filter(Boolean)
-                            .join(" / ")}
+                          {item.futureRepo} / {item.filePath} / {item.fileName}{" "}
+                          [{item.language}]
                         </Text>
                       )}
                     </Group>
