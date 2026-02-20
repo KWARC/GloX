@@ -1,6 +1,7 @@
 import { currentUser } from "@/server/auth/currentUser";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
 import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
+import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
 import {
   getLatexHistory,
   saveLatexDraft,
@@ -87,7 +88,7 @@ function CreateLatexPage() {
 
   const { data: stex, isLoading: stexLoading } = useQuery({
     queryKey: ["stex", ftmlAst],
-    queryFn: () => generateStexFromFtml(ftmlAst!,fileName),
+    queryFn: () => generateStexFromFtml(ftmlAst!, fileName),
     enabled: !!ftmlAst,
     staleTime: Infinity,
   });
@@ -117,7 +118,38 @@ function CreateLatexPage() {
       }),
   });
 
-  const displayLatex = editedLatex ?? stex ?? historyData?.finalLatex ?? "";
+  const { data: provenance } = useQuery({
+    queryKey: ["definition-provenance", documentId],
+    queryFn: () =>
+      getDefinitionProvenance({
+        data: { documentId },
+      }),
+  });
+
+  function injectProvenance(
+    stexSource: string,
+    provenance?: {
+      documentName: string;
+      pageNumber: number;
+    }[],
+  ) {
+    if (!stexSource || !provenance?.length) return stexSource;
+
+    const lines = provenance.map(
+      (p, i) =>
+        `%%% Definition ${i + 1}: ${p.documentName} page ${p.pageNumber}`,
+    );
+
+    return `${stexSource}
+
+${lines.join("\n")}`;
+  }
+
+  const generatedLatex =
+    stex && provenance ? injectProvenance(stex, provenance) : (stex ?? "");
+
+  const displayLatex =
+    editedLatex ?? generatedLatex ?? historyData?.finalLatex ?? "";
 
   if (ftmlLoading || stexLoading) {
     return (

@@ -13,7 +13,10 @@ interface LoginInput {
 
 interface LoginResult {
   success: boolean;
-  error?: string;
+  error?: {
+    code: "INVALID_CREDENTIALS" | "UNVERIFIED_EMAIL";
+    message: string;
+  };
 }
 
 export const login = createServerFn({ method: "POST" })
@@ -45,16 +48,39 @@ export const login = createServerFn({ method: "POST" })
         id: true,
         email: true,
         passwordHash: true,
+        emailVerified: true,
       },
     });
 
     if (!user || !user.passwordHash) {
-      return { success: false, error: "Invalid email or password" };
+      return {
+        success: false,
+        error: {
+          code: "INVALID_CREDENTIALS",
+          message: "Invalid email or password",
+        },
+      };
+    }
+
+    if (!user.emailVerified) {
+      return {
+        success: false,
+        error: {
+          code: "UNVERIFIED_EMAIL",
+          message: "Please verify your email first",
+        },
+      };
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
-      return { success: false, error: "Invalid email or password" };
+      return {
+        success: false,
+        error: {
+          code: "INVALID_CREDENTIALS",
+          message: "Password is incorrect",
+        },
+      };
     }
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {

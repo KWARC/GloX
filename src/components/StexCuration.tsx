@@ -27,10 +27,9 @@ import { ExtractedTextPanel } from "./ExtractedTextList";
 
 export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [identityEditOpen, setIdentityEditOpen] = useState(false);
-  const [identityTarget, setIdentityTarget] = useState<ExtractedItem | null>(
-    null,
-  );
+  const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
+  const [definitionMetaTarget, setDefinitionMetaTarget] =
+    useState<ExtractedItem | null>(null);
 
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
   const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
@@ -46,9 +45,9 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   });
 
   const hasSymbols = (data?.symbols.length ?? 0) > 0;
-  function handleEditIdentity(item: ExtractedItem) {
-    setIdentityTarget(item);
-    setIdentityEditOpen(true);
+  function handleEditDefinitionMeta(item: ExtractedItem) {
+    setDefinitionMetaTarget(item);
+    setDefinitionMetaEditOpen(true);
   }
 
   async function handleDelete(id: string) {
@@ -175,9 +174,9 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     onSelection={() => {}}
                     onOpenSemanticPanel={handleOpenSemanticPanel}
                     showPageNumber={false}
-                    showIdentityPerItem
-                    showIdentityIconOnly
-                    onEditIdentity={handleEditIdentity}
+                    showDefinitionMeta
+                    showDefinitionMetaIconOnly
+                    onEditDefinitionMeta={handleEditDefinitionMeta}
                   />
                 </Stack>
               )}
@@ -195,8 +194,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               gap={6}
               style={{ cursor: "pointer" }}
               onClick={() => {
-                setIdentityTarget(null); // not per-definition
-                setIdentityEditOpen(true);
+                setDefinitionMetaTarget(null);
+                setDefinitionMetaEditOpen(true);
               }}
             >
               <FolderSymlink size={14} />
@@ -215,13 +214,13 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         </Stack>
       </Paper>
       <DefinitionIdentityDialog
-        opened={identityEditOpen}
+        opened={definitionMetaEditOpen}
         onClose={() => {
-          setIdentityEditOpen(false);
-          setIdentityTarget(null);
+          setDefinitionMetaEditOpen(false);
+          setDefinitionMetaTarget(null);
         }}
-        definition={identityTarget}
-        bulkIdentity={identity}
+        definition={definitionMetaTarget}
+        bulkDefinition={identity}
         invalidateKey={["definitionsByIdentity", identity]}
       />
     </>

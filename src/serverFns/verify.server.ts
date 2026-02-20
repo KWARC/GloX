@@ -53,6 +53,19 @@ export const verifyEmail = createServerFn({ method: "POST" })
       });
 
       if (!user) {
+        return { success: false, error: "User not found" };
+      }
+
+      if (user.emailVerified) {
+        return { success: true, message: "Email already verified." };
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true },
+      });
+
+      if (!user) {
         return {
           success: false,
           error: "User not found",

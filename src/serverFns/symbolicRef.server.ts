@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import {
   findUniqueTextLocation,
@@ -26,6 +27,11 @@ type SymbolicRefInput = {
 export const symbolicRef = createServerFn({ method: "POST" })
   .inputValidator((data: SymbolicRefInput) => data)
   .handler(async ({ data }) => {
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
+
+    const userId = userRes.user.id;
+
     const { definitionId, selection, symRef } = data;
 
     let parsed: ParsedMathHubUri;
@@ -98,11 +104,31 @@ export const symbolicRef = createServerFn({ method: "POST" })
 
     const statementToStore = unwrapRoot(updatedAst);
 
-    await prisma.definition.update({
-      where: { id: definitionId },
-      data: {
-        statement: JSON.parse(JSON.stringify(statementToStore)),
-      },
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.definition.findUniqueOrThrow({
+        where: { id: definitionId },
+      });
+
+      const nextVersion = existing.currentVersion + 1;
+
+      await tx.definitionVersion.create({
+        data: {
+          definitionId,
+          versionNumber: nextVersion,
+          originalText: existing.originalText,
+          statement: JSON.parse(JSON.stringify(statementToStore)),
+          editedById: userId,
+        },
+      });
+
+      await tx.definition.update({
+        where: { id: definitionId },
+        data: {
+          statement: JSON.parse(JSON.stringify(statementToStore)),
+          updatedById: userId,
+          currentVersion: nextVersion,
+        },
+      });
     });
 
     const symbolicRef = await prisma.symbolicReference.create({

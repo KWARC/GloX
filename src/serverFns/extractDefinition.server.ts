@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { currentUser } from "@/server/auth/currentUser";
 import { ExtractedItem } from "@/server/text-selection";
 import {
   DefinitionNode,
@@ -35,6 +36,11 @@ export const createDefinition = createServerFn({ method: "POST" })
       throw new Error("Missing definition fields");
     }
 
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
+
+    const userId = userRes.user.id;
+
     const statement: DefinitionNode = {
       type: "definition",
       for_symbols: [],
@@ -46,18 +52,33 @@ export const createDefinition = createServerFn({ method: "POST" })
       ],
     };
 
-    await prisma.definition.create({
-      data: {
-        documentId: data.documentId,
-        documentPageId: data.documentPageId,
-        pageNumber: data.pageNumber,
-        originalText: data.originalText,
-        statement: JSON.parse(JSON.stringify(statement)),
-        futureRepo: data.futureRepo,
-        filePath: data.filePath,
-        fileName: data.fileName,
-        language: data.language,
-      },
+    await prisma.$transaction(async (tx) => {
+      const def = await tx.definition.create({
+        data: {
+          documentId: data.documentId,
+          documentPageId: data.documentPageId,
+          pageNumber: data.pageNumber,
+          originalText: data.originalText,
+          statement: JSON.parse(JSON.stringify(statement)),
+          futureRepo: data.futureRepo,
+          filePath: data.filePath,
+          fileName: data.fileName,
+          language: data.language,
+          createdById: userId,
+          updatedById: userId,
+          currentVersion: 1,
+        },
+      });
+
+      await tx.definitionVersion.create({
+        data: {
+          definitionId: def.id,
+          versionNumber: 1,
+          originalText: data.originalText,
+          statement: JSON.parse(JSON.stringify(statement)),
+          editedById: userId,
+        },
+      });
     });
 
     await prisma.document.update({
@@ -71,14 +92,39 @@ export const createDefinition = createServerFn({ method: "POST" })
 export const updateDefinition = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; statement: FtmlStatement }) => data)
   .handler(async ({ data }) => {
-    if (!data.id) {
-      throw new Error("Missing definition id");
-    }
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
 
-    return prisma.definition.update({
-      where: { id: data.id },
-      data: { statement: JSON.parse(JSON.stringify(data.statement)) },
+    const userId = userRes.user.id;
+
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.definition.findUniqueOrThrow({
+        where: { id: data.id },
+      });
+
+      const nextVersion = existing.currentVersion + 1;
+
+      await tx.definitionVersion.create({
+        data: {
+          definitionId: existing.id,
+          versionNumber: nextVersion,
+          originalText: existing.originalText,
+          statement: JSON.parse(JSON.stringify(data.statement)),
+          editedById: userId,
+        },
+      });
+
+      await tx.definition.update({
+        where: { id: data.id },
+        data: {
+          statement: JSON.parse(JSON.stringify(data.statement)),
+          updatedById: userId,
+          currentVersion: nextVersion,
+        },
+      });
     });
+
+    return { success: true };
   });
 
 export const deleteDefinition = createServerFn({ method: "POST" })

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { currentUser } from "@/server/auth/currentUser";
 import { insertDefiniendum } from "@/server/ftml/astOperations";
 import {
   assertFtmlStatement,
@@ -46,6 +47,11 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         selectedSymbolId,
         selectedSymbolUri,
       } = data;
+
+      const userRes = await currentUser();
+      if (!userRes.loggedIn) throw new Error("Unauthorized");
+
+      const userId = userRes.user.id;
 
       if (!definitionId || !selectedText.trim()) {
         throw new Error("Invalid input");
@@ -147,20 +153,38 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         },
       ];
 
-      if (symdecl) {
-        const existing = definitionNode.for_symbols ?? [];
-        if (!existing.includes(uri)) {
-          definitionNode.for_symbols = [...existing, uri];
-        }
+      const existingSymbols = definitionNode.for_symbols ?? [];
+
+      if (!existingSymbols.includes(uri)) {
+        definitionNode.for_symbols = [...existingSymbols, uri];
       }
+
+      const existing = await tx.definition.findUniqueOrThrow({
+        where: { id: definitionId },
+      });
+
+      const nextVersion = existing.currentVersion + 1;
+
+      const newStatement = JSON.parse(JSON.stringify(unwrapRoot(root)));
+
+      await tx.definitionVersion.create({
+        data: {
+          definitionId,
+          versionNumber: nextVersion,
+          originalText: existing.originalText,
+          statement: newStatement,
+          editedById: userId,
+        },
+      });
 
       await tx.definition.update({
         where: { id: definitionId },
         data: {
-          statement: JSON.parse(JSON.stringify(unwrapRoot(root))),
+          statement: newStatement,
+          updatedById: userId,
+          currentVersion: nextVersion,
         },
       });
-
       return { ok: true };
     });
   });
