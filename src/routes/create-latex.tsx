@@ -137,7 +137,7 @@ function CreateLatexPage() {
 
     const lines = provenance.map(
       (p, i) =>
-        `%%% Definition ${i + 1}: ${p.documentName} page ${p.pageNumber}`,
+        `%%% Definition ${i + 1}: Extracted in this file using GloX from ${p.documentName}, page ${p.pageNumber}`,
     );
 
     return `${stexSource}
