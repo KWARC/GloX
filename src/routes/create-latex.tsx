@@ -36,9 +36,12 @@ type CreateLatexSearch = {
 };
 
 export const Route = createFileRoute("/create-latex")({
-  beforeLoad: async () => {
+  loader: async () => {
     const user = await currentUser();
-    if (!user?.loggedIn) throw redirect({ to: "/login" });
+    if (!user?.loggedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return null;
   },
 
   validateSearch: (search: Record<string, unknown>): CreateLatexSearch => {

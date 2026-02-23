@@ -48,9 +48,12 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 export const Route = createFileRoute("/my-files/$documentId")({
-  beforeLoad: async () => {
+  loader: async () => {
     const user = await currentUser();
-    if (!user?.loggedIn) throw redirect({ to: "/login" });
+    if (!user?.loggedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return null;
   },
   component: RouteComponent,
 });
