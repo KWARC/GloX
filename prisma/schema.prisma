@@ -64,6 +64,11 @@ enum SymbolicRefSource {
   DEFINIENDUM
 }
 
+enum DefinitionStatus {
+  EXTRACTED
+  FINALIZED_IN_FILE
+  SUBMITTED_TO_MATHHUB
+}
 model User {
   id            String   @id @default(uuid())
   firstName     String?
@@ -135,6 +140,7 @@ model Definition {
   statement    Json
 
   symbolicRefs DefinitionSymbolicRef[]
+  status DefinitionStatus @default(EXTRACTED)
 
   futureRepo String @default("Glox")
   filePath   String @default("Glox")

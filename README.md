@@ -17,7 +17,6 @@ GloX — Updated Setup Instructions
 Create a .env file at the project root with the following variables:
 ```bash
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB_NAME
-VITE_MATHHUB_APP_URL=https://mathhub.info
 VITE_FTML_SERVER_URL=https://mathhub.info
 
 JWT_SECRET=replace_with_strong_random_secret

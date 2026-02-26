@@ -138,14 +138,21 @@ function CreateLatexPage() {
   ) {
     if (!stexSource || !provenance?.length) return stexSource;
 
-    const lines = provenance.map(
-      (p, i) =>
-        `%%% Definition ${i + 1}: Extracted in this file using GloX from ${p.documentName}, page ${p.pageNumber}`,
+    const unique = Array.from(
+      new Map(
+        provenance.map((p) => [`${p.documentName}-${p.pageNumber}`, p]),
+      ).values(),
     );
 
-    return `${stexSource}
+    const lines = unique.map(
+      (p) =>
+        `%%% The content of this file was extracted from ${p.documentName}(page ${p.pageNumber}) using Glox`,
+    );
 
-${lines.join("\n")}`;
+    return `${stexSource.trim()}
+
+${lines.join("\n")}
+`;
   }
 
   const generatedLatex =
