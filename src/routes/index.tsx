@@ -13,6 +13,9 @@ export const Route = createFileRoute("/")({
 
 function App() {
   const [opened, setOpened] = useState(false);
+  const [curationLevel, setCurationLevel] = useState<string | null>(
+    "EXTRACTED",
+  );
 
   const { data: user } = useQuery({
     queryKey: ["currentUser"],
@@ -39,7 +42,10 @@ function App() {
 
         {isLoggedIn && (
           <>
-            <CurationSection />
+            <CurationSection
+              curationLevel={curationLevel}
+              setCurationLevel={setCurationLevel}
+            />
             <Divider w="100%" maw={1000} />
             <FinalizedDocumentsSection />
           </>

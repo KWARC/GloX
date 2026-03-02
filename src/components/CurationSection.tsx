@@ -1,9 +1,22 @@
 import { getFileIdentities } from "@/serverFns/latex.server";
-import { Group, Loader, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import {
+  Group,
+  Loader,
+  Select,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { StexCuration } from "./StexCuration";
 
-export function CurationSection() {
+type Props = {
+  curationLevel: string | null;
+  setCurationLevel: (value: string | null) => void;
+};
+
+export function CurationSection({ curationLevel, setCurationLevel }: Props) {
   const { data: fileGroups = [], isLoading } = useQuery({
     queryKey: ["fileIdentities"],
     queryFn: getFileIdentities,
@@ -11,6 +24,18 @@ export function CurationSection() {
 
   return (
     <Stack w="100%" maw={1200} gap="lg">
+      <Select
+        label="Curation Level"
+        value={curationLevel}
+        onChange={setCurationLevel}
+        data={[
+          { value: "EXTRACTED", label: "EXTRACTED" },
+          { value: "SNIFIED", label: "sn-ified" },
+          { value: "FINALIZED", label: "finalized in file" },
+          { value: "SUBMITTED", label: "submitted to mathhub" },
+        ]}
+        w={250}
+      />
       <Group justify="space-between" align="center">
         <Stack gap={4}>
           <Title order={3}>FTML Definitions by File</Title>
