@@ -51,40 +51,6 @@ function normalizeHistory(value: unknown): LatexDraft[] {
   });
 }
 
-export const updateLatexStatus = createServerFn({
-  method: "POST",
-})
-  .inputValidator((data: LatexKey & { isFinal: boolean }) => data)
-  .handler(async ({ data }) => {
-    const { documentId, futureRepo, filePath, fileName, language, isFinal } =
-      data;
-
-    const existing = await prisma.latexTable.findFirst({
-      where: { documentId, futureRepo, filePath, fileName, language },
-    });
-
-    if (!existing) {
-      await prisma.latexTable.create({
-        data: {
-          documentId,
-          futureRepo,
-          filePath,
-          fileName,
-          language,
-          finalLatex: "",
-          history: [],
-          isFinal,
-        },
-      });
-    } else {
-      await prisma.latexTable.update({
-        where: { id: existing.id },
-        data: { isFinal },
-      });
-    }
-
-    return { success: true };
-  });
 export const saveLatexDraft = createServerFn({ method: "POST" })
   .inputValidator((data: LatexKey & { latex: string }) => data)
   .handler(async ({ data }) => {

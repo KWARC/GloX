@@ -10,7 +10,6 @@ import {
   FileIdentity,
   getDefinitionsByIdentity,
   getLatexHistory,
-  updateLatexStatus,
 } from "@/serverFns/latex.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
@@ -274,16 +273,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     <Menu.Item
                       disabled={latexStatus === "SUBMITTED"}
                       onClick={async () => {
-                        await updateLatexStatus({
-                          data: {
-                            documentId: identity.documentId,
-                            futureRepo: identity.futureRepo,
-                            filePath: identity.filePath,
-                            fileName: identity.fileName,
-                            language: identity.language,
-                            isFinal: true,
-                          },
-                        });
+                        // todo updatelatuxstatus
 
                         await queryClient.invalidateQueries({
                           queryKey: [
@@ -304,16 +294,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       color="red"
                       disabled={latexStatus !== "SUBMITTED"}
                       onClick={async () => {
-                        await updateLatexStatus({
-                          data: {
-                            documentId: identity.documentId,
-                            futureRepo: identity.futureRepo,
-                            filePath: identity.filePath,
-                            fileName: identity.fileName,
-                            language: identity.language,
-                            isFinal: false,
-                          },
-                        });
+                        // todo updatelatexstatus
 
                         await queryClient.invalidateQueries({
                           queryKey: [
