@@ -51,6 +51,40 @@ function normalizeHistory(value: unknown): LatexDraft[] {
   });
 }
 
+export const updateLatexStatus = createServerFn({
+  method: "POST",
+})
+  .inputValidator((data: LatexKey & { isFinal: boolean }) => data)
+  .handler(async ({ data }) => {
+    const { documentId, futureRepo, filePath, fileName, language, isFinal } =
+      data;
+
+    const existing = await prisma.latexTable.findFirst({
+      where: { documentId, futureRepo, filePath, fileName, language },
+    });
+
+    if (!existing) {
+      await prisma.latexTable.create({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+          finalLatex: "",
+          history: [],
+          isFinal,
+        },
+      });
+    } else {
+      await prisma.latexTable.update({
+        where: { id: existing.id },
+        data: { isFinal },
+      });
+    }
+
+    return { success: true };
+  });
 export const saveLatexDraft = createServerFn({ method: "POST" })
   .inputValidator((data: LatexKey & { latex: string }) => data)
   .handler(async ({ data }) => {
@@ -60,6 +94,10 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
     const existing = await prisma.latexTable.findFirst({
       where: { documentId, futureRepo, filePath, fileName, language },
     });
+
+    if (existing?.isFinal) {
+      throw new Error("Document already submitted. Editing is locked.");
+    }
 
     const history = normalizeHistory(existing?.history);
 
@@ -78,7 +116,6 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
           language,
           finalLatex: "",
           history: JSON.parse(JSON.stringify(nextHistory)),
-          isFinal: false,
         },
       });
     } else {
@@ -101,6 +138,10 @@ export const saveLatexFinal = createServerFn({ method: "POST" })
     const existing = await prisma.latexTable.findFirst({
       where: { documentId, futureRepo, filePath, fileName, language },
     });
+
+    if (existing?.isFinal) {
+      throw new Error("Document already submitted. Editing is locked.");
+    }
 
     if (!existing) {
       await prisma.latexTable.create({
@@ -138,6 +179,7 @@ export const getLatexHistory = createServerFn({ method: "GET" })
       history: normalizeHistory(record?.history),
       finalLatex: record?.finalLatex ?? "",
       isFinal: record?.isFinal ?? false,
+      status: record?.isFinal ? "SUBMITTED" : "EXTRACTED",
     };
   });
 
@@ -155,6 +197,7 @@ export const getFileIdentities = createServerFn({ method: "GET" }).handler(
     const definitions = await prisma.definition.findMany({
       distinct: ["futureRepo", "filePath", "fileName", "language"],
       select: {
+        documentId: true,
         futureRepo: true,
         filePath: true,
         fileName: true,
@@ -173,6 +216,7 @@ export const getFileIdentities = createServerFn({ method: "GET" }).handler(
 );
 
 export type FileIdentity = {
+  documentId: string;
   futureRepo: string;
   filePath: string;
   fileName: string;

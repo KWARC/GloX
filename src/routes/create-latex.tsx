@@ -6,7 +6,9 @@ import {
   getLatexHistory,
   saveLatexDraft,
   saveLatexFinal,
+  updateLatexStatus,
 } from "@/serverFns/latex.server";
+
 import {
   ActionIcon,
   Badge,
@@ -20,8 +22,8 @@ import {
   Text,
   Textarea,
   Title,
-  Tooltip,
 } from "@mantine/core";
+
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Download } from "lucide-react";
@@ -243,8 +245,43 @@ ${lines.join("\n")}
             <Group>
               <Title order={2}>LaTeX Editor</Title>
               <Badge>sTeX</Badge>
+
+              {historyData?.status === "SUBMITTED" && (
+                <Badge color="green">MathHub Submitted</Badge>
+              )}
             </Group>
+
             <Group>
+              <Button
+                size="xs"
+                color={historyData?.status === "SUBMITTED" ? "gray" : "green"}
+                disabled={historyData?.status === "SUBMITTED"}
+                onClick={async () => {
+                  const confirmSubmit = confirm(
+                    "Submit to MathHub? Editing will be locked.",
+                  );
+                  if (!confirmSubmit) return;
+
+                  await updateLatexStatus({
+                    data: {
+                      documentId,
+                      futureRepo,
+                      filePath,
+                      fileName,
+                      language,
+                      isFinal: true,
+                    },
+                  });
+
+                  alert("✅ MathHub Submitted Successfully");
+                  await refetchHistory();
+                }}
+              >
+                {historyData?.status === "SUBMITTED"
+                  ? "MathHub Submitted"
+                  : "Submit to MathHub"}
+              </Button>
+
               <Button
                 size="xs"
                 variant="light"
@@ -289,8 +326,9 @@ ${lines.join("\n")}
           </Stack>
         </Modal>
 
-        <Paper withBorder style={{ flex: 1, minHeight: 0 }}>
+        <Paper withBorder style={{ flex: 1 }}>
           <Textarea
+            readOnly={historyData?.status === "SUBMITTED"}
             value={displayLatex}
             onChange={(e) => {
               setEditedLatex(e.currentTarget.value);
@@ -305,7 +343,8 @@ ${lines.join("\n")}
                 fontFamily: "monospace",
                 fontSize: 14,
                 height: "100%",
-                resize: "none",
+                backgroundColor: "white",
+                opacity: 1,
               },
             }}
           />
@@ -317,7 +356,8 @@ ${lines.join("\n")}
               {displayLatex.length} characters •{" "}
               {displayLatex.split("\n").length} lines
             </Text>
-            <Group>
+
+            <Group gap="sm">
               <Button
                 variant="default"
                 onClick={() =>
@@ -330,33 +370,23 @@ ${lines.join("\n")}
                 Back
               </Button>
 
-              <Group gap="sm">
-                <Tooltip
-                  label={
-                    isFromHistory
-                      ? "Drafts disabled for restored history."
-                      : undefined
-                  }
-                >
-                  <Button
-                    variant="default"
-                    onClick={handleSaveDraft}
-                    loading={savingDraft}
-                    disabled={isFromHistory}
-                  >
-                    Save Draft
-                  </Button>
-                </Tooltip>
+              <Button
+                onClick={handleSaveDraft}
+                loading={savingDraft}
+                disabled={isFromHistory || historyData?.status === "SUBMITTED"}
+              >
+                Save Draft
+              </Button>
 
-                <Button
-                  variant="gradient"
-                  gradient={{ from: "violet", to: "grape" }}
-                  onClick={handleSaveFinal}
-                  loading={savingFinal}
-                >
-                  Save Final
-                </Button>
-              </Group>
+              <Button
+                variant="gradient"
+                gradient={{ from: "violet", to: "grape" }}
+                onClick={handleSaveFinal}
+                loading={savingFinal}
+                disabled={historyData?.status === "SUBMITTED"}
+              >
+                Save Final
+              </Button>
             </Group>
           </Group>
         </Paper>

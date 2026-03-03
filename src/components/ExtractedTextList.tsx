@@ -13,6 +13,7 @@ import { FolderSymlink } from "lucide-react";
 import { FtmlPreview } from "./FtmlPreview";
 
 interface ExtractedTextPanelProps {
+  isLocked?: boolean;
   extracts: ExtractedItem[];
   editingId: string | null;
   selectedId: string | null;
@@ -21,13 +22,14 @@ interface ExtractedTextPanelProps {
     id: string,
     statement: ExtractedItem["statement"],
   ) => Promise<void>;
+  onDownload?: (item: ExtractedItem) => void;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
   onOpenSemanticPanel: (definitionId: string) => void;
   showPageNumber?: boolean;
   showDefinitionMeta?: boolean;
-  onEditDefinitionMeta?: (item: ExtractedItem) => void; 
-  showDefinitionMetaIconOnly?: boolean; 
+  onEditDefinitionMeta?: (item: ExtractedItem) => void;
+  showDefinitionMetaIconOnly?: boolean;
 }
 
 export function ExtractedTextPanel({
@@ -43,6 +45,7 @@ export function ExtractedTextPanel({
   showDefinitionMeta = true,
   showDefinitionMetaIconOnly = false,
   onEditDefinitionMeta,
+  isLocked = false,
 }: ExtractedTextPanelProps) {
   return (
     <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
@@ -84,6 +87,7 @@ export function ExtractedTextPanel({
                       <ActionIcon
                         size="sm"
                         color="red"
+                        disabled={isLocked}
                         onClick={() => onDelete(item.id)}
                       >
                         <IconTrash size={14} />
@@ -92,6 +96,7 @@ export function ExtractedTextPanel({
                       <ActionIcon
                         size="sm"
                         variant="subtle"
+                        disabled={isLocked}
                         onClick={() => onToggleEdit(item.id)}
                       >
                         <IconPencil size={16} />
@@ -100,6 +105,7 @@ export function ExtractedTextPanel({
                       <ActionIcon
                         size="sm"
                         variant="subtle"
+                        disabled={isLocked}
                         onClick={() => onOpenSemanticPanel(item.id)}
                       >
                         <IconSettings size={16} />
