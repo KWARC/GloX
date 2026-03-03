@@ -164,12 +164,6 @@ model Definition {
   @@index([futureRepo, filePath, fileName, language])
 }
 
-enum LatexStatus {
-  EXTRACTED
-  FINALIZED
-  SUBMITTED
-}
-
 model LatexTable {
   id String @id @default(uuid())
 
@@ -184,8 +178,6 @@ model LatexTable {
   finalLatex String  @db.Text
   history    Json    @db.JsonB
   isFinal    Boolean @default(false)
-
-  status LatexStatus @default(EXTRACTED)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

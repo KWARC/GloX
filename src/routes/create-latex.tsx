@@ -6,7 +6,6 @@ import {
   getLatexHistory,
   saveLatexDraft,
   saveLatexFinal,
-  updateLatexStatus,
 } from "@/serverFns/latex.server";
 
 import {
@@ -261,18 +260,7 @@ ${lines.join("\n")}
                     "Submit to MathHub? Editing will be locked.",
                   );
                   if (!confirmSubmit) return;
-
-                  await updateLatexStatus({
-                    data: {
-                      documentId,
-                      futureRepo,
-                      filePath,
-                      fileName,
-                      language,
-                      isFinal: true,
-                    },
-                  });
-
+                  //todo definition updatestatus
                   alert("✅ MathHub Submitted Successfully");
                   await refetchHistory();
                 }}
