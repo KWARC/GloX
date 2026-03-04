@@ -67,6 +67,7 @@ export const createDefinition = createServerFn({ method: "POST" })
           createdById: userId,
           updatedById: userId,
           currentVersion: 1,
+          status: "EXTRACTED",
         },
       });
 
@@ -221,6 +222,7 @@ export const listDefinition = createServerFn({ method: "GET" })
         fileName: def.fileName,
         language: def.language,
         symbolicRefs: def.symbolicRefs,
+        status: def.status,
       };
     });
 

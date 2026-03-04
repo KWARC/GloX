@@ -1,7 +1,13 @@
 import { queryClient } from "@/queryClient";
+import { injectProvenance } from "@/server/ftml/addProvenanceData";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
 import { ExtractedItem } from "@/server/text-selection";
 import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
+import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
+import {
+  getDefinitionFileStatus,
+  updateDefinitionsStatusByIdentity,
+} from "@/serverFns/definitionStatus.server";
 import {
   deleteDefinition,
   updateDefinition,
@@ -9,7 +15,6 @@ import {
 import {
   FileIdentity,
   getDefinitionsByIdentity,
-  getLatexHistory,
 } from "@/serverFns/latex.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
@@ -26,12 +31,40 @@ import {
   Stack,
   Text,
   Textarea,
+  Tooltip,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Download, FolderSymlink } from "lucide-react";
 import { useState } from "react";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
+
+const STATUS_CONFIG = {
+  SUBMITTED_TO_MATHHUB: {
+    color: "teal",
+    label: "Submitted to MathHub",
+    actionLabel: "Unsubmit from MathHub",
+    actionColor: "red" as const,
+    nextStatus: "FINALIZED_IN_FILE" as const,
+    disabledWhen: (s: string) => s !== "SUBMITTED_TO_MATHHUB",
+  },
+  FINALIZED_IN_FILE: {
+    color: "blue",
+    label: "Submit for MathHub",
+    actionLabel: "Submit to MathHub",
+    actionColor: "blue" as const,
+    nextStatus: "SUBMITTED_TO_MATHHUB" as const,
+    disabledWhen: (s: string) => s !== "FINALIZED_IN_FILE",
+  },
+  EXTRACTED: {
+    color: "gray",
+    label: "Extracted",
+    actionLabel: "Submit to MathHub",
+    actionColor: "blue" as const,
+    nextStatus: "SUBMITTED_TO_MATHHUB" as const,
+    disabledWhen: (s: string) => s !== "FINALIZED_IN_FILE",
+  },
+} as const;
 
 export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,9 +87,17 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
       }),
   });
 
-  const { data: latexHistory } = useQuery({
+  const { data: provenance } = useQuery({
+    queryKey: ["definition-provenance", identity.documentId],
+    queryFn: () =>
+      getDefinitionProvenance({
+        data: identity,
+      }),
+  });
+
+  const { data: definitionStatus } = useQuery({
     queryKey: [
-      "latex-status",
+      "definition-status",
       identity.documentId,
       identity.futureRepo,
       identity.filePath,
@@ -64,14 +105,16 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
       identity.language,
     ],
     queryFn: () =>
-      getLatexHistory({
+      getDefinitionFileStatus({
         data: identity,
       }),
   });
 
-  const latexStatus = latexHistory?.status ?? "EXTRACTED";
-
   const hasSymbols = (data?.symbols.length ?? 0) > 0;
+  const currentStatus =
+    (definitionStatus as keyof typeof STATUS_CONFIG) ?? "EXTRACTED";
+  const statusConf = STATUS_CONFIG[currentStatus] ?? STATUS_CONFIG.EXTRACTED;
+
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
     setDefinitionMetaEditOpen(true);
@@ -94,7 +137,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         return;
       }
 
-      const stex = await generateStexFromFtml(ftmlAst, identity.fileName);
+      let stex = await generateStexFromFtml(ftmlAst, identity.fileName);
+      stex = injectProvenance(stex ?? "", provenance);
 
       if (!stex) {
         alert("LaTeX generation failed.");
@@ -162,15 +206,17 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         return;
       }
 
-      const stex = await generateStexFromFtml(ftmlAst, identity.fileName);
+      let stex = await generateStexFromFtml(ftmlAst, identity.fileName);
+      stex = injectProvenance(stex ?? "", provenance);
 
-      setLatexCode(stex || "");
+      setLatexCode(stex);
       setLatexOpen(true);
     } catch (e) {
       console.error(e);
       alert("Failed to load LaTeX preview");
     }
   }
+
   return (
     <>
       <Paper
@@ -183,7 +229,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           flexDirection: "column",
           overflow: "hidden",
           transition: "box-shadow 150ms ease, border-color 150ms ease",
-          borderColor: "var(--mantine-color-gray-3)",
         }}
         styles={{
           root: {
@@ -199,33 +244,38 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
             px="md"
             py="sm"
             style={{
-              borderBottom: "1px solid var(--mantine-color-gray-1)",
+              borderBottom: "1px solid var(--mantine-color-gray-2)",
               backgroundColor: "var(--mantine-color-gray-0)",
             }}
           >
-            <Group justify="space-between" align="center">
-              <Text size="xs" fw={600} c="gray.7" tt="uppercase">
+            <Group justify="space-between" align="center" mb={6}>
+              <Text size="xs" fw={700} c="gray.6" tt="uppercase" lts={0.5}>
                 Symbol Declared
               </Text>
 
-              <ActionIcon size="sm" variant="subtle" onClick={handleDownload}>
-                <Download size={16} />
-              </ActionIcon>
+              <Tooltip label="Download .tex file" withArrow position="top">
+                <ActionIcon
+                  size="sm"
+                  variant="subtle"
+                  color="gray"
+                  onClick={handleDownload}
+                >
+                  <Download size={14} />
+                </ActionIcon>
+              </Tooltip>
             </Group>
 
             {hasSymbols ? (
-              <Group gap={6}>
+              <Group gap={6} wrap="wrap">
                 {data?.symbols.map((symbol, index) => (
                   <Badge
                     key={`${symbol.id}-${index}`}
                     size="sm"
                     variant="light"
                     color="blue"
+                    radius="sm"
                     styles={{
-                      root: {
-                        textTransform: "none",
-                        fontWeight: 500,
-                      },
+                      root: { textTransform: "none", fontWeight: 500 },
                     }}
                   >
                     {symbol.label}
@@ -233,7 +283,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 ))}
               </Group>
             ) : (
-              <Text size="xs" c="dimmed">
+              <Text size="xs" c="dimmed" fs="italic">
                 No symbol declared
               </Text>
             )}
@@ -247,37 +297,51 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               flexDirection: "column",
             }}
           >
-            <Box px="md" pt="sm" pb="xs">
+            <Box
+              px="md"
+              pt="sm"
+              pb="xs"
+              style={{ borderBottom: "1px solid var(--mantine-color-gray-1)" }}
+            >
               <Group justify="space-between" align="center">
-                <Text size="xs" fw={600} c="gray.7" tt="uppercase">
+                <Text size="xs" fw={700} c="gray.6" tt="uppercase" lts={0.5}>
                   Definitions
                 </Text>
 
-                <Menu shadow="md" width={220}>
+                <Menu shadow="md" width={230} position="bottom-end">
                   <Menu.Target>
-                    <Button
-                      size="xs"
-                      variant="light"
-                      rightSection={<ChevronDown size={14} />}
-                      color={latexStatus === "SUBMITTED" ? "green" : "gray"}
+                    <Tooltip
+                      disabled={definitionStatus !== "EXTRACTED"}
+                      label="Finalize LaTeX first before submitting to MathHub"
+                      withArrow
                     >
-                      {latexStatus === "SUBMITTED"
-                        ? "MathHub Submitted"
-                        : "MathHub Status"}
-                    </Button>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        color={statusConf.color}
+                        rightSection={<ChevronDown size={12} />}
+                        styles={{ section: { marginLeft: 4 } }}
+                      >
+                        {statusConf.label}
+                      </Button>
+                    </Tooltip>
                   </Menu.Target>
-
                   <Menu.Dropdown>
-                    <Menu.Label>MathHub Actions</Menu.Label>
+                    <Menu.Label>Status Actions</Menu.Label>
 
                     <Menu.Item
-                      disabled={latexStatus === "SUBMITTED"}
+                      disabled={definitionStatus !== "FINALIZED_IN_FILE"}
                       onClick={async () => {
-                        // todo updatelatuxstatus
+                        await updateDefinitionsStatusByIdentity({
+                          data: {
+                            identity,
+                            status: "SUBMITTED_TO_MATHHUB",
+                          },
+                        });
 
                         await queryClient.invalidateQueries({
                           queryKey: [
-                            "latex-status",
+                            "definition-status",
                             identity.documentId,
                             identity.futureRepo,
                             identity.filePath,
@@ -292,13 +356,18 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
 
                     <Menu.Item
                       color="red"
-                      disabled={latexStatus !== "SUBMITTED"}
+                      disabled={definitionStatus !== "SUBMITTED_TO_MATHHUB"}
                       onClick={async () => {
-                        // todo updatelatexstatus
+                        await updateDefinitionsStatusByIdentity({
+                          data: {
+                            identity,
+                            status: "FINALIZED_IN_FILE",
+                          },
+                        });
 
                         await queryClient.invalidateQueries({
                           queryKey: [
-                            "latex-status",
+                            "definition-status",
                             identity.documentId,
                             identity.futureRepo,
                             identity.filePath,
@@ -320,7 +389,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               scrollbarSize={6}
               style={{ flex: 1 }}
               px="md"
-              pb="md"
+              py="sm"
             >
               {isLoading && (
                 <Group justify="center" py="lg">
@@ -344,60 +413,99 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     showDefinitionMeta
                     showDefinitionMetaIconOnly
                     onEditDefinitionMeta={handleEditDefinitionMeta}
-                    isLocked={latexStatus === "SUBMITTED"}
+                    isLocked={definitionStatus === "SUBMITTED_TO_MATHHUB"}
                   />
                 </Stack>
               )}
             </ScrollArea>
           </Box>
+
           <Box
             px="md"
-            pt="sm"
-            pb="xs"
+            py="xs"
             style={{
-              borderBottom: "1px solid var(--mantine-color-gray-2)",
+              borderTop: "1px solid var(--mantine-color-gray-2)",
+              backgroundColor: "var(--mantine-color-gray-0)",
             }}
           >
-            <Group justify="space-between">
-              <Group
-                gap={6}
-                style={{ cursor: "pointer" }}
-                onClick={() => {
-                  setDefinitionMetaTarget(null);
-                  setDefinitionMetaEditOpen(true);
-                }}
-              >
-                <FolderSymlink size={14} />
-                <Text size="xs" c="dimmed" ff="monospace" lh={1.4}>
-                  {[
-                    identity.futureRepo,
-                    identity.filePath,
-                    identity.fileName,
-                    identity.language,
-                  ]
-                    .filter(Boolean)
-                    .join(" / ")}
-                </Text>
-              </Group>
-              <Group mt="xs" w="100%">
+            <Group
+              justify="space-between"
+              align="center"
+              wrap="nowrap"
+              gap="xs"
+            >
+              <Tooltip label="Edit file path" withArrow position="top">
+                <Group
+                  gap={6}
+                  wrap="nowrap"
+                  style={{
+                    cursor: "pointer",
+                    minWidth: 0,
+                    flex: 1,
+                    overflow: "hidden",
+                  }}
+                  onClick={() => {
+                    setDefinitionMetaTarget(null);
+                    setDefinitionMetaEditOpen(true);
+                  }}
+                >
+                  <FolderSymlink
+                    size={13}
+                    style={{
+                      flexShrink: 0,
+                      color: "var(--mantine-color-dimmed)",
+                    }}
+                  />
+                  <Text size="10px" c="dimmed" ff="monospace" lh={1.4} truncate>
+                    {[
+                      identity.futureRepo,
+                      identity.filePath,
+                      identity.fileName,
+                      identity.language,
+                    ]
+                      .filter(Boolean)
+                      .join(" / ")}
+                  </Text>
+                </Group>
+              </Tooltip>
+
+              <Tooltip label="Preview sTeX" withArrow>
                 <Button
                   size="xs"
-                  variant="light"
-                  ml="auto"
+                  variant="subtle"
+                  color="blue"
+                  style={{ flexShrink: 0 }}
                   onClick={handleOpenLatexPreview}
                 >
-                  Open LaTeX Editor
+                  LaTeX
                 </Button>
-              </Group>
+              </Tooltip>
             </Group>
           </Box>
         </Stack>
       </Paper>
+
       <Modal
         opened={latexOpen}
         onClose={() => setLatexOpen(false)}
-        title="LaTeX Preview"
+        title={
+          <Group justify="space-between" w="100%">
+            <Group gap="xs">
+              <Text fw={600}>LaTeX Preview</Text>
+              <Badge size="sm" variant="light" color="violet">
+                {identity.fileName}.{identity.language}.tex
+              </Badge>
+            </Group>
+
+            <Tooltip label="Download .tex">
+              <ActionIcon variant="light" onClick={handleDownload}>
+                <Download size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        }
         size="xl"
+        padding="lg"
       >
         <Textarea
           value={latexCode}
@@ -408,10 +516,13 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
             input: {
               fontFamily: "monospace",
               fontSize: 13,
+              lineHeight: 1.6,
+              backgroundColor: "var(--mantine-color-gray-0)",
             },
           }}
         />
       </Modal>
+
       <DefinitionIdentityDialog
         opened={definitionMetaEditOpen}
         onClose={() => {

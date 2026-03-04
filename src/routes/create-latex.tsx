@@ -1,7 +1,12 @@
 import { currentUser } from "@/server/auth/currentUser";
+import { injectProvenance } from "@/server/ftml/addProvenanceData";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
 import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
+import {
+  getDefinitionFileStatus,
+  updateDefinitionsStatusByIdentity,
+} from "@/serverFns/definitionStatus.server";
 import {
   getLatexHistory,
   saveLatexDraft,
@@ -126,35 +131,36 @@ function CreateLatexPage() {
     queryKey: ["definition-provenance", documentId],
     queryFn: () =>
       getDefinitionProvenance({
-        data: { documentId },
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+        },
       }),
   });
 
-  function injectProvenance(
-    stexSource: string,
-    provenance?: {
-      documentName: string;
-      pageNumber: number;
-    }[],
-  ) {
-    if (!stexSource || !provenance?.length) return stexSource;
-
-    const unique = Array.from(
-      new Map(
-        provenance.map((p) => [`${p.documentName}-${p.pageNumber}`, p]),
-      ).values(),
-    );
-
-    const lines = unique.map(
-      (p) =>
-        `%%% The content of this file was extracted from ${p.documentName}(page ${p.pageNumber}) using Glox`,
-    );
-
-    return `${stexSource.trim()}
-
-${lines.join("\n")}
-`;
-  }
+  const { data: definitionStatus } = useQuery({
+    queryKey: [
+      "definition-status",
+      documentId,
+      futureRepo,
+      filePath,
+      fileName,
+      language,
+    ],
+    queryFn: () =>
+      getDefinitionFileStatus({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+        },
+      }),
+  });
 
   const generatedLatex =
     stex && provenance ? injectProvenance(stex, provenance) : (stex ?? "");
@@ -242,39 +248,54 @@ ${lines.join("\n")}
         <Paper p="lg" withBorder>
           <Group justify="space-between">
             <Group>
-              <Title order={2}>LaTeX Editor</Title>
+              <Title order={2}>LaTeX Preview</Title>
               <Badge>sTeX</Badge>
 
-              {historyData?.status === "SUBMITTED" && (
+              {definitionStatus === "SUBMITTED_TO_MATHHUB" && (
                 <Badge color="green">MathHub Submitted</Badge>
               )}
             </Group>
 
             <Group>
-              <Button
-                size="xs"
-                color={historyData?.status === "SUBMITTED" ? "gray" : "green"}
-                disabled={historyData?.status === "SUBMITTED"}
-                onClick={async () => {
-                  const confirmSubmit = confirm(
-                    "Submit to MathHub? Editing will be locked.",
-                  );
-                  if (!confirmSubmit) return;
-                  //todo definition updatestatus
-                  alert("✅ MathHub Submitted Successfully");
-                  await refetchHistory();
-                }}
-              >
-                {historyData?.status === "SUBMITTED"
-                  ? "MathHub Submitted"
-                  : "Submit to MathHub"}
-              </Button>
+              {definitionStatus === "FINALIZED_IN_FILE" && (
+                <Button
+                  size="xs"
+                  color="green"
+                  onClick={async () => {
+                    const confirmSubmit = confirm(
+                      "Submit to MathHub? Editing will be locked.",
+                    );
+                    if (!confirmSubmit) return;
+
+                    await updateDefinitionsStatusByIdentity({
+                      data: {
+                        identity: {
+                          documentId,
+                          futureRepo,
+                          filePath,
+                          fileName,
+                          language,
+                        },
+                        status: "SUBMITTED_TO_MATHHUB",
+                      },
+                    });
+
+                    alert("MathHub submission successful");
+                    navigate({ to: "/" });
+                  }}
+                >
+                  Submit to MathHub
+                </Button>
+              )}
 
               <Button
                 size="xs"
                 variant="light"
                 onClick={() => setHistoryOpen(true)}
-                disabled={!historyData?.history.length}
+                disabled={
+                  definitionStatus === "FINALIZED_IN_FILE" ||
+                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                }
               >
                 Version History
               </Button>
@@ -316,7 +337,10 @@ ${lines.join("\n")}
 
         <Paper withBorder style={{ flex: 1 }}>
           <Textarea
-            readOnly={historyData?.status === "SUBMITTED"}
+            readOnly={
+              definitionStatus === "FINALIZED_IN_FILE" ||
+              definitionStatus === "SUBMITTED_TO_MATHHUB"
+            }
             value={displayLatex}
             onChange={(e) => {
               setEditedLatex(e.currentTarget.value);
@@ -361,7 +385,11 @@ ${lines.join("\n")}
               <Button
                 onClick={handleSaveDraft}
                 loading={savingDraft}
-                disabled={isFromHistory || historyData?.status === "SUBMITTED"}
+                disabled={
+                  isFromHistory ||
+                  definitionStatus === "FINALIZED_IN_FILE" ||
+                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                }
               >
                 Save Draft
               </Button>
@@ -371,7 +399,10 @@ ${lines.join("\n")}
                 gradient={{ from: "violet", to: "grape" }}
                 onClick={handleSaveFinal}
                 loading={savingFinal}
-                disabled={historyData?.status === "SUBMITTED"}
+                disabled={
+                  definitionStatus === "FINALIZED_IN_FILE" ||
+                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                }
               >
                 Save Final
               </Button>
