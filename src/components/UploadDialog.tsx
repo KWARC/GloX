@@ -34,7 +34,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [futureRepo, setFutureRepo] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [filePath, setFilePath] = useState("");
   const [language, setLanguage] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -137,12 +137,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
           placeholder="Click to browse files"
           accept="application/pdf"
           value={file}
-          onChange={(f) => {
-            setFile(f);
-            if (f) {
-              setFileName(f.name.replace(".pdf", ""));
-            }
-          }}
+          onChange={setFile}
           leftSection={<IconFile size={18} />}
           size="md"
           styles={{
@@ -197,9 +192,10 @@ export default function UploadDialog({ opened, onClose }: Props) {
             />
 
             <TextInput
-              label="File Name"
-              value={fileName}
-              onChange={(e) => setFileName(e.currentTarget.value)}
+              label="File Path"
+              placeholder="e.g. mod"
+              value={filePath}
+              onChange={(e) => setFilePath(e.currentTarget.value)}
             />
 
             <Select
