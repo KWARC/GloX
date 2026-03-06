@@ -1,21 +1,23 @@
 import { uploadPdf } from "@/serverFns/upload.server";
 import {
+  Alert,
   Button,
   FileInput,
+  Group,
   Modal,
+  Paper,
+  Progress,
+  Select,
   Stack,
   Text,
-  Group,
-  Paper,
+  TextInput,
   ThemeIcon,
-  Progress,
-  Alert,
 } from "@mantine/core";
 import {
-  IconUpload,
-  IconFile,
-  IconCheck,
   IconAlertCircle,
+  IconCheck,
+  IconFile,
+  IconUpload,
 } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -30,6 +32,10 @@ export default function UploadDialog({ opened, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [futureRepo, setFutureRepo] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [language, setLanguage] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -131,7 +137,12 @@ export default function UploadDialog({ opened, onClose }: Props) {
           placeholder="Click to browse files"
           accept="application/pdf"
           value={file}
-          onChange={setFile}
+          onChange={(f) => {
+            setFile(f);
+            if (f) {
+              setFileName(f.name.replace(".pdf", ""));
+            }
+          }}
           leftSection={<IconFile size={18} />}
           size="md"
           styles={{
@@ -175,6 +186,32 @@ export default function UploadDialog({ opened, onClose }: Props) {
               </ThemeIcon>
             </Group>
           </Paper>
+        )}
+        {file && !loading && (
+          <Stack gap="sm">
+            <TextInput
+              label="Future Repo"
+              placeholder="e.g. smglom/software"
+              value={futureRepo}
+              onChange={(e) => setFutureRepo(e.currentTarget.value)}
+            />
+
+            <TextInput
+              label="File Name"
+              value={fileName}
+              onChange={(e) => setFileName(e.currentTarget.value)}
+            />
+
+            <Select
+              label="Language"
+              value={language}
+              onChange={(v) => setLanguage(v || "en")}
+              data={[
+                { value: "en", label: "en" },
+                { value: "de", label: "de" },
+              ]}
+            />
+          </Stack>
         )}
 
         {loading && (
