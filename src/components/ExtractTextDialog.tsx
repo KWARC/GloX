@@ -1,11 +1,14 @@
 import {
   Button,
+  Divider,
   Group,
   Modal,
   Stack,
+  Text,
   Textarea,
   TextInput,
 } from "@mantine/core";
+import { IconFileText } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 interface ExtractTextDialogProps {
@@ -35,31 +38,54 @@ export function ExtractTextDialog({
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Edit Extracted Text"
+      title={
+        <Group gap="xs">
+          <IconFileText size={18} color="var(--mantine-color-blue-6)" />
+          <Text fw={600} size="md">
+            Extract Text
+          </Text>
+        </Group>
+      }
       centered
       size="lg"
+      radius="md"
+      padding="xl"
     >
-      <Stack gap="md">
+      <Stack gap="lg">
         <TextInput
           label="Definition Name"
+          placeholder="e.g. derivative-rules"
           value={definitionName}
           onChange={(e) => setDefinitionName(e.currentTarget.value)}
-        />
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.currentTarget.value)}
-          autosize
-          minRows={6}
-          styles={{
-            input: {
-              fontFamily: "monospace",
-              lineHeight: 1.6,
-            },
-          }}
+          styles={{ input: { fontWeight: 500 } }}
         />
 
-        <Group justify="flex-end">
-          <Button variant="subtle" onClick={onClose}>
+        <Divider />
+
+        <Stack gap={4}>
+          <Text size="sm" fw={500}>
+            Extracted Text
+          </Text>
+          <Text size="xs" c="dimmed">
+            Review and edit the selected text before extracting.
+          </Text>
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.currentTarget.value)}
+            autosize
+            minRows={6}
+            styles={{
+              input: {
+                fontFamily: "monospace",
+                fontSize: "0.85rem",
+                lineHeight: 1.7,
+              },
+            }}
+          />
+        </Stack>
+
+        <Group justify="flex-end" gap="sm">
+          <Button variant="default" onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -68,6 +94,8 @@ export function ExtractTextDialog({
               if (!cleaned) return;
               onSubmit(cleaned);
             }}
+            disabled={!text.trim()}
+            leftSection={<IconFileText size={16} />}
           >
             Extract
           </Button>

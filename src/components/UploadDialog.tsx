@@ -1,7 +1,9 @@
 import { uploadPdf } from "@/serverFns/upload.server";
 import {
   Alert,
+  Badge,
   Button,
+  Divider,
   FileInput,
   Group,
   Modal,
@@ -35,7 +37,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
 
   const [futureRepo, setFutureRepo] = useState("");
   const [filePath, setFilePath] = useState("");
-  const [language, setLanguage] = useState("");
+  const [language, setLanguage] = useState("en");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -94,42 +96,43 @@ export default function UploadDialog({ opened, onClose }: Props) {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
+  const canUpload =
+    !loading && !!file && !!futureRepo && !!filePath && !!language;
+
   return (
     <Modal
       opened={opened}
       onClose={handleClose}
       title={
-        <Group gap="xs">
-          <ThemeIcon size="lg" radius="md" variant="light" color="blue">
-            <IconUpload size={20} />
+        <Group gap="sm">
+          <ThemeIcon
+            size="lg"
+            radius="md"
+            variant="gradient"
+            gradient={{ from: "blue", to: "cyan" }}
+          >
+            <IconUpload size={18} />
           </ThemeIcon>
-          <Text fw={600} size="lg">
-            Upload PDF Document
-          </Text>
+          <Stack gap={0}>
+            <Text fw={700} size="md" lh={1.2}>
+              Upload PDF
+            </Text>
+            <Text size="xs" c="dimmed" fw={400}>
+              Extract and annotate document content
+            </Text>
+          </Stack>
         </Group>
       }
       centered
       size="md"
       padding="xl"
       radius="md"
-      styles={{
-        header: {
-          paddingBottom: 16,
-        },
-        body: {
-          paddingTop: 0,
-        },
-      }}
     >
       <Stack gap="lg">
-        <Text size="sm" c="dimmed">
-          Upload a PDF file to extract and analyze its contents.
-        </Text>
-
         {error && (
           <Alert
             icon={<IconAlertCircle size={16} />}
-            title="Upload Error"
+            title="Upload failed"
             color="red"
             variant="light"
             radius="md"
@@ -139,22 +142,15 @@ export default function UploadDialog({ opened, onClose }: Props) {
         )}
 
         <FileInput
-          label="Select PDF File"
-          placeholder="Click to browse files"
+          label="PDF File"
+          description="Only PDF files are accepted."
+          placeholder="Click to browse…"
           accept="application/pdf"
           value={file}
           onChange={setFile}
-          leftSection={<IconFile size={18} />}
-          size="md"
-          styles={{
-            input: {
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              "&:hover": {
-                borderColor: "var(--mantine-color-blue-5)",
-              },
-            },
-          }}
+          leftSection={<IconFile size={16} />}
+          radius="md"
+          disabled={loading}
         />
 
         {file && !loading && (
@@ -164,87 +160,87 @@ export default function UploadDialog({ opened, onClose }: Props) {
             withBorder
             style={{
               background:
-                "linear-gradient(135deg, var(--mantine-color-blue-0) 0%, var(--mantine-color-blue-1) 100%)",
+                "linear-gradient(135deg, var(--mantine-color-blue-0) 0%, var(--mantine-color-cyan-0) 100%)",
               borderColor: "var(--mantine-color-blue-3)",
             }}
           >
             <Group justify="space-between" wrap="nowrap">
-              <Group gap="sm">
+              <Group gap="sm" style={{ minWidth: 0 }}>
                 <ThemeIcon size="lg" radius="md" color="blue" variant="light">
-                  <IconFile size={20} />
+                  <IconFile size={18} />
                 </ThemeIcon>
-                <div>
+                <Stack gap={2} style={{ minWidth: 0 }}>
                   <Text size="sm" fw={600} lineClamp={1}>
                     {file.name}
                   </Text>
-                  <Text size="xs" c="dimmed">
+                  <Badge size="xs" variant="light" color="gray">
                     {formatFileSize(file.size)}
-                  </Text>
-                </div>
+                  </Badge>
+                </Stack>
               </Group>
               <ThemeIcon size="md" radius="xl" color="green" variant="light">
-                <IconCheck size={16} />
+                <IconCheck size={14} />
               </ThemeIcon>
             </Group>
           </Paper>
         )}
+
         {file && !loading && (
-          <Stack gap="sm">
-            <TextInput
-              label="Future Repo"
-              placeholder="e.g. smglom/software"
-              value={futureRepo}
-              onChange={(e) => setFutureRepo(e.currentTarget.value)}
-            />
+          <>
+            <Divider label="File metadata" labelPosition="left" />
 
-            <TextInput
-              label="File Path"
-              placeholder="e.g. mod"
-              value={filePath}
-              onChange={(e) => setFilePath(e.currentTarget.value)}
-            />
+            <Stack gap="sm">
+              <TextInput
+                label="Future Repo"
+                placeholder="smglom/software"
+                value={futureRepo}
+                onChange={(e) => setFutureRepo(e.currentTarget.value)}
+                radius="md"
+              />
 
-            <Select
-              label="Language"
-              value={language}
-              onChange={(v) => setLanguage(v || "en")}
-              data={[
-                { value: "en", label: "en" },
-                { value: "de", label: "de" },
-              ]}
-            />
-          </Stack>
+              <TextInput
+                label="File Path"
+                placeholder="mod"
+                value={filePath}
+                onChange={(e) => setFilePath(e.currentTarget.value)}
+                radius="md"
+              />
+
+              <Select
+                label="Language"
+                value={language}
+                onChange={(v) => setLanguage(v || "en")}
+                data={[
+                  { value: "en", label: "English (en)" },
+                  { value: "de", label: "German (de)" },
+                ]}
+                radius="md"
+                allowDeselect={false}
+              />
+            </Stack>
+          </>
         )}
 
         {loading && (
           <Stack gap="xs">
             <Progress value={100} animated color="blue" size="sm" radius="xl" />
             <Text size="xs" c="dimmed" ta="center">
-              Uploading and processing your document...
+              Uploading and processing your document…
             </Text>
           </Stack>
         )}
 
-        <Group justify="flex-end" mt="md">
-          <Button
-            variant="subtle"
-            color="gray"
-            onClick={handleClose}
-            disabled={loading}
-          >
+        <Group justify="flex-end" gap="sm" mt={4}>
+          <Button variant="default" onClick={handleClose} disabled={loading}>
             Cancel
           </Button>
           <Button
             onClick={handleUpload}
             loading={loading}
-            disabled={!file || !futureRepo || !filePath || !language}
-            leftSection={<IconUpload size={18} />}
-            size="md"
-            style={{
-              transition: "all 0.2s ease",
-            }}
+            disabled={!canUpload}
+            leftSection={<IconUpload size={16} />}
           >
-            {loading ? "Uploading..." : "Upload Document"}
+            {loading ? "Uploading…" : "Upload"}
           </Button>
         </Group>
       </Stack>
