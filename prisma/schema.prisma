@@ -25,6 +25,10 @@ model Document {
   mimeType String
   fileSize Int
 
+  futureRepo String @default("smglom/softeng")
+  filePath   String @default("mod")
+  language   String @default("en")
+
   userId String
   user   User   @relation(fields: [userId], references: [id])
 

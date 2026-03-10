@@ -1,9 +1,18 @@
-import { Button, Group, Modal, Stack, Textarea } from "@mantine/core";
+import {
+  Button,
+  Group,
+  Modal,
+  Stack,
+  Textarea,
+  TextInput,
+} from "@mantine/core";
 import { useEffect, useState } from "react";
 
 interface ExtractTextDialogProps {
   opened: boolean;
   initialText: string;
+  definitionName: string;
+  setDefinitionName: (v: string) => void;
   onClose: () => void;
   onSubmit: (text: string) => void;
 }
@@ -11,6 +20,8 @@ interface ExtractTextDialogProps {
 export function ExtractTextDialog({
   opened,
   initialText,
+  definitionName,
+  setDefinitionName,
   onClose,
   onSubmit,
 }: ExtractTextDialogProps) {
@@ -29,6 +40,11 @@ export function ExtractTextDialog({
       size="lg"
     >
       <Stack gap="md">
+        <TextInput
+          label="Definition Name"
+          value={definitionName}
+          onChange={(e) => setDefinitionName(e.currentTarget.value)}
+        />
         <Textarea
           value={text}
           onChange={(e) => setText(e.currentTarget.value)}

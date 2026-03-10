@@ -34,9 +34,15 @@ function RouteComponent() {
           >
             <Card withBorder style={{ cursor: "pointer" }}>
               <Text fw={500}>{doc.filename}</Text>
+
               <Text size="sm" c="dimmed">
                 {(doc.fileSize / 1024 / 1024).toFixed(2)} MB
               </Text>
+
+              <Text size="sm" c="dimmed">
+                {doc.futureRepo} / {doc.filePath} ({doc.language})
+              </Text>
+
               <Text size="sm" c="dimmed">
                 Status: {doc.status}
               </Text>

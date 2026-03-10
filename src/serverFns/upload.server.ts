@@ -8,17 +8,20 @@ export const uploadPdf = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<UploadDocumentResult> => {
     const userId = requireUserId();
 
-    if (!(data instanceof FormData)) {
-      throw new Error("Invalid upload payload");
-    }
-
     const file = data.get("file");
+    const futureRepo = data.get("futureRepo") as string;
+    const filePath = data.get("filePath") as string;
+    const language = data.get("language") as string;
 
     if (!(file instanceof File)) {
       throw new Error("No file provided");
     }
 
-    console.log("Uploading:", file.name);
-
-    return uploadDocument({ file, userId });
+    return uploadDocument({
+      file,
+      userId,
+      futureRepo,
+      filePath,
+      language,
+    });
   });

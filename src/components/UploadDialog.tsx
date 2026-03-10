@@ -41,12 +41,17 @@ export default function UploadDialog({ opened, onClose }: Props) {
 
   const handleUpload = async () => {
     if (!file) return;
+
     setLoading(true);
     setError(null);
 
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("futureRepo", futureRepo);
+      formData.append("filePath", filePath);
+      formData.append("language", language);
+
       const result = await uploadPdf({ data: formData });
 
       if (
@@ -54,19 +59,20 @@ export default function UploadDialog({ opened, onClose }: Props) {
         (result.status === "OK" || result.status === "DUPLICATE")
       ) {
         queryClient.invalidateQueries({ queryKey: ["documents"] });
+
         onClose();
         setFile(null);
+
         navigate({
           to: "/my-files/$documentId",
           params: { documentId: result.documentId },
         });
       } else {
         setError("Upload failed. Please try again.");
-        setFile(null);
       }
     } catch (error) {
-      console.error("Upload failed:", error);
-      setError("An error occurred during upload. Please try again.");
+      console.error(error);
+      setError("An error occurred during upload.");
     } finally {
       setLoading(false);
     }
@@ -231,7 +237,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
           <Button
             onClick={handleUpload}
             loading={loading}
-            disabled={!file}
+            disabled={!file || !futureRepo || !filePath || !language}
             leftSection={<IconUpload size={18} />}
             size="md"
             style={{

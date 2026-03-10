@@ -13,9 +13,7 @@ export const Route = createFileRoute("/")({
 
 function App() {
   const [opened, setOpened] = useState(false);
-  const [curationLevel, setCurationLevel] = useState<string | null>(
-    "EXTRACTED",
-  );
+  const [curationLevel, setCurationLevel] = useState<string | null>(null);
 
   const { data: user } = useQuery({
     queryKey: ["currentUser"],

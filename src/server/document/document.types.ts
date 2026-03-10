@@ -1,7 +1,10 @@
-export interface UploadDocumentInput {
+export type UploadDocumentInput = {
   file: File;
   userId: string;
-}
+  futureRepo: string;
+  filePath: string;
+  language: string;
+};
 
 export type UploadDocumentResult =
   | {
@@ -12,5 +15,3 @@ export type UploadDocumentResult =
       status: "DUPLICATE";
       documentId: string;
     };
-
-

@@ -1,6 +1,5 @@
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { DefinitionIdentityDialog } from "@/components/DefinitionFilePathDialog";
-import { DocumentHeader } from "@/components/DocumentHeader";
 import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { ExtractTextDialog } from "@/components/ExtractTextDialog";
@@ -81,7 +80,8 @@ function RouteComponent() {
   const [filePath, setFilePath] = useState("mod");
   const [fileName, setFileName] = useState("Software");
   const [language, setLanguage] = useState("en");
-  const { errors, validate, clearError } = useValidation();
+  const [definitionName, setDefinitionName] = useState("");
+  const { validate, clearError } = useValidation();
 
   const [activePage, setActivePage] = useState<ActivePage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -98,7 +98,6 @@ function RouteComponent() {
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
-  const [isEditingMeta, setIsEditingMeta] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
   const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
@@ -132,8 +131,7 @@ function RouteComponent() {
     setLockedByExtractId(null);
 
     if (!lockedByExtractId) {
-      const ok = validate(futureRepo, filePath, fileName, language);
-      if (!ok) return;
+      if (!validate(futureRepo, filePath, fileName, language)) return;
     }
 
     handleSelection("left");
@@ -209,12 +207,7 @@ function RouteComponent() {
     setLanguage(extract.language);
 
     setLockedByExtractId(extractId);
-    setIsEditingMeta(false);
-
-    clearError("futureRepo");
-    clearError("filePath");
     clearError("fileName");
-    clearError("language");
 
     handleSelection("right", { extractId });
   }
@@ -405,20 +398,22 @@ function RouteComponent() {
 
   async function handleExtractSubmit(editedText: string) {
     if (!activePage) return;
+    if (!document) return;
     if (!validate(futureRepo, filePath, fileName, language)) return;
 
     await extractText({
       documentPageId: activePage.id,
       pageNumber: activePage.pageNumber,
       text: editedText,
-      futureRepo: futureRepo.trim(),
-      filePath: filePath.trim(),
-      fileName: fileName.trim(),
-      language: language.trim(),
+      futureRepo: document.futureRepo,
+      filePath: document.filePath,
+      fileName: definitionName.trim(),
+      language: document.language,
     });
 
     setExtractDialogOpen(false);
     setPendingExtractText("");
+    setDefinitionName("");
     clearAll();
   }
 
@@ -472,21 +467,6 @@ function RouteComponent() {
         h="100%"
         style={{ overflow: "hidden" }}
       >
-        <Paper shadow="xs" p={isMobile ? "sm" : "md"} withBorder>
-          <DocumentHeader
-            futureRepo={futureRepo}
-            filePath={filePath}
-            fileName={fileName}
-            language={language}
-            disabled={lockedByExtractId ? !isEditingMeta : false}
-            onFutureRepoChange={setFutureRepo}
-            onFilePathChange={setFilePath}
-            onFileNameChange={setFileName}
-            onLanguageChange={setLanguage}
-            errors={errors}
-          />
-        </Paper>
-
         {isMobile ? (
           <Paper
             flex={1}
@@ -683,6 +663,8 @@ function RouteComponent() {
       <ExtractTextDialog
         opened={extractDialogOpen}
         initialText={pendingExtractText}
+        definitionName={definitionName}
+        setDefinitionName={setDefinitionName}
         onClose={() => setExtractDialogOpen(false)}
         onSubmit={handleExtractSubmit}
       />
