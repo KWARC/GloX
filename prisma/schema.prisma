@@ -15,7 +15,8 @@ datasource db {
 
 enum UserRole {
   ADMIN
-  USER
+  CURATOR
+  EXTRACTOR
 }
 
 model Document {
@@ -73,6 +74,7 @@ enum DefinitionStatus {
   FINALIZED_IN_FILE
   SUBMITTED_TO_MATHHUB
 }
+
 model User {
   id            String   @id @default(uuid())
   firstName     String?
@@ -80,7 +82,7 @@ model User {
   email         String   @unique
   passwordHash  String?
   emailVerified Boolean  @default(false)
-  role          UserRole @default(USER)
+  role          UserRole @default(EXTRACTOR)
 
   createdAt          DateTime            @default(now())
   documents          Document[]
@@ -144,7 +146,7 @@ model Definition {
   statement    Json
 
   symbolicRefs DefinitionSymbolicRef[]
-  status DefinitionStatus @default(EXTRACTED)
+  status       DefinitionStatus        @default(EXTRACTED)
 
   futureRepo String @default("Glox")
   filePath   String @default("Glox")
