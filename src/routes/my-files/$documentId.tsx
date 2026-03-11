@@ -743,6 +743,7 @@ function RouteComponent() {
         initialText={pendingExtractText}
         definitionName={definitionName}
         setDefinitionName={setDefinitionName}
+         filePath={`${futureRepo}/ ${filePath}`}
         onClose={() => setExtractDialogOpen(false)}
         onSubmit={handleExtractSubmit}
       />

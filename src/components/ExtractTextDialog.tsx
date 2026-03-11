@@ -15,6 +15,7 @@ interface ExtractTextDialogProps {
   opened: boolean;
   initialText: string;
   definitionName: string;
+  filePath: string;
   setDefinitionName: (v: string) => void;
   onClose: () => void;
   onSubmit: (text: string) => void;
@@ -25,6 +26,7 @@ export function ExtractTextDialog({
   initialText,
   definitionName,
   setDefinitionName,
+  filePath,
   onClose,
   onSubmit,
 }: ExtractTextDialogProps) {
@@ -39,12 +41,23 @@ export function ExtractTextDialog({
       opened={opened}
       onClose={onClose}
       title={
-        <Group gap="xs">
-          <IconFileText size={18} color="var(--mantine-color-blue-6)" />
-          <Text fw={600} size="md">
-            Extract Text
+        <Stack gap={0}>
+          <Group gap="xs">
+            <IconFileText size={18} color="var(--mantine-color-blue-6)" />
+            <Text fw={600} size="md">
+              Extract Text
+            </Text>
+          </Group>
+
+          <Text
+            size="xs"
+            c="dimmed"
+            ff="monospace"
+            style={{ userSelect: "text", lineHeight: 1.2 }}
+          >
+            {filePath}
           </Text>
-        </Group>
+        </Stack>
       }
       centered
       size="lg"
@@ -59,7 +72,6 @@ export function ExtractTextDialog({
           onChange={(e) => setDefinitionName(e.currentTarget.value)}
           styles={{ input: { fontWeight: 500 } }}
         />
-
         <Divider />
 
         <Stack gap={4}>
