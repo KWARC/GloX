@@ -8,7 +8,6 @@ import {
   Modal,
   Paper,
   ScrollArea,
-  Stack,
   TextInput,
 } from "@mantine/core";
 import { useState } from "react";
@@ -27,13 +26,8 @@ function normalizeUri(uri: string) {
     if (uri.includes("stexmmt.mathhub.info/:sTeX")) {
       uri = uri.replace("stexmmt.mathhub.info/:sTeX", "https://mathhub.info");
     }
-
     const url = new URL(uri);
-
-    if (url.protocol !== "https:") {
-      url.protocol = "https:";
-    }
-
+    if (url.protocol !== "https:") url.protocol = "https:";
     return url.toString();
   } catch {
     return uri;
@@ -46,15 +40,12 @@ export function DuplicateDefinitionDialog({
   extracts,
   onConfirm,
 }: Props) {
-  const [query, setQuery] = useState("");
+  const [input, setInput] = useState("");
+  const [search, setSearch] = useState("");
   const [duplicates, setDuplicates] = useState<string[]>([]);
-  const { results, loading } = searchForDuplicateDefinition(query);
 
-  function toggleDuplicate(uri: string) {
-    setDuplicates((prev) =>
-      prev.includes(uri) ? prev.filter((u) => u !== uri) : [...prev, uri],
-    );
-  }
+  const { results, loading } = searchForDuplicateDefinition(search);
+
   return (
     <Modal
       opened={opened}
@@ -63,104 +54,144 @@ export function DuplicateDefinitionDialog({
       padding="lg"
       title="Duplicate Definition Check"
     >
-      <Group align="stretch" gap="lg" style={{ height: "75vh" }}>
-        <Box style={{ width: "40%", display: "flex", flexDirection: "column" }}>
-          <ExtractedTextPanel
-            extracts={extracts}
-            editingId={null}
-            selectedId={null}
-            onToggleEdit={() => {}}
-            onUpdate={async () => {}}
-            onDelete={() => {}}
-            onSelection={() => {}}
-            onOpenSemanticPanel={() => {}}
-            showPageNumber={false}
-            showDefinitionMetaIconOnly
-            isLocked
-          />
-        </Box>
+      <Box
+        style={{
+          height: "75vh",
+          display: "grid",
+          gridTemplateRows: "1fr auto",
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            minHeight: 0,
+          }}
+        >
+          <Box
+            style={{
+              minHeight: 0,
+              overflow: "hidden",
+            }}
+          >
+            <ScrollArea h="100%" type="auto" scrollbarSize={6}>
+              <ExtractedTextPanel
+                extracts={extracts}
+                editingId={null}
+                selectedId={null}
+                onToggleEdit={() => {}}
+                onUpdate={async () => {}}
+                onDelete={() => {}}
+                onSelection={() => {}}
+                onOpenSemanticPanel={() => {}}
+                showPageNumber={false}
+                showDefinitionMetaIconOnly
+                isLocked
+              />
+            </ScrollArea>
+          </Box>
 
-        <Stack style={{ flex: 1 }}>
-          <Group>
-            <TextInput
-              placeholder="Search duplicate definition"
-              value={query}
-              onChange={(e) => setQuery(e.currentTarget.value)}
-              style={{ flex: 1 }}
-            />
-            <Button>Search</Button>
-          </Group>
+          <Box
+            style={{
+              display: "grid",
+              gridTemplateRows: "auto 1fr",
+              minHeight: 0,
+            }}
+          >
+            <Group mb={8}>
+              <TextInput
+                placeholder="Search duplicate definition"
+                value={input}
+                onChange={(e) => setInput(e.currentTarget.value)}
+                style={{ flex: 1 }}
+              />
+              <Button onClick={() => setSearch(input)}>Search</Button>
+            </Group>
 
-          <ScrollArea style={{ flex: 1 }}>
-            <Stack gap="sm">
-              {loading && (
-                <Group justify="center">
-                  <Loader size="sm" />
-                </Group>
-              )}
+            <ScrollArea h="100%" type="auto" scrollbarSize={6}>
+              <Box p="xs">
+                {loading && (
+                  <Group justify="center">
+                    <Loader size="sm" />
+                  </Group>
+                )}
 
-              {results.map((uri) => {
-                const marked = duplicates.includes(uri);
+                {results.map((uri) => {
+                  const marked = duplicates.includes(uri);
 
-                return (
-                  <Paper key={uri} withBorder radius="md" p={0}>
-                    <Group
-                      justify="space-between"
-                      px="xs"
-                      py={6}
-                      style={{
-                        borderBottom: "1px solid var(--mantine-color-gray-2)",
-                        background: marked
-                          ? "var(--mantine-color-red-0)"
-                          : "var(--mantine-color-gray-0)",
-                      }}
+                  return (
+                    <Paper
+                      key={uri}
+                      withBorder
+                      radius="md"
+                      p={0}
+                      mb="sm"
+                      style={{ overflow: "hidden" }}
                     >
-                      <RenderSymbolicUri uri={uri} />
-
-                      <Button
-                        size="xs"
-                        color="red"
-                        variant={marked ? "filled" : "light"}
-                        onClick={() => {
-                          let next: string[];
-
-                          if (duplicates.includes(uri)) {
-                            next = duplicates.filter((u) => u !== uri);
-                          } else {
-                            next = [...duplicates, uri];
-                          }
-
-                          setDuplicates(next);
-                          onConfirm(next);
+                      <Group
+                        justify="space-between"
+                        px="xs"
+                        py={6}
+                        style={{
+                          borderBottom: "1px solid var(--mantine-color-gray-2)",
+                          background: marked
+                            ? "var(--mantine-color-red-0)"
+                            : "var(--mantine-color-gray-0)",
                         }}
                       >
-                        {marked ? "Markeded as Duplicate" : "Mark as duplicate"}
-                      </Button>
-                    </Group>
+                        <RenderSymbolicUri uri={uri} />
 
-                    <Box style={{ height: 220 }}>
-                      <iframe
-                        src={normalizeUri(uri)}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          border: "none",
-                        }}
-                      />
-                    </Box>
-                  </Paper>
-                );
-              })}
-            </Stack>
-          </ScrollArea>
+                        <Button
+                          size="xs"
+                          color="red"
+                          variant={marked ? "filled" : "light"}
+                          onClick={() => {
+                            const next = duplicates.includes(uri)
+                              ? duplicates.filter((u) => u !== uri)
+                              : [...duplicates, uri];
 
+                            setDuplicates(next);
+                            onConfirm(next);
+                          }}
+                        >
+                          {marked ? "Marked as Duplicate" : "Mark as duplicate"}
+                        </Button>
+                      </Group>
+
+                      <Box style={{ height: 220 }}>
+                        <iframe
+                          src={normalizeUri(uri)}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            border: "none",
+                          }}
+                        />
+                      </Box>
+                    </Paper>
+                  );
+                })}
+              </Box>
+            </ScrollArea>
+          </Box>
+        </Box>
+
+        <Box
+          style={{
+            borderTop: "1px solid var(--mantine-color-gray-2)",
+            paddingTop: 10,
+            marginTop: 8,
+          }}
+        >
           <Group justify="flex-end">
             <Button variant="default" onClick={onClose}>
               Cancel
             </Button>
           </Group>
-        </Stack>
-      </Group>
+        </Box>
+      </Box>
     </Modal>
   );
 }

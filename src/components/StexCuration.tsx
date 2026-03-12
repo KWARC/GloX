@@ -34,7 +34,12 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Download, FolderSymlink } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  Download,
+  FolderSymlink,
+} from "lucide-react";
 import { useState } from "react";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { DuplicateDefinitionDialog } from "./DuplicateDefinitionDialog";
@@ -246,16 +251,30 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 Symbol Declared
               </Text>
 
-              <Tooltip label="Download .tex file" withArrow position="top">
-                <ActionIcon
-                  size="sm"
-                  variant="subtle"
-                  color="gray"
-                  onClick={handleDownload}
-                >
-                  <Download size={14} />
-                </ActionIcon>
-              </Tooltip>
+              <Group gap={6}>
+                {duplicateUris.length > 0 && (
+                  <Tooltip
+                    label={`${duplicateUris.length} duplicate definition found on MathHub`}
+                    withArrow
+                    color="red"
+                  >
+                    <ActionIcon size="sm" variant="light" color="red">
+                      <AlertTriangle size={14} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+
+                <Tooltip label="Download .tex file" withArrow position="top">
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color="gray"
+                    onClick={handleDownload}
+                  >
+                    <Download size={14} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
             </Group>
 
             {hasSymbols ? (
@@ -279,12 +298,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               <Text size="xs" c="dimmed" fs="italic">
                 No symbol declared
               </Text>
-            )}
-
-            {duplicateUris.length > 0 && (
-              <Badge size="xs" color="red">
-                {duplicateUris.length}
-              </Badge>
             )}
           </Box>
 
