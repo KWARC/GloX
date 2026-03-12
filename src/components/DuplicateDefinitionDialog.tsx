@@ -1,15 +1,15 @@
 import { searchForDuplicateDefinition } from "@/server/ftml/searchForDuplicateDef";
 import { ExtractedItem } from "@/server/text-selection";
 import {
-    Box,
-    Button,
-    Group,
-    Loader,
-    Modal,
-    Paper,
-    ScrollArea,
-    Stack,
-    TextInput,
+  Box,
+  Button,
+  Group,
+  Loader,
+  Modal,
+  Paper,
+  ScrollArea,
+  Stack,
+  TextInput,
 } from "@mantine/core";
 import { useState } from "react";
 import { ExtractedTextPanel } from "./ExtractedTextList";
@@ -19,25 +19,42 @@ interface Props {
   opened: boolean;
   onClose: () => void;
   extracts: ExtractedItem[];
+  onConfirm: (duplicates: string[]) => void;
 }
 
 function normalizeUri(uri: string) {
-  if (uri.includes("stexmmt.mathhub.info/:sTeX")) {
-    return uri.replace("stexmmt.mathhub.info/:sTeX", "https://mathhub.info");
-  }
+  try {
+    if (uri.includes("stexmmt.mathhub.info/:sTeX")) {
+      uri = uri.replace("stexmmt.mathhub.info/:sTeX", "https://mathhub.info");
+    }
 
-  return uri;
+    const url = new URL(uri);
+
+    if (url.protocol !== "https:") {
+      url.protocol = "https:";
+    }
+
+    return url.toString();
+  } catch {
+    return uri;
+  }
 }
 
 export function DuplicateDefinitionDialog({
   opened,
   onClose,
   extracts,
+  onConfirm,
 }: Props) {
   const [query, setQuery] = useState("");
-
+  const [duplicates, setDuplicates] = useState<string[]>([]);
   const { results, loading } = searchForDuplicateDefinition(query);
 
+  function toggleDuplicate(uri: string) {
+    setDuplicates((prev) =>
+      prev.includes(uri) ? prev.filter((u) => u !== uri) : [...prev, uri],
+    );
+  }
   return (
     <Modal
       opened={opened}
@@ -82,31 +99,58 @@ export function DuplicateDefinitionDialog({
                 </Group>
               )}
 
-              {results.map((uri) => (
-                <Paper key={uri} withBorder radius="md" p={0}>
-                  <Box
-                    px="xs"
-                    py={6}
-                    style={{
-                      borderBottom: "1px solid var(--mantine-color-gray-2)",
-                      background: "var(--mantine-color-gray-0)",
-                    }}
-                  >
-                    <RenderSymbolicUri uri={uri} />
-                  </Box>
+              {results.map((uri) => {
+                const marked = duplicates.includes(uri);
 
-                  <Box style={{ height: 220 }}>
-                    <iframe
-                      src={normalizeUri(uri)}
+                return (
+                  <Paper key={uri} withBorder radius="md" p={0}>
+                    <Group
+                      justify="space-between"
+                      px="xs"
+                      py={6}
                       style={{
-                        width: "100%",
-                        height: "100%",
-                        border: "none",
+                        borderBottom: "1px solid var(--mantine-color-gray-2)",
+                        background: marked
+                          ? "var(--mantine-color-red-0)"
+                          : "var(--mantine-color-gray-0)",
                       }}
-                    />
-                  </Box>
-                </Paper>
-              ))}
+                    >
+                      <RenderSymbolicUri uri={uri} />
+
+                      <Button
+                        size="xs"
+                        color="red"
+                        variant={marked ? "filled" : "light"}
+                        onClick={() => {
+                          let next: string[];
+
+                          if (duplicates.includes(uri)) {
+                            next = duplicates.filter((u) => u !== uri);
+                          } else {
+                            next = [...duplicates, uri];
+                          }
+
+                          setDuplicates(next);
+                          onConfirm(next);
+                        }}
+                      >
+                        {marked ? "Markeded as Duplicate" : "Mark as duplicate"}
+                      </Button>
+                    </Group>
+
+                    <Box style={{ height: 220 }}>
+                      <iframe
+                        src={normalizeUri(uri)}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          border: "none",
+                        }}
+                      />
+                    </Box>
+                  </Paper>
+                );
+              })}
             </Stack>
           </ScrollArea>
 

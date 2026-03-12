@@ -75,6 +75,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexCode, setLatexCode] = useState("");
   const [dupOpen, setDupOpen] = useState(false);
+  const [duplicateUris, setDuplicateUris] = useState<string[]>([]);
+
   const { data, isLoading } = useQuery({
     queryKey: ["definitionsByIdentity", identity],
     queryFn: () =>
@@ -277,6 +279,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               <Text size="xs" c="dimmed" fs="italic">
                 No symbol declared
               </Text>
+            )}
+
+            {duplicateUris.length > 0 && (
+              <Badge size="xs" color="red">
+                {duplicateUris.length}
+              </Badge>
             )}
           </Box>
 
@@ -536,6 +544,9 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           opened={dupOpen}
           onClose={() => setDupOpen(false)}
           extracts={data.definitions}
+          onConfirm={(dups) => {
+            setDuplicateUris(dups);
+          }}
         />
       )}
     </>
