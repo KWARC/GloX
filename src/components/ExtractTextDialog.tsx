@@ -106,7 +106,7 @@ export function ExtractTextDialog({
               if (!cleaned) return;
               onSubmit(cleaned);
             }}
-            disabled={!text.trim()}
+            disabled={!text.trim() || !definitionName.trim()}
             leftSection={<IconFileText size={16} />}
           >
             Extract

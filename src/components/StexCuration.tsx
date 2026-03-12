@@ -37,6 +37,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Download, FolderSymlink } from "lucide-react";
 import { useState } from "react";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
+import { DuplicateDefinitionDialog } from "./DuplicateDefinitionDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
 
 const STATUS_CONFIG = {
@@ -71,14 +72,9 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
   const [definitionMetaTarget, setDefinitionMetaTarget] =
     useState<ExtractedItem | null>(null);
-
-  const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
-  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
-    null,
-  );
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexCode, setLatexCode] = useState("");
-
+  const [dupOpen, setDupOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["definitionsByIdentity", identity],
     queryFn: () =>
@@ -182,11 +178,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
 
   function handleToggleEdit(id: string) {
     setEditingId((prev) => (prev === id ? null : id));
-  }
-
-  function handleOpenSemanticPanel(id: string) {
-    setSemanticPanelDefId(id);
-    setSemanticPanelOpen(true);
   }
 
   async function handleOpenLatexPreview() {
@@ -381,6 +372,13 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     </Menu.Item>
                   </Menu.Dropdown>
                 </Menu>
+                <Button
+                  size="xs"
+                  variant="light"
+                  onClick={() => setDupOpen(true)}
+                >
+                  Check duplicate
+                </Button>
               </Group>
             </Box>
 
@@ -408,7 +406,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     onDownload={handleDownload}
                     onDelete={handleDelete}
                     onSelection={() => {}}
-                    onOpenSemanticPanel={handleOpenSemanticPanel}
+                    onOpenSemanticPanel={() => {}}
                     showPageNumber={false}
                     showDefinitionMeta
                     showDefinitionMetaIconOnly
@@ -533,6 +531,13 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         bulkDefinition={identity}
         invalidateKey={["definitionsByIdentity", identity]}
       />
+      {data?.definitions && (
+        <DuplicateDefinitionDialog
+          opened={dupOpen}
+          onClose={() => setDupOpen(false)}
+          extracts={data.definitions}
+        />
+      )}
     </>
   );
 }
