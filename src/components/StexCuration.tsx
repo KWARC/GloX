@@ -8,14 +8,8 @@ import {
   getDefinitionFileStatus,
   updateDefinitionsStatusByIdentity,
 } from "@/serverFns/definitionStatus.server";
-import {
-  deleteDefinition,
-  updateDefinition,
-} from "@/serverFns/extractDefinition.server";
-import {
-  FileIdentity,
-  getDefinitionsByIdentity,
-} from "@/serverFns/latex.server";
+import { deleteDefinition, updateDefinition } from "@/serverFns/extractDefinition.server";
+import { FileIdentity, getDefinitionsByIdentity } from "@/serverFns/latex.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
   ActionIcon,
@@ -28,6 +22,7 @@ import {
   Modal,
   Paper,
   ScrollArea,
+  Select,
   Stack,
   Text,
   Textarea,
@@ -69,15 +64,15 @@ const STATUS_CONFIG = {
 export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
-  const [definitionMetaTarget, setDefinitionMetaTarget] =
-    useState<ExtractedItem | null>(null);
+  const [definitionMetaTarget, setDefinitionMetaTarget] = useState<ExtractedItem | null>(null);
 
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
-  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
-    null,
-  );
+  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(null);
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexCode, setLatexCode] = useState("");
+  // const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [discardReason, setDiscardReason] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["definitionsByIdentity", identity],
@@ -111,8 +106,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   });
 
   const hasSymbols = (data?.symbols.length ?? 0) > 0;
-  const currentStatus =
-    (definitionStatus as keyof typeof STATUS_CONFIG) ?? "EXTRACTED";
+  const currentStatus = (definitionStatus as keyof typeof STATUS_CONFIG) ?? "EXTRACTED";
   const statusConf = STATUS_CONFIG[currentStatus] ?? STATUS_CONFIG.EXTRACTED;
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
@@ -254,12 +248,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               </Text>
 
               <Tooltip label="Download .tex file" withArrow position="top">
-                <ActionIcon
-                  size="sm"
-                  variant="subtle"
-                  color="gray"
-                  onClick={handleDownload}
-                >
+                <ActionIcon size="sm" variant="subtle" color="gray" onClick={handleDownload}>
                   <Download size={14} />
                 </ActionIcon>
               </Tooltip>
@@ -303,10 +292,19 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               pb="xs"
               style={{ borderBottom: "1px solid var(--mantine-color-gray-1)" }}
             >
-              <Group justify="space-between" align="center">
+              <Group align="center" gap="xs" justify="space-between">
                 <Text size="xs" fw={700} c="gray.6" tt="uppercase" lts={0.5}>
                   Definitions
                 </Text>
+
+                {/* <Button
+                  size="xs"
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => setDuplicateOpen(true)}
+                >
+                  Check duplicates
+                </Button> */}
 
                 <Menu shadow="md" width={230} position="bottom-end">
                   <Menu.Target>
@@ -379,18 +377,15 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     >
                       Unsubmit from MathHub
                     </Menu.Item>
+                    <Menu.Item color="red" onClick={() => setDiscardOpen(true)}>
+                      Discard
+                    </Menu.Item>
                   </Menu.Dropdown>
                 </Menu>
               </Group>
             </Box>
 
-            <ScrollArea
-              type="auto"
-              scrollbarSize={6}
-              style={{ flex: 1 }}
-              px="md"
-              py="sm"
-            >
+            <ScrollArea type="auto" scrollbarSize={6} style={{ flex: 1 }} px="md" py="sm">
               {isLoading && (
                 <Group justify="center" py="lg">
                   <Loader size="sm" />
@@ -428,12 +423,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               backgroundColor: "var(--mantine-color-gray-0)",
             }}
           >
-            <Group
-              justify="space-between"
-              align="center"
-              wrap="nowrap"
-              gap="xs"
-            >
+            <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
               <Tooltip label="Edit file path" withArrow position="top">
                 <Group
                   gap={6}
@@ -457,12 +447,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     }}
                   />
                   <Text size="10px" c="dimmed" ff="monospace" lh={1.4} truncate>
-                    {[
-                      identity.futureRepo,
-                      identity.filePath,
-                      identity.fileName,
-                      identity.language,
-                    ]
+                    {[identity.futureRepo, identity.filePath, identity.fileName, identity.language]
                       .filter(Boolean)
                       .join(" / ")}
                   </Text>
@@ -521,6 +506,83 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
             },
           }}
         />
+      </Modal>
+
+      {/* <Modal
+        opened={duplicateOpen}
+        onClose={() => setDuplicateOpen(false)}
+        title="Check for duplicates"
+        size="xl"
+      >
+        <Group align="flex-start" grow>
+          <Stack>
+            <Text fw={600}>Extracted Definitions</Text>
+
+            {data?.definitions?.map((def) => (
+              <Paper key={def.id} p="sm" withBorder>
+                <Text size="sm">{JSON.stringify(def.statement)}</Text>
+              </Paper>
+            ))}
+          </Stack>
+
+          <Stack>
+            <Text fw={600}>Search MathHub</Text>
+
+            <Textarea placeholder="Search symbols..." minRows={3} />
+
+            <Paper p="sm" withBorder>
+              <Group justify="space-between">
+                <Text size="sm">Example Symbol</Text>
+
+                <Button size="xs" color="red">
+                  Mark duplicate
+                </Button>
+              </Group>
+            </Paper>
+          </Stack>
+        </Group>
+      </Modal> */}
+
+      <Modal opened={discardOpen} onClose={() => setDiscardOpen(false)} title="Discard Definition">
+        <Stack>
+          <Select
+            label="Reason"
+            placeholder="Select reason"
+            data={["POOR QUALITY", "NOT A DEFINITION"]}
+            value={discardReason}
+            onChange={(value) => setDiscardReason(value || "")}
+          />
+
+          <Textarea
+            label="Custom reason"
+            placeholder="Enter reason"
+            value={discardReason}
+            onChange={(e) => setDiscardReason(e.currentTarget.value)}
+          />
+
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setDiscardOpen(false)}>
+              Cancel
+            </Button>
+
+            <Button
+              color="red"
+              onClick={async () => {
+                await updateDefinitionsStatusByIdentity({
+                  data: {
+                    identity,
+                    status: "DISCARDED",
+                    discardedReason: discardReason,
+                  },
+                });
+
+                setDiscardOpen(false);
+              }}
+            >
+              Confirm
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
 
       <DefinitionIdentityDialog

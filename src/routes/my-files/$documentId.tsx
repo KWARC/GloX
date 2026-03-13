@@ -21,10 +21,7 @@ import {
   useValidation,
 } from "@/server/text-selection";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
-import {
-  deleteDefinition,
-  listDefinition,
-} from "@/serverFns/extractDefinition.server";
+import { deleteDefinition, listDefinition } from "@/serverFns/extractDefinition.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
@@ -33,6 +30,7 @@ import {
   ActionIcon,
   Badge,
   Box,
+  Button,
   Center,
   Flex,
   Group,
@@ -46,12 +44,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import {
-  IconArrowRight,
-  IconFileAlert,
-  IconFileText,
-  IconList,
-} from "@tabler/icons-react";
+import { IconArrowRight, IconFileAlert, IconFileText, IconList } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -73,13 +66,9 @@ function RouteComponent() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
 
-  const { data: document, isLoading: docLoading } = useQuery(
-    documentByIdQuery(documentId),
-  );
+  const { data: document, isLoading: docLoading } = useQuery(documentByIdQuery(documentId));
 
-  const { data: pages = [], isLoading: pagesLoading } = useQuery(
-    documentPagesQuery(documentId),
-  );
+  const { data: pages = [], isLoading: pagesLoading } = useQuery(documentPagesQuery(documentId));
 
   const { data: extracts = [] } = useQuery({
     queryKey: ["definitions", documentId],
@@ -102,25 +91,19 @@ function RouteComponent() {
   const [defDialogOpen, setDefDialogOpen] = useState(false);
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
   const [defExtractText, setDefExtractText] = useState("");
-  const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(
-    null,
-  );
+  const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(null);
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
-  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
-    null,
-  );
+  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(null);
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
   const [pendingExtractText, setPendingExtractText] = useState("");
   const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
-  const [definitionMetaTarget, setDefinitionMetaTarget] =
-    useState<ExtractedItem | null>(null);
+  const [definitionMetaTarget, setDefinitionMetaTarget] = useState<ExtractedItem | null>(null);
 
-  const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
-    useTextSelection();
+  const { selection, popup, handleSelection, clearPopupOnly, clearAll } = useTextSelection();
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
   async function handleDeleteDefinition(id: string) {
@@ -507,11 +490,7 @@ function RouteComponent() {
               }}
             >
               <Tabs.List px="sm" pt="xs">
-                <Tabs.Tab
-                  value="document"
-                  leftSection={<IconFileText size={15} />}
-                  fw={500}
-                >
+                <Tabs.Tab value="document" leftSection={<IconFileText size={15} />} fw={500}>
                   Document
                 </Tabs.Tab>
                 <Tabs.Tab
@@ -540,10 +519,7 @@ function RouteComponent() {
                   flexDirection: "column",
                 }}
               >
-                <DocumentPagesPanel
-                  pages={pages}
-                  onSelection={handleLeftSelection}
-                />
+                <DocumentPagesPanel pages={pages} onSelection={handleLeftSelection} />
               </Tabs.Panel>
 
               <Tabs.Panel
@@ -605,10 +581,7 @@ function RouteComponent() {
                 </Badge>
               </Group>
               <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-                <DocumentPagesPanel
-                  pages={pages}
-                  onSelection={handleLeftSelection}
-                />
+                <DocumentPagesPanel pages={pages} onSelection={handleLeftSelection} />
               </Box>
             </Paper>
 
@@ -633,14 +606,20 @@ function RouteComponent() {
                 }}
               >
                 <IconList size={16} color="var(--mantine-color-teal-6)" />
+
                 <Text size="sm" fw={600} c="gray.7">
                   Extracted Definitions
                 </Text>
+
                 {extracts.length > 0 && (
                   <Badge size="xs" variant="filled" color="teal" ml="auto">
                     {extracts.length}
                   </Badge>
                 )}
+
+                <Button size="xs" variant="subtle" color="blue" onClick={handleOpenLatexConfig}>
+                  LaTeX
+                </Button>
               </Group>
               <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
                 <ExtractedTextPanel
@@ -677,9 +656,7 @@ function RouteComponent() {
             popup.source === "right"
               ? () => {
                   if (!selection) return;
-                  const extract = extracts.find(
-                    (e) => e.id === selection.extractId,
-                  );
+                  const extract = extracts.find((e) => e.id === selection.extractId);
                   if (!extract) return;
 
                   setDefExtractId(extract.id);
@@ -693,9 +670,7 @@ function RouteComponent() {
             popup.source === "right"
               ? () => {
                   if (!selection) return;
-                  const extract = extracts.find(
-                    (e) => e.id === selection.extractId,
-                  );
+                  const extract = extracts.find((e) => e.id === selection.extractId);
 
                   if (!extract) return;
 
@@ -743,7 +718,7 @@ function RouteComponent() {
         initialText={pendingExtractText}
         definitionName={definitionName}
         setDefinitionName={setDefinitionName}
-         filePath={`${futureRepo}/ ${filePath}`}
+        filePath={`${futureRepo}/ ${filePath}`}
         onClose={() => setExtractDialogOpen(false)}
         onSubmit={handleExtractSubmit}
       />
@@ -757,28 +732,6 @@ function RouteComponent() {
         definition={definitionMetaTarget}
         invalidateKey={["definitions", documentId]}
       />
-
-      <Portal>
-        <Tooltip label="Generate LaTeX" position="left" withArrow>
-          <ActionIcon
-            size={isMobile ? "lg" : "xl"}
-            radius="xl"
-            variant="gradient"
-            gradient={{ from: "blue", to: "cyan", deg: 135 }}
-            pos="fixed"
-            bottom={isMobile ? 16 : 28}
-            right={isMobile ? 16 : 28}
-            style={{
-              zIndex: 5000,
-              boxShadow: "0 4px 16px rgba(34,139,230,0.45)",
-              transition: "box-shadow 150ms ease, transform 150ms ease",
-            }}
-            onClick={handleOpenLatexConfig}
-          >
-            <IconArrowRight size={isMobile ? 18 : 22} />
-          </ActionIcon>
-        </Tooltip>
-      </Portal>
     </Box>
   );
 }

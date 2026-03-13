@@ -9,7 +9,8 @@ export const updateDefinitionsStatusByIdentity = createServerFn({
   .inputValidator(
     (data: {
       identity: FileIdentity;
-      status: "EXTRACTED" | "FINALIZED_IN_FILE" | "SUBMITTED_TO_MATHHUB";
+      status: "EXTRACTED" | "FINALIZED_IN_FILE" | "SUBMITTED_TO_MATHHUB" | "DISCARDED";
+      discardedReason?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -26,6 +27,7 @@ export const updateDefinitionsStatusByIdentity = createServerFn({
       },
       data: {
         status: data.status,
+        discardedReason: data.discardedReason ?? null,
       },
     });
 
