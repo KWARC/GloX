@@ -19,15 +19,34 @@ function rewriteUris(node: any, uriMap: Map<string, string>): any {
       ...node,
       for_symbols: Array.isArray(node.for_symbols)
         ? node.for_symbols.map((s: string) => uriMap.get(s) ?? s)
-        : [],
+        : node.for_symbols,
       content: rewriteUris(node.content, uriMap),
     };
   }
 
-  if (node.type === "definiendum" || node.type === "symref") {
+  if (node.type === "definiendum") {
     return {
       ...node,
       uri: uriMap.get(node.uri) ?? node.uri,
+      content: rewriteUris(node.content, uriMap),
+    };
+  }
+
+  if (node.type === "symref") {
+    const symrefUri = node.uri;
+
+    if (typeof symrefUri === "string" && !symrefUri.startsWith("http")) {
+      const tempUri = `http://temp?a=temp&m=temp&s=${symrefUri}`;
+      return {
+        ...node,
+        uri: tempUri,
+        content: rewriteUris(node.content, uriMap),
+      };
+    }
+
+    return {
+      ...node,
+      uri: node.uri,
       content: rewriteUris(node.content, uriMap),
     };
   }
@@ -57,9 +76,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
 
       floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
-      fd = floDown.FloDown.fromUri(
-        `http://temp?a=temp&d=${docId}&l=en`
-      );
+      fd = floDown.FloDown.fromUri(`http://temp?a=temp&d=${docId}&l=en`);
 
       containerRef.current.innerHTML = "";
       fd.mountTo(containerRef.current);

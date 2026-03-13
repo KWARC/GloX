@@ -56,7 +56,7 @@ const STATUS_CONFIG = {
   },
   FINALIZED_IN_FILE: {
     color: "blue",
-    label: "Submit for MathHub",
+    label: "Submit to MathHub",
     actionLabel: "Submit to MathHub",
     actionColor: "blue" as const,
     nextStatus: "SUBMITTED_TO_MATHHUB" as const,
@@ -315,91 +315,95 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               pb="xs"
               style={{ borderBottom: "1px solid var(--mantine-color-gray-1)" }}
             >
-              <Group justify="space-between" align="center">
+              <Group justify="space-between" align="center" wrap="nowrap">
                 <Text size="xs" fw={700} c="gray.6" tt="uppercase" lts={0.5}>
                   Definitions
                 </Text>
 
-                <Menu shadow="md" width={230} position="bottom-end">
-                  <Menu.Target>
-                    <Tooltip
-                      disabled={definitionStatus !== "EXTRACTED"}
-                      label="Finalize LaTeX first before submitting to MathHub"
-                      withArrow
-                    >
-                      <Button
-                        size="xs"
-                        variant="light"
-                        color={statusConf.color}
-                        rightSection={<ChevronDown size={12} />}
-                        styles={{ section: { marginLeft: 4 } }}
+                <Group gap={6} wrap="nowrap">
+                  <Menu shadow="md" width={230} position="bottom-end">
+                    <Menu.Target>
+                      <Tooltip
+                        disabled={definitionStatus !== "EXTRACTED"}
+                        label="Finalize LaTeX first before submitting to MathHub"
+                        withArrow
                       >
-                        {statusConf.label}
-                      </Button>
-                    </Tooltip>
-                  </Menu.Target>
-                  <Menu.Dropdown>
-                    <Menu.Label>Status Actions</Menu.Label>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color={statusConf.color}
+                          rightSection={<ChevronDown size={12} />}
+                          styles={{ section: { marginLeft: 4 } }}
+                        >
+                          {statusConf.label}
+                        </Button>
+                      </Tooltip>
+                    </Menu.Target>
 
-                    <Menu.Item
-                      disabled={definitionStatus !== "FINALIZED_IN_FILE"}
-                      onClick={async () => {
-                        await updateDefinitionsStatusByIdentity({
-                          data: {
-                            identity,
-                            status: "SUBMITTED_TO_MATHHUB",
-                          },
-                        });
+                    <Menu.Dropdown>
+                      <Menu.Label>Status Actions</Menu.Label>
 
-                        await queryClient.invalidateQueries({
-                          queryKey: [
-                            "definition-status",
-                            identity.documentId,
-                            identity.futureRepo,
-                            identity.filePath,
-                            identity.fileName,
-                            identity.language,
-                          ],
-                        });
-                      }}
-                    >
-                      Submit to MathHub
-                    </Menu.Item>
+                      <Menu.Item
+                        disabled={definitionStatus !== "FINALIZED_IN_FILE"}
+                        onClick={async () => {
+                          await updateDefinitionsStatusByIdentity({
+                            data: {
+                              identity,
+                              status: "SUBMITTED_TO_MATHHUB",
+                            },
+                          });
 
-                    <Menu.Item
-                      color="red"
-                      disabled={definitionStatus !== "SUBMITTED_TO_MATHHUB"}
-                      onClick={async () => {
-                        await updateDefinitionsStatusByIdentity({
-                          data: {
-                            identity,
-                            status: "FINALIZED_IN_FILE",
-                          },
-                        });
+                          await queryClient.invalidateQueries({
+                            queryKey: [
+                              "definition-status",
+                              identity.documentId,
+                              identity.futureRepo,
+                              identity.filePath,
+                              identity.fileName,
+                              identity.language,
+                            ],
+                          });
+                        }}
+                      >
+                        Submit to MathHub
+                      </Menu.Item>
 
-                        await queryClient.invalidateQueries({
-                          queryKey: [
-                            "definition-status",
-                            identity.documentId,
-                            identity.futureRepo,
-                            identity.filePath,
-                            identity.fileName,
-                            identity.language,
-                          ],
-                        });
-                      }}
-                    >
-                      Unsubmit from MathHub
-                    </Menu.Item>
-                  </Menu.Dropdown>
-                </Menu>
-                <Button
-                  size="xs"
-                  variant="light"
-                  onClick={() => setDupOpen(true)}
-                >
-                  Check duplicate
-                </Button>
+                      <Menu.Item
+                        color="red"
+                        disabled={definitionStatus !== "SUBMITTED_TO_MATHHUB"}
+                        onClick={async () => {
+                          await updateDefinitionsStatusByIdentity({
+                            data: {
+                              identity,
+                              status: "FINALIZED_IN_FILE",
+                            },
+                          });
+
+                          await queryClient.invalidateQueries({
+                            queryKey: [
+                              "definition-status",
+                              identity.documentId,
+                              identity.futureRepo,
+                              identity.filePath,
+                              identity.fileName,
+                              identity.language,
+                            ],
+                          });
+                        }}
+                      >
+                        Unsubmit from MathHub
+                      </Menu.Item>
+                    </Menu.Dropdown>
+                  </Menu>
+
+                  <Button
+                    size="xs"
+                    variant="light"
+                    onClick={() => setDupOpen(true)}
+                  >
+                    Check duplicate
+                  </Button>
+                </Group>
               </Group>
             </Box>
 

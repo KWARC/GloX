@@ -90,18 +90,6 @@ export const symbolicRef = createServerFn({ method: "POST" })
       symrefNode,
     );
 
-    if (symRef.source === "DB") {
-      const defNode = updatedAst.content[0];
-
-      if (defNode && defNode.type === "definition") {
-        const existing = defNode.for_symbols ?? [];
-
-        if (!existing.includes(parsed.conceptUri)) {
-          defNode.for_symbols = [...existing, parsed.conceptUri];
-        }
-      }
-    }
-
     const statementToStore = unwrapRoot(updatedAst);
 
     await prisma.$transaction(async (tx) => {
