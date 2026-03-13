@@ -29,9 +29,10 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Download, FolderSymlink } from "lucide-react";
+import { AlertTriangle, ChevronDown, Download, FolderSymlink } from "lucide-react";
 import { useState } from "react";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
+import { DuplicateDefinitionDialog } from "./DuplicateDefinitionDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
 
 const STATUS_CONFIG = {
@@ -45,7 +46,7 @@ const STATUS_CONFIG = {
   },
   FINALIZED_IN_FILE: {
     color: "blue",
-    label: "Submit for MathHub",
+    label: "Submit to MathHub",
     actionLabel: "Submit to MathHub",
     actionColor: "blue" as const,
     nextStatus: "SUBMITTED_TO_MATHHUB" as const,
@@ -64,15 +65,14 @@ const STATUS_CONFIG = {
 export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
-  const [definitionMetaTarget, setDefinitionMetaTarget] = useState<ExtractedItem | null>(null);
 
-  const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
-  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(null);
-  const [latexOpen, setLatexOpen] = useState(false);
-  const [latexCode, setLatexCode] = useState("");
-  // const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discardReason, setDiscardReason] = useState("");
+  const [definitionMetaTarget, setDefinitionMetaTarget] = useState<ExtractedItem | null>(null);
+  const [latexOpen, setLatexOpen] = useState(false);
+  const [latexCode, setLatexCode] = useState("");
+  const [dupOpen, setDupOpen] = useState(false);
+  const [duplicateUris, setDuplicateUris] = useState<string[]>([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["definitionsByIdentity", identity],
@@ -178,11 +178,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     setEditingId((prev) => (prev === id ? null : id));
   }
 
-  function handleOpenSemanticPanel(id: string) {
-    setSemanticPanelDefId(id);
-    setSemanticPanelOpen(true);
-  }
-
   async function handleOpenLatexPreview() {
     try {
       const ftmlAst = await getCombinedDefinitionFtml({
@@ -247,11 +242,25 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 Symbol Declared
               </Text>
 
-              <Tooltip label="Download .tex file" withArrow position="top">
-                <ActionIcon size="sm" variant="subtle" color="gray" onClick={handleDownload}>
-                  <Download size={14} />
-                </ActionIcon>
-              </Tooltip>
+              <Group gap={6}>
+                {duplicateUris.length > 0 && (
+                  <Tooltip
+                    label={`${duplicateUris.length} duplicate definition found on MathHub`}
+                    withArrow
+                    color="red"
+                  >
+                    <ActionIcon size="sm" variant="light" color="red">
+                      <AlertTriangle size={14} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+
+                <Tooltip label="Download .tex file" withArrow position="top">
+                  <ActionIcon size="sm" variant="subtle" color="gray" onClick={handleDownload}>
+                    <Download size={14} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
             </Group>
 
             {hasSymbols ? (
@@ -292,96 +301,91 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               pb="xs"
               style={{ borderBottom: "1px solid var(--mantine-color-gray-1)" }}
             >
-              <Group align="center" gap="xs" justify="space-between">
+              <Group justify="space-between" align="center" wrap="nowrap">
                 <Text size="xs" fw={700} c="gray.6" tt="uppercase" lts={0.5}>
                   Definitions
                 </Text>
 
-                {/* <Button
-                  size="xs"
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => setDuplicateOpen(true)}
-                >
-                  Check duplicates
-                </Button> */}
-
-                <Menu shadow="md" width={230} position="bottom-end">
-                  <Menu.Target>
-                    <Tooltip
-                      disabled={definitionStatus !== "EXTRACTED"}
-                      label="Finalize LaTeX first before submitting to MathHub"
-                      withArrow
-                    >
-                      <Button
-                        size="xs"
-                        variant="light"
-                        color={statusConf.color}
-                        rightSection={<ChevronDown size={12} />}
-                        styles={{ section: { marginLeft: 4 } }}
+                <Group gap={6} wrap="nowrap">
+                  <Menu shadow="md" width={230} position="bottom-end">
+                    <Menu.Target>
+                      <Tooltip
+                        disabled={definitionStatus !== "EXTRACTED"}
+                        label="Finalize LaTeX first before submitting to MathHub"
+                        withArrow
                       >
-                        {statusConf.label}
-                      </Button>
-                    </Tooltip>
-                  </Menu.Target>
-                  <Menu.Dropdown>
-                    <Menu.Label>Status Actions</Menu.Label>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color={statusConf.color}
+                          rightSection={<ChevronDown size={12} />}
+                          styles={{ section: { marginLeft: 4 } }}
+                        >
+                          {statusConf.label}
+                        </Button>
+                      </Tooltip>
+                    </Menu.Target>
 
-                    <Menu.Item
-                      disabled={definitionStatus !== "FINALIZED_IN_FILE"}
-                      onClick={async () => {
-                        await updateDefinitionsStatusByIdentity({
-                          data: {
-                            identity,
-                            status: "SUBMITTED_TO_MATHHUB",
-                          },
-                        });
+                    <Menu.Dropdown>
+                      <Menu.Label>Status Actions</Menu.Label>
 
-                        await queryClient.invalidateQueries({
-                          queryKey: [
-                            "definition-status",
-                            identity.documentId,
-                            identity.futureRepo,
-                            identity.filePath,
-                            identity.fileName,
-                            identity.language,
-                          ],
-                        });
-                      }}
-                    >
-                      Submit to MathHub
-                    </Menu.Item>
+                      <Menu.Item
+                        disabled={definitionStatus !== "FINALIZED_IN_FILE"}
+                        onClick={async () => {
+                          await updateDefinitionsStatusByIdentity({
+                            data: {
+                              identity,
+                              status: "SUBMITTED_TO_MATHHUB",
+                            },
+                          });
 
-                    <Menu.Item
-                      color="red"
-                      disabled={definitionStatus !== "SUBMITTED_TO_MATHHUB"}
-                      onClick={async () => {
-                        await updateDefinitionsStatusByIdentity({
-                          data: {
-                            identity,
-                            status: "FINALIZED_IN_FILE",
-                          },
-                        });
+                          await queryClient.invalidateQueries({
+                            queryKey: [
+                              "definition-status",
+                              identity.documentId,
+                              identity.futureRepo,
+                              identity.filePath,
+                              identity.fileName,
+                              identity.language,
+                            ],
+                          });
+                        }}
+                      >
+                        Submit to MathHub
+                      </Menu.Item>
 
-                        await queryClient.invalidateQueries({
-                          queryKey: [
-                            "definition-status",
-                            identity.documentId,
-                            identity.futureRepo,
-                            identity.filePath,
-                            identity.fileName,
-                            identity.language,
-                          ],
-                        });
-                      }}
-                    >
-                      Unsubmit from MathHub
-                    </Menu.Item>
-                    <Menu.Item color="red" onClick={() => setDiscardOpen(true)}>
-                      Discard
-                    </Menu.Item>
-                  </Menu.Dropdown>
-                </Menu>
+                      <Menu.Item
+                        color="red"
+                        disabled={definitionStatus !== "SUBMITTED_TO_MATHHUB"}
+                        onClick={async () => {
+                          await updateDefinitionsStatusByIdentity({
+                            data: {
+                              identity,
+                              status: "FINALIZED_IN_FILE",
+                            },
+                          });
+
+                          await queryClient.invalidateQueries({
+                            queryKey: [
+                              "definition-status",
+                              identity.documentId,
+                              identity.futureRepo,
+                              identity.filePath,
+                              identity.fileName,
+                              identity.language,
+                            ],
+                          });
+                        }}
+                      >
+                        Unsubmit from MathHub
+                      </Menu.Item>
+                    </Menu.Dropdown>
+                  </Menu>
+
+                  <Button size="xs" variant="light" onClick={() => setDupOpen(true)}>
+                    Check duplicate
+                  </Button>
+                </Group>
               </Group>
             </Box>
 
@@ -403,7 +407,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     onDownload={handleDownload}
                     onDelete={handleDelete}
                     onSelection={() => {}}
-                    onOpenSemanticPanel={handleOpenSemanticPanel}
+                    onOpenSemanticPanel={() => {}}
                     showPageNumber={false}
                     showDefinitionMeta
                     showDefinitionMetaIconOnly
@@ -508,41 +512,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         />
       </Modal>
 
-      {/* <Modal
-        opened={duplicateOpen}
-        onClose={() => setDuplicateOpen(false)}
-        title="Check for duplicates"
-        size="xl"
-      >
-        <Group align="flex-start" grow>
-          <Stack>
-            <Text fw={600}>Extracted Definitions</Text>
-
-            {data?.definitions?.map((def) => (
-              <Paper key={def.id} p="sm" withBorder>
-                <Text size="sm">{JSON.stringify(def.statement)}</Text>
-              </Paper>
-            ))}
-          </Stack>
-
-          <Stack>
-            <Text fw={600}>Search MathHub</Text>
-
-            <Textarea placeholder="Search symbols..." minRows={3} />
-
-            <Paper p="sm" withBorder>
-              <Group justify="space-between">
-                <Text size="sm">Example Symbol</Text>
-
-                <Button size="xs" color="red">
-                  Mark duplicate
-                </Button>
-              </Group>
-            </Paper>
-          </Stack>
-        </Group>
-      </Modal> */}
-
       <Modal opened={discardOpen} onClose={() => setDiscardOpen(false)} title="Discard Definition">
         <Stack>
           <Select
@@ -595,6 +564,16 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         bulkDefinition={identity}
         invalidateKey={["definitionsByIdentity", identity]}
       />
+      {data?.definitions && (
+        <DuplicateDefinitionDialog
+          opened={dupOpen}
+          onClose={() => setDupOpen(false)}
+          extracts={data.definitions}
+          onConfirm={(dups) => {
+            setDuplicateUris(dups);
+          }}
+        />
+      )}
     </>
   );
 }

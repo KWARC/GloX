@@ -192,7 +192,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
             <Stack gap="sm">
               <TextInput
                 label="Future Repo"
-                placeholder="smglom/software"
+                placeholder="e.g. smglom/software"
                 value={futureRepo}
                 onChange={(e) => setFutureRepo(e.currentTarget.value)}
                 radius="md"
@@ -200,7 +200,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
 
               <TextInput
                 label="File Path"
-                placeholder="mod"
+                placeholder="e.g. mod"
                 value={filePath}
                 onChange={(e) => setFilePath(e.currentTarget.value)}
                 radius="md"
