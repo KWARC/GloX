@@ -1,12 +1,14 @@
 import { ExtractedItem } from "@/server/text-selection";
 import {
   ActionIcon,
+  Button,
   Group,
   Paper,
   ScrollArea,
   Stack,
   Text,
   Textarea,
+  Tooltip,
 } from "@mantine/core";
 import { IconPencil, IconSettings, IconTrash } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
@@ -18,14 +20,12 @@ interface ExtractedTextPanelProps {
   editingId: string | null;
   selectedId: string | null;
   onToggleEdit: (id: string) => void;
-  onUpdate: (
-    id: string,
-    statement: ExtractedItem["statement"],
-  ) => Promise<void>;
+  onUpdate: (id: string, statement: ExtractedItem["statement"]) => Promise<void>;
   onDownload?: (item: ExtractedItem) => void;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
   onOpenSemanticPanel: (definitionId: string) => void;
+  onOpenLatexPreview?: (item: ExtractedItem) => void;
   showPageNumber?: boolean;
   showDefinitionMeta?: boolean;
   onEditDefinitionMeta?: (item: ExtractedItem) => void;
@@ -41,6 +41,7 @@ export function ExtractedTextPanel({
   onDelete,
   onSelection,
   onOpenSemanticPanel,
+  onOpenLatexPreview,
   showPageNumber = true,
   showDefinitionMeta = true,
   showDefinitionMetaIconOnly = false,
@@ -77,13 +78,21 @@ export function ExtractedTextPanel({
                   }}
                 >
                   <Group justify="space-between" mb={4}>
-                    {showPageNumber ? (
-                      <Text size="xs">Page {item.pageNumber}</Text>
-                    ) : (
-                      <div />
-                    )}
+                    {showPageNumber ? <Text size="xs">Page {item.pageNumber}</Text> : <div />}
 
                     <Group gap="xs">
+                      {/* <Tooltip label="Preview sTeX" withArrow>//todo
+                        <Button
+                          size="xs"
+                          variant="subtle"
+                          color="blue"
+                          style={{ flexShrink: 0 }}
+                          onClick={() => onOpenLatexPreview?.(item)}
+                        >
+                          LaTeX
+                        </Button>
+                      </Tooltip> */}
+
                       <ActionIcon
                         size="sm"
                         color="red"
@@ -137,11 +146,7 @@ export function ExtractedTextPanel({
                       style={{ userSelect: "text", cursor: "text" }}
                       onMouseUp={() => onSelection(item.id)}
                     >
-                      <FtmlPreview
-                        key={item.id}
-                        docId={item.id}
-                        ftmlAst={item.statement}
-                      />
+                      <FtmlPreview key={item.id} docId={item.id} ftmlAst={item.statement} />
                     </div>
                   )}
 
@@ -158,8 +163,7 @@ export function ExtractedTextPanel({
                       <FolderSymlink size={14} />
                       {!showDefinitionMetaIconOnly && (
                         <Text size="10px" c="dimmed" ff="monospace">
-                          {item.futureRepo} / {item.filePath} / {item.fileName}{" "}
-                          [{item.language}]
+                          {item.futureRepo} / {item.filePath} / {item.fileName} [{item.language}]
                         </Text>
                       )}
                     </Group>

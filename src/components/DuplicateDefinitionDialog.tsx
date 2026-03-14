@@ -1,23 +1,18 @@
 import { searchForDuplicateDefinition } from "@/server/ftml/searchForDuplicateDef";
 import { ExtractedItem } from "@/server/text-selection";
-import {
-  Box,
-  Button,
-  Group,
-  Loader,
-  Modal,
-  Paper,
-  ScrollArea,
-  TextInput,
-} from "@mantine/core";
+import { Box, Button, Group, Loader, Modal, Paper, ScrollArea, TextInput } from "@mantine/core";
 import { useState } from "react";
 import { ExtractedTextPanel } from "./ExtractedTextList";
 import { RenderSymbolicUri } from "./RenderUri";
+import { updateDefinitionsStatusByIdentity } from "@/serverFns/definitionStatus.server";
+import { queryClient } from "@/queryClient";
+import { FileIdentity } from "@/serverFns/latex.server";
 
 interface Props {
   opened: boolean;
   onClose: () => void;
   extracts: ExtractedItem[];
+  identity: FileIdentity;
   onConfirm: (duplicates: string[]) => void;
 }
 
@@ -38,6 +33,7 @@ export function DuplicateDefinitionDialog({
   opened,
   onClose,
   extracts,
+  identity,
   onConfirm,
 }: Props) {
   const [input, setInput] = useState("");
@@ -142,21 +138,27 @@ export function DuplicateDefinitionDialog({
                         }}
                       >
                         <RenderSymbolicUri uri={uri} />
-
                         <Button
-                          size="xs"
                           color="red"
-                          variant={marked ? "filled" : "light"}
-                          onClick={() => {
-                            const next = duplicates.includes(uri)
-                              ? duplicates.filter((u) => u !== uri)
-                              : [...duplicates, uri];
+                          size="xs"
+                          onClick={async () => {
+                            await updateDefinitionsStatusByIdentity({
+                              data: {
+                                identity,
+                                status: "DISCARDED",
+                                discardedReason: "DUPLICATE_DEFINITION",
+                              },
+                            });
 
-                            setDuplicates(next);
-                            onConfirm(next);
+                            await queryClient.invalidateQueries({
+                              queryKey: ["definitionsByIdentity", identity],
+                            });
+
+                            alert("Marked duplicate is discarded");
+                            onClose();
                           }}
                         >
-                          {marked ? "Marked as Duplicate" : "Mark as duplicate"}
+                          Mark as duplicate
                         </Button>
                       </Group>
 

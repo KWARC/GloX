@@ -34,6 +34,7 @@ import { useState } from "react";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { DuplicateDefinitionDialog } from "./DuplicateDefinitionDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
+import { useNavigate } from "@tanstack/react-router";
 
 const STATUS_CONFIG = {
   SUBMITTED_TO_MATHHUB: {
@@ -60,6 +61,12 @@ const STATUS_CONFIG = {
     nextStatus: "SUBMITTED_TO_MATHHUB" as const,
     disabledWhen: (s: string) => s !== "FINALIZED_IN_FILE",
   },
+  DISCARDED: {
+    color: "red",
+    label: "Discarded",
+    actionLabel: "Discarded",
+    actionColor: "red",
+  },
 } as const;
 
 export function StexCuration({ identity }: { identity: FileIdentity }) {
@@ -73,6 +80,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [latexCode, setLatexCode] = useState("");
   const [dupOpen, setDupOpen] = useState(false);
   const [duplicateUris, setDuplicateUris] = useState<string[]>([]);
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ["definitionsByIdentity", identity],
@@ -178,7 +186,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     setEditingId((prev) => (prev === id ? null : id));
   }
 
-  async function handleOpenLatexPreview() {
+  async function handleOpenLatexPreview(item?: ExtractedItem) {
     try {
       const ftmlAst = await getCombinedDefinitionFtml({
         data: {
@@ -310,9 +318,21 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                   <Menu shadow="md" width={230} position="bottom-end">
                     <Menu.Target>
                       <Tooltip
-                        disabled={definitionStatus !== "EXTRACTED"}
-                        label="Finalize LaTeX first before submitting to MathHub"
                         withArrow
+                        multiline
+                        w={260}
+                        label={
+                          definitionStatus === "DISCARDED" ? (
+                            <Stack gap={2}>
+                              <Text fw={600} size="xs">
+                                Discarded
+                              </Text>
+                              <Text size="xs">Reason: {discardReason || "Not specified"}</Text>
+                            </Stack>
+                          ) : (
+                            "Finalize LaTeX first before submitting to MathHub"
+                          )
+                        }
                       >
                         <Button
                           size="xs"
@@ -379,6 +399,13 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       >
                         Unsubmit from MathHub
                       </Menu.Item>
+
+                      {/* ADD THIS */}
+                      <Menu.Divider />
+
+                      <Menu.Item color="red" onClick={() => setDiscardOpen(true)}>
+                        Discard
+                      </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
 
@@ -413,6 +440,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     showDefinitionMetaIconOnly
                     onEditDefinitionMeta={handleEditDefinitionMeta}
                     isLocked={definitionStatus === "SUBMITTED_TO_MATHHUB"}
+                    onOpenLatexPreview={(item) => handleOpenLatexPreview(item)}
                   />
                 </Stack>
               )}
@@ -427,48 +455,50 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               backgroundColor: "var(--mantine-color-gray-0)",
             }}
           >
-            <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
-              <Tooltip label="Edit file path" withArrow position="top">
-                <Group
-                  gap={6}
-                  wrap="nowrap"
-                  style={{
-                    cursor: "pointer",
-                    minWidth: 0,
-                    flex: 1,
-                    overflow: "hidden",
-                  }}
-                  onClick={() => {
-                    setDefinitionMetaTarget(null);
-                    setDefinitionMetaEditOpen(true);
-                  }}
-                >
-                  <FolderSymlink
-                    size={13}
-                    style={{
-                      flexShrink: 0,
-                      color: "var(--mantine-color-dimmed)",
-                    }}
-                  />
-                  <Text size="10px" c="dimmed" ff="monospace" lh={1.4} truncate>
-                    {[identity.futureRepo, identity.filePath, identity.fileName, identity.language]
-                      .filter(Boolean)
-                      .join(" / ")}
-                  </Text>
-                </Group>
-              </Tooltip>
+            <Group justify="space-between" align="center">
+              <Group
+                gap={6}
+                wrap="nowrap"
+                style={{
+                  cursor: "pointer",
+                  minWidth: 0,
+                  flex: 1,
+                  overflow: "hidden",
+                }}
+              >
+                <FolderSymlink size={13} />
+                <Text size="10px" c="dimmed" ff="monospace">
+                  {[identity.futureRepo, identity.filePath, identity.fileName, identity.language]
+                    .filter(Boolean)
+                    .join(" / ")}
+                </Text>
+              </Group>
 
-              <Tooltip label="Preview sTeX" withArrow>
+              <Group gap="xs">
+                <Tooltip label="Preview sTeX" withArrow>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    color="blue"
+                    onClick={() => handleOpenLatexPreview()}
+                  >
+                    LaTeX
+                  </Button>
+                </Tooltip>
+
                 <Button
                   size="xs"
-                  variant="subtle"
-                  color="blue"
-                  style={{ flexShrink: 0 }}
-                  onClick={handleOpenLatexPreview}
+                  variant="light"
+                  onClick={() =>
+                    navigate({
+                      to: "/my-files/$documentId",
+                      params: { documentId: identity.documentId },
+                    })
+                  }
                 >
-                  LaTeX
+                  Go to My Files
                 </Button>
-              </Tooltip>
+              </Group>
             </Group>
           </Box>
         </Stack>
@@ -498,9 +528,10 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
       >
         <Textarea
           value={latexCode}
-          readOnly
+          onChange={(e) => setLatexCode(e.currentTarget.value)}
           autosize
           minRows={25}
+          readOnly={definitionStatus === "SUBMITTED_TO_MATHHUB"}
           styles={{
             input: {
               fontFamily: "monospace",
@@ -510,6 +541,63 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
             },
           }}
         />
+        <Group justify="flex-end" mt="md" gap="sm">
+          {/* FINAL BUTTON */}
+          <Button
+            color="blue"
+            disabled={definitionStatus === "SUBMITTED_TO_MATHHUB"}
+            onClick={async () => {
+              await updateDefinitionsStatusByIdentity({
+                data: {
+                  identity,
+                  status: "FINALIZED_IN_FILE",
+                },
+              });
+
+              await queryClient.invalidateQueries({
+                queryKey: [
+                  "definition-status",
+                  identity.documentId,
+                  identity.futureRepo,
+                  identity.filePath,
+                  identity.fileName,
+                  identity.language,
+                ],
+              });
+            }}
+          >
+            Final
+          </Button>
+
+          {/* SUBMIT BUTTON */}
+          <Button
+            color="teal"
+            disabled={definitionStatus !== "FINALIZED_IN_FILE"}
+            onClick={async () => {
+              await updateDefinitionsStatusByIdentity({
+                data: {
+                  identity,
+                  status: "SUBMITTED_TO_MATHHUB",
+                },
+              });
+
+              await queryClient.invalidateQueries({
+                queryKey: [
+                  "definition-status",
+                  identity.documentId,
+                  identity.futureRepo,
+                  identity.filePath,
+                  identity.fileName,
+                  identity.language,
+                ],
+              });
+
+              setLatexOpen(false);
+            }}
+          >
+            Submit to MathHub
+          </Button>
+        </Group>
       </Modal>
 
       <Modal opened={discardOpen} onClose={() => setDiscardOpen(false)} title="Discard Definition">
@@ -569,6 +657,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           opened={dupOpen}
           onClose={() => setDupOpen(false)}
           extracts={data.definitions}
+          identity={identity}
           onConfirm={(dups) => {
             setDuplicateUris(dups);
           }}
