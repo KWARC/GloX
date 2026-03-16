@@ -545,7 +545,10 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           {/* FINAL BUTTON */}
           <Button
             color="blue"
-            disabled={definitionStatus === "SUBMITTED_TO_MATHHUB"}
+            disabled={
+              definitionStatus === "SUBMITTED_TO_MATHHUB" ||
+              definitionStatus === "FINALIZED_IN_FILE"
+            }
             onClick={async () => {
               await updateDefinitionsStatusByIdentity({
                 data: {
@@ -566,7 +569,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               });
             }}
           >
-            Final
+            {definitionStatus === "FINALIZED_IN_FILE" ? "Finalised" : "Finalise"}
           </Button>
 
           {/* SUBMIT BUTTON */}
@@ -595,7 +598,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               setLatexOpen(false);
             }}
           >
-            Submit to MathHub
+            Submitted to mathhub
           </Button>
         </Group>
       </Modal>
