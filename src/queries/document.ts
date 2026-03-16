@@ -2,16 +2,22 @@ import { getMyDocuments } from "@/serverFns/myDocuments.server";
 import { queryOptions } from "@tanstack/react-query";
 
 export type MyDocument = {
-  id: string;
-  filename: string;
-  fileHash: string;
-  mimeType: string;
-  fileSize: number;
-  userId: string;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
+  id: string
+  filename: string
+  fileHash: string
+  mimeType: string
+  fileSize: number
+
+  futureRepo: string
+  filePath: string
+  language: string
+
+  userId: string
+  status: string
+
+  createdAt: Date
+  updatedAt: Date
+}
 
 export const myDocumentsQuery = queryOptions<MyDocument[]>({
   queryKey: ["documents", "mine"],

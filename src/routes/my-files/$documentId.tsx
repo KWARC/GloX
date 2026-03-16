@@ -1,6 +1,5 @@
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { DefinitionIdentityDialog } from "@/components/DefinitionFilePathDialog";
-import { DocumentHeader } from "@/components/DocumentHeader";
 import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { ExtractTextDialog } from "@/components/ExtractTextDialog";
@@ -31,18 +30,21 @@ import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
 import {
-  ActionIcon,
+  Badge,
   Box,
+  Button,
+  Center,
   Flex,
+  Group,
   Loader,
   Paper,
-  Portal,
   Stack,
   Tabs,
   Text,
+  ThemeIcon,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconArrowRight, IconFileText, IconList } from "@tabler/icons-react";
+import { IconFileAlert, IconFileText, IconList } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -81,7 +83,8 @@ function RouteComponent() {
   const [filePath, setFilePath] = useState("mod");
   const [fileName, setFileName] = useState("Software");
   const [language, setLanguage] = useState("en");
-  const { errors, validate, clearError } = useValidation();
+  const [definitionName, setDefinitionName] = useState("");
+  const { validate, clearError } = useValidation();
 
   const [activePage, setActivePage] = useState<ActivePage | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -98,7 +101,6 @@ function RouteComponent() {
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
-  const [isEditingMeta, setIsEditingMeta] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
   const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
@@ -132,8 +134,7 @@ function RouteComponent() {
     setLockedByExtractId(null);
 
     if (!lockedByExtractId) {
-      const ok = validate(futureRepo, filePath, fileName, language);
-      if (!ok) return;
+      if (!validate(futureRepo, filePath, fileName, language)) return;
     }
 
     handleSelection("left");
@@ -209,12 +210,7 @@ function RouteComponent() {
     setLanguage(extract.language);
 
     setLockedByExtractId(extractId);
-    setIsEditingMeta(false);
-
-    clearError("futureRepo");
-    clearError("filePath");
     clearError("fileName");
-    clearError("language");
 
     handleSelection("right", { extractId });
   }
@@ -405,20 +401,22 @@ function RouteComponent() {
 
   async function handleExtractSubmit(editedText: string) {
     if (!activePage) return;
+    if (!document) return;
     if (!validate(futureRepo, filePath, fileName, language)) return;
 
     await extractText({
       documentPageId: activePage.id,
       pageNumber: activePage.pageNumber,
       text: editedText,
-      futureRepo: futureRepo.trim(),
-      filePath: filePath.trim(),
-      fileName: fileName.trim(),
-      language: language.trim(),
+      futureRepo: document.futureRepo,
+      filePath: document.filePath,
+      fileName: definitionName.trim(),
+      language: document.language,
     });
 
     setExtractDialogOpen(false);
     setPendingExtractText("");
+    setDefinitionName("");
     clearAll();
   }
 
@@ -444,54 +442,47 @@ function RouteComponent() {
 
   if (docLoading || pagesLoading) {
     return (
-      <Stack align="center" justify="center" h="100vh">
-        <Loader size="lg" />
-        <Text c="dimmed">Loading document...</Text>
-      </Stack>
+      <Center h="100vh">
+        <Stack align="center" gap="md">
+          <Loader size="lg" color="blue" />
+          <Text size="sm" c="dimmed" fw={500}>
+            Loading document…
+          </Text>
+        </Stack>
+      </Center>
     );
   }
 
   if (!document) {
     return (
-      <Stack align="center" justify="center" h="100vh">
-        <Text size="xl" fw={500} c="red">
-          Document not found
-        </Text>
-      </Stack>
+      <Center h="100vh">
+        <Stack align="center" gap="md">
+          <ThemeIcon size={56} radius="xl" color="red" variant="light">
+            <IconFileAlert size={28} />
+          </ThemeIcon>
+          <Text size="lg" fw={600} c="red.7">
+            Document not found
+          </Text>
+          <Text size="sm" c="dimmed">
+            The document you're looking for doesn't exist or has been removed.
+          </Text>
+        </Stack>
+      </Center>
     );
   }
 
-  return (
-    <Box
-      h="100%"
-      p={isMobile ? "sm" : isTablet ? "md" : "lg"}
-      style={{ overflow: "hidden" }}
-    >
-      <Stack
-        gap={isMobile ? "sm" : "md"}
-        h="100%"
-        style={{ overflow: "hidden" }}
-      >
-        <Paper shadow="xs" p={isMobile ? "sm" : "md"} withBorder>
-          <DocumentHeader
-            futureRepo={futureRepo}
-            filePath={filePath}
-            fileName={fileName}
-            language={language}
-            disabled={lockedByExtractId ? !isEditingMeta : false}
-            onFutureRepoChange={setFutureRepo}
-            onFilePathChange={setFilePath}
-            onFileNameChange={setFileName}
-            onLanguageChange={setLanguage}
-            errors={errors}
-          />
-        </Paper>
+  const pad = isMobile ? "xs" : isTablet ? "md" : "lg";
+  const gap = isMobile ? "xs" : "md";
 
+  return (
+    <Box h="100%" p={pad} style={{ overflow: "hidden" }}>
+      <Stack gap={gap} h="100%" style={{ overflow: "hidden" }}>
         {isMobile ? (
           <Paper
             flex={1}
-            shadow="sm"
+            shadow="xs"
             withBorder
+            radius="md"
             style={{
               minHeight: 0,
               overflow: "hidden",
@@ -499,15 +490,35 @@ function RouteComponent() {
               flexDirection: "column",
             }}
           >
-            <Tabs value={activeTab} onChange={setActiveTab}>
-              <Tabs.List>
+            <Tabs
+              value={activeTab}
+              onChange={setActiveTab}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                height: "100%",
+              }}
+            >
+              <Tabs.List px="sm" pt="xs">
                 <Tabs.Tab
                   value="document"
-                  leftSection={<IconFileText size={16} />}
+                  leftSection={<IconFileText size={15} />}
+                  fw={500}
                 >
                   Document
                 </Tabs.Tab>
-                <Tabs.Tab value="extracts" leftSection={<IconList size={16} />}>
+                <Tabs.Tab
+                  value="extracts"
+                  leftSection={<IconList size={15} />}
+                  fw={500}
+                  rightSection={
+                    extracts.length > 0 ? (
+                      <Badge size="xs" variant="filled" color="blue" circle>
+                        {extracts.length}
+                      </Badge>
+                    ) : undefined
+                  }
+                >
                   Extracts
                 </Tabs.Tab>
               </Tabs.List>
@@ -516,7 +527,7 @@ function RouteComponent() {
                 value="document"
                 pt="xs"
                 style={{
-                  height: "100%",
+                  flex: 1,
                   overflow: "auto",
                   display: "flex",
                   flexDirection: "column",
@@ -532,7 +543,7 @@ function RouteComponent() {
                 value="extracts"
                 pt="xs"
                 style={{
-                  height: "100%",
+                  flex: 1,
                   overflow: "auto",
                   display: "flex",
                   flexDirection: "column",
@@ -560,8 +571,9 @@ function RouteComponent() {
           >
             <Paper
               flex={isTablet ? undefined : 1}
-              shadow="sm"
+              shadow="xs"
               withBorder
+              radius="md"
               style={{
                 minHeight: isTablet ? "50%" : undefined,
                 overflow: "hidden",
@@ -569,16 +581,35 @@ function RouteComponent() {
                 flexDirection: "column",
               }}
             >
-              <DocumentPagesPanel
-                pages={pages}
-                onSelection={handleLeftSelection}
-              />
+              <Group
+                px="md"
+                py="sm"
+                gap="xs"
+                style={{
+                  borderBottom: "1px solid var(--mantine-color-gray-2)",
+                }}
+              >
+                <IconFileText size={16} color="var(--mantine-color-blue-6)" />
+                <Text size="sm" fw={600} c="gray.7">
+                  Document
+                </Text>
+                <Badge size="xs" variant="light" color="gray" ml="auto">
+                  {pages.length} {pages.length === 1 ? "page" : "pages"}
+                </Badge>
+              </Group>
+              <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+                <DocumentPagesPanel
+                  pages={pages}
+                  onSelection={handleLeftSelection}
+                />
+              </Box>
             </Paper>
 
             <Paper
-              w={isTablet ? undefined : 420}
-              shadow="sm"
+              w={isTablet ? undefined : 440}
+              shadow="xs"
               withBorder
+              radius="md"
               style={{
                 minHeight: isTablet ? "50%" : undefined,
                 overflow: "hidden",
@@ -586,17 +617,48 @@ function RouteComponent() {
                 flexDirection: "column",
               }}
             >
-              <ExtractedTextPanel
-                extracts={extracts}
-                editingId={editingId}
-                selectedId={lockedByExtractId}
-                onUpdate={handleUpdateExtract}
-                onDelete={handleDeleteDefinition}
-                onSelection={handleRightSelection}
-                onToggleEdit={handleToggleEdit}
-                onOpenSemanticPanel={handleOpenSemanticPanel}
-                onEditDefinitionMeta={handleEditDefinitionMeta}
-              />
+              <Group
+                px="md"
+                py="sm"
+                gap="xs"
+                style={{
+                  borderBottom: "1px solid var(--mantine-color-gray-2)",
+                }}
+              >
+                <IconList size={16} color="var(--mantine-color-teal-6)" />
+
+                <Text size="sm" fw={600} c="gray.7">
+                  Extracted Definitions
+                </Text>
+
+                {extracts.length > 0 && (
+                  <Badge size="xs" variant="filled" color="teal" ml="auto">
+                    {extracts.length}
+                  </Badge>
+                )}
+
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="blue"
+                  onClick={handleOpenLatexConfig}
+                >
+                  LaTeX
+                </Button>
+              </Group>
+              <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+                <ExtractedTextPanel
+                  extracts={extracts}
+                  editingId={editingId}
+                  selectedId={lockedByExtractId}
+                  onUpdate={handleUpdateExtract}
+                  onDelete={handleDeleteDefinition}
+                  onSelection={handleRightSelection}
+                  onToggleEdit={handleToggleEdit}
+                  onOpenSemanticPanel={handleOpenSemanticPanel}
+                  onEditDefinitionMeta={handleEditDefinitionMeta}
+                />
+              </Box>
             </Paper>
           </Flex>
         )}
@@ -683,6 +745,9 @@ function RouteComponent() {
       <ExtractTextDialog
         opened={extractDialogOpen}
         initialText={pendingExtractText}
+        definitionName={definitionName}
+        setDefinitionName={setDefinitionName}
+        filePath={`${futureRepo}/ ${filePath}`}
         onClose={() => setExtractDialogOpen(false)}
         onSubmit={handleExtractSubmit}
       />
@@ -696,22 +761,6 @@ function RouteComponent() {
         definition={definitionMetaTarget}
         invalidateKey={["definitions", documentId]}
       />
-
-      <Portal>
-        <ActionIcon
-          size={isMobile ? "lg" : "xl"}
-          radius="xl"
-          variant="filled"
-          color="blue"
-          pos="fixed"
-          bottom={isMobile ? 16 : 24}
-          right={isMobile ? 16 : 24}
-          style={{ zIndex: 5000 }}
-          onClick={handleOpenLatexConfig}
-        >
-          <IconArrowRight size={isMobile ? 18 : 22} />
-        </ActionIcon>
-      </Portal>
     </Box>
   );
 }

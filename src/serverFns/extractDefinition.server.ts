@@ -67,6 +67,7 @@ export const createDefinition = createServerFn({ method: "POST" })
           createdById: userId,
           updatedById: userId,
           currentVersion: 1,
+          status: "EXTRACTED",
         },
       });
 
@@ -148,14 +149,64 @@ export const updateDefinitionFilePath = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    return prisma.definition.update({
-      where: { id: data.id },
-      data: {
-        futureRepo: data.futureRepo,
-        filePath: data.filePath,
-        fileName: data.fileName,
-        language: data.language,
-      },
+    return prisma.$transaction(async (tx) => {
+      const definition = await tx.definition.update({
+        where: { id: data.id },
+        data: {
+          futureRepo: data.futureRepo,
+          filePath: data.filePath,
+          fileName: data.fileName,
+          language: data.language,
+        },
+      });
+
+      const statement = assertFtmlStatement(definition.statement);
+
+      const symbols: string[] = [];
+
+      const nodes = Array.isArray(statement)
+        ? statement
+        : statement.type === "root"
+          ? (statement.content ?? [])
+          : [statement];
+
+      for (const node of nodes as any[]) {
+        if (node.type !== "definition") continue;
+
+        for (const child of node.content ?? []) {
+          if (child.type === "definiendum" && child.symdecl === true) {
+            const label = (child.content ?? [])
+              .filter((c: any) => typeof c === "string")
+              .join("");
+            symbols.push(label);
+          }
+
+          if (child.type === "paragraph") {
+            for (const sub of child.content ?? []) {
+              if (sub.type === "definiendum" && sub.symdecl === true) {
+                const label = (sub.content ?? [])
+                  .filter((c: any) => typeof c === "string")
+                  .join("");
+                symbols.push(label);
+              }
+            }
+          }
+        }
+      }
+
+      for (const symbolName of symbols) {
+        await tx.symbol.updateMany({
+          where: { symbolName },
+          data: {
+            futureRepo: data.futureRepo,
+            filePath: data.filePath,
+            fileName: data.fileName,
+            language: data.language,
+          },
+        });
+      }
+
+      return { success: true };
     });
   });
 
@@ -172,22 +223,70 @@ export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { identity, futureRepo, filePath, fileName, language } = data;
 
-    await prisma.definition.updateMany({
-      where: {
-        futureRepo: identity.futureRepo,
-        filePath: identity.filePath,
-        fileName: identity.fileName,
-        language: identity.language,
-      },
-      data: {
-        futureRepo,
-        filePath,
-        fileName,
-        language,
-      },
-    });
+    return prisma.$transaction(async (tx) => {
+      const defs = await tx.definition.findMany({
+        where: {
+          futureRepo: identity.futureRepo,
+          filePath: identity.filePath,
+          fileName: identity.fileName,
+          language: identity.language,
+        },
+      });
 
-    return { success: true };
+      const symbols: string[] = [];
+
+      for (const def of defs) {
+        const statement = assertFtmlStatement(def.statement);
+
+        const nodes = Array.isArray(statement)
+          ? statement
+          : statement.type === "root"
+            ? (statement.content ?? [])
+            : [statement];
+
+        for (const node of nodes as any[]) {
+          if (node.type !== "definition") continue;
+
+          for (const child of node.content ?? []) {
+            if (child.type === "definiendum" && child.symdecl === true) {
+              const label = (child.content ?? [])
+                .filter((c: any) => typeof c === "string")
+                .join("");
+              symbols.push(label);
+            }
+          }
+        }
+      }
+
+      await tx.definition.updateMany({
+        where: {
+          futureRepo: identity.futureRepo,
+          filePath: identity.filePath,
+          fileName: identity.fileName,
+          language: identity.language,
+        },
+        data: {
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+        },
+      });
+
+      for (const symbolName of [...new Set(symbols)]) {
+        await tx.symbol.updateMany({
+          where: { symbolName },
+          data: {
+            futureRepo,
+            filePath,
+            fileName,
+            language,
+          },
+        });
+      }
+
+      return { success: true };
+    });
   });
 
 export const listDefinition = createServerFn({ method: "GET" })
@@ -221,6 +320,7 @@ export const listDefinition = createServerFn({ method: "GET" })
         fileName: def.fileName,
         language: def.language,
         symbolicRefs: def.symbolicRefs,
+        status: def.status,
       };
     });
 

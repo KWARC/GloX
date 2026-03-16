@@ -15,7 +15,42 @@ datasource db {
 
 enum UserRole {
   ADMIN
-  USER
+  CURATOR
+  EXTRACTOR
+}
+
+enum DocumentStatus {
+  UPLOADED
+  TEXT_EXTRACTED
+  FAILED
+}
+
+enum SymbolicRefSource {
+  MATHHUB
+  DEFINIENDUM
+}
+
+enum DefinitionStatus {
+  DISCARDED
+  EXTRACTED
+  FINALIZED_IN_FILE
+  SUBMITTED_TO_MATHHUB
+}
+
+model User {
+  id            String   @id @default(uuid())
+  firstName     String?
+  lastName      String?
+  email         String   @unique
+  passwordHash  String?
+  emailVerified Boolean  @default(false)
+  role          UserRole @default(EXTRACTOR)
+
+  createdAt          DateTime            @default(now())
+  documents          Document[]
+  DefinitionsHistory DefinitionVersion[]
+  createdDefinitions Definition[]        @relation("DefinitionCreatedBy")
+  updatedDefinitions Definition[]        @relation("DefinitionUpdatedBy")
 }
 
 model Document {
@@ -24,6 +59,10 @@ model Document {
   fileHash String @unique
   mimeType String
   fileSize Int
+
+  futureRepo String @default("smglom/softeng")
+  filePath   String @default("mod")
+  language   String @default("en")
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
@@ -51,33 +90,6 @@ model DocumentPage {
 
   @@unique([documentId, pageNumber])
   @@index([documentId])
-}
-
-enum DocumentStatus {
-  UPLOADED
-  TEXT_EXTRACTED
-  FAILED
-}
-
-enum SymbolicRefSource {
-  MATHHUB
-  DEFINIENDUM
-}
-
-model User {
-  id            String   @id @default(uuid())
-  firstName     String?
-  lastName      String?
-  email         String   @unique
-  passwordHash  String?
-  emailVerified Boolean  @default(false)
-  role          UserRole @default(USER)
-
-  createdAt          DateTime            @default(now())
-  documents          Document[]
-  DefinitionsHistory DefinitionVersion[]
-  createdDefinitions Definition[]        @relation("DefinitionCreatedBy")
-  updatedDefinitions Definition[]        @relation("DefinitionUpdatedBy")
 }
 
 model Symbol {
@@ -134,10 +146,12 @@ model Definition {
   originalText String @db.Text
   statement    Json
 
-  symbolicRefs DefinitionSymbolicRef[]
+  symbolicRefs    DefinitionSymbolicRef[]
+  status          DefinitionStatus        @default(EXTRACTED)
+  discardedReason String?
 
-  futureRepo String @default("Glox")
-  filePath   String @default("Glox")
+  futureRepo String @default("smglom/Glox")
+  filePath   String @default("mod")
   fileName   String @default("Glox")
   language   String @default("en")
 

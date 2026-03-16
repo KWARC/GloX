@@ -61,6 +61,10 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
       where: { documentId, futureRepo, filePath, fileName, language },
     });
 
+    if (existing?.isFinal) {
+      throw new Error("Document already submitted. Editing is locked.");
+    }
+
     const history = normalizeHistory(existing?.history);
 
     const nextHistory = [
@@ -78,7 +82,6 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
           language,
           finalLatex: "",
           history: JSON.parse(JSON.stringify(nextHistory)),
-          isFinal: false,
         },
       });
     } else {
@@ -98,32 +101,47 @@ export const saveLatexFinal = createServerFn({ method: "POST" })
     const { latex, documentId, futureRepo, filePath, fileName, language } =
       data;
 
-    const existing = await prisma.latexTable.findFirst({
-      where: { documentId, futureRepo, filePath, fileName, language },
-    });
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.latexTable.findFirst({
+        where: { documentId, futureRepo, filePath, fileName, language },
+      });
 
-    if (!existing) {
-      await prisma.latexTable.create({
-        data: {
+      if (!existing) {
+        await tx.latexTable.create({
+          data: {
+            documentId,
+            futureRepo,
+            filePath,
+            fileName,
+            language,
+            finalLatex: latex,
+            history: JSON.parse(JSON.stringify([] as LatexDraft[])),
+            isFinal: true,
+          },
+        });
+      } else {
+        await tx.latexTable.update({
+          where: { id: existing.id },
+          data: {
+            finalLatex: latex,
+            isFinal: true,
+          },
+        });
+      }
+
+      await tx.definition.updateMany({
+        where: {
           documentId,
           futureRepo,
           filePath,
           fileName,
           language,
-          finalLatex: latex,
-          history: JSON.parse(JSON.stringify([] as LatexDraft[])),
-          isFinal: true,
         },
-      });
-    } else {
-      await prisma.latexTable.update({
-        where: { id: existing.id },
         data: {
-          finalLatex: latex,
-          isFinal: true,
+          status: "FINALIZED_IN_FILE",
         },
       });
-    }
+    });
   });
 
 export const getLatexHistory = createServerFn({ method: "GET" })
@@ -150,11 +168,18 @@ export const getFinalizedDocuments = createServerFn({ method: "GET" }).handler(
   },
 );
 
-export const getFileIdentities = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const getFileIdentities = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      status?: "EXTRACTED" | "FINALIZED_IN_FILE" | "SUBMITTED_TO_MATHHUB";
+    }) => data,
+  )
+  .handler(async ({ data }) => {
     const definitions = await prisma.definition.findMany({
+      where: data.status ? { status: data.status } : {},
       distinct: ["futureRepo", "filePath", "fileName", "language"],
       select: {
+        documentId: true,
         futureRepo: true,
         filePath: true,
         fileName: true,
@@ -169,10 +194,10 @@ export const getFileIdentities = createServerFn({ method: "GET" }).handler(
     });
 
     return definitions;
-  },
-);
+  });
 
 export type FileIdentity = {
+  documentId: string;
   futureRepo: string;
   filePath: string;
   fileName: string;

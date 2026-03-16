@@ -1,12 +1,18 @@
 import { currentUser } from "@/server/auth/currentUser";
+import { injectProvenance } from "@/server/ftml/addProvenanceData";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
 import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
+import {
+  getDefinitionFileStatus,
+  updateDefinitionsStatusByIdentity,
+} from "@/serverFns/definitionStatus.server";
 import {
   getLatexHistory,
   saveLatexDraft,
   saveLatexFinal,
 } from "@/serverFns/latex.server";
+
 import {
   ActionIcon,
   Badge,
@@ -20,8 +26,8 @@ import {
   Text,
   Textarea,
   Title,
-  Tooltip,
 } from "@mantine/core";
+
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Download } from "lucide-react";
@@ -125,28 +131,36 @@ function CreateLatexPage() {
     queryKey: ["definition-provenance", documentId],
     queryFn: () =>
       getDefinitionProvenance({
-        data: { documentId },
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+        },
       }),
   });
 
-  function injectProvenance(
-    stexSource: string,
-    provenance?: {
-      documentName: string;
-      pageNumber: number;
-    }[],
-  ) {
-    if (!stexSource || !provenance?.length) return stexSource;
-
-    const lines = provenance.map(
-      (p, i) =>
-        `%%% Definition ${i + 1}: Extracted in this file using GloX from ${p.documentName}, page ${p.pageNumber}`,
-    );
-
-    return `${stexSource}
-
-${lines.join("\n")}`;
-  }
+  const { data: definitionStatus } = useQuery({
+    queryKey: [
+      "definition-status",
+      documentId,
+      futureRepo,
+      filePath,
+      fileName,
+      language,
+    ],
+    queryFn: () =>
+      getDefinitionFileStatus({
+        data: {
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+        },
+      }),
+  });
 
   const generatedLatex =
     stex && provenance ? injectProvenance(stex, provenance) : (stex ?? "");
@@ -234,15 +248,54 @@ ${lines.join("\n")}`;
         <Paper p="lg" withBorder>
           <Group justify="space-between">
             <Group>
-              <Title order={2}>LaTeX Editor</Title>
+              <Title order={2}>LaTeX Preview</Title>
               <Badge>sTeX</Badge>
+
+              {definitionStatus === "SUBMITTED_TO_MATHHUB" && (
+                <Badge color="green">MathHub Submitted</Badge>
+              )}
             </Group>
+
             <Group>
+              {definitionStatus === "FINALIZED_IN_FILE" && (
+                <Button
+                  size="xs"
+                  color="green"
+                  onClick={async () => {
+                    const confirmSubmit = confirm(
+                      "Submit to MathHub? Editing will be locked.",
+                    );
+                    if (!confirmSubmit) return;
+
+                    await updateDefinitionsStatusByIdentity({
+                      data: {
+                        identity: {
+                          documentId,
+                          futureRepo,
+                          filePath,
+                          fileName,
+                          language,
+                        },
+                        status: "SUBMITTED_TO_MATHHUB",
+                      },
+                    });
+
+                    alert("MathHub submission successful");
+                    navigate({ to: "/" });
+                  }}
+                >
+                  Submit to MathHub
+                </Button>
+              )}
+
               <Button
                 size="xs"
                 variant="light"
                 onClick={() => setHistoryOpen(true)}
-                disabled={!historyData?.history.length}
+                disabled={
+                  definitionStatus === "FINALIZED_IN_FILE" ||
+                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                }
               >
                 Version History
               </Button>
@@ -282,8 +335,12 @@ ${lines.join("\n")}`;
           </Stack>
         </Modal>
 
-        <Paper withBorder style={{ flex: 1, minHeight: 0 }}>
+        <Paper withBorder style={{ flex: 1 }}>
           <Textarea
+            readOnly={
+              definitionStatus === "FINALIZED_IN_FILE" ||
+              definitionStatus === "SUBMITTED_TO_MATHHUB"
+            }
             value={displayLatex}
             onChange={(e) => {
               setEditedLatex(e.currentTarget.value);
@@ -298,7 +355,8 @@ ${lines.join("\n")}`;
                 fontFamily: "monospace",
                 fontSize: 14,
                 height: "100%",
-                resize: "none",
+                backgroundColor: "white",
+                opacity: 1,
               },
             }}
           />
@@ -310,7 +368,8 @@ ${lines.join("\n")}`;
               {displayLatex.length} characters •{" "}
               {displayLatex.split("\n").length} lines
             </Text>
-            <Group>
+
+            <Group gap="sm">
               <Button
                 variant="default"
                 onClick={() =>
@@ -323,33 +382,30 @@ ${lines.join("\n")}`;
                 Back
               </Button>
 
-              <Group gap="sm">
-                <Tooltip
-                  label={
-                    isFromHistory
-                      ? "Drafts disabled for restored history."
-                      : undefined
-                  }
-                >
-                  <Button
-                    variant="default"
-                    onClick={handleSaveDraft}
-                    loading={savingDraft}
-                    disabled={isFromHistory}
-                  >
-                    Save Draft
-                  </Button>
-                </Tooltip>
+              <Button
+                onClick={handleSaveDraft}
+                loading={savingDraft}
+                disabled={
+                  isFromHistory ||
+                  definitionStatus === "FINALIZED_IN_FILE" ||
+                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                }
+              >
+                Save Draft
+              </Button>
 
-                <Button
-                  variant="gradient"
-                  gradient={{ from: "violet", to: "grape" }}
-                  onClick={handleSaveFinal}
-                  loading={savingFinal}
-                >
-                  Save Final
-                </Button>
-              </Group>
+              <Button
+                variant="gradient"
+                gradient={{ from: "violet", to: "grape" }}
+                onClick={handleSaveFinal}
+                loading={savingFinal}
+                disabled={
+                  definitionStatus === "FINALIZED_IN_FILE" ||
+                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                }
+              >
+                Save Final
+              </Button>
             </Group>
           </Group>
         </Paper>

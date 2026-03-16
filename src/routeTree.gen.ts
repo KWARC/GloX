@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as CurationRouteImport } from './routes/curation'
 import { Route as CreateLatexRouteImport } from './routes/create-latex'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
@@ -31,6 +32,11 @@ const SignupRoute = SignupRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CurationRoute = CurationRouteImport.update({
+  id: '/curation',
+  path: '/curation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreateLatexRoute = CreateLatexRouteImport.update({
@@ -62,6 +68,7 @@ const MyFilesDocumentIdRoute = MyFilesDocumentIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create-latex': typeof CreateLatexRoute
+  '/curation': typeof CurationRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/verify': typeof VerifyRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create-latex': typeof CreateLatexRoute
+  '/curation': typeof CurationRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/verify': typeof VerifyRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/create-latex': typeof CreateLatexRoute
+  '/curation': typeof CurationRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/verify': typeof VerifyRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/create-latex'
+    | '/curation'
     | '/login'
     | '/signup'
     | '/verify'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/create-latex'
+    | '/curation'
     | '/login'
     | '/signup'
     | '/verify'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/create-latex'
+    | '/curation'
     | '/login'
     | '/signup'
     | '/verify'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateLatexRoute: typeof CreateLatexRoute
+  CurationRoute: typeof CurationRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   VerifyRoute: typeof VerifyRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/curation': {
+      id: '/curation'
+      path: '/curation'
+      fullPath: '/curation'
+      preLoaderRoute: typeof CurationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/create-latex': {
@@ -198,6 +218,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateLatexRoute: CreateLatexRoute,
+  CurationRoute: CurationRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   VerifyRoute: VerifyRoute,

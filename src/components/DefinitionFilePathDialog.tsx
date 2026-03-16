@@ -79,19 +79,19 @@ export function DefinitionIdentityDialog({
     >
       <Stack>
         <TextInput
-          label="Archive"
+          label="Future Repo"
           placeholder="e.g. smglom/algebra"
           value={futureRepo}
           onChange={(e) => setFutureRepo(e.currentTarget.value)}
         />
         <TextInput
-          label="Module Path"
+          label="File Path"
           placeholder="e.g. mod"
           value={filePath}
           onChange={(e) => setFilePath(e.currentTarget.value)}
         />
         <TextInput
-          label="Module"
+          label="File Name"
           placeholder="e.g. group-theory"
           value={fileName}
           onChange={(e) => setFileName(e.currentTarget.value)}
