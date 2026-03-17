@@ -171,7 +171,7 @@ export const getFinalizedDocuments = createServerFn({ method: "GET" }).handler(
 export const getFileIdentities = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      status?: "EXTRACTED" | "FINALIZED_IN_FILE" | "SUBMITTED_TO_MATHHUB";
+      status?: "EXTRACTED" | "FINALIZED_IN_FILE" | "SUBMITTED_TO_MATHHUB" | "DISCARDED";
     }) => data,
   )
   .handler(async ({ data }) => {

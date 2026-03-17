@@ -145,7 +145,7 @@ export function DuplicateDefinitionDialog({
                               data: {
                                 identity,
                                 status: "DISCARDED",
-                                discardedReason: "DUPLICATE_DEFINITION",
+                                discardedReason: `Duplicate of - ${uri}`,
                               },
                             });
 

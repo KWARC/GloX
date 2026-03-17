@@ -8,8 +8,14 @@ import {
   getDefinitionFileStatus,
   updateDefinitionsStatusByIdentity,
 } from "@/serverFns/definitionStatus.server";
-import { deleteDefinition, updateDefinition } from "@/serverFns/extractDefinition.server";
-import { FileIdentity, getDefinitionsByIdentity } from "@/serverFns/latex.server";
+import {
+  deleteDefinition,
+  updateDefinition,
+} from "@/serverFns/extractDefinition.server";
+import {
+  FileIdentity,
+  getDefinitionsByIdentity,
+} from "@/serverFns/latex.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
   ActionIcon,
@@ -29,12 +35,17 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ChevronDown, Download, FolderSymlink } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  ChevronDown,
+  Download,
+  FolderSymlink,
+} from "lucide-react";
 import { useState } from "react";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { DuplicateDefinitionDialog } from "./DuplicateDefinitionDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
-import { useNavigate } from "@tanstack/react-router";
 
 const STATUS_CONFIG = {
   SUBMITTED_TO_MATHHUB: {
@@ -43,29 +54,21 @@ const STATUS_CONFIG = {
     actionLabel: "Unsubmit from MathHub",
     actionColor: "red" as const,
     nextStatus: "FINALIZED_IN_FILE" as const,
-    disabledWhen: (s: string) => s !== "SUBMITTED_TO_MATHHUB",
   },
   FINALIZED_IN_FILE: {
     color: "blue",
-    label: "Submit to MathHub",
+    label: "Finalized",
     actionLabel: "Submit to MathHub",
     actionColor: "blue" as const,
     nextStatus: "SUBMITTED_TO_MATHHUB" as const,
-    disabledWhen: (s: string) => s !== "FINALIZED_IN_FILE",
   },
   EXTRACTED: {
     color: "gray",
     label: "Extracted",
-    actionLabel: "Submit to MathHub",
-    actionColor: "blue" as const,
-    nextStatus: "SUBMITTED_TO_MATHHUB" as const,
-    disabledWhen: (s: string) => s !== "FINALIZED_IN_FILE",
   },
   DISCARDED: {
     color: "red",
     label: "Discarded",
-    actionLabel: "Discarded",
-    actionColor: "red",
   },
 } as const;
 
@@ -75,7 +78,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
 
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discardReason, setDiscardReason] = useState("");
-  const [definitionMetaTarget, setDefinitionMetaTarget] = useState<ExtractedItem | null>(null);
+  const [definitionMetaTarget, setDefinitionMetaTarget] =
+    useState<ExtractedItem | null>(null);
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexCode, setLatexCode] = useState("");
   const [dupOpen, setDupOpen] = useState(false);
@@ -113,9 +117,10 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
       }),
   });
 
+  const status = definitionStatus?.status ?? "EXTRACTED";
+  const statusConf = STATUS_CONFIG[status] ?? STATUS_CONFIG.EXTRACTED;
   const hasSymbols = (data?.symbols.length ?? 0) > 0;
-  const currentStatus = (definitionStatus as keyof typeof STATUS_CONFIG) ?? "EXTRACTED";
-  const statusConf = STATUS_CONFIG[currentStatus] ?? STATUS_CONFIG.EXTRACTED;
+  const discardReasonFromServer = definitionStatus?.discardedReason ?? null;
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
@@ -264,7 +269,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 )}
 
                 <Tooltip label="Download .tex file" withArrow position="top">
-                  <ActionIcon size="sm" variant="subtle" color="gray" onClick={handleDownload}>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color="gray"
+                    onClick={handleDownload}
+                  >
                     <Download size={14} />
                   </ActionIcon>
                 </Tooltip>
@@ -317,23 +327,34 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 <Group gap={6} wrap="nowrap">
                   <Menu shadow="md" width={230} position="bottom-end">
                     <Menu.Target>
-                      <Tooltip
-                        withArrow
-                        multiline
-                        w={260}
-                        label={
-                          definitionStatus === "DISCARDED" ? (
+                      {status === "DISCARDED" ? (
+                        <Tooltip
+                          withArrow
+                          multiline
+                          w={260}
+                          label={
                             <Stack gap={2}>
                               <Text fw={600} size="xs">
                                 Discarded
                               </Text>
-                              <Text size="xs">Reason: {discardReason || "Not specified"}</Text>
+                              <Text size="xs">
+                                Reason:{" "}
+                                {discardReasonFromServer || "Not specified"}
+                              </Text>
                             </Stack>
-                          ) : (
-                            "Finalize LaTeX first before submitting to MathHub"
-                          )
-                        }
-                      >
+                          }
+                        >
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color={statusConf.color}
+                            rightSection={<ChevronDown size={12} />}
+                            styles={{ section: { marginLeft: 4 } }}
+                          >
+                            {statusConf.label}
+                          </Button>
+                        </Tooltip>
+                      ) : (
                         <Button
                           size="xs"
                           variant="light"
@@ -343,40 +364,14 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                         >
                           {statusConf.label}
                         </Button>
-                      </Tooltip>
+                      )}
                     </Menu.Target>
 
                     <Menu.Dropdown>
                       <Menu.Label>Status Actions</Menu.Label>
-
-                      <Menu.Item
-                        disabled={definitionStatus !== "FINALIZED_IN_FILE"}
-                        onClick={async () => {
-                          await updateDefinitionsStatusByIdentity({
-                            data: {
-                              identity,
-                              status: "SUBMITTED_TO_MATHHUB",
-                            },
-                          });
-
-                          await queryClient.invalidateQueries({
-                            queryKey: [
-                              "definition-status",
-                              identity.documentId,
-                              identity.futureRepo,
-                              identity.filePath,
-                              identity.fileName,
-                              identity.language,
-                            ],
-                          });
-                        }}
-                      >
-                        Submit to MathHub
-                      </Menu.Item>
-
                       <Menu.Item
                         color="red"
-                        disabled={definitionStatus !== "SUBMITTED_TO_MATHHUB"}
+                        disabled={status !== "SUBMITTED_TO_MATHHUB"}
                         onClick={async () => {
                           await updateDefinitionsStatusByIdentity({
                             data: {
@@ -397,26 +392,89 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                           });
                         }}
                       >
-                        Unsubmit from MathHub
+                        Extracted
+                      </Menu.Item>
+
+                      <Menu.Item
+                        color="red"
+                        disabled={status !== "SUBMITTED_TO_MATHHUB"}
+                        onClick={async () => {
+                          await updateDefinitionsStatusByIdentity({
+                            data: {
+                              identity,
+                              status: "FINALIZED_IN_FILE",
+                            },
+                          });
+
+                          await queryClient.invalidateQueries({
+                            queryKey: [
+                              "definition-status",
+                              identity.documentId,
+                              identity.futureRepo,
+                              identity.filePath,
+                              identity.fileName,
+                              identity.language,
+                            ],
+                          });
+                        }}
+                      >
+                        Finalized
+                      </Menu.Item>
+                      <Menu.Item
+                        disabled={status !== "FINALIZED_IN_FILE"}
+                        onClick={async () => {
+                          await updateDefinitionsStatusByIdentity({
+                            data: {
+                              identity,
+                              status: "SUBMITTED_TO_MATHHUB",
+                            },
+                          });
+
+                          await queryClient.invalidateQueries({
+                            queryKey: [
+                              "definition-status",
+                              identity.documentId,
+                              identity.futureRepo,
+                              identity.filePath,
+                              identity.fileName,
+                              identity.language,
+                            ],
+                          });
+                        }}
+                      >
+                        Submitted to MathHub
                       </Menu.Item>
 
                       {/* ADD THIS */}
                       <Menu.Divider />
 
-                      <Menu.Item color="red" onClick={() => setDiscardOpen(true)}>
+                      <Menu.Item
+                        color="red"
+                        onClick={() => setDiscardOpen(true)}
+                      >
                         Discard
                       </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
 
-                  <Button size="xs" variant="light" onClick={() => setDupOpen(true)}>
+                  <Button
+                    size="xs"
+                    variant="light"
+                    onClick={() => setDupOpen(true)}
+                  >
                     Check duplicate
                   </Button>
                 </Group>
               </Group>
             </Box>
 
-            <ScrollArea type="auto" scrollbarSize={6} style={{ flex: 1 }} px="md" py="sm">
+            <ScrollArea
+              type="auto"
+              scrollbarSize={6}
+              style={{ flex: 1 }}
+              px="md"
+              py="sm"
+            >
               {isLoading && (
                 <Group justify="center" py="lg">
                   <Loader size="sm" />
@@ -439,7 +497,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     showDefinitionMeta
                     showDefinitionMetaIconOnly
                     onEditDefinitionMeta={handleEditDefinitionMeta}
-                    isLocked={definitionStatus === "SUBMITTED_TO_MATHHUB"}
+                    isLocked={status !== "SUBMITTED_TO_MATHHUB"}
                     onOpenLatexPreview={(item) => handleOpenLatexPreview(item)}
                   />
                 </Stack>
@@ -468,7 +526,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               >
                 <FolderSymlink size={13} />
                 <Text size="10px" c="dimmed" ff="monospace">
-                  {[identity.futureRepo, identity.filePath, identity.fileName, identity.language]
+                  {[
+                    identity.futureRepo,
+                    identity.filePath,
+                    identity.fileName,
+                    identity.language,
+                  ]
                     .filter(Boolean)
                     .join(" / ")}
                 </Text>
@@ -531,7 +594,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           onChange={(e) => setLatexCode(e.currentTarget.value)}
           autosize
           minRows={25}
-          readOnly={definitionStatus === "SUBMITTED_TO_MATHHUB"}
+          readOnly={status !== "SUBMITTED_TO_MATHHUB"}
           styles={{
             input: {
               fontFamily: "monospace",
@@ -545,7 +608,33 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           {/* FINAL BUTTON */}
           <Button
             color="blue"
-            disabled={definitionStatus === "SUBMITTED_TO_MATHHUB"}
+            disabled={status === "FINALIZED_IN_FILE"}
+            onClick={async () => {
+              // await updateDefinitionsStatusByIdentity({
+              //   data: {
+              //     identity,
+              //     status: "FINALIZED_IN_FILE",
+              //   },
+              // });
+
+              // await queryClient.invalidateQueries({
+              //   queryKey: [
+              //     "definition-status",
+              //     identity.documentId,
+              //     identity.futureRepo,
+              //     identity.filePath,
+              //     identity.fileName,
+              //     identity.language,
+              //   ],
+              // });
+              setLatexOpen(false);
+            }}
+          >
+            Save
+          </Button>
+          <Button
+            color="blue"
+            disabled={status === "FINALIZED_IN_FILE"}
             onClick={async () => {
               await updateDefinitionsStatusByIdentity({
                 data: {
@@ -564,43 +653,19 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                   identity.language,
                 ],
               });
-            }}
-          >
-            Final
-          </Button>
-
-          {/* SUBMIT BUTTON */}
-          <Button
-            color="teal"
-            disabled={definitionStatus !== "FINALIZED_IN_FILE"}
-            onClick={async () => {
-              await updateDefinitionsStatusByIdentity({
-                data: {
-                  identity,
-                  status: "SUBMITTED_TO_MATHHUB",
-                },
-              });
-
-              await queryClient.invalidateQueries({
-                queryKey: [
-                  "definition-status",
-                  identity.documentId,
-                  identity.futureRepo,
-                  identity.filePath,
-                  identity.fileName,
-                  identity.language,
-                ],
-              });
-
               setLatexOpen(false);
             }}
           >
-            Submit to MathHub
+            Save & Finalize
           </Button>
         </Group>
       </Modal>
 
-      <Modal opened={discardOpen} onClose={() => setDiscardOpen(false)} title="Discard Definition">
+      <Modal
+        opened={discardOpen}
+        onClose={() => setDiscardOpen(false)}
+        title="Discard Definition"
+      >
         <Stack>
           <Select
             label="Reason"
@@ -631,6 +696,17 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     status: "DISCARDED",
                     discardedReason: discardReason,
                   },
+                });
+
+                await queryClient.invalidateQueries({
+                  queryKey: [
+                    "definition-status",
+                    identity.documentId,
+                    identity.futureRepo,
+                    identity.filePath,
+                    identity.fileName,
+                    identity.language,
+                  ],
                 });
 
                 setDiscardOpen(false);

@@ -162,6 +162,8 @@ function CreateLatexPage() {
       }),
   });
 
+  const status = definitionStatus?.status ?? "EXTRACTED";
+
   const generatedLatex =
     stex && provenance ? injectProvenance(stex, provenance) : (stex ?? "");
 
@@ -251,13 +253,13 @@ function CreateLatexPage() {
               <Title order={2}>LaTeX Preview</Title>
               <Badge>sTeX</Badge>
 
-              {definitionStatus === "SUBMITTED_TO_MATHHUB" && (
+              {status === "SUBMITTED_TO_MATHHUB" && (
                 <Badge color="green">MathHub Submitted</Badge>
               )}
             </Group>
 
             <Group>
-              {definitionStatus === "FINALIZED_IN_FILE" && (
+              {status === "FINALIZED_IN_FILE" && (
                 <Button
                   size="xs"
                   color="green"
@@ -293,8 +295,8 @@ function CreateLatexPage() {
                 variant="light"
                 onClick={() => setHistoryOpen(true)}
                 disabled={
-                  definitionStatus === "FINALIZED_IN_FILE" ||
-                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                  status === "FINALIZED_IN_FILE" ||
+                  status === "SUBMITTED_TO_MATHHUB"
                 }
               >
                 Version History
@@ -338,8 +340,8 @@ function CreateLatexPage() {
         <Paper withBorder style={{ flex: 1 }}>
           <Textarea
             readOnly={
-              definitionStatus === "FINALIZED_IN_FILE" ||
-              definitionStatus === "SUBMITTED_TO_MATHHUB"
+              status === "FINALIZED_IN_FILE" ||
+              status === "SUBMITTED_TO_MATHHUB"
             }
             value={displayLatex}
             onChange={(e) => {
@@ -387,8 +389,8 @@ function CreateLatexPage() {
                 loading={savingDraft}
                 disabled={
                   isFromHistory ||
-                  definitionStatus === "FINALIZED_IN_FILE" ||
-                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                  status === "FINALIZED_IN_FILE" ||
+                  status === "SUBMITTED_TO_MATHHUB"
                 }
               >
                 Save Draft
@@ -400,8 +402,8 @@ function CreateLatexPage() {
                 onClick={handleSaveFinal}
                 loading={savingFinal}
                 disabled={
-                  definitionStatus === "FINALIZED_IN_FILE" ||
-                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                  status === "FINALIZED_IN_FILE" ||
+                  status === "SUBMITTED_TO_MATHHUB"
                 }
               >
                 Save Final

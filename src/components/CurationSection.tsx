@@ -1,3 +1,4 @@
+import { DefinitionStatus } from "@/routes/curation";
 import { getFileIdentities } from "@/serverFns/latex.server";
 import {
   Box,
@@ -14,8 +15,8 @@ import { useQuery } from "@tanstack/react-query";
 import { StexCuration } from "./StexCuration";
 
 type Props = {
-  curationLevel: string | null;
-  setCurationLevel: (value: string | null) => void;
+  curationLevel: DefinitionStatus | null;
+  setCurationLevel: (value: DefinitionStatus | null) => void;
 };
 
 export function CurationSection({ curationLevel, setCurationLevel }: Props) {
@@ -24,11 +25,7 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
     queryFn: () =>
       getFileIdentities({
         data: {
-          status: curationLevel as
-            | "EXTRACTED"
-            | "FINALIZED_IN_FILE"
-            | "SUBMITTED_TO_MATHHUB"
-            | undefined,
+          status: curationLevel ?? undefined,
         },
       }),
   });
@@ -52,15 +49,20 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
               label="Filter by Definition status"
               placeholder="All statuses"
               value={curationLevel}
-              onChange={setCurationLevel}
+              onChange={(value) =>
+                setCurationLevel(value as DefinitionStatus | null)
+              }
               clearable
               data={[
                 { value: "EXTRACTED", label: "Extracted" },
-                { value: "FINALIZED_IN_FILE", label: "Finalized in file" },
+                // { value: "sTeX Modified", label: "sTeX Modified" },
+
+                { value: "FINALIZED_IN_FILE", label: " Finalized " },
                 {
                   value: "SUBMITTED_TO_MATHHUB",
                   label: "Submitted to MathHub",
                 },
+                { value: "DISCARDED", label: "Discard" },
               ]}
               w={220}
               size="sm"
