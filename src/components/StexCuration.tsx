@@ -1,7 +1,7 @@
 import { queryClient } from "@/queryClient";
 import { injectProvenance } from "@/server/ftml/addProvenanceData";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
-import { ExtractedItem } from "@/server/text-selection";
+import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
 import {
@@ -29,12 +29,14 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, ChevronDown, Download, FolderSymlink } from "lucide-react";
 import { useState } from "react";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { DuplicateDefinitionDialog } from "./DuplicateDefinitionDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
-import { useNavigate } from "@tanstack/react-router";
+import { SelectionPopup } from "./SelectionPopup";
+import { SemanticPanel } from "./SemanticPanel";
 
 const STATUS_CONFIG = {
   SUBMITTED_TO_MATHHUB: {
@@ -43,29 +45,21 @@ const STATUS_CONFIG = {
     actionLabel: "Unsubmit from MathHub",
     actionColor: "red" as const,
     nextStatus: "FINALIZED_IN_FILE" as const,
-    disabledWhen: (s: string) => s !== "SUBMITTED_TO_MATHHUB",
   },
   FINALIZED_IN_FILE: {
     color: "blue",
-    label: "Submit to MathHub",
+    label: "Finalized",
     actionLabel: "Submit to MathHub",
     actionColor: "blue" as const,
     nextStatus: "SUBMITTED_TO_MATHHUB" as const,
-    disabledWhen: (s: string) => s !== "FINALIZED_IN_FILE",
   },
   EXTRACTED: {
     color: "gray",
     label: "Extracted",
-    actionLabel: "Submit to MathHub",
-    actionColor: "blue" as const,
-    nextStatus: "SUBMITTED_TO_MATHHUB" as const,
-    disabledWhen: (s: string) => s !== "FINALIZED_IN_FILE",
   },
   DISCARDED: {
     color: "red",
     label: "Discarded",
-    actionLabel: "Discarded",
-    actionColor: "red",
   },
 } as const;
 
@@ -81,6 +75,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [dupOpen, setDupOpen] = useState(false);
   const [duplicateUris, setDuplicateUris] = useState<string[]>([]);
   const navigate = useNavigate();
+  const { selection, popup, handleSelection, clearPopupOnly, clearAll } = useTextSelection();
 
   const { data, isLoading } = useQuery({
     queryKey: ["definitionsByIdentity", identity],
@@ -113,13 +108,22 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
       }),
   });
 
+  const status = definitionStatus?.status ?? "EXTRACTED";
+  const statusConf = STATUS_CONFIG[status] ?? STATUS_CONFIG.EXTRACTED;
   const hasSymbols = (data?.symbols.length ?? 0) > 0;
-  const currentStatus = (definitionStatus as keyof typeof STATUS_CONFIG) ?? "EXTRACTED";
-  const statusConf = STATUS_CONFIG[currentStatus] ?? STATUS_CONFIG.EXTRACTED;
+  const discardReasonFromServer = definitionStatus?.discardedReason ?? null;
+  const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
+  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(null);
+  const selectedDefinition = data?.definitions?.find((d) => d.id === semanticPanelDefId) ?? null;
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
     setDefinitionMetaEditOpen(true);
+  }
+
+  function handleOpenSemanticPanel(definitionId: string) {
+    setSemanticPanelDefId(definitionId);
+    setSemanticPanelOpen(true);
   }
 
   async function handleDownload() {
@@ -317,23 +321,33 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 <Group gap={6} wrap="nowrap">
                   <Menu shadow="md" width={230} position="bottom-end">
                     <Menu.Target>
-                      <Tooltip
-                        withArrow
-                        multiline
-                        w={260}
-                        label={
-                          definitionStatus === "DISCARDED" ? (
+                      {status === "DISCARDED" ? (
+                        <Tooltip
+                          withArrow
+                          multiline
+                          w={260}
+                          label={
                             <Stack gap={2}>
                               <Text fw={600} size="xs">
                                 Discarded
                               </Text>
-                              <Text size="xs">Reason: {discardReason || "Not specified"}</Text>
+                              <Text size="xs">
+                                Reason: {discardReasonFromServer || "Not specified"}
+                              </Text>
                             </Stack>
-                          ) : (
-                            "Finalize LaTeX first before submitting to MathHub"
-                          )
-                        }
-                      >
+                          }
+                        >
+                          <Button
+                            size="xs"
+                            variant="light"
+                            color={statusConf.color}
+                            rightSection={<ChevronDown size={12} />}
+                            styles={{ section: { marginLeft: 4 } }}
+                          >
+                            {statusConf.label}
+                          </Button>
+                        </Tooltip>
+                      ) : (
                         <Button
                           size="xs"
                           variant="light"
@@ -343,40 +357,14 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                         >
                           {statusConf.label}
                         </Button>
-                      </Tooltip>
+                      )}
                     </Menu.Target>
 
                     <Menu.Dropdown>
                       <Menu.Label>Status Actions</Menu.Label>
-
-                      <Menu.Item
-                        disabled={definitionStatus !== "FINALIZED_IN_FILE"}
-                        onClick={async () => {
-                          await updateDefinitionsStatusByIdentity({
-                            data: {
-                              identity,
-                              status: "SUBMITTED_TO_MATHHUB",
-                            },
-                          });
-
-                          await queryClient.invalidateQueries({
-                            queryKey: [
-                              "definition-status",
-                              identity.documentId,
-                              identity.futureRepo,
-                              identity.filePath,
-                              identity.fileName,
-                              identity.language,
-                            ],
-                          });
-                        }}
-                      >
-                        Submit to MathHub
-                      </Menu.Item>
-
                       <Menu.Item
                         color="red"
-                        disabled={definitionStatus !== "SUBMITTED_TO_MATHHUB"}
+                        disabled={status !== "SUBMITTED_TO_MATHHUB"}
                         onClick={async () => {
                           await updateDefinitionsStatusByIdentity({
                             data: {
@@ -397,7 +385,57 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                           });
                         }}
                       >
-                        Unsubmit from MathHub
+                        Extracted
+                      </Menu.Item>
+
+                      <Menu.Item
+                        color="red"
+                        disabled={status !== "SUBMITTED_TO_MATHHUB"}
+                        onClick={async () => {
+                          await updateDefinitionsStatusByIdentity({
+                            data: {
+                              identity,
+                              status: "FINALIZED_IN_FILE",
+                            },
+                          });
+
+                          await queryClient.invalidateQueries({
+                            queryKey: [
+                              "definition-status",
+                              identity.documentId,
+                              identity.futureRepo,
+                              identity.filePath,
+                              identity.fileName,
+                              identity.language,
+                            ],
+                          });
+                        }}
+                      >
+                        Finalized
+                      </Menu.Item>
+                      <Menu.Item
+                        disabled={status !== "FINALIZED_IN_FILE"}
+                        onClick={async () => {
+                          await updateDefinitionsStatusByIdentity({
+                            data: {
+                              identity,
+                              status: "SUBMITTED_TO_MATHHUB",
+                            },
+                          });
+
+                          await queryClient.invalidateQueries({
+                            queryKey: [
+                              "definition-status",
+                              identity.documentId,
+                              identity.futureRepo,
+                              identity.filePath,
+                              identity.fileName,
+                              identity.language,
+                            ],
+                          });
+                        }}
+                      >
+                        Submitted to MathHub
                       </Menu.Item>
 
                       {/* ADD THIS */}
@@ -433,13 +471,15 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     onUpdate={handleUpdate}
                     onDownload={handleDownload}
                     onDelete={handleDelete}
-                    onSelection={() => {}}
-                    onOpenSemanticPanel={() => {}}
+                    onSelection={(extractId) => {
+                      handleSelection("right", { extractId });
+                    }}
+                    onOpenSemanticPanel={handleOpenSemanticPanel}
                     showPageNumber={false}
                     showDefinitionMeta
                     showDefinitionMetaIconOnly
                     onEditDefinitionMeta={handleEditDefinitionMeta}
-                    isLocked={definitionStatus === "SUBMITTED_TO_MATHHUB"}
+                    isLocked={status !== "SUBMITTED_TO_MATHHUB"}
                     onOpenLatexPreview={(item) => handleOpenLatexPreview(item)}
                   />
                 </Stack>
@@ -531,7 +571,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           onChange={(e) => setLatexCode(e.currentTarget.value)}
           autosize
           minRows={25}
-          readOnly={definitionStatus === "SUBMITTED_TO_MATHHUB"}
+          readOnly={status !== "SUBMITTED_TO_MATHHUB"}
           styles={{
             input: {
               fontFamily: "monospace",
@@ -545,10 +585,33 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           {/* FINAL BUTTON */}
           <Button
             color="blue"
-            disabled={
-              definitionStatus === "SUBMITTED_TO_MATHHUB" ||
-              definitionStatus === "FINALIZED_IN_FILE"
-            }
+            disabled={status === "FINALIZED_IN_FILE"}
+            onClick={async () => {
+              // await updateDefinitionsStatusByIdentity({
+              //   data: {
+              //     identity,
+              //     status: "FINALIZED_IN_FILE",
+              //   },
+              // });
+
+              // await queryClient.invalidateQueries({
+              //   queryKey: [
+              //     "definition-status",
+              //     identity.documentId,
+              //     identity.futureRepo,
+              //     identity.filePath,
+              //     identity.fileName,
+              //     identity.language,
+              //   ],
+              // });
+              setLatexOpen(false);
+            }}
+          >
+            Save
+          </Button>
+          <Button
+            color="blue"
+            disabled={status === "FINALIZED_IN_FILE"}
             onClick={async () => {
               await updateDefinitionsStatusByIdentity({
                 data: {
@@ -567,38 +630,10 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                   identity.language,
                 ],
               });
-            }}
-          >
-            {definitionStatus === "FINALIZED_IN_FILE" ? "Finalised" : "Finalise"}
-          </Button>
-
-          {/* SUBMIT BUTTON */}
-          <Button
-            color="teal"
-            disabled={definitionStatus !== "FINALIZED_IN_FILE"}
-            onClick={async () => {
-              await updateDefinitionsStatusByIdentity({
-                data: {
-                  identity,
-                  status: "SUBMITTED_TO_MATHHUB",
-                },
-              });
-
-              await queryClient.invalidateQueries({
-                queryKey: [
-                  "definition-status",
-                  identity.documentId,
-                  identity.futureRepo,
-                  identity.filePath,
-                  identity.fileName,
-                  identity.language,
-                ],
-              });
-
               setLatexOpen(false);
             }}
           >
-            Submitted to mathhub
+            Save & Finalize
           </Button>
         </Group>
       </Modal>
@@ -636,6 +671,17 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                   },
                 });
 
+                await queryClient.invalidateQueries({
+                  queryKey: [
+                    "definition-status",
+                    identity.documentId,
+                    identity.futureRepo,
+                    identity.filePath,
+                    identity.fileName,
+                    identity.language,
+                  ],
+                });
+
                 setDiscardOpen(false);
               }}
             >
@@ -664,6 +710,31 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           onConfirm={(dups) => {
             setDuplicateUris(dups);
           }}
+        />
+      )}
+      {popup && (
+        <SelectionPopup
+          popup={popup}
+          onClose={clearPopupOnly}
+          onDefiniendum={() => {
+            console.log("Definiendum clicked");
+          }}
+          onSymbolicRef={() => {
+            console.log("SymbolicRef clicked");
+          }}
+        />
+      )}
+      {semanticPanelOpen && (
+        <SemanticPanel
+          opened={semanticPanelOpen}
+          onClose={() => {
+            setSemanticPanelOpen(false);
+            setSemanticPanelDefId(null);
+          }}
+          definition={selectedDefinition}
+          onEditDefiniendum={() => {}}
+          onEditSymbolicRef={() => {}}
+          onDeleteNode={() => {}}
         />
       )}
     </>
