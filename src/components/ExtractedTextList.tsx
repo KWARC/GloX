@@ -1,13 +1,5 @@
 import { ExtractedItem } from "@/server/text-selection";
-import {
-  ActionIcon,
-  Group,
-  Paper,
-  ScrollArea,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
+import { ActionIcon, Group, Paper, ScrollArea, Stack, Text, Textarea } from "@mantine/core";
 import { IconPencil, IconSettings, IconTrash } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
 import { FtmlPreview } from "./FtmlPreview";
@@ -18,10 +10,7 @@ interface ExtractedTextPanelProps {
   editingId: string | null;
   selectedId: string | null;
   onToggleEdit: (id: string) => void;
-  onUpdate: (
-    id: string,
-    statement: ExtractedItem["statement"],
-  ) => Promise<void>;
+  onUpdate: (id: string, statement: ExtractedItem["statement"]) => Promise<void>;
   onDownload?: (item: ExtractedItem) => void;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
@@ -79,11 +68,7 @@ export function ExtractedTextPanel({
                   }}
                 >
                   <Group justify="space-between" mb={4}>
-                    {showPageNumber ? (
-                      <Text size="xs">Page {item.pageNumber}</Text>
-                    ) : (
-                      <div />
-                    )}
+                    {showPageNumber ? <Text size="xs">Page {item.pageNumber}</Text> : <div />}
 
                     <Group gap="xs">
                       {/* <Tooltip label="Preview sTeX" withArrow>//todo
@@ -149,13 +134,15 @@ export function ExtractedTextPanel({
                   ) : (
                     <div
                       style={{ userSelect: "text", cursor: "text" }}
-                      onMouseUp={() => onSelection(item.id)}
+                      onMouseUp={() => {
+                        const selectedText = window.getSelection()?.toString();
+
+                        if (selectedText) {
+                          onSelection(item.id);
+                        }
+                      }}
                     >
-                      <FtmlPreview
-                        key={item.id}
-                        docId={item.id}
-                        ftmlAst={item.statement}
-                      />
+                      <FtmlPreview key={item.id} docId={item.id} ftmlAst={item.statement} />
                     </div>
                   )}
 
@@ -172,8 +159,7 @@ export function ExtractedTextPanel({
                       <FolderSymlink size={14} />
                       {!showDefinitionMetaIconOnly && (
                         <Text size="10px" c="dimmed" ff="monospace">
-                          {item.futureRepo} / {item.filePath} / {item.fileName}{" "}
-                          [{item.language}]
+                          {item.futureRepo} / {item.filePath} / {item.fileName} [{item.language}]
                         </Text>
                       )}
                     </Group>
