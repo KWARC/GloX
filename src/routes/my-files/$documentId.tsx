@@ -21,13 +21,15 @@ import {
   useValidation,
 } from "@/server/text-selection";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
-import { deleteDefinition, listDefinition } from "@/serverFns/extractDefinition.server";
+import {
+  deleteDefinition,
+  listDefinition,
+} from "@/serverFns/extractDefinition.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
 import {
-  ActionIcon,
   Badge,
   Box,
   Button,
@@ -36,15 +38,13 @@ import {
   Group,
   Loader,
   Paper,
-  Portal,
   Stack,
   Tabs,
   Text,
   ThemeIcon,
-  Tooltip,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconArrowRight, IconFileAlert, IconFileText, IconList } from "@tabler/icons-react";
+import { IconFileAlert, IconFileText, IconList } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -66,9 +66,13 @@ function RouteComponent() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
 
-  const { data: document, isLoading: docLoading } = useQuery(documentByIdQuery(documentId));
+  const { data: document, isLoading: docLoading } = useQuery(
+    documentByIdQuery(documentId),
+  );
 
-  const { data: pages = [], isLoading: pagesLoading } = useQuery(documentPagesQuery(documentId));
+  const { data: pages = [], isLoading: pagesLoading } = useQuery(
+    documentPagesQuery(documentId),
+  );
 
   const { data: extracts = [] } = useQuery({
     queryKey: ["definitions", documentId],
@@ -91,19 +95,25 @@ function RouteComponent() {
   const [defDialogOpen, setDefDialogOpen] = useState(false);
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
   const [defExtractText, setDefExtractText] = useState("");
-  const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(null);
+  const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(
+    null,
+  );
 
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("document");
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
-  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(null);
+  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
+    null,
+  );
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
   const [pendingExtractText, setPendingExtractText] = useState("");
   const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
-  const [definitionMetaTarget, setDefinitionMetaTarget] = useState<ExtractedItem | null>(null);
+  const [definitionMetaTarget, setDefinitionMetaTarget] =
+    useState<ExtractedItem | null>(null);
 
-  const { selection, popup, handleSelection, clearPopupOnly, clearAll } = useTextSelection();
+  const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
+    useTextSelection();
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
   async function handleDeleteDefinition(id: string) {
@@ -490,7 +500,11 @@ function RouteComponent() {
               }}
             >
               <Tabs.List px="sm" pt="xs">
-                <Tabs.Tab value="document" leftSection={<IconFileText size={15} />} fw={500}>
+                <Tabs.Tab
+                  value="document"
+                  leftSection={<IconFileText size={15} />}
+                  fw={500}
+                >
                   Document
                 </Tabs.Tab>
                 <Tabs.Tab
@@ -519,7 +533,10 @@ function RouteComponent() {
                   flexDirection: "column",
                 }}
               >
-                <DocumentPagesPanel pages={pages} onSelection={handleLeftSelection} />
+                <DocumentPagesPanel
+                  pages={pages}
+                  onSelection={handleLeftSelection}
+                />
               </Tabs.Panel>
 
               <Tabs.Panel
@@ -581,7 +598,10 @@ function RouteComponent() {
                 </Badge>
               </Group>
               <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-                <DocumentPagesPanel pages={pages} onSelection={handleLeftSelection} />
+                <DocumentPagesPanel
+                  pages={pages}
+                  onSelection={handleLeftSelection}
+                />
               </Box>
             </Paper>
 
@@ -617,7 +637,12 @@ function RouteComponent() {
                   </Badge>
                 )}
 
-                <Button size="xs" variant="subtle" color="blue" onClick={handleOpenLatexConfig}>
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="blue"
+                  onClick={handleOpenLatexConfig}
+                >
                   LaTeX
                 </Button>
               </Group>
@@ -656,7 +681,9 @@ function RouteComponent() {
             popup.source === "right"
               ? () => {
                   if (!selection) return;
-                  const extract = extracts.find((e) => e.id === selection.extractId);
+                  const extract = extracts.find(
+                    (e) => e.id === selection.extractId,
+                  );
                   if (!extract) return;
 
                   setDefExtractId(extract.id);
@@ -670,7 +697,9 @@ function RouteComponent() {
             popup.source === "right"
               ? () => {
                   if (!selection) return;
-                  const extract = extracts.find((e) => e.id === selection.extractId);
+                  const extract = extracts.find(
+                    (e) => e.id === selection.extractId,
+                  );
 
                   if (!extract) return;
 

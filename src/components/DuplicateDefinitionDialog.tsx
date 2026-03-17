@@ -34,7 +34,6 @@ export function DuplicateDefinitionDialog({
   onClose,
   extracts,
   identity,
-  onConfirm,
 }: Props) {
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
