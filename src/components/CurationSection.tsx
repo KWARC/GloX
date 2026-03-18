@@ -55,8 +55,6 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
               clearable
               data={[
                 { value: "EXTRACTED", label: "Extracted" },
-                // { value: "sTeX Modified", label: "sTeX Modified" },
-
                 { value: "FINALIZED_IN_FILE", label: " Finalized " },
                 {
                   value: "SUBMITTED_TO_MATHHUB",
