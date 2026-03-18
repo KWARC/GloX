@@ -8,8 +8,14 @@ import {
   getDefinitionFileStatus,
   updateDefinitionsStatusByIdentity,
 } from "@/serverFns/definitionStatus.server";
-import { deleteDefinition, updateDefinition } from "@/serverFns/extractDefinition.server";
-import { FileIdentity, getDefinitionsByIdentity } from "@/serverFns/latex.server";
+import {
+  deleteDefinition,
+  updateDefinition,
+} from "@/serverFns/extractDefinition.server";
+import {
+  FileIdentity,
+  getDefinitionsByIdentity,
+} from "@/serverFns/latex.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
   ActionIcon,
@@ -30,7 +36,12 @@ import {
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, ChevronDown, Download, FolderSymlink } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  Download,
+  FolderSymlink,
+} from "lucide-react";
 import { useState } from "react";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { DuplicateDefinitionDialog } from "./DuplicateDefinitionDialog";
@@ -69,13 +80,14 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
 
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discardReason, setDiscardReason] = useState("");
-  const [definitionMetaTarget, setDefinitionMetaTarget] = useState<ExtractedItem | null>(null);
+  const [definitionMetaTarget, setDefinitionMetaTarget] =
+    useState<ExtractedItem | null>(null);
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexCode, setLatexCode] = useState("");
   const [dupOpen, setDupOpen] = useState(false);
   const [duplicateUris, setDuplicateUris] = useState<string[]>([]);
   const navigate = useNavigate();
-  const { selection, popup, handleSelection, clearPopupOnly, clearAll } = useTextSelection();
+  const { popup, handleSelection, clearPopupOnly } = useTextSelection();
 
   const { data, isLoading } = useQuery({
     queryKey: ["definitionsByIdentity", identity],
@@ -113,8 +125,11 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const hasSymbols = (data?.symbols.length ?? 0) > 0;
   const discardReasonFromServer = definitionStatus?.discardedReason ?? null;
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
-  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(null);
-  const selectedDefinition = data?.definitions?.find((d) => d.id === semanticPanelDefId) ?? null;
+  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
+    null,
+  );
+  const selectedDefinition =
+    data?.definitions?.find((d) => d.id === semanticPanelDefId) ?? null;
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
@@ -268,7 +283,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 )}
 
                 <Tooltip label="Download .tex file" withArrow position="top">
-                  <ActionIcon size="sm" variant="subtle" color="gray" onClick={handleDownload}>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color="gray"
+                    onClick={handleDownload}
+                  >
                     <Download size={14} />
                   </ActionIcon>
                 </Tooltip>
@@ -332,7 +352,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                                 Discarded
                               </Text>
                               <Text size="xs">
-                                Reason: {discardReasonFromServer || "Not specified"}
+                                Reason:{" "}
+                                {discardReasonFromServer || "Not specified"}
                               </Text>
                             </Stack>
                           }
@@ -437,24 +458,35 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       >
                         Submitted to MathHub
                       </Menu.Item>
-
-                      {/* ADD THIS */}
                       <Menu.Divider />
 
-                      <Menu.Item color="red" onClick={() => setDiscardOpen(true)}>
+                      <Menu.Item
+                        color="red"
+                        onClick={() => setDiscardOpen(true)}
+                      >
                         Discard
                       </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
 
-                  <Button size="xs" variant="light" onClick={() => setDupOpen(true)}>
+                  <Button
+                    size="xs"
+                    variant="light"
+                    onClick={() => setDupOpen(true)}
+                  >
                     Check duplicate
                   </Button>
                 </Group>
               </Group>
             </Box>
 
-            <ScrollArea type="auto" scrollbarSize={6} style={{ flex: 1 }} px="md" py="sm">
+            <ScrollArea
+              type="auto"
+              scrollbarSize={6}
+              style={{ flex: 1 }}
+              px="md"
+              py="sm"
+            >
               {isLoading && (
                 <Group justify="center" py="lg">
                   <Loader size="sm" />
@@ -479,7 +511,10 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     showDefinitionMeta
                     showDefinitionMetaIconOnly
                     onEditDefinitionMeta={handleEditDefinitionMeta}
-                    isLocked={status !== "SUBMITTED_TO_MATHHUB"}
+                    isLocked={
+                      status === "SUBMITTED_TO_MATHHUB" ||
+                      status === "DISCARDED"
+                    }
                     onOpenLatexPreview={(item) => handleOpenLatexPreview(item)}
                   />
                 </Stack>
@@ -508,7 +543,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               >
                 <FolderSymlink size={13} />
                 <Text size="10px" c="dimmed" ff="monospace">
-                  {[identity.futureRepo, identity.filePath, identity.fileName, identity.language]
+                  {[
+                    identity.futureRepo,
+                    identity.filePath,
+                    identity.fileName,
+                    identity.language,
+                  ]
                     .filter(Boolean)
                     .join(" / ")}
                 </Text>
@@ -638,7 +678,11 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         </Group>
       </Modal>
 
-      <Modal opened={discardOpen} onClose={() => setDiscardOpen(false)} title="Discard Definition">
+      <Modal
+        opened={discardOpen}
+        onClose={() => setDiscardOpen(false)}
+        title="Discard Definition"
+      >
         <Stack>
           <Select
             label="Reason"
