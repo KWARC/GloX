@@ -20,6 +20,9 @@ export type ActivePage = {
 export type TextSelection = {
   text: string;
   extractId?: string;
+
+  startOffset: number;
+  endOffset: number;
 };
 
 export type ExtractedItem = {
@@ -59,14 +62,30 @@ export function useTextSelection() {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
 
-    const text = sel.toString().trim();
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+
+    const range = sel.getRangeAt(0);
+    const text = sel.toString();
     if (!text) return;
 
-    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    const startContainer = range.startContainer;
+    const endContainer = range.endContainer;
+
+    if (
+      startContainer !== endContainer ||
+      startContainer.nodeType !== Node.TEXT_NODE
+    ) {
+      return; 
+    }
+
+    const startOffset = range.startOffset;
+    const endOffset = range.endOffset;
 
     setSelection({
       text,
       extractId: options?.extractId,
+      startOffset,
+      endOffset,
     });
 
     setPopup({

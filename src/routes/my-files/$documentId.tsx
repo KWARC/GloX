@@ -356,7 +356,11 @@ function RouteComponent() {
       await symbolicRef({
         data: {
           definitionId: defExtractId,
-          selection: { text: selection.text },
+          selection: {
+            text: selection.text,
+            startOffset: selection.startOffset,
+            endOffset: selection.endOffset,
+          },
           symRef,
         },
       });

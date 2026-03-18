@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import {
-  findUniqueTextLocation,
+  findAllTextOccurrences,
   pathTraversesSemanticNode,
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
@@ -20,6 +20,8 @@ type SymbolicRefInput = {
   definitionId: string;
   selection: {
     text: string;
+    startOffset: number;
+    endOffset: number;
   };
   symRef: UnifiedSymbolicReference;
 };
@@ -62,8 +64,17 @@ export const symbolicRef = createServerFn({ method: "POST" })
     );
 
     let location;
+
     try {
-      location = findUniqueTextLocation(currentAst, selection.text);
+      const occurrences = findAllTextOccurrences(currentAst, selection.text);
+
+      location = occurrences.find(
+        (loc) => loc.offset === selection.startOffset,
+      );
+
+      if (!location) {
+        throw new Error("Exact selection match not found in AST");
+      }
     } catch (error) {
       throw new Error(
         `Cannot add symbolic reference: ${(error as Error).message}`,
@@ -86,7 +97,8 @@ export const symbolicRef = createServerFn({ method: "POST" })
     const updatedAst = replaceTextWithNode(
       currentAst,
       location,
-      location.offset + selection.text.length,
+      selection.startOffset,
+      selection.endOffset,
       symrefNode,
     );
 

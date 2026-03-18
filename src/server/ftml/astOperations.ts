@@ -149,32 +149,13 @@ export function findAllTextOccurrences(
   return locations;
 }
 
-export function findUniqueTextLocation(
-  root: RootNode,
-  searchText: string,
-): TextLocation {
-  const occurrences = findAllTextOccurrences(root, searchText);
-
-  if (occurrences.length === 0) {
-    throw new Error(`Text "${searchText}" not found in AST`);
-  }
-
-  if (occurrences.length > 1) {
-    throw new Error(
-      `Text "${searchText}" appears ${occurrences.length} times. ` +
-        `Selection must be unique within the definition.`,
-    );
-  }
-
-  return occurrences[0];
-}
-
 export function replaceTextWithNode(
   root: RootNode,
   location: TextLocation,
+  startOffset: number,
   endOffset: number,
   node: FtmlNode,
-): RootNode {
+): RootNode{
   const cloned = cloneAst(root);
 
   const targetParagraph = cloned.content[location.paragraphIndex];
@@ -204,8 +185,8 @@ export function replaceTextWithNode(
     throw new Error("Target node is not a text node");
   }
 
-  const before = textNode.slice(0, location.offset);
-  const after = textNode.slice(endOffset);
+const before = textNode.slice(0, startOffset);
+const after = textNode.slice(endOffset);
 
   const replacement: FtmlContent[] = [];
   if (before) replacement.push(before);
