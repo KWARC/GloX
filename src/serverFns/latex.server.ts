@@ -17,6 +17,7 @@ export type LatexDraft = {
 };
 
 export type LatexKey = {
+  definitionIds: string[];
   documentId: string;
   futureRepo: string;
   filePath: string;

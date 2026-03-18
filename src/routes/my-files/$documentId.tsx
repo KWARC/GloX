@@ -430,10 +430,19 @@ function RouteComponent() {
     fileName: string;
     language: string;
   }) {
+    const filteredDefinitions = extracts.filter(
+      (e) =>
+        e.futureRepo === config.futureRepo &&
+        e.filePath === config.filePath &&
+        e.fileName === config.fileName &&
+        e.language === config.language,
+    );
+
     navigate({
       to: "/create-latex",
       search: {
         documentId,
+        definitionIds: filteredDefinitions.map((e) => e.id),
         futureRepo: config.futureRepo,
         filePath: config.filePath,
         fileName: config.fileName,

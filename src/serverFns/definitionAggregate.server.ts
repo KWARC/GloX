@@ -5,6 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 export const getCombinedDefinitionFtml = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
+      definitionIds: string[];
       documentId: string;
       futureRepo: string;
       filePath: string;
@@ -13,27 +14,34 @@ export const getCombinedDefinitionFtml = createServerFn({ method: "GET" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const defs = (await prisma.definition.findMany({
+    const defs = await prisma.definition.findMany({
       where: {
-        documentId: data.documentId,
-        futureRepo: data.futureRepo,
-        filePath: data.filePath,
-        fileName: data.fileName,
-        language: data.language,
+        id: { in: data.definitionIds },
       },
-      orderBy: { pageNumber: "asc" },
-      select: { statement: true },
-    })) as { statement: FtmlStatement | null }[];
+      select: {
+        id: true,
+        statement: true,
+      },
+    });
+
+    if (!defs.length) {
+      throw new Error("No definitions found");
+    }
+
+    const defMap = new Map(
+      defs.map((d) => [d.id, d.statement as FtmlStatement | null]),
+    );
 
     const combined: RootNode = {
       type: "root",
       content: [],
     };
 
-    for (const row of defs) {
-      if (!row.statement) continue;
+    for (const id of data.definitionIds) {
+      const statement = defMap.get(id);
+      if (!statement) continue;
 
-      const root = normalizeToRoot(row.statement);
+      const root = normalizeToRoot(statement);
       combined.content.push(...root.content);
     }
 

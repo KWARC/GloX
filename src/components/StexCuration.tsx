@@ -96,13 +96,21 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         data: identity,
       }),
   });
-
+  const definitionIds = data?.definitions.map((d) => d.id) ?? [];
   const { data: provenance } = useQuery({
-    queryKey: ["definition-provenance", identity.documentId],
+    queryKey: ["definition-provenance", definitionIds],
     queryFn: () =>
       getDefinitionProvenance({
-        data: identity,
+        data: {
+          definitionIds,
+          documentId: identity.documentId,
+          futureRepo: identity.futureRepo,
+          filePath: identity.filePath,
+          fileName: identity.fileName,
+          language: identity.language,
+        },
       }),
+    enabled: definitionIds.length > 0,
   });
 
   const { data: definitionStatus } = useQuery({
@@ -145,6 +153,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     try {
       const ftmlAst = await getCombinedDefinitionFtml({
         data: {
+          definitionIds,
           documentId: identity.documentId,
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
@@ -205,10 +214,11 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     setEditingId((prev) => (prev === id ? null : id));
   }
 
-  async function handleOpenLatexPreview(item?: ExtractedItem) {
+  async function handleOpenLatexPreview() {
     try {
       const ftmlAst = await getCombinedDefinitionFtml({
         data: {
+          definitionIds,
           documentId: identity.documentId,
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
@@ -515,7 +525,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       status === "SUBMITTED_TO_MATHHUB" ||
                       status === "DISCARDED"
                     }
-                    onOpenLatexPreview={(item) => handleOpenLatexPreview(item)}
+                    onOpenLatexPreview={() => handleOpenLatexPreview()}
                   />
                 </Stack>
               )}
@@ -611,7 +621,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           onChange={(e) => setLatexCode(e.currentTarget.value)}
           autosize
           minRows={25}
-          readOnly={status !== "SUBMITTED_TO_MATHHUB"}
+          readOnly={status === "SUBMITTED_TO_MATHHUB" || status === "DISCARDED"}
           styles={{
             input: {
               fontFamily: "monospace",
@@ -622,28 +632,31 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           }}
         />
         <Group justify="flex-end" mt="md" gap="sm">
-          {/* FINAL BUTTON */}
           <Button
             color="blue"
-            disabled={status === "FINALIZED_IN_FILE"}
+            disabled={
+              status === "FINALIZED_IN_FILE" ||
+              status === "SUBMITTED_TO_MATHHUB" ||
+              status === "DISCARDED"
+            }
             onClick={async () => {
-              // await updateDefinitionsStatusByIdentity({
-              //   data: {
-              //     identity,
-              //     status: "FINALIZED_IN_FILE",
-              //   },
-              // });
+              await updateDefinitionsStatusByIdentity({
+                data: {
+                  identity,
+                  status: "EXTRACTED",
+                },
+              });
 
-              // await queryClient.invalidateQueries({
-              //   queryKey: [
-              //     "definition-status",
-              //     identity.documentId,
-              //     identity.futureRepo,
-              //     identity.filePath,
-              //     identity.fileName,
-              //     identity.language,
-              //   ],
-              // });
+              await queryClient.invalidateQueries({
+                queryKey: [
+                  "definition-status",
+                  identity.documentId,
+                  identity.futureRepo,
+                  identity.filePath,
+                  identity.fileName,
+                  identity.language,
+                ],
+              });
               setLatexOpen(false);
             }}
           >
@@ -651,7 +664,11 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           </Button>
           <Button
             color="blue"
-            disabled={status === "FINALIZED_IN_FILE"}
+            disabled={
+              status === "FINALIZED_IN_FILE" ||
+              status === "SUBMITTED_TO_MATHHUB" ||
+              status === "DISCARDED"
+            }
             onClick={async () => {
               await updateDefinitionsStatusByIdentity({
                 data: {

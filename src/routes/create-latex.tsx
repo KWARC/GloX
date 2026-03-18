@@ -34,6 +34,7 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 
 type CreateLatexSearch = {
+  definitionIds: string[];
   documentId: string;
   futureRepo: string;
   filePath: string;
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/create-latex")({
 
   validateSearch: (search: Record<string, unknown>): CreateLatexSearch => {
     return {
+      definitionIds: search.definitionIds as string[],
       documentId: search.documentId as string,
       futureRepo: search.futureRepo as string,
       filePath: search.filePath as string,
@@ -65,8 +67,14 @@ export const Route = createFileRoute("/create-latex")({
 
 function CreateLatexPage() {
   const navigate = useNavigate();
-  const { documentId, futureRepo, filePath, fileName, language } =
-    Route.useSearch();
+  const {
+    definitionIds,
+    documentId,
+    futureRepo,
+    filePath,
+    fileName,
+    language,
+  } = Route.useSearch();
 
   const [editedLatex, setEditedLatex] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -86,6 +94,7 @@ function CreateLatexPage() {
     queryFn: () =>
       getCombinedDefinitionFtml({
         data: {
+          definitionIds,
           documentId,
           futureRepo,
           filePath,
@@ -119,6 +128,7 @@ function CreateLatexPage() {
       getLatexHistory({
         data: {
           documentId,
+          definitionIds,
           futureRepo,
           filePath,
           fileName,
@@ -132,6 +142,7 @@ function CreateLatexPage() {
     queryFn: () =>
       getDefinitionProvenance({
         data: {
+          definitionIds,
           documentId,
           futureRepo,
           filePath,
@@ -200,6 +211,7 @@ function CreateLatexPage() {
       await saveLatexDraft({
         data: {
           documentId,
+          definitionIds,
           futureRepo,
           filePath,
           fileName,
@@ -219,6 +231,7 @@ function CreateLatexPage() {
       await saveLatexFinal({
         data: {
           documentId,
+          definitionIds,
           futureRepo,
           filePath,
           fileName,
