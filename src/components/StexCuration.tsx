@@ -15,6 +15,8 @@ import {
 import {
   FileIdentity,
   getDefinitionsByIdentity,
+  saveLatexDraft,
+  saveLatexFinal,
 } from "@/serverFns/latex.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
@@ -640,23 +642,22 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               status === "DISCARDED"
             }
             onClick={async () => {
-              await updateDefinitionsStatusByIdentity({
+              await saveLatexDraft({
                 data: {
-                  identity,
-                  status: "EXTRACTED",
+                  latex: latexCode,
+                  definitionIds,
+                  documentId: identity.documentId,
+                  futureRepo: identity.futureRepo,
+                  filePath: identity.filePath,
+                  fileName: identity.fileName,
+                  language: identity.language,
                 },
               });
 
               await queryClient.invalidateQueries({
-                queryKey: [
-                  "definition-status",
-                  identity.documentId,
-                  identity.futureRepo,
-                  identity.filePath,
-                  identity.fileName,
-                  identity.language,
-                ],
+                queryKey: ["definitionsByIdentity", identity],
               });
+
               setLatexOpen(false);
             }}
           >
@@ -670,11 +671,20 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               status === "DISCARDED"
             }
             onClick={async () => {
-              await updateDefinitionsStatusByIdentity({
+              await saveLatexFinal({
                 data: {
-                  identity,
-                  status: "FINALIZED_IN_FILE",
+                  latex: latexCode,
+                  definitionIds,
+                  documentId: identity.documentId,
+                  futureRepo: identity.futureRepo,
+                  filePath: identity.filePath,
+                  fileName: identity.fileName,
+                  language: identity.language,
                 },
+              });
+
+              await queryClient.invalidateQueries({
+                queryKey: ["definitionsByIdentity", identity],
               });
 
               await queryClient.invalidateQueries({
@@ -687,6 +697,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                   identity.language,
                 ],
               });
+
               setLatexOpen(false);
             }}
           >

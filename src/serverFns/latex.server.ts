@@ -70,10 +70,6 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
       where: { documentId, futureRepo, filePath, fileName, language },
     });
 
-    if (existing?.isFinal) {
-      throw new Error("Document already submitted. Editing is locked.");
-    }
-
     const history = normalizeHistory(existing?.history);
 
     const nextHistory = [
@@ -119,6 +115,7 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
         where: { id: def.id },
         data: {
           statement: JSON.parse(JSON.stringify(updatedStatement)),
+          status: "EXTRACTED",
         },
       });
     }
