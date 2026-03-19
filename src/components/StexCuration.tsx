@@ -553,7 +553,19 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                   overflow: "hidden",
                 }}
               >
-                <FolderSymlink size={13} />
+                <Tooltip label="Move file path" withArrow>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    onClick={() => {
+                      setDefinitionMetaTarget(null);
+                      setDefinitionMetaEditOpen(true);
+                    }}
+                  >
+                    <FolderSymlink size={14} />
+                  </ActionIcon>
+                </Tooltip>
+
                 <Text size="10px" c="dimmed" ff="monospace">
                   {[
                     identity.futureRepo,
@@ -770,7 +782,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           setDefinitionMetaTarget(null);
         }}
         definition={definitionMetaTarget}
-        bulkDefinition={identity}
+        multipleDefinitions={!definitionMetaTarget ? identity : undefined}
         invalidateKey={["definitionsByIdentity", identity]}
       />
       {data?.definitions && (

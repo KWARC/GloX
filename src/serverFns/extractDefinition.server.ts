@@ -150,6 +150,30 @@ export const updateDefinitionFilePath = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     return prisma.$transaction(async (tx) => {
+      const current = await tx.definition.findUniqueOrThrow({
+        where: { id: data.id },
+      });
+
+      const targetDefs = await tx.definition.findMany({
+        where: {
+          futureRepo: data.futureRepo,
+          filePath: data.filePath,
+          fileName: data.fileName,
+          language: data.language,
+        },
+        select: { status: true },
+      });
+
+      if (targetDefs.length > 0) {
+        const sameStatus = targetDefs.every((d) => d.status === current.status);
+
+        if (!sameStatus) {
+          throw new Error(
+            "Cannot move definition: target path contains different status definitions",
+          );
+        }
+      }
+
       const definition = await tx.definition.update({
         where: { id: data.id },
         data: {
@@ -231,7 +255,39 @@ export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
           fileName: identity.fileName,
           language: identity.language,
         },
+        select: { id: true, status: true, statement: true },
       });
+
+      if (defs.length === 0) return { success: true };
+
+      const currentStatus = defs[0].status;
+
+      const sameSourceStatus = defs.every((d) => d.status === currentStatus);
+      if (!sameSourceStatus) {
+        throw new Error("Source definitions have mixed status");
+      }
+
+      const targetDefs = await tx.definition.findMany({
+        where: {
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+        },
+        select: { status: true },
+      });
+
+      if (targetDefs.length > 0) {
+        const sameTargetStatus = targetDefs.every(
+          (d) => d.status === currentStatus,
+        );
+
+        if (!sameTargetStatus) {
+          throw new Error(
+            "Cannot move definitions: target path contains different status definitions",
+          );
+        }
+      }
 
       const symbols: string[] = [];
 

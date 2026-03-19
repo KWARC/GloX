@@ -13,7 +13,7 @@ interface Props {
   opened: boolean;
   onClose: () => void;
   definition: ExtractedItem | null;
-  bulkDefinition?: FileIdentity; 
+  multipleDefinitions?: FileIdentity;
   invalidateKey: QueryKey;
 }
 
@@ -22,7 +22,7 @@ export function DefinitionIdentityDialog({
   onClose,
   definition,
   invalidateKey,
-  bulkDefinition,
+  multipleDefinitions: multipleDefinitions,
 }: Props) {
   const [futureRepo, setFutureRepo] = useState("");
   const [filePath, setFilePath] = useState("");
@@ -35,39 +35,43 @@ export function DefinitionIdentityDialog({
       setFilePath(definition.filePath);
       setFileName(definition.fileName);
       setLanguage(definition.language);
-    } else if (bulkDefinition) {
-      setFutureRepo(bulkDefinition.futureRepo);
-      setFilePath(bulkDefinition.filePath);
-      setFileName(bulkDefinition.fileName);
-      setLanguage(bulkDefinition.language);
+    } else if (multipleDefinitions) {
+      setFutureRepo(multipleDefinitions.futureRepo);
+      setFilePath(multipleDefinitions.filePath);
+      setFileName(multipleDefinitions.fileName);
+      setLanguage(multipleDefinitions.language);
     }
-  }, [definition, bulkDefinition]);
+  }, [definition, multipleDefinitions]);
 
   async function handleSave() {
-    if (bulkDefinition) {
-      await updateDefinitionsFilePath({
-        data: {
-          identity: bulkDefinition,
-          futureRepo: futureRepo.trim(),
-          filePath: filePath.trim(),
-          fileName: fileName.trim(),
-          language: language.trim(),
-        },
-      });
-    } else if (definition) {
-      await updateDefinitionFilePath({
-        data: {
-          id: definition.id,
-          futureRepo: futureRepo.trim(),
-          filePath: filePath.trim(),
-          fileName: fileName.trim(),
-          language: language.trim(),
-        },
-      });
-    }
+    try {
+      if (multipleDefinitions) {
+        await updateDefinitionsFilePath({
+          data: {
+            identity: multipleDefinitions,
+            futureRepo: futureRepo.trim(),
+            filePath: filePath.trim(),
+            fileName: fileName.trim(),
+            language: language.trim(),
+          },
+        });
+      } else if (definition) {
+        await updateDefinitionFilePath({
+          data: {
+            id: definition.id,
+            futureRepo: futureRepo.trim(),
+            filePath: filePath.trim(),
+            fileName: fileName.trim(),
+            language: language.trim(),
+          },
+        });
+      }
 
-    await queryClient.invalidateQueries({ queryKey: invalidateKey });
-    onClose();
+      await queryClient.invalidateQueries({ queryKey: invalidateKey });
+      onClose();
+    } catch (e: any) {
+      alert(e.message || "Failed to move definitions");
+    }
   }
 
   return (

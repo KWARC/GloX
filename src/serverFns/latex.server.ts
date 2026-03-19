@@ -274,6 +274,13 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
         fileName: data.fileName,
         language: data.language,
       },
+      include: {
+        symbolicRefs: {
+          include: {
+            symbolicReference: true,
+          },
+        },
+      },
       orderBy: { createdAt: "asc" },
     });
 
@@ -288,7 +295,7 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
         filePath: def.filePath,
         fileName: def.fileName,
         language: def.language,
-        symbolicRefs: [],
+        symbolicRefs: def.symbolicRefs,
       };
     });
 
