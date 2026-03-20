@@ -230,8 +230,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           definitionId: defExtractId,
           selection: {
             text: savedSelection.text,
-            startOffset: 0,
-            endOffset: 0
+            startOffset: selection.startOffset,
+            endOffset: selection.endOffset,
           },
           symRef,
         },
