@@ -10,6 +10,9 @@ import {
 } from "@/serverFns/definitionStatus.server";
 import { deleteDefinition, updateDefinition } from "@/serverFns/extractDefinition.server";
 import { FileIdentity, getDefinitionsByIdentity } from "@/serverFns/latex.server";
+import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
+import { symbolicRef } from "@/serverFns/symbolicRef.server";
+import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
   ActionIcon,
@@ -32,11 +35,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, ChevronDown, Download, FolderSymlink } from "lucide-react";
 import { useState } from "react";
+import { DefiniendumDialog } from "./DefiniendumDialog";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { DuplicateDefinitionDialog } from "./DuplicateDefinitionDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
 import { SelectionPopup } from "./SelectionPopup";
 import { SemanticPanel } from "./SemanticPanel";
+import { SymbolicRef } from "./SymbolicRef";
 
 const STATUS_CONFIG = {
   SUBMITTED_TO_MATHHUB: {
@@ -115,6 +120,20 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
   const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(null);
   const selectedDefinition = data?.definitions?.find((d) => d.id === semanticPanelDefId) ?? null;
+  const [defDialogOpen, setDefDialogOpen] = useState(false);
+  const [defExtractId, setDefExtractId] = useState<string | null>(null);
+  const [defExtractText, setDefExtractText] = useState<string | null>(null);
+
+  const [mode, setMode] = useState<"SymbolicRef" | null>(null);
+  const [conceptUri, setConceptUri] = useState("");
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [savedSelection, setSavedSelection] = useState<any>(null);
+
+  function handleEditDefiniendum(definitionId: string, def: any) {
+    setDefExtractId(definitionId);
+    setDefExtractText(def.text);
+    setDefDialogOpen(true);
+  }
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
@@ -124,6 +143,140 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   function handleOpenSemanticPanel(definitionId: string) {
     setSemanticPanelDefId(definitionId);
     setSemanticPanelOpen(true);
+  }
+
+  function handleEditSymbolicRef(definitionId: string, ref: any) {
+    setDefExtractId(definitionId);
+    setEditingNodeId(ref.uri);
+    setConceptUri(ref.uri);
+    setMode("SymbolicRef");
+  }
+
+  async function handleSaveSymbolicRef(symRef: any) {
+    if (!defExtractId) return;
+
+    if (editingNodeId) {
+      await updateDefinitionAst({
+        data: {
+          definitionId: defExtractId,
+          operation: {
+            kind: "replaceSemantic",
+            target: {
+              type: "symref",
+              uri: editingNodeId,
+            },
+            payload: {
+              type: "symref",
+              uri:
+                symRef.source === "MATHHUB"
+                  ? symRef.uri
+                  : `${symRef.futureRepo}/${symRef.symbolName}`,
+            },
+          },
+        },
+      });
+    } else {
+      if (!selection?.text) {
+        return;
+      }
+
+      await symbolicRef({
+        data: {
+          definitionId: defExtractId,
+          selection: {
+            text: savedSelection.text,
+          },
+          symRef,
+        },
+      });
+    }
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
+
+    setMode(null);
+    setEditingNodeId(null);
+  }
+
+  async function handleDefiniendumSubmit(params: any) {
+    if (!defExtractId || !defExtractText) return;
+
+    if (params.mode === "CREATE") {
+      await createSymbolDefiniendum({
+        data: {
+          definitionId: defExtractId,
+          selectedText: defExtractText,
+          symdecl: true,
+
+          futureRepo: identity.futureRepo,
+          filePath: identity.filePath,
+          fileName: identity.fileName,
+          language: identity.language,
+
+          symbolName: params.symbolName,
+          alias: params.alias || null,
+        },
+      });
+    } else {
+      if (params.selectedSymbol.source === "DB") {
+        await createSymbolDefiniendum({
+          data: {
+            definitionId: defExtractId,
+            selectedText: defExtractText,
+            symdecl: false,
+
+            futureRepo: identity.futureRepo,
+            filePath: identity.filePath,
+            fileName: identity.fileName,
+            language: identity.language,
+
+            symbolName: "",
+            selectedSymbolSource: "DB",
+            selectedSymbolId: params.selectedSymbol.id,
+          },
+        });
+      } else {
+        await createSymbolDefiniendum({
+          data: {
+            definitionId: defExtractId,
+            selectedText: defExtractText,
+            symdecl: false,
+
+            futureRepo: identity.futureRepo,
+            filePath: identity.filePath,
+            fileName: identity.fileName,
+            language: identity.language,
+
+            symbolName: "",
+            selectedSymbolSource: "MATHHUB",
+            selectedSymbolUri: params.selectedSymbol.uri,
+          },
+        });
+      }
+    }
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
+
+    setDefDialogOpen(false);
+    setDefExtractId(null);
+    setDefExtractText(null);
+  }
+  async function handleDeleteNode(definitionId: string, target: any) {
+    await updateDefinitionAst({
+      data: {
+        definitionId,
+        operation: { kind: "removeSemantic", target },
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
+
+    setSemanticPanelOpen(false);
   }
 
   async function handleDownload() {
@@ -438,7 +591,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                         Submitted to MathHub
                       </Menu.Item>
 
-                      {/* ADD THIS */}
                       <Menu.Divider />
 
                       <Menu.Item color="red" onClick={() => setDiscardOpen(true)}>
@@ -582,7 +734,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           }}
         />
         <Group justify="flex-end" mt="md" gap="sm">
-          {/* FINAL BUTTON */}
           <Button
             color="blue"
             disabled={status === "FINALIZED_IN_FILE"}
@@ -717,10 +868,24 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           popup={popup}
           onClose={clearPopupOnly}
           onDefiniendum={() => {
-            console.log("Definiendum clicked");
+            if (!selection?.extractId || !selection.text) return;
+
+            setDefExtractId(selection.extractId);
+            setDefExtractText(selection.text);
+            setDefDialogOpen(true);
+            clearPopupOnly();
           }}
           onSymbolicRef={() => {
-            console.log("SymbolicRef clicked");
+            if (!selection?.extractId || !selection.text) return;
+            setSavedSelection(selection);
+
+            setDefExtractId(selection.extractId);
+
+            setConceptUri(selection.text);
+            setEditingNodeId(null);
+
+            setMode("SymbolicRef");
+            clearPopupOnly();
           }}
         />
       )}
@@ -732,9 +897,23 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
             setSemanticPanelDefId(null);
           }}
           definition={selectedDefinition}
-          onEditDefiniendum={() => {}}
-          onEditSymbolicRef={() => {}}
-          onDeleteNode={() => {}}
+          onEditDefiniendum={handleEditDefiniendum}
+          onEditSymbolicRef={handleEditSymbolicRef}
+          onDeleteNode={handleDeleteNode}
+        />
+      )}
+
+      <DefiniendumDialog
+        opened={defDialogOpen}
+        extractedText={defExtractText}
+        onSubmit={handleDefiniendumSubmit}
+        onClose={() => setDefDialogOpen(false)}
+      />
+      {mode === "SymbolicRef" && (
+        <SymbolicRef
+          conceptUri={conceptUri}
+          onClose={() => setMode(null)}
+          onSelect={handleSaveSymbolicRef}
         />
       )}
     </>
