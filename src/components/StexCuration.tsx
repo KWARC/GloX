@@ -18,6 +18,8 @@ import {
   saveLatexDraft,
   saveLatexFinal,
 } from "@/serverFns/latex.server";
+import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
+import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
@@ -41,10 +43,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown, Download, FolderSymlink } from "lucide-react";
 import { useState } from "react";
+import { DefiniendumDialog } from "./DefiniendumDialog";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
 import { SelectionPopup } from "./SelectionPopup";
 import { SemanticPanel } from "./SemanticPanel";
+import { SymbolicRef } from "./SymbolicRef";
 
 const STATUS_CONFIG = {
   SUBMITTED_TO_MATHHUB: {
@@ -82,7 +86,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexCode, setLatexCode] = useState("");
   const navigate = useNavigate();
-  const { popup, handleSelection, clearPopupOnly } = useTextSelection();
+  const { selection, popup, handleSelection, clearPopupOnly } =
+    useTextSelection();
 
   const { data, isLoading } = useQuery({
     queryKey: ["definitionsByIdentity", identity],
@@ -133,6 +138,14 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   );
   const selectedDefinition =
     data?.definitions?.find((d) => d.id === semanticPanelDefId) ?? null;
+  const [defDialogOpen, setDefDialogOpen] = useState(false);
+  const [defExtractId, setDefExtractId] = useState<string | null>(null);
+  const [defExtractText, setDefExtractText] = useState<string | null>(null);
+
+  const [mode, setMode] = useState<"SymbolicRef" | null>(null);
+  const [conceptUri, setConceptUri] = useState("");
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [savedSelection, setSavedSelection] = useState<any>(null);
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
@@ -182,6 +195,121 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     await queryClient.invalidateQueries({
       queryKey: ["definitionsByIdentity", identity],
     });
+  }
+
+  async function handleSaveSymbolicRef(symRef: any) {
+    if (!defExtractId) return;
+
+    if (editingNodeId) {
+      await updateDefinitionAst({
+        data: {
+          definitionId: defExtractId,
+          operation: {
+            kind: "replaceSemantic",
+            target: {
+              type: "symref",
+              uri: editingNodeId,
+            },
+            payload: {
+              type: "symref",
+              uri:
+                symRef.source === "MATHHUB"
+                  ? symRef.uri
+                  : `${symRef.futureRepo}/${symRef.symbolName}`,
+            },
+          },
+        },
+      });
+    } else {
+      if (!selection?.text) {
+        return;
+      }
+
+      await symbolicRef({
+        data: {
+          definitionId: defExtractId,
+          selection: {
+            text: savedSelection.text,
+            startOffset: 0,
+            endOffset: 0
+          },
+          symRef,
+        },
+      });
+    }
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
+
+    setMode(null);
+    setEditingNodeId(null);
+  }
+
+  async function handleDefiniendumSubmit(params: any) {
+    if (!defExtractId || !defExtractText) return;
+
+    if (params.mode === "CREATE") {
+      await createSymbolDefiniendum({
+        data: {
+          definitionId: defExtractId,
+          selectedText: defExtractText,
+          symdecl: true,
+
+          futureRepo: identity.futureRepo,
+          filePath: identity.filePath,
+          fileName: identity.fileName,
+          language: identity.language,
+
+          symbolName: params.symbolName,
+          alias: params.alias || null,
+        },
+      });
+    } else {
+      if (params.selectedSymbol.source === "DB") {
+        await createSymbolDefiniendum({
+          data: {
+            definitionId: defExtractId,
+            selectedText: defExtractText,
+            symdecl: false,
+
+            futureRepo: identity.futureRepo,
+            filePath: identity.filePath,
+            fileName: identity.fileName,
+            language: identity.language,
+
+            symbolName: "",
+            selectedSymbolSource: "DB",
+            selectedSymbolId: params.selectedSymbol.id,
+          },
+        });
+      } else {
+        await createSymbolDefiniendum({
+          data: {
+            definitionId: defExtractId,
+            selectedText: defExtractText,
+            symdecl: false,
+
+            futureRepo: identity.futureRepo,
+            filePath: identity.filePath,
+            fileName: identity.fileName,
+            language: identity.language,
+
+            symbolName: "",
+            selectedSymbolSource: "MATHHUB",
+            selectedSymbolUri: params.selectedSymbol.uri,
+          },
+        });
+      }
+    }
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
+
+    setDefDialogOpen(false);
+    setDefExtractId(null);
+    setDefExtractText(null);
   }
 
   async function handleDownload() {
@@ -803,10 +931,24 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           popup={popup}
           onClose={clearPopupOnly}
           onDefiniendum={() => {
-            console.log("Definiendum clicked");
+            if (!selection?.extractId || !selection.text) return;
+
+            setDefExtractId(selection.extractId);
+            setDefExtractText(selection.text);
+            setDefDialogOpen(true);
+            clearPopupOnly();
           }}
           onSymbolicRef={() => {
-            console.log("SymbolicRef clicked");
+            if (!selection?.extractId || !selection.text) return;
+            setSavedSelection(selection);
+
+            setDefExtractId(selection.extractId);
+
+            setConceptUri(selection.text);
+            setEditingNodeId(null);
+
+            setMode("SymbolicRef");
+            clearPopupOnly();
           }}
         />
       )}
@@ -820,6 +962,20 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           definition={selectedDefinition}
           onReplaceNode={handleReplaceNode}
           onDeleteNode={handleDeleteNode}
+        />
+      )}
+
+      <DefiniendumDialog
+        opened={defDialogOpen}
+        extractedText={defExtractText}
+        onSubmit={handleDefiniendumSubmit}
+        onClose={() => setDefDialogOpen(false)}
+      />
+      {mode === "SymbolicRef" && (
+        <SymbolicRef
+          conceptUri={conceptUri}
+          onClose={() => setMode(null)}
+          onSelect={handleSaveSymbolicRef}
         />
       )}
     </>
