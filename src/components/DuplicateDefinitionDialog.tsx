@@ -14,7 +14,6 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useState } from "react";
-import { ExtractedTextPanel } from "./ExtractedTextList";
 import { RenderSymbolicUri } from "./RenderUri";
 
 interface Props {
@@ -41,7 +40,6 @@ function normalizeUri(uri: string) {
 export function DuplicateDefinitionDialog({
   opened,
   onClose,
-  extracts,
   identity,
 }: Props) {
   const [input, setInput] = useState("");
@@ -83,21 +81,6 @@ export function DuplicateDefinitionDialog({
               overflow: "hidden",
             }}
           >
-            <ScrollArea h="100%" type="auto" scrollbarSize={6}>
-              <ExtractedTextPanel
-                extracts={extracts}
-                editingId={null}
-                selectedId={null}
-                onToggleEdit={() => {}}
-                onUpdate={async () => {}}
-                onDelete={() => {}}
-                onSelection={() => {}}
-                onOpenSemanticPanel={() => {}}
-                showPageNumber={false}
-                showDefinitionMetaIconOnly
-                isLocked
-              />
-            </ScrollArea>
           </Box>
 
           <Box

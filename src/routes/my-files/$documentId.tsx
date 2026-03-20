@@ -390,6 +390,27 @@ function RouteComponent() {
     clearAll();
   }
 
+  async function handleReplaceNode(
+    definitionId: string,
+    target: { type: "definiendum" | "symref"; uri: string },
+    payload: any,
+  ) {
+    await updateDefinitionAst({
+      data: {
+        definitionId,
+        operation: {
+          kind: "replaceSemantic",
+          target,
+          payload,
+        },
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
+    });
+  }
+
   function handleToggleEdit(id: string) {
     setEditingId(editingId === id ? null : id);
   }
@@ -752,6 +773,7 @@ function RouteComponent() {
         definition={extracts.find((e) => e.id === semanticPanelDefId) ?? null}
         onEditDefiniendum={handleEditDefiniendum}
         onEditSymbolicRef={handleEditSymbolicRef}
+        onReplaceNode={handleReplaceNode}
         onDeleteNode={handleDeleteNode}
       />
 

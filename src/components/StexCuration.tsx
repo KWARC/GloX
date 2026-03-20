@@ -18,6 +18,7 @@ import {
   saveLatexDraft,
   saveLatexFinal,
 } from "@/serverFns/latex.server";
+import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
   ActionIcon,
@@ -38,15 +39,9 @@ import {
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  AlertTriangle,
-  ChevronDown,
-  Download,
-  FolderSymlink,
-} from "lucide-react";
+import { ChevronDown, Download, FolderSymlink } from "lucide-react";
 import { useState } from "react";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
-import { DuplicateDefinitionDialog } from "./DuplicateDefinitionDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
 import { SelectionPopup } from "./SelectionPopup";
 import { SemanticPanel } from "./SemanticPanel";
@@ -86,8 +81,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     useState<ExtractedItem | null>(null);
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexCode, setLatexCode] = useState("");
-  const [dupOpen, setDupOpen] = useState(false);
-  const [duplicateUris, setDuplicateUris] = useState<string[]>([]);
   const navigate = useNavigate();
   const { popup, handleSelection, clearPopupOnly } = useTextSelection();
 
@@ -149,6 +142,46 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   function handleOpenSemanticPanel(definitionId: string) {
     setSemanticPanelDefId(definitionId);
     setSemanticPanelOpen(true);
+  }
+
+  async function handleReplaceNode(
+    definitionId: string,
+    target: { type: "definiendum" | "symref"; uri: string },
+    payload: any,
+  ) {
+    await updateDefinitionAst({
+      data: {
+        definitionId,
+        operation: {
+          kind: "replaceSemantic",
+          target,
+          payload,
+        },
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
+  }
+
+  async function handleDeleteNode(
+    definitionId: string,
+    target: { type: "definiendum" | "symref"; uri: string },
+  ) {
+    await updateDefinitionAst({
+      data: {
+        definitionId,
+        operation: {
+          kind: "removeSemantic",
+          target,
+        },
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
   }
 
   async function handleDownload() {
@@ -282,18 +315,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               </Text>
 
               <Group gap={6}>
-                {duplicateUris.length > 0 && (
-                  <Tooltip
-                    label={`${duplicateUris.length} duplicate definition found on MathHub`}
-                    withArrow
-                    color="red"
-                  >
-                    <ActionIcon size="sm" variant="light" color="red">
-                      <AlertTriangle size={14} />
-                    </ActionIcon>
-                  </Tooltip>
-                )}
-
                 <Tooltip label="Download .tex file" withArrow position="top">
                   <ActionIcon
                     size="sm"
@@ -480,14 +501,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
-
-                  <Button
-                    size="xs"
-                    variant="light"
-                    onClick={() => setDupOpen(true)}
-                  >
-                    Check duplicate
-                  </Button>
                 </Group>
               </Group>
             </Box>
@@ -785,17 +798,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         multipleDefinitions={!definitionMetaTarget ? identity : undefined}
         invalidateKey={["definitionsByIdentity", identity]}
       />
-      {data?.definitions && (
-        <DuplicateDefinitionDialog
-          opened={dupOpen}
-          onClose={() => setDupOpen(false)}
-          extracts={data.definitions}
-          identity={identity}
-          onConfirm={(dups) => {
-            setDuplicateUris(dups);
-          }}
-        />
-      )}
       {popup && (
         <SelectionPopup
           popup={popup}
@@ -816,9 +818,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
             setSemanticPanelDefId(null);
           }}
           definition={selectedDefinition}
-          onEditDefiniendum={() => {}}
-          onEditSymbolicRef={() => {}}
-          onDeleteNode={() => {}}
+          onReplaceNode={handleReplaceNode}
+          onDeleteNode={handleDeleteNode}
         />
       )}
     </>
