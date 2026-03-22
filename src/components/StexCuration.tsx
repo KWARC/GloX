@@ -337,7 +337,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         return;
       }
 
-      let stex = await generateStexFromFtml(ftmlAst, identity.fileName);
+      let stex = await generateStexFromFtml(
+        ftmlAst,
+        identity.futureRepo,
+        identity.filePath,
+        identity.fileName,
+      );
       stex = injectProvenance(stex ?? "", provenance);
 
       if (!stex) {
@@ -402,7 +407,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         return;
       }
 
-      let stex = await generateStexFromFtml(ftmlAst, identity.fileName);
+      let stex = await generateStexFromFtml(
+        ftmlAst,
+        identity.futureRepo,
+        identity.filePath,
+        identity.fileName,
+      );
       stex = injectProvenance(stex ?? "", provenance);
 
       setLatexCode(stex);

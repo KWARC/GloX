@@ -106,7 +106,8 @@ function CreateLatexPage() {
 
   const { data: stex, isLoading: stexLoading } = useQuery({
     queryKey: ["stex", ftmlAst],
-    queryFn: () => generateStexFromFtml(ftmlAst!, fileName),
+    queryFn: () =>
+      generateStexFromFtml(ftmlAst!, futureRepo, filePath, fileName),
     enabled: !!ftmlAst,
     staleTime: Infinity,
   });
