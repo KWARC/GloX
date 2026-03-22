@@ -153,26 +153,6 @@ function RouteComponent() {
     setSemanticPanelOpen(true);
   }
 
-  function handleEditDefiniendum(
-    definitionId: string,
-    def: { uri: string; text: string; symbolId: string },
-  ) {
-    setDefExtractId(definitionId);
-    setEditingNodeId(def.uri);
-    setDefExtractText(def.text);
-    setDefDialogOpen(true);
-  }
-
-  function handleEditSymbolicRef(
-    definitionId: string,
-    ref: { uri: string; text: string; symbolicRefId: string },
-  ) {
-    setDefExtractId(definitionId);
-    setEditingNodeId(ref.uri);
-    setConceptUri(ref.text);
-    setMode("SymbolicRef");
-  }
-
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
     setFutureRepo(item.futureRepo);
@@ -771,8 +751,6 @@ function RouteComponent() {
         opened={semanticPanelOpen}
         onClose={() => setSemanticPanelOpen(false)}
         definition={extracts.find((e) => e.id === semanticPanelDefId) ?? null}
-        onEditDefiniendum={handleEditDefiniendum}
-        onEditSymbolicRef={handleEditSymbolicRef}
         onReplaceNode={handleReplaceNode}
         onDeleteNode={handleDeleteNode}
       />

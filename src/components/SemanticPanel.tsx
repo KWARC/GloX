@@ -27,14 +27,6 @@ type Props = {
       symbolicReference: { id: string; conceptUri: string };
     }[];
   } | null;
-  onEditDefiniendum: (
-    definitionId: string,
-    def: { uri: string; text: string; symbolId: string },
-  ) => void;
-  onEditSymbolicRef: (
-    definitionId: string,
-    ref: { uri: string; text: string; symbolicRefId: string },
-  ) => void;
   onReplaceNode: (
     definitionId: string,
     target: { type: "definiendum" | "symref"; uri: string },

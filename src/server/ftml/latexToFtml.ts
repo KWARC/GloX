@@ -1,13 +1,6 @@
 import { FtmlStatement } from "@/types/ftml.types";
 
-function extractDefinitionBody(latex: string): string {
-  const match = latex.match(
-    /\\begin\{sdefinition\}([\s\S]*?)\\end\{sdefinition\}/,
-  );
-  return match?.[1]?.trim() ?? "";
-}
-
-function extractExistingSymrefs(statement: FtmlStatement): any[] {
+function extractNodes(statement: FtmlStatement, type: string): any[] {
   const result: any[] = [];
 
   function walk(node: any) {
@@ -20,7 +13,7 @@ function extractExistingSymrefs(statement: FtmlStatement): any[] {
 
     if (typeof node !== "object") return;
 
-    if (node.type === "symref") {
+    if (node.type === type) {
       result.push(node);
     }
 
@@ -33,30 +26,57 @@ function extractExistingSymrefs(statement: FtmlStatement): any[] {
   return result;
 }
 
-function parseLatexToFtmlContent(input: string, existingSymrefs: any[]) {
+function extractDefinitionBody(latex: string): string {
+  const match = latex.match(
+    /\\begin\{sdefinition\}([\s\S]*?)\\end\{sdefinition\}/,
+  );
+  return match?.[1]?.trim() ?? "";
+}
+
+function parseLatexToFtmlContent(input: string, existing: FtmlStatement) {
   const parts: any[] = [];
-  const regex = /\\sr\{([^}]+)\}\{([^}]+)\}/g;
+
+  const regex = /\\(definiendum|sr)\{([^}]*)\}\{([^}]*)\}/g;
 
   let lastIndex = 0;
   let match;
-  let symIndex = 0;
+
+  const existingDefMap = new Map(
+    extractNodes(existing, "definiendum").map((n) => [n.uri, n]),
+  );
+
+  const existingSymMap = new Map(
+    extractNodes(existing, "symref").map((n) => [n.uri, n]),
+  );
 
   while ((match = regex.exec(input)) !== null) {
-    const [full, _label, text] = match;
+    const [full, type, label, text] = match;
 
     if (match.index > lastIndex) {
       parts.push(input.slice(lastIndex, match.index));
     }
 
-    const existing = existingSymrefs[symIndex];
+    if (type === "definiendum") {
+      const existingNode = existingDefMap.get(label);
 
-    parts.push({
-      type: "symref",
-      uri: existing?.uri,
-      content: [text],
-    });
+      parts.push({
+        type: "definiendum",
+        uri: existingNode?.uri ?? label,
+        content: [text],
+        symdecl: existingNode?.symdecl ?? true,
+      });
+    }
 
-    symIndex++;
+    if (type === "sr") {
+      const existingNode = existingSymMap.get(label);
+
+      parts.push({
+        type: "symref",
+        uri: existingNode?.uri ?? label,
+        content: [text],
+      });
+    }
+
     lastIndex = match.index + full.length;
   }
 
@@ -73,9 +93,7 @@ export function latexToDefinitionStatement(
 ): FtmlStatement {
   const body = extractDefinitionBody(latex);
 
-  const existingSymrefs = extractExistingSymrefs(existing);
-
-  const parsedContent = parseLatexToFtmlContent(body, existingSymrefs);
+  const parsedContent = parseLatexToFtmlContent(body, existing);
 
   return {
     type: "definition",
