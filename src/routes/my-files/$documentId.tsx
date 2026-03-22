@@ -251,6 +251,8 @@ function RouteComponent() {
           data: {
             definitionId: defExtractId,
             selectedText: defExtractText,
+            startOffset: selection!.startOffset,
+            endOffset: selection!.endOffset,
             symdecl: true,
             futureRepo: futureRepo.trim(),
             filePath: filePath.trim(),
@@ -266,6 +268,8 @@ function RouteComponent() {
             data: {
               definitionId: defExtractId,
               selectedText: defExtractText,
+              startOffset: selection!.startOffset,
+              endOffset: selection!.endOffset,
               symdecl: false,
 
               futureRepo: futureRepo.trim(),
@@ -284,6 +288,8 @@ function RouteComponent() {
             data: {
               definitionId: defExtractId,
               selectedText: defExtractText,
+              startOffset: selection!.startOffset,
+              endOffset: selection!.endOffset,
               symdecl: false,
 
               futureRepo: futureRepo.trim(),
@@ -309,6 +315,7 @@ function RouteComponent() {
     setDefDialogOpen(false);
     setDefExtractId(null);
     setDefExtractText("");
+    clearAll();
   }
 
   async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
@@ -695,6 +702,7 @@ function RouteComponent() {
             popup.source === "right"
               ? () => {
                   if (!selection) return;
+
                   const extract = extracts.find(
                     (e) => e.id === selection.extractId,
                   );
@@ -703,7 +711,6 @@ function RouteComponent() {
                   setDefExtractId(extract.id);
                   setDefExtractText(selection.text);
                   setDefDialogOpen(true);
-                  clearAll();
                 }
               : undefined
           }

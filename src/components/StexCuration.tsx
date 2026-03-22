@@ -86,7 +86,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexCode, setLatexCode] = useState("");
   const navigate = useNavigate();
-  const { selection, popup, handleSelection, clearPopupOnly } =
+  const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
 
   const { data, isLoading } = useQuery({
@@ -254,6 +254,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         data: {
           definitionId: defExtractId,
           selectedText: defExtractText,
+          startOffset: selection!.startOffset,
+          endOffset: selection!.endOffset,
           symdecl: true,
 
           futureRepo: identity.futureRepo,
@@ -271,6 +273,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           data: {
             definitionId: defExtractId,
             selectedText: defExtractText,
+            startOffset: selection!.startOffset,
+            endOffset: selection!.endOffset,
             symdecl: false,
 
             futureRepo: identity.futureRepo,
@@ -288,6 +292,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           data: {
             definitionId: defExtractId,
             selectedText: defExtractText,
+            startOffset: selection!.startOffset,
+            endOffset: selection!.endOffset,
             symdecl: false,
 
             futureRepo: identity.futureRepo,
@@ -310,6 +316,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     setDefDialogOpen(false);
     setDefExtractId(null);
     setDefExtractText(null);
+    clearAll();
   }
 
   async function handleDownload() {
@@ -936,7 +943,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
             setDefExtractId(selection.extractId);
             setDefExtractText(selection.text);
             setDefDialogOpen(true);
-            clearPopupOnly();
           }}
           onSymbolicRef={() => {
             if (!selection?.extractId || !selection.text) return;

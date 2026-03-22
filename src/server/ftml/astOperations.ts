@@ -155,7 +155,7 @@ export function replaceTextWithNode(
   startOffset: number,
   endOffset: number,
   node: FtmlNode,
-): RootNode{
+): RootNode {
   const cloned = cloneAst(root);
 
   const targetParagraph = cloned.content[location.paragraphIndex];
@@ -185,8 +185,8 @@ export function replaceTextWithNode(
     throw new Error("Target node is not a text node");
   }
 
-const before = textNode.slice(0, startOffset);
-const after = textNode.slice(endOffset);
+  const before = textNode.slice(0, startOffset);
+  const after = textNode.slice(endOffset);
 
   const replacement: FtmlContent[] = [];
   if (before) replacement.push(before);
@@ -200,37 +200,51 @@ const after = textNode.slice(endOffset);
 
 export function insertDefiniendum(
   content: FtmlContent[],
-  selectedText: string,
-  createNode: (text: string) => DefiniendumNode,
+  startOffset: number,
+  endOffset: number,
+  createNode: () => DefiniendumNode,
 ): FtmlContent[] {
-  const needle = selectedText.trim();
+  let currentOffset = 0;
   const result: FtmlContent[] = [];
   let inserted = false;
 
-  for (let i = content.length - 1; i >= 0; i--) {
-    const item = content[i];
+  const fullText = content
+    .map((p) => (typeof p === "string" ? p : ""))
+    .join("");
 
-    if (typeof item !== "string") continue;
+  const expected = fullText.slice(startOffset, endOffset);
 
-    const index = item.lastIndexOf(needle);
-    if (index === -1) continue;
+  for (const part of content) {
+    if (typeof part !== "string") {
+      result.push(part);
+      continue;
+    }
 
-    const before = item.slice(0, index);
-    const after = item.slice(index + needle.length);
+    const nextOffset = currentOffset + part.length;
 
-    // rebuild content
-    result.push(...content.slice(0, i));
-    if (before) result.push(before);
-    result.push(createNode(needle));
-    if (after) result.push(after);
-    result.push(...content.slice(i + 1));
+    if (!inserted && startOffset >= currentOffset && endOffset <= nextOffset) {
+      const localStart = startOffset - currentOffset;
+      const localEnd = endOffset - currentOffset;
 
-    inserted = true;
-    break;
-  }
+      const actual = part.slice(localStart, localEnd);
 
-  if (!inserted) {
-    return content;
+      if (localStart >= 0 && localEnd <= part.length && actual === expected) {
+        const before = part.slice(0, localStart);
+        const after = part.slice(localEnd);
+
+        if (before) result.push(before);
+        result.push(createNode());
+        if (after) result.push(after);
+
+        inserted = true;
+      } else {
+        result.push(part);
+      }
+    } else {
+      result.push(part);
+    }
+
+    currentOffset = nextOffset;
   }
 
   return result;

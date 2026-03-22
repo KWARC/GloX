@@ -49,6 +49,28 @@ export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
   return { uri: `LOCAL:${symRef.symbolName}`, text: symRef.symbolName };
 }
 
+function normalizeContent(content: FtmlContent[]): FtmlContent[] {
+  const result: FtmlContent[] = [];
+
+  for (const item of content) {
+    if (typeof item === "string") {
+      if (item === "") continue;
+
+      const prev = result[result.length - 1];
+
+      if (typeof prev === "string") {
+        result[result.length - 1] = prev + item;
+      } else {
+        result.push(item);
+      }
+    } else {
+      result.push(item);
+    }
+  }
+
+  return result;
+}
+
 type RemoveSemanticOperation = {
   kind: "removeSemantic";
   target: { type: "definiendum" | "symref"; uri: string };
@@ -85,6 +107,7 @@ function removeSemanticNode(
 ): FtmlTree {
   if (Array.isArray(node)) {
     const result: FtmlContent[] = [];
+
     for (const child of node) {
       if (
         typeof child === "object" &&
@@ -93,26 +116,36 @@ function removeSemanticNode(
         (child as FtmlNode).uri === target.uri
       ) {
         const childNode = child as FtmlNode;
+
         if (childNode.content) {
-          result.push(...(childNode.content as FtmlContent[]));
+          for (const c of childNode.content as FtmlContent[]) {
+            result.push(c);
+          }
         }
       } else {
-        result.push(
-          removeSemanticNode(child as FtmlTree, target) as FtmlContent,
-        );
+        const transformed = removeSemanticNode(child as FtmlTree, target);
+
+        if (Array.isArray(transformed)) {
+          result.push(...transformed);
+        } else {
+          result.push(transformed as FtmlContent);
+        }
       }
     }
-    return result;
+
+    return normalizeContent(result);
   }
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return node;
 
   const copy: FtmlNode = { ...(node as FtmlNode) };
   if (copy.content) {
-    copy.content = removeSemanticNode(
-      copy.content as FtmlContent[],
-      target,
-    ) as FtmlContent[];
+    copy.content = normalizeContent(
+      removeSemanticNode(
+        copy.content as FtmlContent[],
+        target,
+      ) as FtmlContent[],
+    );
   }
   return copy;
 }
