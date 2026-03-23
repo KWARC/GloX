@@ -257,7 +257,7 @@ export function SemanticPanel({
 
                           <Box mt="xs" h={160}>
                             <iframe
-                              src={uri}
+                              src={uri.replace('http:','https:')}
                               style={{
                                 width: "100%",
                                 height: "100%",
