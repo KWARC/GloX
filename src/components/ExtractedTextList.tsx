@@ -42,7 +42,6 @@ export function ExtractedTextPanel({
   onDelete,
   onSelection,
   onOpenSemanticPanel,
-  onOpenLatexPreview,
   showPageNumber = true,
   showDefinitionMeta = true,
   showDefinitionMetaIconOnly = false,
@@ -86,18 +85,6 @@ export function ExtractedTextPanel({
                     )}
 
                     <Group gap="xs">
-                      {/* <Tooltip label="Preview sTeX" withArrow>//todo
-                        <Button
-                          size="xs"
-                          variant="subtle"
-                          color="blue"
-                          style={{ flexShrink: 0 }}
-                          onClick={() => onOpenLatexPreview?.(item)}
-                        >
-                          LaTeX
-                        </Button>
-                      </Tooltip> */}
-
                       <ActionIcon
                         size="sm"
                         color="red"

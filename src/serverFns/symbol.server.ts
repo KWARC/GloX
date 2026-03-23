@@ -14,6 +14,8 @@ import { createServerFn } from "@tanstack/react-start";
 export type CreateSymbolDefiniendumInput = {
   definitionId: string;
   selectedText: string;
+  startOffset: number;
+  endOffset: number;
   symdecl: boolean;
 
   futureRepo: string;
@@ -137,7 +139,8 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
 
       const updatedContent = insertDefiniendum(
         paragraphNode.content,
-        selectedText,
+        data.startOffset,
+        data.endOffset,
         () => ({
           type: "definiendum",
           uri,

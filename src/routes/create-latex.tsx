@@ -34,6 +34,7 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 
 type CreateLatexSearch = {
+  definitionIds: string[];
   documentId: string;
   futureRepo: string;
   filePath: string;
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/create-latex")({
 
   validateSearch: (search: Record<string, unknown>): CreateLatexSearch => {
     return {
+      definitionIds: search.definitionIds as string[],
       documentId: search.documentId as string,
       futureRepo: search.futureRepo as string,
       filePath: search.filePath as string,
@@ -65,8 +67,14 @@ export const Route = createFileRoute("/create-latex")({
 
 function CreateLatexPage() {
   const navigate = useNavigate();
-  const { documentId, futureRepo, filePath, fileName, language } =
-    Route.useSearch();
+  const {
+    definitionIds,
+    documentId,
+    futureRepo,
+    filePath,
+    fileName,
+    language,
+  } = Route.useSearch();
 
   const [editedLatex, setEditedLatex] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -86,6 +94,7 @@ function CreateLatexPage() {
     queryFn: () =>
       getCombinedDefinitionFtml({
         data: {
+          definitionIds,
           documentId,
           futureRepo,
           filePath,
@@ -97,7 +106,8 @@ function CreateLatexPage() {
 
   const { data: stex, isLoading: stexLoading } = useQuery({
     queryKey: ["stex", ftmlAst],
-    queryFn: () => generateStexFromFtml(ftmlAst!, fileName),
+    queryFn: () =>
+      generateStexFromFtml(ftmlAst!, futureRepo, filePath, fileName),
     enabled: !!ftmlAst,
     staleTime: Infinity,
   });
@@ -119,6 +129,7 @@ function CreateLatexPage() {
       getLatexHistory({
         data: {
           documentId,
+          definitionIds,
           futureRepo,
           filePath,
           fileName,
@@ -132,6 +143,7 @@ function CreateLatexPage() {
     queryFn: () =>
       getDefinitionProvenance({
         data: {
+          definitionIds,
           documentId,
           futureRepo,
           filePath,
@@ -161,6 +173,8 @@ function CreateLatexPage() {
         },
       }),
   });
+
+  const status = definitionStatus?.status ?? "EXTRACTED";
 
   const generatedLatex =
     stex && provenance ? injectProvenance(stex, provenance) : (stex ?? "");
@@ -198,6 +212,7 @@ function CreateLatexPage() {
       await saveLatexDraft({
         data: {
           documentId,
+          definitionIds,
           futureRepo,
           filePath,
           fileName,
@@ -217,6 +232,7 @@ function CreateLatexPage() {
       await saveLatexFinal({
         data: {
           documentId,
+          definitionIds,
           futureRepo,
           filePath,
           fileName,
@@ -251,13 +267,13 @@ function CreateLatexPage() {
               <Title order={2}>LaTeX Preview</Title>
               <Badge>sTeX</Badge>
 
-              {definitionStatus === "SUBMITTED_TO_MATHHUB" && (
+              {status === "SUBMITTED_TO_MATHHUB" && (
                 <Badge color="green">MathHub Submitted</Badge>
               )}
             </Group>
 
             <Group>
-              {definitionStatus === "FINALIZED_IN_FILE" && (
+              {status === "FINALIZED_IN_FILE" && (
                 <Button
                   size="xs"
                   color="green"
@@ -293,8 +309,8 @@ function CreateLatexPage() {
                 variant="light"
                 onClick={() => setHistoryOpen(true)}
                 disabled={
-                  definitionStatus === "FINALIZED_IN_FILE" ||
-                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                  status === "FINALIZED_IN_FILE" ||
+                  status === "SUBMITTED_TO_MATHHUB"
                 }
               >
                 Version History
@@ -338,8 +354,8 @@ function CreateLatexPage() {
         <Paper withBorder style={{ flex: 1 }}>
           <Textarea
             readOnly={
-              definitionStatus === "FINALIZED_IN_FILE" ||
-              definitionStatus === "SUBMITTED_TO_MATHHUB"
+              status === "FINALIZED_IN_FILE" ||
+              status === "SUBMITTED_TO_MATHHUB"
             }
             value={displayLatex}
             onChange={(e) => {
@@ -387,8 +403,8 @@ function CreateLatexPage() {
                 loading={savingDraft}
                 disabled={
                   isFromHistory ||
-                  definitionStatus === "FINALIZED_IN_FILE" ||
-                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                  status === "FINALIZED_IN_FILE" ||
+                  status === "SUBMITTED_TO_MATHHUB"
                 }
               >
                 Save Draft
@@ -400,8 +416,8 @@ function CreateLatexPage() {
                 onClick={handleSaveFinal}
                 loading={savingFinal}
                 disabled={
-                  definitionStatus === "FINALIZED_IN_FILE" ||
-                  definitionStatus === "SUBMITTED_TO_MATHHUB"
+                  status === "FINALIZED_IN_FILE" ||
+                  status === "SUBMITTED_TO_MATHHUB"
                 }
               >
                 Save Final

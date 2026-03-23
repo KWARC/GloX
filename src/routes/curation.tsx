@@ -4,6 +4,12 @@ import { Box, Stack } from "@mantine/core";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 
+export type DefinitionStatus =
+  | "EXTRACTED"
+  | "FINALIZED_IN_FILE"
+  | "SUBMITTED_TO_MATHHUB"
+  | "DISCARDED";
+
 export const Route = createFileRoute("/curation")({
   loader: async () => {
     const user = await adminUser();
@@ -16,7 +22,9 @@ export const Route = createFileRoute("/curation")({
 });
 
 function RouteComponent() {
-  const [curationLevel, setCurationLevel] = useState<string | null>(null);
+  const [curationLevel, setCurationLevel] = useState<DefinitionStatus | null>(
+    null,
+  );
 
   return (
     <Box

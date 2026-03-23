@@ -1,12 +1,20 @@
+import { queryClient } from "@/queryClient";
 import { searchForDuplicateDefinition } from "@/server/ftml/searchForDuplicateDef";
 import { ExtractedItem } from "@/server/text-selection";
-import { Box, Button, Group, Loader, Modal, Paper, ScrollArea, TextInput } from "@mantine/core";
-import { useState } from "react";
-import { ExtractedTextPanel } from "./ExtractedTextList";
-import { RenderSymbolicUri } from "./RenderUri";
 import { updateDefinitionsStatusByIdentity } from "@/serverFns/definitionStatus.server";
-import { queryClient } from "@/queryClient";
 import { FileIdentity } from "@/serverFns/latex.server";
+import {
+  Box,
+  Button,
+  Group,
+  Loader,
+  Modal,
+  Paper,
+  ScrollArea,
+  TextInput,
+} from "@mantine/core";
+import { useState } from "react";
+import { RenderSymbolicUri } from "./RenderUri";
 
 interface Props {
   opened: boolean;
@@ -32,7 +40,6 @@ function normalizeUri(uri: string) {
 export function DuplicateDefinitionDialog({
   opened,
   onClose,
-  extracts,
   identity,
 }: Props) {
   const [input, setInput] = useState("");
@@ -44,7 +51,10 @@ export function DuplicateDefinitionDialog({
   return (
     <Modal
       opened={opened}
-      onClose={onClose}
+      onClose={() => {
+        setDuplicates([]);
+        onClose();
+      }}
       size="90%"
       padding="lg"
       title="Duplicate Definition Check"
@@ -71,21 +81,6 @@ export function DuplicateDefinitionDialog({
               overflow: "hidden",
             }}
           >
-            <ScrollArea h="100%" type="auto" scrollbarSize={6}>
-              <ExtractedTextPanel
-                extracts={extracts}
-                editingId={null}
-                selectedId={null}
-                onToggleEdit={() => {}}
-                onUpdate={async () => {}}
-                onDelete={() => {}}
-                onSelection={() => {}}
-                onOpenSemanticPanel={() => {}}
-                showPageNumber={false}
-                showDefinitionMetaIconOnly
-                isLocked
-              />
-            </ScrollArea>
           </Box>
 
           <Box
@@ -145,7 +140,7 @@ export function DuplicateDefinitionDialog({
                               data: {
                                 identity,
                                 status: "DISCARDED",
-                                discardedReason: "DUPLICATE_DEFINITION",
+                                discardedReason: `Duplicate of - ${uri}`,
                               },
                             });
 
@@ -187,7 +182,13 @@ export function DuplicateDefinitionDialog({
           }}
         >
           <Group justify="flex-end">
-            <Button variant="default" onClick={onClose}>
+            <Button
+              variant="default"
+              onClick={() => {
+                setDuplicates([]);
+                onClose();
+              }}
+            >
               Cancel
             </Button>
           </Group>

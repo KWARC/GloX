@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { latexToDefinitionStatement } from "@/server/ftml/latexToFtml";
 import { ExtractedItem } from "@/server/text-selection";
 import {
   assertFtmlStatement,
@@ -17,6 +18,7 @@ export type LatexDraft = {
 };
 
 export type LatexKey = {
+  definitionIds: string[];
   documentId: string;
   futureRepo: string;
   filePath: string;
@@ -54,16 +56,19 @@ function normalizeHistory(value: unknown): LatexDraft[] {
 export const saveLatexDraft = createServerFn({ method: "POST" })
   .inputValidator((data: LatexKey & { latex: string }) => data)
   .handler(async ({ data }) => {
-    const { latex, documentId, futureRepo, filePath, fileName, language } =
-      data;
+    const {
+      latex,
+      documentId,
+      definitionIds,
+      futureRepo,
+      filePath,
+      fileName,
+      language,
+    } = data;
 
     const existing = await prisma.latexTable.findFirst({
       where: { documentId, futureRepo, filePath, fileName, language },
     });
-
-    if (existing?.isFinal) {
-      throw new Error("Document already submitted. Editing is locked.");
-    }
 
     const history = normalizeHistory(existing?.history);
 
@@ -93,13 +98,41 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
         },
       });
     }
+
+    const defs = await prisma.definition.findMany({
+      where: { id: { in: definitionIds } },
+    });
+
+    for (const def of defs) {
+      const existingStatement = assertFtmlStatement(def.statement);
+
+      const updatedStatement = latexToDefinitionStatement(
+        latex,
+        existingStatement,
+      );
+
+      await prisma.definition.update({
+        where: { id: def.id },
+        data: {
+          statement: JSON.parse(JSON.stringify(updatedStatement)),
+          status: "EXTRACTED",
+        },
+      });
+    }
   });
 
 export const saveLatexFinal = createServerFn({ method: "POST" })
   .inputValidator((data: LatexKey & { latex: string }) => data)
   .handler(async ({ data }) => {
-    const { latex, documentId, futureRepo, filePath, fileName, language } =
-      data;
+    const {
+      latex,
+      documentId,
+      definitionIds,
+      futureRepo,
+      filePath,
+      fileName,
+      language,
+    } = data;
 
     await prisma.$transaction(async (tx) => {
       const existing = await tx.latexTable.findFirst({
@@ -129,18 +162,41 @@ export const saveLatexFinal = createServerFn({ method: "POST" })
         });
       }
 
-      await tx.definition.updateMany({
+      const defs = await tx.definition.findMany({
         where: {
-          documentId,
-          futureRepo,
-          filePath,
-          fileName,
-          language,
-        },
-        data: {
-          status: "FINALIZED_IN_FILE",
+          id: { in: definitionIds },
         },
       });
+
+      for (const def of defs) {
+        const existingStatement = assertFtmlStatement(def.statement);
+
+        const updatedStatement = latexToDefinitionStatement(
+          latex,
+          existingStatement,
+        );
+
+        const nextVersion = def.currentVersion + 1;
+
+        await tx.definitionVersion.create({
+          data: {
+            definitionId: def.id,
+            versionNumber: nextVersion,
+            originalText: def.originalText,
+            statement: JSON.parse(JSON.stringify(updatedStatement)),
+            editedById: def.updatedById ?? def.createdById,
+          },
+        });
+
+        await tx.definition.update({
+          where: { id: def.id },
+          data: {
+            statement: JSON.parse(JSON.stringify(updatedStatement)),
+            currentVersion: nextVersion,
+            status: "FINALIZED_IN_FILE",
+          },
+        });
+      }
     });
   });
 
@@ -171,7 +227,11 @@ export const getFinalizedDocuments = createServerFn({ method: "GET" }).handler(
 export const getFileIdentities = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      status?: "EXTRACTED" | "FINALIZED_IN_FILE" | "SUBMITTED_TO_MATHHUB";
+      status?:
+        | "EXTRACTED"
+        | "FINALIZED_IN_FILE"
+        | "SUBMITTED_TO_MATHHUB"
+        | "DISCARDED";
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -214,6 +274,13 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
         fileName: data.fileName,
         language: data.language,
       },
+      include: {
+        symbolicRefs: {
+          include: {
+            symbolicReference: true,
+          },
+        },
+      },
       orderBy: { createdAt: "asc" },
     });
 
@@ -228,7 +295,7 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
         filePath: def.filePath,
         fileName: def.fileName,
         language: def.language,
-        symbolicRefs: [],
+        symbolicRefs: def.symbolicRefs,
       };
     });
 

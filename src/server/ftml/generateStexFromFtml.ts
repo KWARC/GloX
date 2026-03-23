@@ -15,14 +15,26 @@ function isMathHubUri(uri: string): boolean {
   );
 }
 
-function finalFTML(node: FtmlNode, uriMap: Map<string, string>): FtmlNode {
+function finalFTML(
+  node: FtmlNode,
+  uriMap: Map<string, string>,
+  futureRepo: string,
+  filePath: string,
+  fileName: string,
+): FtmlNode {
   if (node.type === "definition") {
     const def = node as DefinitionNode;
 
     return {
       ...def,
       for_symbols: def.for_symbols.map((s) => uriMap.get(s) ?? s),
-      content: rewriteContent(def.content, uriMap),
+      content: rewriteContent(
+        def.content,
+        uriMap,
+        futureRepo,
+        filePath,
+        fileName,
+      ),
     };
   }
 
@@ -35,19 +47,31 @@ function finalFTML(node: FtmlNode, uriMap: Map<string, string>): FtmlNode {
       !defNode.uri.startsWith("http")
     ) {
       const symbolName = defNode.uri;
-      const tempUri = `http://temp?a=temp&m=temp&s=${symbolName}`;
+      const tempUri = `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${symbolName}`;
 
       return {
         ...defNode,
         uri: tempUri,
-        content: rewriteContent(defNode.content ?? [], uriMap),
+        content: rewriteContent(
+          defNode.content ?? [],
+          uriMap,
+          futureRepo,
+          filePath,
+          fileName,
+        ),
       };
     }
 
     return {
       ...defNode,
       uri: uriMap.get(defNode.uri!) ?? defNode.uri,
-      content: rewriteContent(defNode.content ?? [], uriMap),
+      content: rewriteContent(
+        defNode.content ?? [],
+        uriMap,
+        futureRepo,
+        filePath,
+        fileName,
+      ),
     };
   }
 
@@ -56,25 +80,44 @@ function finalFTML(node: FtmlNode, uriMap: Map<string, string>): FtmlNode {
 
     if (symrefUri && !isMathHubUri(symrefUri)) {
       const symbolName = symrefUri;
-      const tempUri = `http://temp?a=temp&m=temp&s=${symbolName}`;
+      const tempUri = `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${symbolName}`;
+
       return {
         ...node,
         uri: tempUri,
-        content: rewriteContent(node.content ?? [], uriMap),
+        content: rewriteContent(
+          node.content ?? [],
+          uriMap,
+          futureRepo,
+          filePath,
+          fileName,
+        ),
       };
     }
 
     return {
       ...node,
       uri: uriMap.get(node.uri!) ?? node.uri,
-      content: rewriteContent(node.content ?? [], uriMap),
+      content: rewriteContent(
+        node.content ?? [],
+        uriMap,
+        futureRepo,
+        filePath,
+        fileName,
+      ),
     };
   }
 
   if (node.content) {
     return {
       ...node,
-      content: rewriteContent(node.content, uriMap),
+      content: rewriteContent(
+        node.content,
+        uriMap,
+        futureRepo,
+        filePath,
+        fileName,
+      ),
     };
   }
 
@@ -84,10 +127,14 @@ function finalFTML(node: FtmlNode, uriMap: Map<string, string>): FtmlNode {
 function rewriteContent(
   content: FtmlContent[],
   uriMap: Map<string, string>,
+  futureRepo: string,
+  filePath: string,
+  fileName: string,
 ): FtmlContent[] {
   return content.map((item) => {
     if (typeof item === "string") return item;
-    return finalFTML(item, uriMap);
+
+    return finalFTML(item, uriMap, futureRepo, filePath, fileName);
   });
 }
 
@@ -126,11 +173,15 @@ function collectSymbolsToRemove(content: FtmlContent[]): Set<string> {
 
 export async function generateStexFromFtml(
   ftmlAst: FtmlStatement,
+  futureRepo: string,
+  filePath: string,
   fileName: string,
 ): Promise<string> {
   const floDown = await initFloDown();
   floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
-  const fd = floDown.FloDown.fromUri(`http://temp?a=temp&d=${fileName}&l=en`);
+  const fd = floDown.FloDown.fromUri(
+    `http://=${futureRepo}?a==${filePath}&d=${fileName}&l=en`,
+  );
 
   const root = normalizeToRoot(ftmlAst);
 
@@ -161,7 +212,13 @@ export async function generateStexFromFtml(
     const transformedDef = {
       ...def,
       for_symbols: filteredForSymbols.map((s) => uriMap.get(s) ?? s),
-      content: rewriteContent(def.content, uriMap),
+      content: rewriteContent(
+        def.content,
+        uriMap,
+        futureRepo,
+        filePath,
+        fileName,
+      ),
     };
 
     fd.addElement(transformedDef);

@@ -153,26 +153,6 @@ function RouteComponent() {
     setSemanticPanelOpen(true);
   }
 
-  function handleEditDefiniendum(
-    definitionId: string,
-    def: { uri: string; text: string; symbolId: string },
-  ) {
-    setDefExtractId(definitionId);
-    setEditingNodeId(def.uri);
-    setDefExtractText(def.text);
-    setDefDialogOpen(true);
-  }
-
-  function handleEditSymbolicRef(
-    definitionId: string,
-    ref: { uri: string; text: string; symbolicRefId: string },
-  ) {
-    setDefExtractId(definitionId);
-    setEditingNodeId(ref.uri);
-    setConceptUri(ref.text);
-    setMode("SymbolicRef");
-  }
-
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
     setFutureRepo(item.futureRepo);
@@ -271,6 +251,8 @@ function RouteComponent() {
           data: {
             definitionId: defExtractId,
             selectedText: defExtractText,
+            startOffset: selection!.startOffset,
+            endOffset: selection!.endOffset,
             symdecl: true,
             futureRepo: futureRepo.trim(),
             filePath: filePath.trim(),
@@ -286,6 +268,8 @@ function RouteComponent() {
             data: {
               definitionId: defExtractId,
               selectedText: defExtractText,
+              startOffset: selection!.startOffset,
+              endOffset: selection!.endOffset,
               symdecl: false,
 
               futureRepo: futureRepo.trim(),
@@ -304,6 +288,8 @@ function RouteComponent() {
             data: {
               definitionId: defExtractId,
               selectedText: defExtractText,
+              startOffset: selection!.startOffset,
+              endOffset: selection!.endOffset,
               symdecl: false,
 
               futureRepo: futureRepo.trim(),
@@ -329,6 +315,7 @@ function RouteComponent() {
     setDefDialogOpen(false);
     setDefExtractId(null);
     setDefExtractText("");
+    clearAll();
   }
 
   async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
@@ -356,7 +343,11 @@ function RouteComponent() {
       await symbolicRef({
         data: {
           definitionId: defExtractId,
-          selection: { text: selection.text },
+          selection: {
+            text: selection.text,
+            startOffset: selection.startOffset,
+            endOffset: selection.endOffset,
+          },
           symRef,
         },
       });
@@ -384,6 +375,27 @@ function RouteComponent() {
     setMode(null);
     setDefExtractId(null);
     clearAll();
+  }
+
+  async function handleReplaceNode(
+    definitionId: string,
+    target: { type: "definiendum" | "symref"; uri: string },
+    payload: any,
+  ) {
+    await updateDefinitionAst({
+      data: {
+        definitionId,
+        operation: {
+          kind: "replaceSemantic",
+          target,
+          payload,
+        },
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
+    });
   }
 
   function handleToggleEdit(id: string) {
@@ -426,10 +438,19 @@ function RouteComponent() {
     fileName: string;
     language: string;
   }) {
+    const filteredDefinitions = extracts.filter(
+      (e) =>
+        e.futureRepo === config.futureRepo &&
+        e.filePath === config.filePath &&
+        e.fileName === config.fileName &&
+        e.language === config.language,
+    );
+
     navigate({
       to: "/create-latex",
       search: {
         documentId,
+        definitionIds: filteredDefinitions.map((e) => e.id),
         futureRepo: config.futureRepo,
         filePath: config.filePath,
         fileName: config.fileName,
@@ -681,6 +702,7 @@ function RouteComponent() {
             popup.source === "right"
               ? () => {
                   if (!selection) return;
+
                   const extract = extracts.find(
                     (e) => e.id === selection.extractId,
                   );
@@ -689,7 +711,6 @@ function RouteComponent() {
                   setDefExtractId(extract.id);
                   setDefExtractText(selection.text);
                   setDefDialogOpen(true);
-                  clearAll();
                 }
               : undefined
           }
@@ -737,8 +758,7 @@ function RouteComponent() {
         opened={semanticPanelOpen}
         onClose={() => setSemanticPanelOpen(false)}
         definition={extracts.find((e) => e.id === semanticPanelDefId) ?? null}
-        onEditDefiniendum={handleEditDefiniendum}
-        onEditSymbolicRef={handleEditSymbolicRef}
+        onReplaceNode={handleReplaceNode}
         onDeleteNode={handleDeleteNode}
       />
 

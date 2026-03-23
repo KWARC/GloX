@@ -9,7 +9,11 @@ export const updateDefinitionsStatusByIdentity = createServerFn({
   .inputValidator(
     (data: {
       identity: FileIdentity;
-      status: "EXTRACTED" | "FINALIZED_IN_FILE" | "SUBMITTED_TO_MATHHUB" | "DISCARDED";
+      status:
+        | "EXTRACTED"
+        | "FINALIZED_IN_FILE"
+        | "SUBMITTED_TO_MATHHUB"
+        | "DISCARDED";
       discardedReason?: string;
     }) => data,
   )
@@ -45,8 +49,16 @@ export const getDefinitionFileStatus = createServerFn({ method: "POST" })
         fileName: data.fileName,
         language: data.language,
       },
-      select: { status: true },
+      select: {
+        status: true,
+        discardedReason: true,
+      },
     });
 
-    return result?.status ?? "EXTRACTED";
+    return (
+      result ?? {
+        status: "EXTRACTED",
+        discardedReason: null,
+      }
+    );
   });
