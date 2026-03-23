@@ -192,9 +192,10 @@ function replaceSemanticNode(
     if (current.type === "symref") {
       return {
         ...current,
-        uri: payload.uri,
+        uri: payload.uri ?? current.uri,
       };
     }
+
     if (target.type === "definiendum" && current.for_symbols) {
       const definitionNode = current as DefinitionNode;
       return {
@@ -209,10 +210,15 @@ function replaceSemanticNode(
         ) as FtmlContent[],
       };
     }
-    return { ...current, ...payload };
+
+    return {
+      ...current,
+      uri: payload.uri ?? current.uri,
+    };
   }
 
   const copy: FtmlNode = { ...(current as FtmlNode) };
+
   if (copy.content) {
     copy.content = replaceSemanticNode(
       copy.content as FtmlContent[],
@@ -220,5 +226,6 @@ function replaceSemanticNode(
       payload,
     ) as FtmlContent[];
   }
+
   return copy;
 }
