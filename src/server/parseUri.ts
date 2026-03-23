@@ -188,36 +188,33 @@ function replaceSemanticNode(
 
   const current = node as FtmlNode;
 
-  if (current.type === target.type && current.uri === target.uri) {
-    if (current.type === "symref") {
-      return {
-        ...current,
-        uri: payload.uri ?? current.uri,
-      };
-    }
+  if (current.type === "definition") {
+    const def = current as DefinitionNode;
 
-    if (target.type === "definiendum" && current.for_symbols) {
-      const definitionNode = current as DefinitionNode;
-      return {
-        ...definitionNode,
-        for_symbols: definitionNode.for_symbols
-          .map((s: string) => (s === target.uri ? payload.uri : s))
-          .filter((s): s is string => s !== undefined),
-        content: replaceSemanticNode(
-          definitionNode.content as FtmlContent[],
-          target,
-          payload,
-        ) as FtmlContent[],
-      };
-    }
+    const updatedContent = replaceSemanticNode(
+      def.content as FtmlContent[],
+      target,
+      payload,
+    ) as FtmlContent[];
 
     return {
-      ...current,
-      uri: payload.uri ?? current.uri,
+      ...def,
+      content: updatedContent,
+      for_symbols: Array.isArray(def.for_symbols)
+        ? def.for_symbols.filter((s) => s !== target.uri)
+        : def.for_symbols,
     };
   }
 
-  const copy: FtmlNode = { ...(current as FtmlNode) };
+  if (current.type === target.type && current.uri === target.uri) {
+    return {
+      ...current,
+      uri: payload.uri ?? current.uri,
+      ...(current.type === "definiendum" ? { symdecl: false } : {}),
+    };
+  }
+
+  const copy: FtmlNode = { ...current };
 
   if (copy.content) {
     copy.content = replaceSemanticNode(
