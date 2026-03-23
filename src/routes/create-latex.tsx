@@ -1,7 +1,10 @@
 import { currentUser } from "@/server/auth/currentUser";
 import { injectProvenance } from "@/server/ftml/addProvenanceData";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
-import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
+import {
+  getCombinedDefinitionFtml,
+  getFinalizedLatexById,
+} from "@/serverFns/definitionAggregate.server";
 import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
 import {
   getDefinitionFileStatus,
@@ -40,6 +43,8 @@ type CreateLatexSearch = {
   filePath: string;
   fileName: string;
   language: string;
+  finalized?: boolean;
+  latexId?: string;
 };
 
 export const Route = createFileRoute("/create-latex")({
@@ -74,6 +79,8 @@ function CreateLatexPage() {
     filePath,
     fileName,
     language,
+    finalized,
+    latexId,
   } = Route.useSearch();
 
   const [editedLatex, setEditedLatex] = useState<string | null>(null);
@@ -102,13 +109,20 @@ function CreateLatexPage() {
           language,
         },
       }),
+    enabled: !finalized && definitionIds.length > 0,
+  });
+
+  const { data: finalizedData, isLoading: finalizedLoading } = useQuery({
+    queryKey: ["finalized-latex", latexId],
+    queryFn: () => getFinalizedLatexById({ data: { id: latexId! } }),
+    enabled: finalized === true && !!latexId,
   });
 
   const { data: stex, isLoading: stexLoading } = useQuery({
     queryKey: ["stex", ftmlAst],
     queryFn: () =>
       generateStexFromFtml(ftmlAst!, futureRepo, filePath, fileName),
-    enabled: !!ftmlAst,
+    enabled: !finalized && !!ftmlAst,
     staleTime: Infinity,
   });
 
@@ -136,6 +150,7 @@ function CreateLatexPage() {
           language,
         },
       }),
+    enabled: !finalized,
   });
 
   const { data: provenance } = useQuery({
@@ -151,6 +166,7 @@ function CreateLatexPage() {
           language,
         },
       }),
+    enabled: !finalized,
   });
 
   const { data: definitionStatus } = useQuery({
@@ -179,15 +195,16 @@ function CreateLatexPage() {
   const generatedLatex =
     stex && provenance ? injectProvenance(stex, provenance) : (stex ?? "");
 
-  const displayLatex =
-    editedLatex ?? generatedLatex ?? historyData?.finalLatex ?? "";
+  const displayLatex = finalized
+    ? (finalizedData?.latex ?? "")
+    : (editedLatex ?? generatedLatex ?? historyData?.finalLatex ?? "");
 
-  if (ftmlLoading || stexLoading) {
+  if (!finalized && (ftmlLoading || stexLoading)) {
     return (
       <Box p="xl" h="100dvh">
         <Stack align="center" justify="center" h="100%">
           <Loader size="xl" />
-          <Text>Generating sTeX…</Text>
+          <Text>Loading sTeX…</Text>
         </Stack>
       </Box>
     );
@@ -247,7 +264,7 @@ function CreateLatexPage() {
     }
   };
 
-  if (stexLoading) {
+  if (stexLoading || finalizedLoading) {
     return (
       <Box p="xl" h="100dvh">
         <Stack align="center" justify="center" h="100%">
@@ -257,6 +274,11 @@ function CreateLatexPage() {
       </Box>
     );
   }
+
+  const isLocked =
+    finalized ||
+    status === "FINALIZED_IN_FILE" ||
+    status === "SUBMITTED_TO_MATHHUB";
 
   return (
     <Box p="xl" h="100dvh">
@@ -308,10 +330,7 @@ function CreateLatexPage() {
                 size="xs"
                 variant="light"
                 onClick={() => setHistoryOpen(true)}
-                disabled={
-                  status === "FINALIZED_IN_FILE" ||
-                  status === "SUBMITTED_TO_MATHHUB"
-                }
+                disabled={isLocked}
               >
                 Version History
               </Button>
@@ -353,10 +372,7 @@ function CreateLatexPage() {
 
         <Paper withBorder style={{ flex: 1 }}>
           <Textarea
-            readOnly={
-              status === "FINALIZED_IN_FILE" ||
-              status === "SUBMITTED_TO_MATHHUB"
-            }
+            readOnly={isLocked}
             value={displayLatex}
             onChange={(e) => {
               setEditedLatex(e.currentTarget.value);
@@ -401,11 +417,7 @@ function CreateLatexPage() {
               <Button
                 onClick={handleSaveDraft}
                 loading={savingDraft}
-                disabled={
-                  isFromHistory ||
-                  status === "FINALIZED_IN_FILE" ||
-                  status === "SUBMITTED_TO_MATHHUB"
-                }
+                disabled={isFromHistory || isLocked}
               >
                 Save Draft
               </Button>
@@ -415,10 +427,7 @@ function CreateLatexPage() {
                 gradient={{ from: "violet", to: "grape" }}
                 onClick={handleSaveFinal}
                 loading={savingFinal}
-                disabled={
-                  status === "FINALIZED_IN_FILE" ||
-                  status === "SUBMITTED_TO_MATHHUB"
-                }
+                disabled={isLocked}
               >
                 Save Final
               </Button>
