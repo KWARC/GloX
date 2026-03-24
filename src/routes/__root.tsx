@@ -1,13 +1,11 @@
-import { AppShell, MantineProvider } from "@mantine/core";
-import "@mantine/core/styles.css";
-import { TanStackDevtools } from "@tanstack/react-devtools";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { queryClient } from "@/queryClient";
-import Header from "../components/Header";
 import { MainLayout } from "@/components/MainLayout";
 import { initFtmlClient } from "@/lib/ftmlClient";
+import { queryClient } from "@/queryClient";
+import { AppShell, MantineProvider } from "@mantine/core";
+import "@mantine/core/styles.css";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import Header from "../components/Header";
 
 function NotFound() {
   return (
