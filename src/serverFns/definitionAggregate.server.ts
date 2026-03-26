@@ -47,3 +47,24 @@ export const getCombinedDefinitionFtml = createServerFn({ method: "GET" })
 
     return combined;
   });
+
+export const getFinalizedLatexById = createServerFn({ method: "GET" })
+  .inputValidator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    const record = await prisma.latexTable.findUnique({
+      where: { id: data.id },
+    });
+
+    if (!record || !record.isFinal) {
+      throw new Error("Finalized document not found");
+    }
+
+    return {
+      latex: record.finalLatex,
+      documentId: record.documentId,
+      futureRepo: record.futureRepo,
+      filePath: record.filePath,
+      fileName: record.fileName,
+      language: record.language,
+    };
+  });

@@ -1,5 +1,18 @@
 import { initFloDown } from "@/lib/flodownClient";
-import { FtmlStatement, normalizeToRoot } from "@/types/ftml.types";
+import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
+
+import {
+  DefiniendumNode,
+  DefinitionNode,
+  FtmlContent,
+  FtmlNode,
+  FtmlStatement,
+  isDefiniendumNode,
+  isDefinitionNode,
+  normalizeToRoot,
+  ParagraphNode,
+  SymrefNode,
+} from "@/types/ftml.types";
 import { useEffect, useRef } from "react";
 
 interface FtmlPreviewProps {
@@ -7,119 +20,234 @@ interface FtmlPreviewProps {
   docId: string;
 }
 
-function rewriteUris(node: any, uriMap: Map<string, string>): any {
-  if (Array.isArray(node)) {
-    return node.map((n) => rewriteUris(n, uriMap));
-  }
+type FloDownBlock = {
+  mountTo: (el: HTMLElement) => void;
+  addElement: (node: FtmlNode) => void;
+  addSymbolDeclaration: (name: string) => string;
+  getStex(): string;
+  getFtml(): string;
+  clear: () => void;
+  clearText: () => void;
+};
 
-  if (!node || typeof node !== "object") return node;
+function isHttpUri(uri: string): boolean {
+  return uri.startsWith("http://") || uri.startsWith("https://");
+}
 
-  if (node.type === "definition") {
-    return {
-      ...node,
-      for_symbols: Array.isArray(node.for_symbols)
-        ? node.for_symbols.map((s: string) => uriMap.get(s) ?? s)
-        : node.for_symbols,
-      content: rewriteUris(node.content, uriMap),
-    };
-  }
-
-  if (node.type === "definiendum") {
-    return {
-      ...node,
-      uri: uriMap.get(node.uri) ?? node.uri,
-      content: rewriteUris(node.content, uriMap),
-    };
-  }
+function collectExternalLabels(
+  node: FtmlNode | FtmlContent,
+  acc: Set<string>,
+): void {
+  if (typeof node === "string") return;
 
   if (node.type === "symref") {
-    const symrefUri = node.uri;
-
-    if (typeof symrefUri === "string" && !symrefUri.startsWith("http")) {
-      const tempUri = `http://temp?a=temp&m=temp&s=${symrefUri}`;
-      return {
-        ...node,
-        uri: tempUri,
-        content: rewriteUris(node.content, uriMap),
-      };
+    const symref = node as SymrefNode;
+    if (symref.uri && !isHttpUri(symref.uri)) {
+      acc.add(symref.uri);
     }
-
-    return {
-      ...node,
-      uri: node.uri,
-      content: rewriteUris(node.content, uriMap),
-    };
   }
+
+  if (
+    isDefiniendumNode(node) &&
+    node.symdecl === false &&
+    node.uri &&
+    !isHttpUri(node.uri)
+  ) {
+    acc.add(node.uri);
+  }
+
+  if (node.content) {
+    for (const child of node.content) {
+      collectExternalLabels(child, acc);
+    }
+  }
+}
+
+function rewriteDefinitionNode(
+  def: DefinitionNode,
+  uriMap: Map<string, string>,
+): DefinitionNode {
+  return {
+    ...def,
+    for_symbols: def.for_symbols.map((s) => uriMap.get(s) ?? s),
+    content: rewriteContentArray(def.content, uriMap),
+  };
+}
+
+function rewriteDefiniendumNode(
+  node: DefiniendumNode,
+  uriMap: Map<string, string>,
+): DefiniendumNode {
+  return {
+    ...node,
+    uri: uriMap.get(node.uri) ?? node.uri,
+    content: rewriteContentArray(node.content, uriMap),
+  };
+}
+
+function rewriteSymrefNode(
+  node: SymrefNode,
+  uriMap: Map<string, string>,
+): SymrefNode {
+  if (isHttpUri(node.uri)) return node;
+
+  const resolved = uriMap.get(node.uri);
+
+  if (!resolved) {
+    throw new Error(`Unresolved symbol: ${node.uri}`);
+  }
+
+  return {
+    ...node,
+    uri: resolved,
+    content: rewriteContentArray(node.content, uriMap),
+  };
+}
+
+function rewriteFtmlNode(
+  node: FtmlNode,
+  uriMap: Map<string, string>,
+): FtmlNode {
+  if (isDefinitionNode(node)) return rewriteDefinitionNode(node, uriMap);
+  if (isDefiniendumNode(node)) return rewriteDefiniendumNode(node, uriMap);
+  if (node.type === "symref")
+    return rewriteSymrefNode(node as SymrefNode, uriMap);
 
   if (node.content) {
     return {
       ...node,
-      content: rewriteUris(node.content, uriMap),
+      content: rewriteContentArray(node.content, uriMap),
     };
   }
 
   return node;
 }
 
+function rewriteContentArray(
+  content: FtmlContent[],
+  uriMap: Map<string, string>,
+): FtmlContent[] {
+  return content.map((item) => {
+    if (typeof item === "string") return item;
+    return rewriteFtmlNode(item, uriMap);
+  });
+}
+
+type FloDownLib = {
+  setBackendUrl: (url: string) => void;
+  FloDown: { fromUri: (uri: string) => FloDownBlock };
+};
+
 export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const hiddenRef = useRef<HTMLDivElement>(null);
+  const fdHiddenRef = useRef<FloDownBlock | null>(null);
+  const fdVisibleRef = useRef<FloDownBlock | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const containerEl = containerRef.current;
+    const hiddenEl = hiddenRef.current;
+
+    if (!containerEl || !hiddenEl) return;
 
     let disposed = false;
-    let fd: any = null;
 
     (async () => {
-      const floDown = await initFloDown();
-      if (disposed || !containerRef.current) return;
+      const floDown = (await initFloDown()) as FloDownLib;
+      if (disposed) return;
 
-      floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
+      floDown.setBackendUrl("https://mathhub.info");
+      const fdHidden = floDown.FloDown.fromUri(
+        `http://temp-hidden?a=temp&d=${docId}&l=en`,
+      );
 
-      fd = floDown.FloDown.fromUri(`http://temp?a=temp&d=${docId}&l=en`);
+      hiddenEl.innerHTML = "";
+      fdHidden.mountTo(hiddenEl);
+      hiddenEl.style.display = "none";
 
-      containerRef.current.innerHTML = "";
-      fd.mountTo(containerRef.current);
+      const fdVisible = floDown.FloDown.fromUri(
+        `http://temp-visible?a=temp&d=${docId}&l=en`,
+      );
+
+      fdHiddenRef.current = fdHidden;
+      fdVisibleRef.current = fdVisible;
+      containerEl.innerHTML = "";
+      fdVisible.mountTo(containerEl);
 
       const root = normalizeToRoot(ftmlAst);
       const block = root.content[0];
       if (!block) return;
 
       if (block.type === "paragraph") {
-        fd.addElement(block);
+        fdVisible.addElement(block as ParagraphNode);
         return;
       }
 
-      if (block.type !== "definition") return;
+      if (!isDefinitionNode(block)) return;
+
+      const defBlock = block as DefinitionNode;
+      const externalLabels = new Set<string>();
+      collectExternalLabels(defBlock, externalLabels);
+
+      const definingNodes =
+        externalLabels.size > 0
+          ? await getDefiningDefinitions({
+              data: { labels: Array.from(externalLabels) },
+            })
+          : {};
+
+      if (disposed) return;
 
       const uriMap = new Map<string, string>();
 
-      if (Array.isArray(block.for_symbols)) {
-        for (const symbolName of block.for_symbols) {
-          if (!symbolName.startsWith("http")) {
-            const declaredUri = fd.addSymbolDeclaration(symbolName);
-            uriMap.set(symbolName, declaredUri);
-          }
+      for (const [label, depDef] of Object.entries(definingNodes)) {
+        const uri = fdHidden.addSymbolDeclaration(label);
+        uriMap.set(label, uri);
+
+        const rewrittenDep = rewriteFtmlNode(depDef, uriMap);
+        fdHidden.addElement(rewrittenDep);
+      }
+
+      for (const symbolName of defBlock.for_symbols) {
+        if (!uriMap.has(symbolName)) {
+          const uriHidden = fdHidden.addSymbolDeclaration(symbolName);
+          fdVisible.addSymbolDeclaration(symbolName);
+
+          uriMap.set(symbolName, uriHidden);
         }
       }
 
-      const rewritten = rewriteUris(block, uriMap);
-
-      fd.addElement(rewritten);
+      const rewritten = rewriteFtmlNode(defBlock, uriMap);
+      fdVisible.addElement(rewritten);
+      // console.log(fdVisible.getStex())
     })();
 
     return () => {
       disposed = true;
-      if (fd) {
-        try {
-          fd.clear();
-        } catch {}
-      }
-      if (containerRef.current) {
-        containerRef.current.innerHTML = "";
-      }
-    };
-  }, [ftmlAst]);
 
-  return <div ref={containerRef} />;
+      if (fdHiddenRef.current) {
+        try {
+          fdHiddenRef.current.clear();
+        } catch {}
+        fdHiddenRef.current = null;
+      }
+
+      if (fdVisibleRef.current) {
+        try {
+          fdVisibleRef.current.clear();
+        } catch {}
+        fdVisibleRef.current = null;
+      }
+
+      if (containerEl) containerEl.innerHTML = "";
+      if (hiddenEl) hiddenEl.innerHTML = "";
+    };
+  }, [ftmlAst, docId]);
+
+  return (
+    <>
+      <div ref={hiddenRef} />
+      <div ref={containerRef} />
+    </>
+  );
 }

@@ -1,18 +1,48 @@
 import { initFloDown } from "@/lib/flodownClient";
+import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefiniendumNode,
   DefinitionNode,
   FtmlContent,
   FtmlNode,
   FtmlStatement,
+  isDefiniendumNode,
   normalizeToRoot,
 } from "@/types/ftml.types";
+
+function isHttp(uri: string) {
+  return uri.startsWith("http://") || uri.startsWith("https://");
+}
 
 function isMathHubUri(uri: string): boolean {
   return (
     uri.startsWith("http://mathhub.info?") ||
     uri.startsWith("https://mathhub.info?")
   );
+}
+
+function collectExternalLabels(
+  node: FtmlNode | FtmlContent,
+  acc: Set<string>,
+): void {
+  if (typeof node === "string") return;
+
+  if (node.type === "symref" && node.uri && !isHttp(node.uri)) {
+    acc.add(node.uri);
+  }
+
+  if (
+    isDefiniendumNode(node) &&
+    node.symdecl === false &&
+    node.uri &&
+    !isHttp(node.uri)
+  ) {
+    acc.add(node.uri);
+  }
+
+  if (node.content) {
+    node.content.forEach((c) => collectExternalLabels(c, acc));
+  }
 }
 
 function finalFTML(
@@ -24,12 +54,11 @@ function finalFTML(
 ): FtmlNode {
   if (node.type === "definition") {
     const def = node as DefinitionNode;
-
     return {
       ...def,
       for_symbols: def.for_symbols.map((s) => uriMap.get(s) ?? s),
-      content: rewriteContent(
-        def.content,
+      content: rewrite(
+        node.content ?? [],
         uriMap,
         futureRepo,
         filePath,
@@ -39,21 +68,14 @@ function finalFTML(
   }
 
   if (node.type === "definiendum") {
-    const defNode = node as DefiniendumNode;
+    const n = node as DefiniendumNode;
 
-    if (
-      defNode.symdecl === false &&
-      defNode.uri &&
-      !defNode.uri.startsWith("http")
-    ) {
-      const symbolName = defNode.uri;
-      const tempUri = `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${symbolName}`;
-
+    if (!n.symdecl && n.uri && !isHttp(n.uri)) {
       return {
-        ...defNode,
-        uri: tempUri,
-        content: rewriteContent(
-          defNode.content ?? [],
+        ...n,
+        uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${n.uri}`,
+        content: rewrite(
+          n.content ?? [],
           uriMap,
           futureRepo,
           filePath,
@@ -63,29 +85,20 @@ function finalFTML(
     }
 
     return {
-      ...defNode,
-      uri: uriMap.get(defNode.uri!) ?? defNode.uri,
-      content: rewriteContent(
-        defNode.content ?? [],
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-      ),
+      ...n,
+      uri: uriMap.get(n.uri!) ?? n.uri,
+      content: rewrite(n.content ?? [], uriMap, futureRepo, filePath, fileName),
     };
   }
 
   if (node.type === "symref") {
-    const symrefUri = node.uri;
+    const u = node.uri;
 
-    if (symrefUri && !isMathHubUri(symrefUri)) {
-      const symbolName = symrefUri;
-      const tempUri = `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${symbolName}`;
-
+    if (u && !isMathHubUri(u)) {
       return {
         ...node,
-        uri: tempUri,
-        content: rewriteContent(
+        uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${u}`,
+        content: rewrite(
           node.content ?? [],
           uriMap,
           futureRepo,
@@ -98,7 +111,7 @@ function finalFTML(
     return {
       ...node,
       uri: uriMap.get(node.uri!) ?? node.uri,
-      content: rewriteContent(
+      content: rewrite(
         node.content ?? [],
         uriMap,
         futureRepo,
@@ -111,64 +124,25 @@ function finalFTML(
   if (node.content) {
     return {
       ...node,
-      content: rewriteContent(
-        node.content,
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-      ),
+      content: rewrite(node.content, uriMap, futureRepo, filePath, fileName),
     };
   }
 
   return node;
 }
 
-function rewriteContent(
+function rewrite(
   content: FtmlContent[],
   uriMap: Map<string, string>,
   futureRepo: string,
   filePath: string,
   fileName: string,
 ): FtmlContent[] {
-  return content.map((item) => {
-    if (typeof item === "string") return item;
-
-    return finalFTML(item, uriMap, futureRepo, filePath, fileName);
-  });
-}
-
-function collectSymbolsToRemove(content: FtmlContent[]): Set<string> {
-  const toRemove = new Set<string>();
-
-  for (const item of content) {
-    if (typeof item === "string") continue;
-
-    if (item.type === "definiendum") {
-      const defNode = item as DefiniendumNode;
-      if (
-        defNode.symdecl === false &&
-        defNode.uri &&
-        !defNode.uri.startsWith("http")
-      ) {
-        toRemove.add(defNode.uri);
-      }
-    }
-
-    if (item.type === "symref") {
-      const symrefUri = item.uri;
-      if (symrefUri && !isMathHubUri(symrefUri)) {
-        toRemove.add(symrefUri);
-      }
-    }
-
-    if (item.content) {
-      const nested = collectSymbolsToRemove(item.content);
-      nested.forEach((s) => toRemove.add(s));
-    }
-  }
-
-  return toRemove;
+  return content.map((c) =>
+    typeof c === "string"
+      ? c
+      : finalFTML(c, uriMap, futureRepo, filePath, fileName),
+  );
 }
 
 export async function generateStexFromFtml(
@@ -179,50 +153,67 @@ export async function generateStexFromFtml(
 ): Promise<string> {
   const floDown = await initFloDown();
   floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
-  const fd = floDown.FloDown.fromUri(
-    `http://=${futureRepo}?a==${filePath}&d=${fileName}&l=en`,
+
+  const fdHidden = floDown.FloDown.fromUri(
+    `http://hidden?a=temp&d=${fileName}&l=en`,
+  );
+
+  const fdVisible = floDown.FloDown.fromUri(
+    `http://${futureRepo}?a=${filePath}&d=${fileName}&l=en`,
   );
 
   const root = normalizeToRoot(ftmlAst);
 
   for (const block of root.content) {
     if (block.type === "paragraph") {
-      fd.addElement(block);
+      fdVisible.addElement(block);
       continue;
     }
 
     if (block.type !== "definition") continue;
 
     const def = block as DefinitionNode;
-    const symbolsToRemove = collectSymbolsToRemove(def.content);
 
-    const filteredForSymbols = def.for_symbols.filter(
-      (symbolName) => !symbolsToRemove.has(symbolName),
-    );
+    const external = new Set<string>();
+    collectExternalLabels(def, external);
+
+    const deps =
+      external.size > 0
+        ? await getDefiningDefinitions({
+            data: { labels: Array.from(external) },
+          })
+        : {};
 
     const uriMap = new Map<string, string>();
 
-    for (const symbolName of filteredForSymbols) {
-      if (!symbolName.startsWith("http")) {
-        const declaredUri = fd.addSymbolDeclaration(symbolName);
-        uriMap.set(symbolName, declaredUri);
-      }
-    }
+    for (const [label, depDef] of Object.entries(deps)) {
+      const uri = fdHidden.addSymbolDeclaration(label);
+      uriMap.set(label, uri);
 
-    const transformedDef = {
-      ...def,
-      for_symbols: filteredForSymbols.map((s) => uriMap.get(s) ?? s),
-      content: rewriteContent(
-        def.content,
+      const rewritten = finalFTML(
+        depDef,
         uriMap,
         futureRepo,
         filePath,
         fileName,
-      ),
-    };
+      );
 
-    fd.addElement(transformedDef);
+      fdHidden.addElement(rewritten);
+    }
+
+    for (const symbol of def.for_symbols) {
+      if (!uriMap.has(symbol) && !symbol.startsWith("http")) {
+        const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
+        fdVisible.addSymbolDeclaration(symbol);
+
+        uriMap.set(symbol, hiddenUri);
+      }
+    }
+
+    const rewritten = finalFTML(def, uriMap, futureRepo, filePath, fileName);
+
+    fdVisible.addElement(rewritten);
   }
 
-  return fd.getStex();
+  return fdVisible.getStex();
 }

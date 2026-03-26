@@ -35,10 +35,13 @@ export function FinalizedDocumentsSection() {
       to: "/create-latex",
       search: {
         documentId: doc.documentId,
+        definitionIds: [],
         futureRepo: doc.futureRepo,
         filePath: doc.filePath,
         fileName: doc.fileName,
         language: doc.language,
+        latexId: doc.id,
+        finalized: true,
       },
     });
   };

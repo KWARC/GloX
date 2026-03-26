@@ -14,6 +14,9 @@ importers:
       '@flexiformal/ftml-backend':
         specifier: ^0.0.7
         version: 0.0.7
+      '@flexiformal/ftml-react':
+        specifier: ^0.0.25
+        version: 0.0.25
       '@mantine/core':
         specifier: ^8.3.10
         version: 8.3.10(@mantine/hooks@8.3.10(react@19.2.3))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -490,8 +493,14 @@ packages:
   '@flexiformal/ftml-backend@0.0.7':
     resolution: {integrity: sha512-C90rlfSvBzxfwrCbAzDTLmsoNvPi1WVCUEbU+rjPhiaJCFt3bblzTxk7gGFC+iXWrtwyH+KxlOIsxDthbLtcEA==}
 
+  '@flexiformal/ftml-react@0.0.25':
+    resolution: {integrity: sha512-f0eQPmghKW8NF2X8x84NVffQWOpPZOj1pn20IV5hCdI3BpTZns/h+ZiBmkoLls7aC1MU+KdKTQgy4va3GZzQBA==}
+
   '@flexiformal/ftml@0.0.22':
     resolution: {integrity: sha512-DcNc2lrcVHS0kjl1LmjK8sTLNS/TLzR/egKqTIMUYMTuyJmdW2lbtDl8/BCUVT30ktlEgnIUptV7ktVTsQj2vw==}
+
+  '@flexiformal/ftml@0.0.24':
+    resolution: {integrity: sha512-UHzPhub8PDI8ss2jWT4wY9Bryvo0enlpnGGFsQxTgudIN5YtXZH1s1W+dwMlZDydCZj8vwbDZqL0Oys/OIPJMQ==}
 
   '@floating-ui/core@1.7.3':
     resolution: {integrity: sha512-sGnvb5dmrJaKEZ+LDIpguvdX3bDlEllmv4/ClQ9awcmCZrlx5jQyyMWFM5kBI+EyNOCDDiKk8il0zeuX3Zlg/w==}
@@ -3403,7 +3412,15 @@ snapshots:
 
   '@flexiformal/ftml-backend@0.0.7': {}
 
+  '@flexiformal/ftml-react@0.0.25':
+    dependencies:
+      '@flexiformal/ftml': 0.0.24
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+
   '@flexiformal/ftml@0.0.22': {}
+
+  '@flexiformal/ftml@0.0.24': {}
 
   '@floating-ui/core@1.7.3':
     dependencies:

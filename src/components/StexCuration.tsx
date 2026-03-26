@@ -562,13 +562,11 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     <Menu.Dropdown>
                       <Menu.Label>Status Actions</Menu.Label>
                       <Menu.Item
-                        color="red"
-                        disabled={status !== "SUBMITTED_TO_MATHHUB"}
                         onClick={async () => {
                           await updateDefinitionsStatusByIdentity({
                             data: {
                               identity,
-                              status: "FINALIZED_IN_FILE",
+                              status: "EXTRACTED",
                             },
                           });
 
@@ -586,10 +584,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       >
                         Extracted
                       </Menu.Item>
-
                       <Menu.Item
-                        color="red"
-                        disabled={status !== "SUBMITTED_TO_MATHHUB"}
                         onClick={async () => {
                           await updateDefinitionsStatusByIdentity({
                             data: {
@@ -613,7 +608,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                         Finalized
                       </Menu.Item>
                       <Menu.Item
-                        disabled={status !== "FINALIZED_IN_FILE"}
                         onClick={async () => {
                           await updateDefinitionsStatusByIdentity({
                             data: {
