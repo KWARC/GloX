@@ -1,7 +1,8 @@
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { ReplacePayload } from "@/server/parseUri";
-import { useSymbolSearch } from "@/server/useSymbolSearch";
-import { FtmlStatement } from "@/types/ftml.types";
+import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
+import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
+import { assertFtmlStatement, FtmlStatement } from "@/types/ftml.types";
 import {
   Box,
   Button,
@@ -16,7 +17,9 @@ import {
   TextInput,
   Tooltip,
 } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { FtmlPreview } from "./FtmlPreview";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 
 type Props = {
@@ -294,73 +297,20 @@ export function SemanticPanel({
                             </Text>
 
                             {results
-                              .filter((r) => r.source === "DB")
+                              .filter(
+                                (r): r is DbSymbolResult => r.source === "DB",
+                              )
                               .map((r) => (
-                                <Paper
+                                <DbResultItem
                                   key={r.id}
-                                  withBorder
-                                  p="xs"
-                                  style={{ cursor: "pointer" }}
-                                  bg={
-                                    selectedUri === r.symbolName
-                                      ? "blue.0"
-                                      : undefined
-                                  }
-                                  onClick={() => setSelectedUri(r.symbolName)}
-                                >
-                                  <Group
-                                    justify="space-between"
-                                    wrap="nowrap"
-                                    align="center"
-                                  >
-                                    <Box
-                                      style={{
-                                        flex: 1,
-                                        minWidth: 0,
-                                        overflow: "hidden",
-                                      }}
-                                    >
-                                      <RenderDbSymbol
-                                        symbol={{
-                                          symbolName: r.symbolName,
-                                          source: "DB",
-                                          futureRepo: r.futureRepo,
-                                        }}
-                                      />
-                                    </Box>
-
-                                    <Button
-                                      size="xs"
-                                      style={{ flexShrink: 0 }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-
-                                        const newUri = r.symbolName;
-
-                                        onReplaceNode(
-                                          definition.id,
-                                          {
-                                            type: "definiendum",
-                                            uri: selectedDefiniendum.uri,
-                                          },
-                                          {
-                                            type: "definiendum",
-                                            uri: newUri,
-                                            symdecl: false,
-                                          },
-                                        );
-
-                                        setSelectedNode({
-                                          type: "definiendum",
-                                          uri: newUri,
-                                        });
-                                        setSelectedUri(newUri);
-                                      }}
-                                    >
-                                      Use this
-                                    </Button>
-                                  </Group>
-                                </Paper>
+                                  r={r}
+                                  selectedUri={selectedUri}
+                                  setSelectedUri={setSelectedUri}
+                                  definition={definition}
+                                  selectedDefiniendum={selectedDefiniendum}
+                                  onReplaceNode={onReplaceNode}
+                                  setSelectedNode={setSelectedNode}
+                                />
                               ))}
                           </Stack>
                         )}
@@ -542,50 +492,18 @@ export function SemanticPanel({
                             </Text>
 
                             {results
-                              .filter((r) => r.source === "DB")
+                              .filter(
+                                (r): r is DbSymbolResult => r.source === "DB",
+                              )
                               .map((r) => (
-                                <Paper key={r.id} withBorder p="xs">
-                                  <Group
-                                    justify="space-between"
-                                    wrap="nowrap"
-                                    align="center"
-                                  >
-                                    <RenderDbSymbol
-                                      symbol={{
-                                        symbolName: r.symbolName,
-                                        source: "DB",
-                                        futureRepo: r.futureRepo,
-                                      }}
-                                    />
-
-                                    <Button
-                                      size="xs"
-                                      style={{ flexShrink: 0 }}
-                                      onClick={() => {
-                                        const newUri = r.symbolName;
-
-                                        onReplaceNode(
-                                          definition.id,
-                                          {
-                                            type: "symref",
-                                            uri: selectedSymref.uri,
-                                          },
-                                          {
-                                            type: "symref",
-                                            uri: newUri,
-                                          },
-                                        );
-
-                                        setSelectedNode({
-                                          type: "symref",
-                                          uri: newUri,
-                                        });
-                                      }}
-                                    >
-                                      Use this
-                                    </Button>
-                                  </Group>
-                                </Paper>
+                                <DbSymrefResultItem
+                                  key={r.id}
+                                  r={r}
+                                  definition={definition}
+                                  selectedSymref={selectedSymref}
+                                  onReplaceNode={onReplaceNode}
+                                  setSelectedNode={setSelectedNode}
+                                />
                               ))}
                           </Stack>
                         )}
@@ -676,5 +594,163 @@ export function SemanticPanel({
         </Flex>
       )}
     </Modal>
+  );
+}
+
+type DbSymbolResult = Extract<SymbolSearchResult, { source: "DB" }>;
+
+function DbResultItem({
+  r,
+  selectedUri,
+  setSelectedUri,
+  definition,
+  selectedDefiniendum,
+  onReplaceNode,
+  setSelectedNode,
+}: {
+  r: DbSymbolResult;
+  selectedUri: string;
+  setSelectedUri: (v: string) => void;
+  definition: Props["definition"];
+  selectedDefiniendum: any;
+  onReplaceNode: Props["onReplaceNode"];
+  setSelectedNode: React.Dispatch<React.SetStateAction<SelectedNode>>;
+}) {
+  const { data: def, isLoading } = useQuery({
+    queryKey: ["definition-by-symbol", r.symbolName],
+    queryFn: () => getDefinitionBySymbol({ data: r.symbolName }),
+    staleTime: Infinity,
+  });
+  console.log({ r });
+  console.log({ def });
+  return (
+    <Paper
+      withBorder
+      p="xs"
+      bg={selectedUri === r.symbolName ? "blue.0" : undefined}
+      onClick={() => setSelectedUri(r.symbolName)}
+    >
+      <Group justify="space-between">
+        <RenderDbSymbol
+          symbol={{
+            symbolName: r.symbolName,
+            source: "DB",
+            futureRepo: r.futureRepo,
+          }}
+        />
+
+        <Button
+          size="xs"
+          onClick={(e) => {
+            e.stopPropagation();
+
+            const newUri = r.symbolName;
+
+            onReplaceNode(
+              definition!.id,
+              {
+                type: "definiendum",
+                uri: selectedDefiniendum.uri,
+              },
+              {
+                type: "definiendum",
+                uri: newUri,
+                symdecl: false,
+              },
+            );
+
+            setSelectedNode({
+              type: "definiendum",
+              uri: newUri,
+            });
+            setSelectedUri(newUri);
+          }}
+        >
+          Use this
+        </Button>
+      </Group>
+
+      {isLoading && <Loader size="xs" mt="xs" />}
+
+      {def && (
+        <Box mt="xs" h={120}>
+          <FtmlPreview
+            ftmlAst={assertFtmlStatement(def.statement)}
+            docId={def.id}
+          />
+        </Box>
+      )}
+    </Paper>
+  );
+}
+
+function DbSymrefResultItem({
+  r,
+  definition,
+  selectedSymref,
+  onReplaceNode,
+  setSelectedNode,
+}: {
+  r: DbSymbolResult;
+  definition: Props["definition"];
+  selectedSymref: { uri: string; text: string };
+  onReplaceNode: Props["onReplaceNode"];
+  setSelectedNode: React.Dispatch<React.SetStateAction<SelectedNode>>;
+}) {
+  const { data: def, isLoading } = useQuery({
+    queryKey: ["definition-by-symbol", r.symbolName],
+    queryFn: () => getDefinitionBySymbol({ data: r.symbolName }),
+    staleTime: Infinity,
+  });
+
+  return (
+    <Paper withBorder p="xs">
+      <Group justify="space-between" wrap="nowrap" align="center">
+        <RenderDbSymbol
+          symbol={{
+            symbolName: r.symbolName,
+            source: "DB",
+            futureRepo: r.futureRepo,
+          }}
+        />
+
+        <Button
+          size="xs"
+          onClick={() => {
+            const newUri = r.symbolName;
+
+            onReplaceNode(
+              definition!.id,
+              {
+                type: "symref",
+                uri: selectedSymref.uri,
+              },
+              {
+                type: "symref",
+                uri: newUri,
+              },
+            );
+
+            setSelectedNode({
+              type: "symref",
+              uri: newUri,
+            });
+          }}
+        >
+          Use this
+        </Button>
+      </Group>
+
+      {isLoading && <Loader size="xs" mt="xs" />}
+
+      {def && (
+        <Box mt="xs" h={120}>
+          <FtmlPreview
+            ftmlAst={assertFtmlStatement(def.statement)}
+            docId={def.id}
+          />
+        </Box>
+      )}
+    </Paper>
   );
 }

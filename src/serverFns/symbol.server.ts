@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { insertDefiniendum } from "@/server/ftml/astOperations";
+import { findDefiniendum } from "@/server/parseUri";
 import {
   assertFtmlStatement,
   isDefinitionNode,
@@ -204,4 +205,29 @@ export const searchSymbol = createServerFn({ method: "POST" })
       take: 10,
       orderBy: { createdAt: "desc" },
     });
+  });
+
+export const getDefinitionBySymbol = createServerFn({ method: "POST" })
+  .inputValidator((symbolName: string) => symbolName)
+  .handler(async ({ data: symbolName }) => {
+    const defs = await prisma.definition.findMany({
+      select: {
+        id: true,
+        statement: true,
+      },
+    });
+
+    for (const def of defs) {
+      const root = normalizeToRoot(assertFtmlStatement(def.statement));
+
+      for (const node of root.content) {
+        if (!isDefinitionNode(node)) continue;
+
+        if (node.content && findDefiniendum(node.content, symbolName)) {
+          return def;
+        }
+      }
+    }
+
+    return null;
   });
