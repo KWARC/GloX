@@ -193,7 +193,7 @@ export function SemanticPanel({
                     <Group gap={4} wrap="nowrap">
                       {selectedDefiniendum.symdecl && (
                         <Text size="xs" c="blue" fw={600}>
-                          NEW
+                          NEW URI currently in use :
                         </Text>
                       )}
 
