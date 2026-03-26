@@ -32,7 +32,6 @@ export const getDefiningDefinitions = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<Record<string, DefinitionNode>> => {
     if (!data.labels.length) return {};
 
-    // fetch all active definitions (no schema change, no joins)
     const definitions = await prisma.definition.findMany({
       where: { status: { not: "DISCARDED" } },
       select: { statement: true },

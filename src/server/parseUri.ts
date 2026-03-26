@@ -1,5 +1,6 @@
 import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import type {
+  DefiniendumNode,
   DefinitionNode,
   FtmlContent,
   FtmlNode,
@@ -14,6 +15,21 @@ export type ParsedMathHubUri = {
   symbol: string;
   conceptUri: string;
 };
+
+export type ReplaceDefiniendumPayload = {
+  type: "definiendum";
+  uri: string;
+  content?: FtmlContent[];
+  symdecl: boolean;
+};
+
+export type ReplaceSymrefPayload = {
+  type: "symref";
+  uri: string;
+  content?: FtmlContent[];
+};
+
+export type ReplacePayload = ReplaceDefiniendumPayload | ReplaceSymrefPayload;
 
 export function parseUri(uri: string): ParsedMathHubUri {
   const url = new URL(uri);
@@ -69,7 +85,7 @@ type RemoveSemanticOperation = {
 type ReplaceSemanticOperation = {
   kind: "replaceSemantic";
   target: { type: "definiendum" | "symref"; uri: string };
-  payload: Partial<FtmlNode> & { uri?: string };
+  payload: ReplacePayload;
 };
 
 export type SemanticOperation =
@@ -165,7 +181,7 @@ function removeSemanticNodeWithIndex(
 function replaceSemanticNode(
   node: FtmlTree,
   target: { type: "definiendum" | "symref"; uri: string },
-  payload: ReplaceSemanticOperation["payload"],
+  payload: ReplacePayload,
 ): FtmlTree {
   if (Array.isArray(node)) {
     return node.map((child) =>
@@ -191,13 +207,14 @@ function replaceSemanticNode(
       ? def.for_symbols.filter((s) => s !== target.uri)
       : [];
 
-    if (
-      target.type === "definiendum" &&
-      payload.uri &&
-      !payload.uri.startsWith("http")
-    ) {
+    if (payload.type === "definiendum" && payload.symdecl && payload.uri) {
       symbols.push(payload.uri);
     }
+    {
+      symbols.push(payload.uri);
+    }
+
+    symbols = Array.from(new Set(symbols));
 
     return {
       ...def,
@@ -207,13 +224,23 @@ function replaceSemanticNode(
   }
 
   if (current.type === target.type && current.uri === target.uri) {
-    return {
-      ...current,
-      uri: payload.uri ?? current.uri,
-      ...(current.type === "definiendum" ? { symdecl: false } : {}),
-    };
-  }
+    if (current.type === "definiendum" && payload.type === "definiendum") {
+      return {
+        ...(current as DefiniendumNode),
+        uri: payload.uri,
+        content: payload.content ?? current.content,
+        symdecl: payload.symdecl,
+      } as DefiniendumNode;
+    }
 
+    if (current.type === "symref" && payload.type === "symref") {
+      return {
+        ...current,
+        uri: payload.uri,
+        content: payload.content ?? current.content,
+      };
+    }
+  }
   const copy: FtmlNode = { ...current };
 
   if (copy.content) {

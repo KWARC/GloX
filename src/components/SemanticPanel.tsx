@@ -1,4 +1,5 @@
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
+import { ReplacePayload } from "@/server/parseUri";
 import { useSymbolSearch } from "@/server/useSymbolSearch";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
@@ -13,6 +14,7 @@ import {
   Stack,
   Text,
   TextInput,
+  Tooltip,
 } from "@mantine/core";
 import { useMemo, useState } from "react";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
@@ -30,7 +32,7 @@ type Props = {
   onReplaceNode: (
     definitionId: string,
     target: { type: "definiendum" | "symref"; uri: string },
-    payload: any,
+    payload: ReplacePayload,
   ) => void;
   onDeleteNode: (
     definitionId: string,
@@ -51,6 +53,7 @@ export function SemanticPanel({
   onDeleteNode,
 }: Props) {
   const [selectedNode, setSelectedNode] = useState<SelectedNode>(null);
+  const [selectedUri, setSelectedUri] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -67,10 +70,14 @@ export function SemanticPanel({
 
   const selectedSymref = symbolicRefs.find((s) => s.uri === selectedNode?.uri);
 
+  const canMakeNewSymbol =
+    selectedNode?.type === "definiendum" && !!selectedUri;
+
   function handleClose() {
     setSearchInput("");
     setSearchQuery("");
     setSelectedNode(null);
+    setSelectedUri("");
     onClose();
   }
 
@@ -111,12 +118,10 @@ export function SemanticPanel({
                     withBorder
                     bg={selectedNode?.uri === d.uri ? "blue.0" : undefined}
                     style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      setSelectedNode({
-                        type: "definiendum",
-                        uri: d.uri,
-                      })
-                    }
+                    onClick={() => {
+                      setSelectedNode({ type: "definiendum", uri: d.uri });
+                      setSelectedUri(d.uri);
+                    }}
                   >
                     <Text size="sm" truncate>
                       {d.text}
@@ -137,12 +142,10 @@ export function SemanticPanel({
                     withBorder
                     bg={selectedNode?.uri === s.uri ? "teal.0" : undefined}
                     style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      setSelectedNode({
-                        type: "symref",
-                        uri: s.uri,
-                      })
-                    }
+                    onClick={() => {
+                      setSelectedNode({ type: "symref", uri: s.uri });
+                      setSelectedUri("");
+                    }}
                   >
                     <Text size="sm" truncate>
                       {s.text}
@@ -186,13 +189,70 @@ export function SemanticPanel({
                     </Button>
                   </Group>
 
-                  <Text size="sm">Current URI: {selectedDefiniendum.uri}</Text>
+                  <Tooltip label={selectedDefiniendum.uri} withArrow>
+                    <Group gap={4} wrap="nowrap">
+                      {selectedDefiniendum.symdecl && (
+                        <Text size="xs" c="blue" fw={600}>
+                          NEW
+                        </Text>
+                      )}
+
+                      <Box
+                        style={{
+                          maxWidth: 300,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {selectedDefiniendum.uri.startsWith("http") ? (
+                          <RenderSymbolicUri uri={selectedDefiniendum.uri} />
+                        ) : (
+                          <RenderDbSymbol
+                            symbol={{
+                              symbolName: selectedDefiniendum.uri,
+                              source: "DB",
+                              futureRepo: "",
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </Group>
+                  </Tooltip>
 
                   <Paper withBorder p="sm">
                     <Group justify="space-between">
                       <Text size="sm">{selectedDefiniendum.text}</Text>
 
                       <Group gap={6}>
+                        <Button
+                          size="xs"
+                          style={{ flexShrink: 0 }}
+                          disabled={!canMakeNewSymbol}
+                          onClick={() => {
+                            const newUri = selectedUri;
+                            onReplaceNode(
+                              definition.id,
+                              {
+                                type: "definiendum",
+                                uri: selectedDefiniendum.uri,
+                              },
+                              {
+                                type: "definiendum",
+                                uri: selectedUri,
+                                symdecl: true,
+                              },
+                            );
+                            setSelectedNode({
+                              type: "definiendum",
+                              uri: newUri,
+                            });
+                            setSelectedUri("");
+                          }}
+                        >
+                          Make new symbol
+                        </Button>
+
                         <Button
                           size="xs"
                           color="red"
@@ -236,9 +296,30 @@ export function SemanticPanel({
                             {results
                               .filter((r) => r.source === "DB")
                               .map((r) => (
-                                <Paper key={r.id} withBorder p="xs">
-                                  <Group justify="space-between" wrap="nowrap">
-                                    <Box style={{ flex: 1 }}>
+                                <Paper
+                                  key={r.id}
+                                  withBorder
+                                  p="xs"
+                                  style={{ cursor: "pointer" }}
+                                  bg={
+                                    selectedUri === r.symbolName
+                                      ? "blue.0"
+                                      : undefined
+                                  }
+                                  onClick={() => setSelectedUri(r.symbolName)}
+                                >
+                                  <Group
+                                    justify="space-between"
+                                    wrap="nowrap"
+                                    align="center"
+                                  >
+                                    <Box
+                                      style={{
+                                        flex: 1,
+                                        minWidth: 0,
+                                        overflow: "hidden",
+                                      }}
+                                    >
                                       <RenderDbSymbol
                                         symbol={{
                                           symbolName: r.symbolName,
@@ -250,7 +331,12 @@ export function SemanticPanel({
 
                                     <Button
                                       size="xs"
-                                      onClick={() =>
+                                      style={{ flexShrink: 0 }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+
+                                        const newUri = r.symbolName;
+
                                         onReplaceNode(
                                           definition.id,
                                           {
@@ -259,14 +345,19 @@ export function SemanticPanel({
                                           },
                                           {
                                             type: "definiendum",
-                                            uri: `${r.symbolName}`,
-                                            content: [r.symbolName],
+                                            uri: newUri,
                                             symdecl: false,
                                           },
-                                        )
-                                      }
+                                        );
+
+                                        setSelectedNode({
+                                          type: "definiendum",
+                                          uri: newUri,
+                                        });
+                                        setSelectedUri(newUri);
+                                      }}
                                     >
-                                      Use
+                                      Use this
                                     </Button>
                                   </Group>
                                 </Paper>
@@ -284,15 +375,39 @@ export function SemanticPanel({
                             {results
                               .filter((r) => r.source === "MATHHUB")
                               .map((r) => (
-                                <Paper key={r.uri} withBorder p="xs">
-                                  <Group justify="space-between" wrap="nowrap">
-                                    <Box style={{ flex: 1 }}>
+                                <Paper
+                                  key={r.uri}
+                                  withBorder
+                                  p="xs"
+                                  style={{ cursor: "pointer" }}
+                                  bg={
+                                    selectedUri === r.uri ? "blue.0" : undefined
+                                  }
+                                  onClick={() => setSelectedUri(r.uri)}
+                                >
+                                  <Group
+                                    justify="space-between"
+                                    wrap="nowrap"
+                                    align="center"
+                                  >
+                                    <Box
+                                      style={{
+                                        flex: 1,
+                                        minWidth: 0,
+                                        overflow: "hidden",
+                                      }}
+                                    >
                                       <RenderSymbolicUri uri={r.uri} />
                                     </Box>
 
                                     <Button
                                       size="xs"
-                                      onClick={() =>
+                                      style={{ flexShrink: 0 }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+
+                                        const newUri = r.uri;
+
                                         onReplaceNode(
                                           definition.id,
                                           {
@@ -301,14 +416,19 @@ export function SemanticPanel({
                                           },
                                           {
                                             type: "definiendum",
-                                            uri: r.uri,
-                                            content: [r.uri],
+                                            uri: newUri,
                                             symdecl: false,
                                           },
-                                        )
-                                      }
+                                        );
+
+                                        setSelectedNode({
+                                          type: "definiendum",
+                                          uri: newUri,
+                                        });
+                                        setSelectedUri(newUri);
+                                      }}
                                     >
-                                      Use
+                                      Use this
                                     </Button>
                                   </Group>
 
@@ -349,7 +469,32 @@ export function SemanticPanel({
                     </Button>
                   </Group>
 
-                  <Text size="sm">Current URI: {selectedSymref.uri}</Text>
+                  <Group gap={6} wrap="nowrap">
+                    <Text size="sm">Current URI:</Text>
+
+                    <Tooltip label={selectedSymref.uri} withArrow>
+                      <Box
+                        style={{
+                          maxWidth: 300,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {selectedSymref.uri.startsWith("http") ? (
+                          <RenderSymbolicUri uri={selectedSymref.uri} />
+                        ) : (
+                          <RenderDbSymbol
+                            symbol={{
+                              symbolName: selectedSymref.uri,
+                              source: "DB",
+                              futureRepo: "",
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </Tooltip>
+                  </Group>
 
                   <Paper withBorder p="sm">
                     <Group justify="space-between">
@@ -400,7 +545,11 @@ export function SemanticPanel({
                               .filter((r) => r.source === "DB")
                               .map((r) => (
                                 <Paper key={r.id} withBorder p="xs">
-                                  <Group justify="space-between">
+                                  <Group
+                                    justify="space-between"
+                                    wrap="nowrap"
+                                    align="center"
+                                  >
                                     <RenderDbSymbol
                                       symbol={{
                                         symbolName: r.symbolName,
@@ -411,7 +560,10 @@ export function SemanticPanel({
 
                                     <Button
                                       size="xs"
-                                      onClick={() =>
+                                      style={{ flexShrink: 0 }}
+                                      onClick={() => {
+                                        const newUri = r.symbolName;
+
                                         onReplaceNode(
                                           definition.id,
                                           {
@@ -420,13 +572,17 @@ export function SemanticPanel({
                                           },
                                           {
                                             type: "symref",
-                                            uri: `${r.symbolName}`,
-                                            content: [r.symbolName],
+                                            uri: newUri,
                                           },
-                                        )
-                                      }
+                                        );
+
+                                        setSelectedNode({
+                                          type: "symref",
+                                          uri: newUri,
+                                        });
+                                      }}
                                     >
-                                      Use
+                                      Use this
                                     </Button>
                                   </Group>
                                 </Paper>
@@ -445,12 +601,19 @@ export function SemanticPanel({
                               .filter((r) => r.source === "MATHHUB")
                               .map((r) => (
                                 <Paper key={r.uri} withBorder p="xs">
-                                  <Group justify="space-between">
+                                  <Group
+                                    justify="space-between"
+                                    wrap="nowrap"
+                                    align="center"
+                                  >
                                     <RenderSymbolicUri uri={r.uri} />
 
                                     <Button
                                       size="xs"
-                                      onClick={() =>
+                                      style={{ flexShrink: 0 }}
+                                      onClick={() => {
+                                        const newUri = r.uri;
+
                                         onReplaceNode(
                                           definition.id,
                                           {
@@ -459,13 +622,17 @@ export function SemanticPanel({
                                           },
                                           {
                                             type: "symref",
-                                            uri: r.uri,
-                                            content: [r.uri],
+                                            uri: newUri,
                                           },
-                                        )
-                                      }
+                                        );
+
+                                        setSelectedNode({
+                                          type: "symref",
+                                          uri: newUri,
+                                        });
+                                      }}
                                     >
-                                      Use
+                                      Use this
                                     </Button>
                                   </Group>
 

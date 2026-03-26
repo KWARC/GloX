@@ -219,7 +219,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
 
       const rewritten = rewriteFtmlNode(defBlock, uriMap);
       fdVisible.addElement(rewritten);
-      console.log(fdVisible.getStex())
+      // console.log(fdVisible.getStex())
     })();
 
     return () => {

@@ -1,21 +1,8 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
-import { transform } from "@/server/parseUri";
-import { FtmlNode, FtmlRoot } from "@/types/ftml.types";
+import { SemanticOperation, transform } from "@/server/parseUri";
+import { FtmlRoot } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
-
-type RemoveSemanticOp = {
-  kind: "removeSemantic";
-  target: { type: "definiendum" | "symref"; uri: string };
-};
-
-type ReplaceSemanticOp = {
-  kind: "replaceSemantic";
-  target: { type: "definiendum" | "symref"; uri: string };
-  payload: FtmlNode;
-};
-
-type SemanticOperation = RemoveSemanticOp | ReplaceSemanticOp;
 
 function assertFtmlRoot(value: unknown): asserts value is FtmlRoot {
   if (!value || typeof value !== "object") {
