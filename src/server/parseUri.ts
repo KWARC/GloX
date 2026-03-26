@@ -241,10 +241,10 @@ function replaceSemanticNode(
       ? def.for_symbols.filter((s) => s !== target.uri)
       : [];
 
-    if (payload.type === "definiendum" && payload.symdecl && payload.uri) {
-      symbols.push(payload.uri);
-    }
-    {
+    if (
+      payload.type === "definiendum" &&
+      payload.uri
+    ) {
       symbols.push(payload.uri);
     }
 
