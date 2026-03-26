@@ -167,7 +167,6 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
       });
 
       const nextVersion = existing.currentVersion + 1;
-
       const newStatement = JSON.parse(JSON.stringify(unwrapRoot(root)));
 
       await tx.definitionVersion.create({

@@ -1,5 +1,5 @@
-import { searchForDuplicateDefinition } from "@/server/ftml/searchForDuplicateDef";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
+import { useSymbolSearch } from "@/server/useSymbolSearch";
 import { FtmlStatement } from "@/types/ftml.types";
 import {
   Box,
@@ -15,7 +15,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useMemo, useState } from "react";
-import { RenderSymbolicUri } from "./RenderUri";
+import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 
 type Props = {
   opened: boolean;
@@ -59,7 +59,7 @@ export function SemanticPanel({
     return extractSemanticIndex(definition.statement, definition);
   }, [definition]);
 
-  const { results, loading } = searchForDuplicateDefinition(searchQuery);
+  const { results, isLoading: loading } = useSymbolSearch(searchQuery);
 
   const selectedDefiniendum = definienda.find(
     (d) => d.uri === selectedNode?.uri,
@@ -224,49 +224,110 @@ export function SemanticPanel({
                       </Group>
                     )}
 
-                    {!loading &&
-                      results.map((uri) => (
-                        <Paper key={uri} withBorder p="xs" m="xs">
-                          <Group gap="xs" wrap="nowrap">
-                            <Box style={{ flex: 1, minWidth: 0 }}>
-                              <RenderSymbolicUri uri={uri} />
-                            </Box>
+                    {!loading && (
+                      <>
+                        {results.filter((r) => r.source === "DB").length >
+                          0 && (
+                          <Stack gap="xs">
+                            <Text size="xs" fw={600} c="dimmed">
+                              Local DB
+                            </Text>
 
-                            <Button
-                              size="xs"
-                              style={{ flexShrink: 0 }}
-                              onClick={() =>
-                                onReplaceNode(
-                                  definition.id,
-                                  {
-                                    type: "definiendum",
-                                    uri: selectedDefiniendum.uri,
-                                  },
-                                  {
-                                    type: "definiendum",
-                                    uri,
-                                    content: [uri],
-                                    symdecl: false,
-                                  },
-                                )
-                              }
-                            >
-                              Use this
-                            </Button>
-                          </Group>
+                            {results
+                              .filter((r) => r.source === "DB")
+                              .map((r) => (
+                                <Paper key={r.id} withBorder p="xs">
+                                  <Group justify="space-between" wrap="nowrap">
+                                    <Box style={{ flex: 1 }}>
+                                      <RenderDbSymbol
+                                        symbol={{
+                                          symbolName: r.symbolName,
+                                          source: "DB",
+                                          futureRepo: r.futureRepo,
+                                        }}
+                                      />
+                                    </Box>
 
-                          <Box mt="xs" h={160}>
-                            <iframe
-                              src={uri.replace('http:','https:')}
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                border: "none",
-                              }}
-                            />
-                          </Box>
-                        </Paper>
-                      ))}
+                                    <Button
+                                      size="xs"
+                                      onClick={() =>
+                                        onReplaceNode(
+                                          definition.id,
+                                          {
+                                            type: "definiendum",
+                                            uri: selectedDefiniendum.uri,
+                                          },
+                                          {
+                                            type: "definiendum",
+                                            uri: `${r.symbolName}`,
+                                            content: [r.symbolName],
+                                            symdecl: false,
+                                          },
+                                        )
+                                      }
+                                    >
+                                      Use
+                                    </Button>
+                                  </Group>
+                                </Paper>
+                              ))}
+                          </Stack>
+                        )}
+
+                        {results.filter((r) => r.source === "MATHHUB").length >
+                          0 && (
+                          <Stack gap="xs" mt="sm">
+                            <Text size="xs" fw={600} c="dimmed">
+                              MathHub
+                            </Text>
+
+                            {results
+                              .filter((r) => r.source === "MATHHUB")
+                              .map((r) => (
+                                <Paper key={r.uri} withBorder p="xs">
+                                  <Group justify="space-between" wrap="nowrap">
+                                    <Box style={{ flex: 1 }}>
+                                      <RenderSymbolicUri uri={r.uri} />
+                                    </Box>
+
+                                    <Button
+                                      size="xs"
+                                      onClick={() =>
+                                        onReplaceNode(
+                                          definition.id,
+                                          {
+                                            type: "definiendum",
+                                            uri: selectedDefiniendum.uri,
+                                          },
+                                          {
+                                            type: "definiendum",
+                                            uri: r.uri,
+                                            content: [r.uri],
+                                            symdecl: false,
+                                          },
+                                        )
+                                      }
+                                    >
+                                      Use
+                                    </Button>
+                                  </Group>
+
+                                  <Box mt="xs" h={140}>
+                                    <iframe
+                                      src={r.uri.replace("http:", "https:")}
+                                      style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        border: "none",
+                                      }}
+                                    />
+                                  </Box>
+                                </Paper>
+                              ))}
+                          </Stack>
+                        )}
+                      </>
+                    )}
                   </Box>
                 </Stack>
               )}
@@ -326,43 +387,104 @@ export function SemanticPanel({
                       </Group>
                     )}
 
-                    {!loading &&
-                      results.map((uri) => (
-                        <Paper key={uri} withBorder p="xs" m="xs">
-                          <Group gap="xs" wrap="nowrap">
-                            <RenderSymbolicUri uri={uri} />
+                    {!loading && (
+                      <>
+                        {results.filter((r) => r.source === "DB").length >
+                          0 && (
+                          <Stack gap="xs">
+                            <Text size="xs" fw={600} c="dimmed">
+                              Local DB
+                            </Text>
 
-                            <Button
-                              size="xs"
-                              style={{ flexShrink: 0 }}
-                              onClick={() =>
-                                onReplaceNode(
-                                  definition.id,
-                                  { type: "symref", uri: selectedSymref.uri },
-                                  {
-                                    type: "symref",
-                                    uri,
-                                    content: [uri],
-                                  },
-                                )
-                              }
-                            >
-                              Use this
-                            </Button>
-                          </Group>
+                            {results
+                              .filter((r) => r.source === "DB")
+                              .map((r) => (
+                                <Paper key={r.id} withBorder p="xs">
+                                  <Group justify="space-between">
+                                    <RenderDbSymbol
+                                      symbol={{
+                                        symbolName: r.symbolName,
+                                        source: "DB",
+                                        futureRepo: r.futureRepo,
+                                      }}
+                                    />
 
-                          <Box mt="xs" h={160}>
-                            <iframe
-                              src={uri}
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                border: "none",
-                              }}
-                            />
-                          </Box>
-                        </Paper>
-                      ))}
+                                    <Button
+                                      size="xs"
+                                      onClick={() =>
+                                        onReplaceNode(
+                                          definition.id,
+                                          {
+                                            type: "symref",
+                                            uri: selectedSymref.uri,
+                                          },
+                                          {
+                                            type: "symref",
+                                            uri: `${r.symbolName}`,
+                                            content: [r.symbolName],
+                                          },
+                                        )
+                                      }
+                                    >
+                                      Use
+                                    </Button>
+                                  </Group>
+                                </Paper>
+                              ))}
+                          </Stack>
+                        )}
+
+                        {results.filter((r) => r.source === "MATHHUB").length >
+                          0 && (
+                          <Stack gap="xs" mt="sm">
+                            <Text size="xs" fw={600} c="dimmed">
+                              MathHub
+                            </Text>
+
+                            {results
+                              .filter((r) => r.source === "MATHHUB")
+                              .map((r) => (
+                                <Paper key={r.uri} withBorder p="xs">
+                                  <Group justify="space-between">
+                                    <RenderSymbolicUri uri={r.uri} />
+
+                                    <Button
+                                      size="xs"
+                                      onClick={() =>
+                                        onReplaceNode(
+                                          definition.id,
+                                          {
+                                            type: "symref",
+                                            uri: selectedSymref.uri,
+                                          },
+                                          {
+                                            type: "symref",
+                                            uri: r.uri,
+                                            content: [r.uri],
+                                          },
+                                        )
+                                      }
+                                    >
+                                      Use
+                                    </Button>
+                                  </Group>
+
+                                  <Box mt="xs" h={140}>
+                                    <iframe
+                                      src={r.uri}
+                                      style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        border: "none",
+                                      }}
+                                    />
+                                  </Box>
+                                </Paper>
+                              ))}
+                          </Stack>
+                        )}
+                      </>
+                    )}
                   </Box>
                 </Stack>
               )}

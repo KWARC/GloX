@@ -6,16 +6,6 @@ import type {
   FtmlRoot,
 } from "@/types/ftml.types";
 
-export function uriToSymbolName(uri: string): string {
-  if (uri.startsWith("LOCAL:")) return uri.slice("LOCAL:".length);
-  try {
-    const url = new URL(uri);
-    return url.searchParams.get("s") || uri;
-  } catch {
-    return uri;
-  }
-}
-
 export type ParsedMathHubUri = {
   archive: string;
   filePath: string;
@@ -30,7 +20,7 @@ export function parseUri(uri: string): ParsedMathHubUri {
   const params = url.searchParams;
   return {
     archive: params.get("a") || "",
-    filePath: params.get("f") || "",
+    filePath: params.get("p") || "",
     fileName: params.get("d") || "",
     language: params.get("l") || "en",
     symbol: params.get("s") || "",
@@ -46,7 +36,7 @@ export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
     const parsed = parseUri(symRef.uri);
     return { uri: parsed.conceptUri, text: parsed.symbol };
   }
-  return { uri: `LOCAL:${symRef.symbolName}`, text: symRef.symbolName };
+  return { uri: `${symRef.symbolName}`, text: symRef.symbolName };
 }
 
 function normalizeContent(content: FtmlContent[]): FtmlContent[] {
@@ -197,12 +187,22 @@ function replaceSemanticNode(
       payload,
     ) as FtmlContent[];
 
+    let symbols = Array.isArray(def.for_symbols)
+      ? def.for_symbols.filter((s) => s !== target.uri)
+      : [];
+
+    if (
+      target.type === "definiendum" &&
+      payload.uri &&
+      !payload.uri.startsWith("http")
+    ) {
+      symbols.push(payload.uri);
+    }
+
     return {
       ...def,
       content: updatedContent,
-      for_symbols: Array.isArray(def.for_symbols)
-        ? def.for_symbols.filter((s) => s !== target.uri)
-        : def.for_symbols,
+      for_symbols: symbols,
     };
   }
 
