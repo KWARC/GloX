@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
-import { SemanticOperation, transform } from "@/server/parseUri";
+import { parseUri, SemanticOperation, transform } from "@/server/parseUri";
 import { FtmlRoot } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -26,7 +26,59 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
 
       assertFtmlRoot(def.statement);
 
-      const newAst = transform(structuredClone(def.statement), data.operation);
+      let operation = data.operation;
+
+      if (
+        operation.kind === "replaceSemantic" &&
+        operation.payload.type === "definiendum"
+      ) {
+        const payload = operation.payload;
+        const isMathhubUri = payload.uri.startsWith("http");
+
+        if (payload.symdecl === true && isMathhubUri) {
+          const parsed = parseUri(payload.uri);
+          const symbolName = parsed.symbol;
+
+          if (!symbolName) {
+            throw new Error("Invalid MathHub URI: missing symbol");
+          }
+
+          const def = await tx.definition.findUniqueOrThrow({
+            where: { id: data.definitionId },
+          });
+
+          await tx.symbol.upsert({
+            where: {
+              symbolName_futureRepo_filePath_fileName_language: {
+                symbolName,
+                futureRepo: def.futureRepo,
+                filePath: def.filePath,
+                fileName: def.fileName,
+                language: def.language,
+              },
+            },
+            update: {},
+            create: {
+              symbolName,
+              futureRepo: def.futureRepo,
+              filePath: def.filePath,
+              fileName: def.fileName,
+              language: def.language,
+            },
+          });
+
+          operation = {
+            ...operation,
+            payload: {
+              ...payload,
+              uri: symbolName,
+              symdecl: true,
+            },
+          };
+        }
+      }
+
+      const newAst = transform(structuredClone(def.statement), operation);
       const nextVersion = def.currentVersion + 1;
       await tx.definitionVersion.create({
         data: {

@@ -184,11 +184,16 @@ export function SemanticPanel({
                     />
 
                     <Group gap={4} wrap="nowrap">
-                      {selectedDefiniendum.symdecl && (
-                        <Text size="xs" c="blue" fw={600}>
-                          NEW URI currently in use :
-                        </Text>
-                      )}
+                      <Text
+                        size="xs"
+                        c={selectedDefiniendum.symdecl ? "blue" : "dimmed"}
+                        fw={600}
+                      >
+                        {selectedDefiniendum.symdecl
+                          ? "NEW URI currently in use :"
+                          : "URI currently in use :"}
+                      </Text>
+
                       <CurrentUriDisplay uri={selectedDefiniendum.uri} />
                     </Group>
 

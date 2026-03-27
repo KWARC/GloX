@@ -243,7 +243,8 @@ function replaceSemanticNode(
 
     if (
       payload.type === "definiendum" &&
-      payload.uri
+      payload.uri &&
+      !payload.uri.startsWith("http")
     ) {
       symbols.push(payload.uri);
     }
