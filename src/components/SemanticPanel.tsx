@@ -10,10 +10,8 @@ import {
   Paper,
   Stack,
   Text,
-  Tooltip,
 } from "@mantine/core";
 import { useMemo, useState } from "react";
-
 import {
   DbSymbolResult,
   MathhubResult,
@@ -124,9 +122,16 @@ export function SemanticPanel({
                       setSelectedUri(d.uri);
                     }}
                   >
-                    <Text size="sm" truncate>
-                      {d.text}
-                    </Text>
+                    <Group gap={6} justify="space-between" wrap="nowrap">
+                      <Text size="sm" truncate>
+                        {d.text}
+                      </Text>
+                      {d.symdecl && (
+                        <Text size="10px" c="blue" fw={700}>
+                          NEW
+                        </Text>
+                      )}
+                    </Group>
                   </Paper>
                 ))}
               </Stack>
@@ -178,16 +183,14 @@ export function SemanticPanel({
                       onSearch={() => setSearchQuery(searchInput)}
                     />
 
-                    <Tooltip label={selectedDefiniendum.uri} withArrow>
-                      <Group gap={4} wrap="nowrap">
-                        {selectedDefiniendum.symdecl && (
-                          <Text size="xs" c="blue" fw={600}>
-                            NEW URI currently in use :
-                          </Text>
-                        )}
-                        <CurrentUriDisplay uri={selectedDefiniendum.uri} />
-                      </Group>
-                    </Tooltip>
+                    <Group gap={4} wrap="nowrap">
+                      {selectedDefiniendum.symdecl && (
+                        <Text size="xs" c="blue" fw={600}>
+                          NEW URI currently in use :
+                        </Text>
+                      )}
+                      <CurrentUriDisplay uri={selectedDefiniendum.uri} />
+                    </Group>
 
                     <Paper withBorder p="sm">
                       <Group justify="space-between">
@@ -355,10 +358,7 @@ export function SemanticPanel({
 
                     <Group gap={6} wrap="nowrap">
                       <Text size="sm">Current URI:</Text>
-
-                      <Tooltip label={selectedSymref.uri} withArrow>
-                        <CurrentUriDisplay uri={selectedSymref.uri} />
-                      </Tooltip>
+                      <CurrentUriDisplay uri={selectedSymref.uri} />
                     </Group>
 
                     <Paper withBorder p="sm">
