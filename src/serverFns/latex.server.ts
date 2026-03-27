@@ -101,14 +101,18 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
 
     const defs = await prisma.definition.findMany({
       where: { id: { in: definitionIds } },
+      orderBy: { createdAt: "asc" },
     });
 
-    for (const def of defs) {
+    for (let i = 0; i < defs.length; i++) {
+      const def = defs[i];
+
       const existingStatement = assertFtmlStatement(def.statement);
 
       const updatedStatement = latexToDefinitionStatement(
         latex,
         existingStatement,
+        i,
       );
 
       await prisma.definition.update({
@@ -163,17 +167,19 @@ export const saveLatexFinal = createServerFn({ method: "POST" })
       }
 
       const defs = await tx.definition.findMany({
-        where: {
-          id: { in: definitionIds },
-        },
+        where: { id: { in: definitionIds } },
+        orderBy: { createdAt: "asc" }, // REQUIRED
       });
 
-      for (const def of defs) {
+      for (let i = 0; i < defs.length; i++) {
+        const def = defs[i];
+
         const existingStatement = assertFtmlStatement(def.statement);
 
         const updatedStatement = latexToDefinitionStatement(
           latex,
           existingStatement,
+          i,
         );
 
         const nextVersion = def.currentVersion + 1;

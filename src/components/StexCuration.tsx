@@ -21,7 +21,12 @@ import {
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
-import { FtmlStatement } from "@/types/ftml.types";
+import {
+  FtmlContent,
+  FtmlNode,
+  FtmlRoot,
+  FtmlStatement,
+} from "@/types/ftml.types";
 import {
   ActionIcon,
   Badge,
@@ -128,9 +133,16 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
       }),
   });
 
+  const actualSymbols = Array.from(
+    new Set(
+      data?.definitions.flatMap((def) =>
+        extractSymbolsFromStatement(def.statement),
+      ) ?? [],
+    ),
+  );
+
   const status = definitionStatus?.status ?? "EXTRACTED";
   const statusConf = STATUS_CONFIG[status] ?? STATUS_CONFIG.EXTRACTED;
-  const hasSymbols = (data?.symbols.length ?? 0) > 0;
   const discardReasonFromServer = definitionStatus?.discardedReason ?? null;
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
   const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
@@ -389,6 +401,44 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     setEditingId((prev) => (prev === id ? null : id));
   }
 
+  function extractSymbolsFromStatement(statement: FtmlRoot): string[] {
+    const rawContent: FtmlContent[] = Array.isArray(statement)
+      ? statement
+      : statement.type === "root"
+        ? (statement.content ?? [])
+        : [statement];
+
+    const nodes: FtmlNode[] = rawContent.filter(
+      (c): c is FtmlNode => typeof c === "object" && c !== null,
+    );
+
+    const symbols: string[] = [];
+
+    function walk(node: FtmlNode) {
+      if (node.type === "definiendum" && (node as any).symdecl === true) {
+        const label = (node.content ?? [])
+          .filter((c): c is string => typeof c === "string")
+          .join("");
+
+        if (label) symbols.push(label);
+      }
+
+      if (node.content) {
+        for (const child of node.content) {
+          if (typeof child === "object" && child !== null) {
+            walk(child);
+          }
+        }
+      }
+    }
+
+    for (const node of nodes) {
+      walk(node);
+    }
+
+    return symbols;
+  }
+
   async function handleOpenLatexPreview() {
     try {
       const ftmlAst = await getCombinedDefinitionFtml({
@@ -473,20 +523,17 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               </Group>
             </Group>
 
-            {hasSymbols ? (
+            {actualSymbols.length > 0 ? (
               <Group gap={6} wrap="wrap">
-                {data?.symbols.map((symbol, index) => (
+                {actualSymbols.map((symbol) => (
                   <Badge
-                    key={`${symbol.id}-${index}`}
+                    key={symbol}
                     size="sm"
                     variant="light"
                     color="blue"
                     radius="sm"
-                    styles={{
-                      root: { textTransform: "none", fontWeight: 500 },
-                    }}
                   >
-                    {symbol.label}
+                    {symbol}
                   </Badge>
                 ))}
               </Group>
