@@ -1,7 +1,98 @@
-import { FtmlStatement } from "@/types/ftml.types";
+import {
+  DefiniendumNode,
+  FtmlContent,
+  FtmlRoot,
+  FtmlStatement,
+  normalizeToRoot,
+  SymrefNode,
+  unwrapRoot,
+} from "@/types/ftml.types";
 
-function extractNodes(statement: FtmlStatement, type: string): any[] {
-  const result: any[] = [];
+function extractDefinitionBodyByIndex(latex: string, index: number): string {
+  const regex =
+    /\\begin\{sdefinition\}(\[[^\]]*\])?([\s\S]*?)\\end\{sdefinition\}/g;
+
+  let match: RegExpExecArray | null;
+  let i = 0;
+
+  while ((match = regex.exec(latex)) !== null) {
+    if (i === index) {
+      return match[2].trim();
+    }
+    i++;
+  }
+
+  return "";
+}
+
+function parseLatex(body: string, root: FtmlRoot): FtmlContent[] {
+  const parts: FtmlContent[] = [];
+
+  const { defMap, symMap } = buildExistingMaps(root);
+
+  const regex = /\\(definiendum|sr)\{([^}]*)\}(?:\{([^}]*)\})?/g;
+
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(body)) !== null) {
+    const [full, rawType, uri, rawText] = match;
+
+    const rawChunk = body.slice(lastIndex, match.index);
+
+    const cleanedChunk = rawChunk
+      .replace(/^[\s}]+/, "") 
+      .replace(/[\s}]+$/, "") 
+      .trim();
+
+    if (cleanedChunk.length > 0) {
+      parts.push(cleanedChunk);
+    }
+
+    const text = rawText ?? uri;
+
+    if (rawType === "definiendum") {
+      const existing = defMap.get(uri);
+
+      const node: DefiniendumNode = {
+        type: "definiendum",
+        uri: existing?.uri ?? uri,
+        content: [" " +text.trim() + " "],
+        symdecl: existing?.symdecl ?? true,
+      };
+
+      parts.push(node);
+    } else {
+      const existing = symMap.get(uri);
+
+      const node: SymrefNode = {
+        type: "symref",
+        uri: existing?.uri ?? uri,
+        content: [" " +text.trim() + " "],
+      };
+
+      parts.push(node);
+    }
+    lastIndex = match.index + full.length;
+  }
+
+  const tail = body.slice(lastIndex);
+
+  const cleanedTail = tail
+    .replace(/^[\s}]+/, "")
+    .replace(/[\s}]+$/, "")
+    .trim();
+
+  if (cleanedTail.length > 0) {
+    parts.push(cleanedTail);
+  }
+
+  return parts;
+}
+
+function buildExistingMaps(root: FtmlRoot) {
+  const defMap = new Map<string, any>();
+  const symMap = new Map<string, any>();
 
   function walk(node: any) {
     if (!node) return;
@@ -13,99 +104,49 @@ function extractNodes(statement: FtmlStatement, type: string): any[] {
 
     if (typeof node !== "object") return;
 
-    if (node.type === type) {
-      result.push(node);
+    if (node.type === "definiendum") {
+      defMap.set(node.uri, node);
     }
 
-    if (node.content) {
-      walk(node.content);
+    if (node.type === "symref") {
+      symMap.set(node.uri, node);
     }
+
+    if (node.content) walk(node.content);
   }
 
-  walk(statement);
-  return result;
-}
+  walk(root);
 
-function extractDefinitionBody(latex: string): string {
-  const match = latex.match(
-    /\\begin\{sdefinition\}([\s\S]*?)\\end\{sdefinition\}/,
-  );
-  return match?.[1]?.trim() ?? "";
-}
-
-function parseLatexToFtmlContent(input: string, existing: FtmlStatement) {
-  const parts: any[] = [];
-
-  const regex = /\\(definiendum|sr)\{([^}]*)\}\{([^}]*)\}/g;
-
-  let lastIndex = 0;
-  let match;
-
-  const existingDefMap = new Map(
-    extractNodes(existing, "definiendum").map((n) => [n.uri, n]),
-  );
-
-  const existingSymMap = new Map(
-    extractNodes(existing, "symref").map((n) => [n.uri, n]),
-  );
-
-  while ((match = regex.exec(input)) !== null) {
-    const [full, type, label, text] = match;
-
-    if (match.index > lastIndex) {
-      parts.push(input.slice(lastIndex, match.index));
-    }
-
-    if (type === "definiendum") {
-      const existingNode = existingDefMap.get(label);
-
-      parts.push({
-        type: "definiendum",
-        uri: existingNode?.uri ?? label,
-        content: [text],
-        symdecl: existingNode?.symdecl ?? true,
-      });
-    }
-
-    if (type === "sr") {
-      const existingNode = existingSymMap.get(label);
-
-      parts.push({
-        type: "symref",
-        uri: existingNode?.uri ?? label,
-        content: [text],
-      });
-    }
-
-    lastIndex = match.index + full.length;
-  }
-
-  if (lastIndex < input.length) {
-    parts.push(input.slice(lastIndex));
-  }
-
-  return parts;
+  return { defMap, symMap };
 }
 
 export function latexToDefinitionStatement(
   latex: string,
   existing: FtmlStatement,
+  index: number,
 ): FtmlStatement {
-  const body = extractDefinitionBody(latex);
+  const body = extractDefinitionBodyByIndex(latex, index);
 
-  const parsedContent = parseLatexToFtmlContent(body, existing);
+  const root = normalizeToRoot(existing as FtmlRoot);
 
-  return {
-    type: "definition",
-    for_symbols:
-      typeof existing === "object" && "for_symbols" in existing
-        ? ((existing as any).for_symbols ?? [])
-        : [],
+  const content = parseLatex(body, root);
+
+  return unwrapRoot({
+    ...root,
     content: [
       {
-        type: "paragraph",
-        content: parsedContent,
+        type: "definition",
+        ...(typeof root.content[0] === "object" &&
+        "for_symbols" in root.content[0]
+          ? { for_symbols: (root.content[0] as any).for_symbols ?? [] }
+          : {}),
+        content: [
+          {
+            type: "paragraph",
+            content,
+          },
+        ],
       },
     ],
-  };
+  });
 }

@@ -1,10 +1,11 @@
 import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
-import type {
-  DefiniendumNode,
-  DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlRoot,
+import {
+  isDefiniendumNode,
+  type DefiniendumNode,
+  type DefinitionNode,
+  type FtmlContent,
+  type FtmlNode,
+  type FtmlRoot,
 } from "@/types/ftml.types";
 
 export type ParsedMathHubUri = {
@@ -75,6 +76,39 @@ function normalizeContent(content: FtmlContent[]): FtmlContent[] {
   }
 
   return result;
+}
+
+export function findDefiniendum(
+  content: FtmlContent[],
+  symbolName: string,
+): boolean {
+  const normalize = (u: string) => {
+    if (!u) return u;
+    if (u.startsWith("http")) {
+      try {
+        return new URL(u).searchParams.get("s") ?? u;
+      } catch {
+        return u;
+      }
+    }
+    return u;
+  };
+
+  for (const c of content) {
+    if (typeof c === "string") continue;
+
+    if (isDefiniendumNode(c)) {
+      if (c.symdecl === true && normalize(c.uri) === symbolName) {
+        return true;
+      }
+    }
+
+    if (c.content && findDefiniendum(c.content, symbolName)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 type RemoveSemanticOperation = {
@@ -207,10 +241,11 @@ function replaceSemanticNode(
       ? def.for_symbols.filter((s) => s !== target.uri)
       : [];
 
-    if (payload.type === "definiendum" && payload.symdecl && payload.uri) {
-      symbols.push(payload.uri);
-    }
-    {
+    if (
+      payload.type === "definiendum" &&
+      payload.uri &&
+      !payload.uri.startsWith("http")
+    ) {
       symbols.push(payload.uri);
     }
 

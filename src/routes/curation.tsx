@@ -1,7 +1,9 @@
 import { CurationSection } from "@/components/CurationSection";
-import { adminUser } from "@/server/auth/isAdmin";
+import { adminUser } from "@/server/auth/isAdmin.server";
 import { Box, Stack } from "@mantine/core";
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+
 import { useState } from "react";
 
 export type DefinitionStatus =
@@ -10,13 +12,19 @@ export type DefinitionStatus =
   | "SUBMITTED_TO_MATHHUB"
   | "DISCARDED";
 
+const checkAdmin = createServerFn().handler(async () => {
+  const user = await adminUser();
+
+  if (!user.loggedIn || !user.isAdmin) {
+    throw redirect({ to: "/" });
+  }
+
+  return null;
+});
+
 export const Route = createFileRoute("/curation")({
   loader: async () => {
-    const user = await adminUser();
-
-    if (!user.loggedIn || !user.isAdmin) {
-      throw redirect({ to: "/" });
-    }
+    await checkAdmin();
   },
   component: RouteComponent,
 });
