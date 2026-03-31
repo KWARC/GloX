@@ -9,10 +9,9 @@ export function CurrentUriDisplay({ uri }: CurrentUriDisplayProps) {
   return (
     <Box
       style={{
-        maxWidth: 300,
+        flex: 1,
+        minWidth: 0,
         overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
       }}
     >
       {uri.startsWith("http") ? (
