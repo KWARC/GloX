@@ -799,7 +799,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     })
                   }
                 >
-                  Go to My Files
+                  Go to Source
                 </Button>
               </Group>
             </Group>

@@ -526,7 +526,7 @@ function RouteComponent() {
                   leftSection={<IconFileText size={15} />}
                   fw={500}
                 >
-                  Document
+                  {document.filename}
                 </Tabs.Tab>
                 <Tabs.Tab
                   value="extracts"
@@ -612,7 +612,7 @@ function RouteComponent() {
               >
                 <IconFileText size={16} color="var(--mantine-color-blue-6)" />
                 <Text size="sm" fw={600} c="gray.7">
-                  Document
+                  {document.filename}
                 </Text>
                 <Badge size="xs" variant="light" color="gray" ml="auto">
                   {pages.length} {pages.length === 1 ? "page" : "pages"}
