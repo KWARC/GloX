@@ -1,6 +1,5 @@
 import { initFloDown } from "@/lib/flodownClient";
 import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
-
 import {
   DefiniendumNode,
   DefinitionNode,
@@ -28,6 +27,11 @@ type FloDownBlock = {
   getFtml(): string;
   clear: () => void;
   clearText: () => void;
+};
+
+type FloDownLib = {
+  setBackendUrl: (url: string) => void;
+  FloDown: { fromUri: (uri: string) => FloDownBlock };
 };
 
 function isHttpUri(uri: string): boolean {
@@ -63,6 +67,15 @@ function collectExternalLabels(
   }
 }
 
+function collectDeclaredLocalSymbols(
+  def: DefinitionNode,
+  acc: Set<string>,
+): void {
+  for (const sym of def.for_symbols) {
+    if (!isHttpUri(sym)) acc.add(sym);
+  }
+}
+
 function rewriteDefinitionNode(
   def: DefinitionNode,
   uriMap: Map<string, string>,
@@ -91,11 +104,7 @@ function rewriteSymrefNode(
 ): SymrefNode {
   if (isHttpUri(node.uri)) return node;
 
-  const resolved = uriMap.get(node.uri);
-
-  if (!resolved) {
-    throw new Error(`Unresolved symbol: ${node.uri}`);
-  }
+  const resolved = uriMap.get(node.uri) ?? node.uri;
 
   return {
     ...node,
@@ -110,8 +119,9 @@ function rewriteFtmlNode(
 ): FtmlNode {
   if (isDefinitionNode(node)) return rewriteDefinitionNode(node, uriMap);
   if (isDefiniendumNode(node)) return rewriteDefiniendumNode(node, uriMap);
-  if (node.type === "symref")
+  if (node.type === "symref") {
     return rewriteSymrefNode(node as SymrefNode, uriMap);
+  }
 
   if (node.content) {
     return {
@@ -133,11 +143,6 @@ function rewriteContentArray(
   });
 }
 
-type FloDownLib = {
-  setBackendUrl: (url: string) => void;
-  FloDown: { fromUri: (uri: string) => FloDownBlock };
-};
-
 export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
@@ -157,6 +162,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
       if (disposed) return;
 
       floDown.setBackendUrl("https://mathhub.info");
+
       const fdHidden = floDown.FloDown.fromUri(
         `http://temp-hidden?a=temp&d=${docId}&l=en`,
       );
@@ -188,13 +194,14 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
       const defBlock = block as DefinitionNode;
       const externalLabels = new Set<string>();
       collectExternalLabels(defBlock, externalLabels);
+      collectDeclaredLocalSymbols(defBlock, externalLabels);
 
       const definingNodes =
         externalLabels.size > 0
           ? await getDefiningDefinitions({
               data: { labels: Array.from(externalLabels) },
             })
-          : {};
+          : ({} as Record<string, DefinitionNode>);
 
       if (disposed) return;
 
@@ -208,18 +215,21 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
         fdHidden.addElement(rewrittenDep);
       }
 
-      for (const symbolName of defBlock.for_symbols) {
-        if (!uriMap.has(symbolName)) {
-          const uriHidden = fdHidden.addSymbolDeclaration(symbolName);
-          fdVisible.addSymbolDeclaration(symbolName);
+      for (const label of externalLabels) {
+        if (!uriMap.has(label)) {
+          const fallbackUri = fdHidden.addSymbolDeclaration(label);
+          uriMap.set(label, fallbackUri);
+        }
+      }
 
-          uriMap.set(symbolName, uriHidden);
+      for (const symbolName of defBlock.for_symbols) {
+        if (!isHttpUri(symbolName)) {
+          fdVisible.addSymbolDeclaration(symbolName);
         }
       }
 
       const rewritten = rewriteFtmlNode(defBlock, uriMap);
       fdVisible.addElement(rewritten);
-      // console.log(fdVisible.getStex())
     })();
 
     return () => {
@@ -228,14 +238,18 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
       if (fdHiddenRef.current) {
         try {
           fdHiddenRef.current.clear();
-        } catch {}
+        } catch {
+          // ignore
+        }
         fdHiddenRef.current = null;
       }
 
       if (fdVisibleRef.current) {
         try {
           fdVisibleRef.current.clear();
-        } catch {}
+        } catch {
+          // ignore
+        }
         fdVisibleRef.current = null;
       }
 

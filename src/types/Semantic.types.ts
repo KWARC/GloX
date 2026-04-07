@@ -2,6 +2,7 @@ import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { ReplacePayload } from "@/server/parseUri";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
+import { UpdateDefinitionAstResult } from "@/serverFns/updateDefinition.server";
 import { FtmlStatement } from "@/types/ftml.types";
 
 type SemanticIndex = ReturnType<typeof extractSemanticIndex>;
@@ -37,7 +38,7 @@ export type OnReplaceNode = (
   definitionId: string,
   target: { type: "definiendum" | "symref"; uri: string },
   payload: ReplacePayload,
-) => void;
+) => Promise<UpdateDefinitionAstResult>;
 
 export type OnDeleteNode = (
   definitionId: string,

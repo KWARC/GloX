@@ -1,6 +1,7 @@
 import { queryClient } from "@/queryClient";
 import { injectProvenance } from "@/server/ftml/addProvenanceData";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
+import { ReplacePayload } from "@/server/parseUri";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
@@ -20,7 +21,10 @@ import {
 } from "@/serverFns/latex.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
-import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
+import {
+  updateDefinitionAst,
+  UpdateDefinitionAstResult,
+} from "@/serverFns/updateDefinition.server";
 import {
   FtmlContent,
   FtmlNode,
@@ -172,9 +176,9 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   async function handleReplaceNode(
     definitionId: string,
     target: { type: "definiendum" | "symref"; uri: string },
-    payload: any,
-  ) {
-    await updateDefinitionAst({
+    payload: ReplacePayload,
+  ): Promise<UpdateDefinitionAstResult> {
+    const result = await updateDefinitionAst({
       data: {
         definitionId,
         operation: {
@@ -188,12 +192,14 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     await queryClient.invalidateQueries({
       queryKey: ["definitionsByIdentity", identity],
     });
+
+    return result;
   }
 
   async function handleDeleteNode(
     definitionId: string,
     target: { type: "definiendum" | "symref"; uri: string },
-  ) {
+  ): Promise<void> {
     await updateDefinitionAst({
       data: {
         definitionId,
@@ -799,7 +805,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                     })
                   }
                 >
-                  Go to My Files
+                  Go to Source
                 </Button>
               </Group>
             </Group>

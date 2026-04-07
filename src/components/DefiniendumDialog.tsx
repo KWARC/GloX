@@ -1,8 +1,8 @@
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import {
   ActionIcon,
+  Box,
   Button,
-  Group,
   Paper,
   Portal,
   Stack,
@@ -94,14 +94,22 @@ export function DefiniendumDialog({
           position: "fixed",
           right: 60,
           top: 100,
-          width: 420,
+          width: 520,
           maxHeight: "calc(100vh - 120px)",
           overflowY: "auto",
           zIndex: 5000,
         }}
       >
         <Stack gap="sm">
-          <Group justify="space-between">
+          <Box
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
             <Text fw={600}>Definiendum</Text>
             <ActionIcon
               variant="subtle"
@@ -112,7 +120,7 @@ export function DefiniendumDialog({
             >
               <IconX size={16} />
             </ActionIcon>
-          </Group>
+          </Box>
 
           <Paper withBorder p="sm" bg="blue.0" radius="md">
             <Text size="xs" fw={600} c="dimmed" mb={4}>
@@ -123,22 +131,32 @@ export function DefiniendumDialog({
             </Text>
           </Paper>
 
-          <Group gap="xs">
+          <Box
+            style={{
+              display: "flex",
+              gap: 8,
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
             <Button
               size="xs"
               variant={mode === "CREATE" ? "filled" : "light"}
               onClick={() => setMode("CREATE")}
+              style={{ flex: 1, minWidth: 0 }}
             >
               Create New Symbol
             </Button>
+
             <Button
               size="xs"
               variant={mode === "PICK_EXISTING" ? "filled" : "light"}
               onClick={() => setMode("PICK_EXISTING")}
+              style={{ flex: 1, minWidth: 0 }}
             >
               Link to Existing
             </Button>
-          </Group>
+          </Box>
 
           {mode === "CREATE" && (
             <form
@@ -147,7 +165,13 @@ export function DefiniendumDialog({
                 form.handleSubmit();
               }}
             >
-              <Stack gap="sm">
+              <Stack
+                gap="sm"
+                style={{
+                  width: "100%",
+                  minWidth: 0,
+                }}
+              >
                 <form.Field
                   name="symbolName"
                   validators={{
@@ -195,30 +219,35 @@ export function DefiniendumDialog({
 
           {mode === "PICK_EXISTING" && (
             <Stack gap="sm">
-              <SymbolResult
-                initialQuery={searchQuery}
-                onQueryChange={setSearchQuery}
-                selectedSymbol={selectedSymbol}
-                onSelectSymbol={setSelectedSymbol}
-              />
+              <Box style={{ width: "100%", minWidth: 0, overflow: "hidden" }}>
+                <SymbolResult
+                  initialQuery={searchQuery}
+                  onQueryChange={setSearchQuery}
+                  selectedSymbol={selectedSymbol}
+                  onSelectSymbol={setSelectedSymbol}
+                />
+              </Box>
 
               {selectedSymbol && (
-                <Paper withBorder p="sm" bg="green.0" radius="md">
+                <Paper withBorder p="sm" bg="green.0" radius="md ">
                   <Text size="xs" fw={600} c="dimmed" mb={4}>
                     Selected Symbol:
                   </Text>
-
-                  {selectedSymbol.source === "DB" ? (
-                    <RenderDbSymbol
-                      symbol={{
-                        symbolName: selectedSymbol.symbolName,
-                        source: "DB",
-                        futureRepo: selectedSymbol.futureRepo,
-                      }}
-                    />
-                  ) : (
-                    <RenderSymbolicUri uri={selectedSymbol.uri} />
-                  )}
+                  <Box
+                    style={{ width: "100%", minWidth: 0, overflow: "hidden" }}
+                  >
+                    {selectedSymbol.source === "DB" ? (
+                      <RenderDbSymbol
+                        symbol={{
+                          symbolName: selectedSymbol.symbolName,
+                          source: "DB",
+                          futureRepo: selectedSymbol.futureRepo,
+                        }}
+                      />
+                    ) : (
+                      <RenderSymbolicUri uri={selectedSymbol.uri} />
+                    )}
+                  </Box>
                 </Paper>
               )}
 

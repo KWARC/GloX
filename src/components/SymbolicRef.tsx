@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { SymbolResult } from "./SymbolResult";
 
-const SEARCH_MODAL_WIDTH = 440;
+const SEARCH_MODAL_WIDTH = 520;
 const SEARCH_MODAL_RIGHT_OFFSET = 60;
 const SEARCH_MODAL_TOP_OFFSET = 80;
 
