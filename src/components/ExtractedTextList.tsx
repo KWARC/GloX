@@ -7,6 +7,7 @@ import {
   Stack,
   Text,
   Textarea,
+  Tooltip,
 } from "@mantine/core";
 import { IconPencil, IconSettings, IconTrash } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
@@ -85,32 +86,38 @@ export function ExtractedTextPanel({
                     )}
 
                     <Group gap="xs">
-                      <ActionIcon
-                        size="sm"
-                        color="red"
-                        disabled={isLocked}
-                        onClick={() => onDelete(item.id)}
-                      >
-                        <IconTrash size={14} />
-                      </ActionIcon>
+                      <Tooltip label="Delete definition" withArrow>
+                        <ActionIcon
+                          size="sm"
+                          color="red"
+                          disabled={isLocked}
+                          onClick={() => onDelete(item.id)}
+                        >
+                          <IconTrash size={14} />
+                        </ActionIcon>
+                      </Tooltip>
 
-                      <ActionIcon
-                        size="sm"
-                        variant="subtle"
-                        disabled={isLocked}
-                        onClick={() => onToggleEdit(item.id)}
-                      >
-                        <IconPencil size={16} />
-                      </ActionIcon>
+                      <Tooltip label="Edit JSON format" withArrow>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          disabled={isLocked}
+                          onClick={() => onToggleEdit(item.id)}
+                        >
+                          <IconPencil size={16} />
+                        </ActionIcon>
+                      </Tooltip>
 
-                      <ActionIcon
-                        size="sm"
-                        variant="subtle"
-                        disabled={isLocked}
-                        onClick={() => onOpenSemanticPanel(item.id)}
-                      >
-                        <IconSettings size={16} />
-                      </ActionIcon>
+                      <Tooltip label="Manage semantics" withArrow>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          disabled={isLocked}
+                          onClick={() => onOpenSemanticPanel(item.id)}
+                        >
+                          <IconSettings size={16} />
+                        </ActionIcon>
+                      </Tooltip>
                     </Group>
                   </Group>
 
