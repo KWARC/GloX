@@ -382,7 +382,7 @@ function RouteComponent() {
     target: { type: "definiendum" | "symref"; uri: string },
     payload: any,
   ) {
-    await updateDefinitionAst({
+    const result = await updateDefinitionAst({
       data: {
         definitionId,
         operation: {
@@ -396,6 +396,8 @@ function RouteComponent() {
     await queryClient.invalidateQueries({
       queryKey: ["definitions", documentId],
     });
+
+    return result;
   }
 
   function handleToggleEdit(id: string) {
