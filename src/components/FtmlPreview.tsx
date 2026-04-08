@@ -38,13 +38,6 @@ function isHttp(uri: string): boolean {
   return uri.startsWith("http://") || uri.startsWith("https://");
 }
 
-function isMathHubUri(uri: string): boolean {
-  return (
-    uri.startsWith("http://mathhub.info?") ||
-    uri.startsWith("https://mathhub.info?")
-  );
-}
-
 function deepClone<T>(value: T): T {
   return structuredClone(value);
 }
@@ -76,110 +69,83 @@ function collectExternalLabels(
 function rewriteContentArray(
   content: FtmlContent[],
   uriMap: Map<string, string>,
-  futureRepo: string,
-  filePath: string,
-  fileName: string,
+  docId: string,
 ): FtmlContent[] {
   return content.map((c) =>
-    typeof c === "string"
-      ? c
-      : rewriteNode(c, uriMap, futureRepo, filePath, fileName),
+    typeof c === "string" ? c : rewriteNode(c, uriMap, docId),
   );
 }
 
 function rewriteNode(
   node: FtmlNode,
   uriMap: Map<string, string>,
-  futureRepo: string,
-  filePath: string,
-  fileName: string,
+  docId: string,
 ): FtmlNode {
   if (isDefinitionNode(node)) {
     const def = node as DefinitionNode;
     return {
       ...def,
       for_symbols: def.for_symbols.map((s) => uriMap.get(s) ?? s),
-      content: rewriteContentArray(
-        def.content,
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-      ),
+      content: rewriteContentArray(def.content, uriMap, docId),
     };
   }
 
   if (isDefiniendumNode(node)) {
     const n = node as DefiniendumNode;
 
-    if (!n.symdecl && n.uri && !isHttp(n.uri)) {
+    if (isHttp(n.uri)) {
       return {
         ...n,
-        uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${n.uri}`,
-        content: rewriteContentArray(
-          n.content ?? [],
-          uriMap,
-          futureRepo,
-          filePath,
-          fileName,
-        ),
+        content: rewriteContentArray(n.content ?? [], uriMap, docId),
       };
     }
 
-    return {
-      ...n,
-      uri: uriMap.get(n.uri) ?? n.uri,
-      content: rewriteContentArray(
-        n.content ?? [],
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-      ),
-    };
+    const resolved = uriMap.get(n.uri);
+
+    if (resolved) {
+      return {
+        ...n,
+        uri: resolved,
+        content: rewriteContentArray(n.content ?? [], uriMap, docId),
+      };
+    }
+
+    if (!n.symdecl) {
+      return {
+        ...n,
+        uri: `http://temp-visible?a=temp&d=${docId}&l=en&s=${n.uri}`,
+        content: rewriteContentArray(n.content ?? [], uriMap, docId),
+      };
+    }
+
+    return n;
   }
 
   if (node.type === "symref") {
     const n = node as SymrefNode;
-    const u = n.uri;
 
-    if (u && !isMathHubUri(u)) {
+    if (isHttp(n.uri)) return n;
+    const resolved = uriMap.get(n.uri);
+
+    if (resolved) {
       return {
         ...n,
-        uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${u}`,
-        content: rewriteContentArray(
-          n.content ?? [],
-          uriMap,
-          futureRepo,
-          filePath,
-          fileName,
-        ),
+        uri: resolved,
+        content: rewriteContentArray(n.content ?? [], uriMap, docId),
       };
     }
 
     return {
       ...n,
-      uri: uriMap.get(n.uri) ?? n.uri,
-      content: rewriteContentArray(
-        n.content ?? [],
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-      ),
+      uri: `http://temp-visible?a=temp&d=${docId}&l=en&s=${n.uri}`,
+      content: rewriteContentArray(n.content ?? [], uriMap, docId),
     };
   }
 
   if (node.content) {
     return {
       ...node,
-      content: rewriteContentArray(
-        node.content,
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-      ),
+      content: rewriteContentArray(node.content, uriMap, docId),
     };
   }
 
@@ -221,10 +187,6 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
       containerEl.innerHTML = "";
       fdVisible.mountTo(containerEl);
 
-      const futureRepo = "temp-visible";
-      const filePath = "temp";
-      const fileName = docId;
-
       const root = normalizeToRoot(ftmlAst);
 
       for (const block of root.content) {
@@ -256,15 +218,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
         for (const [label, depDef] of Object.entries(deps)) {
           const uri = fdHidden.addSymbolDeclaration(label);
           uriMap.set(label, uri);
-
-          // Deep-clone dep before rewriting so WASM never gets aliased refs
-          const rewrittenDep = rewriteNode(
-            deepClone(depDef),
-            uriMap,
-            futureRepo,
-            filePath,
-            fileName,
-          );
+          const rewrittenDep = rewriteNode(deepClone(depDef), uriMap, docId);
           fdHidden.addElement(rewrittenDep);
         }
 
@@ -276,13 +230,9 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
           }
         }
 
-        const rewritten = rewriteNode(
-          deepClone(def),
-          uriMap,
-          futureRepo,
-          filePath,
-          fileName,
-        );
+        const rewritten = rewriteNode(deepClone(def), uriMap, docId);
+        console.log(fdHidden.getStex())
+        console.log(fdVisible.getStex())
         fdVisible.addElement(rewritten);
       }
     })();
