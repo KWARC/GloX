@@ -30,6 +30,7 @@ export const currentUser = createServerFn({ method: "GET" }).handler(
           email: true,
           firstName: true,
           lastName: true,
+          role:true,
         },
       });
 
@@ -44,6 +45,7 @@ export const currentUser = createServerFn({ method: "GET" }).handler(
           email: user.email,
           firstName: user.firstName ?? undefined,
           lastName: user.lastName ?? undefined,
+          role:user.role??"EXTRACTOR",
         },
       };
     } catch {

@@ -406,7 +406,7 @@ function CreateLatexPage() {
                 variant="default"
                 onClick={() =>
                   navigate({
-                    to: "/my-files/$documentId",
+                    to: "/files/$documentId",
                     params: { documentId },
                   })
                 }

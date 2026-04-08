@@ -800,7 +800,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                   variant="light"
                   onClick={() =>
                     navigate({
-                      to: "/my-files/$documentId",
+                      to: "/files/$documentId",
                       params: { documentId: identity.documentId },
                     })
                   }

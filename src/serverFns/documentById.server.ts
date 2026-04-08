@@ -1,18 +1,28 @@
 import prisma from "@/lib/prisma";
-import { requireUserId } from "@/server/auth/requireUser";
+import { currentUser } from "@/server/auth/currentUser";
 import { createServerFn } from "@tanstack/react-start";
 
 export const getDocumentById = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
-    const userId = requireUserId();
+    const res = await currentUser();
 
-    const doc = await prisma.document.findFirst({
-      where: { id: data.id, userId },
+    if (!res.loggedIn) {
+      throw new Error("Not authenticated");
+    }
+
+    const role = res.user.role;
+
+    const doc = await prisma.document.findUnique({
+      where: { id: data.id },
     });
 
     if (!doc) {
       throw new Error("Document not found");
+    }
+
+    if (role !== "ADMIN" && doc.userId !== res.user.id) {
+      throw new Error("Unauthorized");
     }
 
     return doc;

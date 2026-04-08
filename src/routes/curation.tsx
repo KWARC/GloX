@@ -15,7 +15,13 @@ export type DefinitionStatus =
 const checkAdmin = createServerFn().handler(async () => {
   const user = await adminUser();
 
-  if (!user.loggedIn || !user.isAdmin) {
+  if (!user.loggedIn) {
+    throw redirect({ to: "/" });
+  }
+
+  const role = user.user?.role;
+
+  if (role !== "ADMIN" && role !== "CURATOR") {
     throw redirect({ to: "/" });
   }
 

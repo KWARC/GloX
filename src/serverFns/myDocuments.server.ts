@@ -1,12 +1,12 @@
-import { requireUserId } from "@/server/auth/requireUser";
+import prisma from "@/lib/prisma";
+import { currentUser } from "@/server/auth/currentUser";
 import { createServerFn } from "@tanstack/react-start";
-import prisma from "../lib/prisma";
 
 export const getMyDocuments = createServerFn({ method: "GET" }).handler(
   async () => {
-    const userId = requireUserId();
+    const res = await currentUser();
 
-    if (!userId) {
+    if (!res.loggedIn) {
       return {
         success: false,
         error: "Not logged in",
@@ -14,8 +14,13 @@ export const getMyDocuments = createServerFn({ method: "GET" }).handler(
       };
     }
 
+    const role = res.user.role;
+
     const docs = await prisma.document.findMany({
-      where: { userId },
+      where:
+        role === "ADMIN"
+          ? {} 
+          : { userId: res.user.id },
       orderBy: { createdAt: "desc" },
     });
 
