@@ -35,7 +35,7 @@ export const adminUser = createServerFn({ method: "GET" }).handler(async () => {
 
   return {
     loggedIn: true,
-    isAdmin: user.role === "ADMIN" || user.role==="CURATOR",
+    isAdmin: user.role === "ADMIN",
     user: {
       id: user.id,
       email: user.email,

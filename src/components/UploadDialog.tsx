@@ -66,7 +66,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
         setFile(null);
 
         navigate({
-          to: "/my-files/$documentId",
+          to: "/files/$documentId",
           params: { documentId: result.documentId },
         });
       } else {

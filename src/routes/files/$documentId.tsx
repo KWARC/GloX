@@ -49,7 +49,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-export const Route = createFileRoute("/my-files/$documentId")({
+export const Route = createFileRoute("/files/$documentId")({
   loader: async () => {
     const user = await currentUser();
     if (!user?.loggedIn) {

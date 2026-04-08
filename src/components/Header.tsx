@@ -26,6 +26,7 @@ import {
 } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { FileText } from "lucide-react";
 import { useState } from "react";
 
 export default function Header() {
@@ -41,6 +42,8 @@ export default function Header() {
   });
 
   const loggedIn = user?.loggedIn;
+  const role = user?.user?.role;
+  const isAdmin = role === "ADMIN" || role === "CURATOR";
   const email = user?.user?.email;
   const firstName = user?.user?.firstName;
   const lastName = user?.user?.lastName;
@@ -198,9 +201,9 @@ export default function Header() {
           {loggedIn && (
             <>
               <NavLink
-                label="My Files"
+                label="Files"
                 component={Link}
-                to="/my-files"
+                to="/files"
                 onClick={() => setOpened(false)}
                 leftSection={<IconFiles size={18} />}
                 styles={{
@@ -226,7 +229,21 @@ export default function Header() {
               />
             </>
           )}
-
+          {loggedIn && isAdmin && (
+            <NavLink
+              label="Curation"
+              component={Link}
+              to="/curation"
+              onClick={() => setOpened(false)}
+              leftSection={<FileText size={18} />}
+              styles={{
+                root: {
+                  borderRadius: "8px",
+                  padding: "12px",
+                },
+              }}
+            />
+          )}
           {loggedIn && (
             <>
               <Divider my="md" />

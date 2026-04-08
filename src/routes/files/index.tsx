@@ -1,15 +1,29 @@
 import { MyDocument, myDocumentsQuery } from "@/queries/document";
+import { currentUser } from "@/server/auth/currentUser";
 import { Card, Loader, Stack, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/my-files/")({
+export const Route = createFileRoute("/files/")({
+  loader: async () => {
+    const user = await currentUser();
+    if (!user?.loggedIn) {
+      throw redirect({ to: "/login" });
+    }
+    return null;
+  },
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const { data = [], isLoading } = useQuery<MyDocument[]>(myDocumentsQuery);
-
+  const { data: auth } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: currentUser,
+    staleTime: 60_000,
+  });
+  const role = auth?.user?.role;
+  const isAdmin = role === "ADMIN";
   if (isLoading) {
     return (
       <Stack align="center" p="xl">
@@ -20,15 +34,19 @@ function RouteComponent() {
 
   return (
     <Stack p="md">
-      <Title order={2}>My Files</Title>
-
+      <Title order={2}>Uploaded Files</Title>
+      {isAdmin && (
+        <Text size="sm" c="blue">
+          Showing all documents (ADMIN ACCESS)
+        </Text>
+      )}
       {data.length === 0 ? (
         <Text c="dimmed">No files uploaded yet</Text>
       ) : (
         data.map((doc) => (
           <Link
             key={doc.id}
-            to="/my-files/$documentId"
+            to="/files/$documentId"
             params={{ documentId: doc.id }}
             style={{ textDecoration: "none" }}
           >
