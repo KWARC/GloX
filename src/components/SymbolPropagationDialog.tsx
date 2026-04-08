@@ -16,7 +16,7 @@ import {
   Text,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 
 interface SymbolPropagationDialogProps {
@@ -68,6 +68,12 @@ export function SymbolPropagationDialog({
     });
   }
 
+  useEffect(() => {
+    if (opened && candidates.length > 0) {
+      setSelected(new Set(candidates.map((c) => c.id)));
+    }
+  }, [opened, candidates]);
+
   async function handleApply() {
     setApplying(true);
     try {
@@ -118,7 +124,7 @@ export function SymbolPropagationDialog({
 
   const allChecked =
     candidates.length > 0 && selected.size === candidates.length;
-
+  const hasCandidates = candidates.length > 0;
   return (
     <Modal
       opened={opened}
@@ -133,8 +139,8 @@ export function SymbolPropagationDialog({
             <Text span ff="monospace" fw={600}>
               {localSymbolUri}
             </Text>{" "}
-            was referenced in another Definition. Choose which other definitions should
-            also be updated.
+            was referenced in another Definition. Choose which other definitions
+            should also be updated.
           </Text>
         </Stack>
       }
@@ -222,16 +228,30 @@ export function SymbolPropagationDialog({
       )}
 
       <Group justify="flex-end" mt="lg" gap="sm">
-        <Button variant="default" onClick={handleSkip} loading={applying}>
-          Skip
-        </Button>
-        <Button
-          onClick={handleApply}
-          loading={applying}
-          disabled={selected.size === 0 || isLoading}
-        >
-          Apply to {selected.size} definition{selected.size !== 1 ? "s" : ""}
-        </Button>
+        {hasCandidates ? (
+          <>
+            <Button variant="default" onClick={handleSkip} loading={applying}>
+              Skip
+            </Button>
+            <Button
+              onClick={handleApply}
+              loading={applying}
+              disabled={selected.size === 0 || isLoading}
+            >
+              Apply to {selected.size} definition
+              {selected.size !== 1 ? "s" : ""}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="default" onClick={onSkip} loading={applying}>
+              Cancel
+            </Button>
+            <Button onClick={handleSkip} loading={applying}>
+              Confirm Replacement
+            </Button>
+          </>
+        )}
       </Group>
     </Modal>
   );
