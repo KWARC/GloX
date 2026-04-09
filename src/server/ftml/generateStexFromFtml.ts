@@ -10,18 +10,11 @@ import {
   normalizeToRoot,
 } from "@/types/ftml.types";
 
-function isHttp(uri: string) {
+export function isHttp(uri: string) {
   return uri.startsWith("http://") || uri.startsWith("https://");
 }
 
-function isMathHubUri(uri: string): boolean {
-  return (
-    uri.startsWith("http://mathhub.info?") ||
-    uri.startsWith("https://mathhub.info?")
-  );
-}
-
-function collectExternalLabels(
+export function collectExternalSymbols(
   node: FtmlNode | FtmlContent,
   acc: Set<string>,
 ): void {
@@ -41,8 +34,15 @@ function collectExternalLabels(
   }
 
   if (node.content) {
-    node.content.forEach((c) => collectExternalLabels(c, acc));
+    node.content.forEach((c) => collectExternalSymbols(c, acc));
   }
+}
+
+function isMathHubUri(uri: string): boolean {
+  return (
+    uri.startsWith("http://mathhub.info?") ||
+    uri.startsWith("https://mathhub.info?")
+  );
 }
 
 function finalFTML(
@@ -175,7 +175,7 @@ export async function generateStexFromFtml(
     const def = block as DefinitionNode;
 
     const external = new Set<string>();
-    collectExternalLabels(def, external);
+    collectExternalSymbols(def, external);
 
     const deps =
       external.size > 0

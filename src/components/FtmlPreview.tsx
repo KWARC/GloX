@@ -1,4 +1,8 @@
 import { initFloDown } from "@/lib/flodownClient";
+import {
+  collectExternalSymbols,
+  isHttp,
+} from "@/server/ftml/generateStexFromFtml";
 import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefiniendumNode,
@@ -34,36 +38,8 @@ type FloDownLib = {
   FloDown: { fromUri: (uri: string) => FloDownBlock };
 };
 
-function isHttp(uri: string): boolean {
-  return uri.startsWith("http://") || uri.startsWith("https://");
-}
-
 function deepClone<T>(value: T): T {
   return structuredClone(value);
-}
-
-function collectExternalLabels(
-  node: FtmlNode | FtmlContent,
-  acc: Set<string>,
-): void {
-  if (typeof node === "string") return;
-
-  if (node.type === "symref" && node.uri && !isHttp(node.uri)) {
-    acc.add(node.uri);
-  }
-
-  if (
-    isDefiniendumNode(node) &&
-    node.symdecl === false &&
-    node.uri &&
-    !isHttp(node.uri)
-  ) {
-    acc.add(node.uri);
-  }
-
-  if (node.content) {
-    node.content.forEach((c) => collectExternalLabels(c, acc));
-  }
 }
 
 function rewriteContentArray(
@@ -74,6 +50,23 @@ function rewriteContentArray(
   return content.map((c) =>
     typeof c === "string" ? c : rewriteNode(c, uriMap, docId),
   );
+}
+
+function collectDeclaredLabels(
+  node: FtmlNode | FtmlContent,
+  acc: Set<string>,
+): void {
+  if (typeof node === "string") return;
+
+  if (isDefiniendumNode(node) && node.symdecl === true && node.uri) {
+    acc.add(node.uri);
+  }
+
+  if (node.content) {
+    for (const child of node.content) {
+      collectDeclaredLabels(child, acc);
+    }
+  }
 }
 
 function rewriteNode(
@@ -202,7 +195,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
         const def = block as DefinitionNode;
 
         const external = new Set<string>();
-        collectExternalLabels(def, external);
+        collectExternalSymbols(def, external);
 
         const deps: Record<string, DefinitionNode> =
           external.size > 0
@@ -213,26 +206,46 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
 
         if (disposed) return;
 
-        const uriMap = new Map<string, string>();
+        const hiddenUriMap = new Map<string, string>();
+        const visibleUriMap = new Map<string, string>();
+        const uniqueDeps = new Set<DefinitionNode>();
 
-        for (const [label, depDef] of Object.entries(deps)) {
-          const uri = fdHidden.addSymbolDeclaration(label);
-          uriMap.set(label, uri);
-          const rewrittenDep = rewriteNode(deepClone(depDef), uriMap, docId);
+        for (const depDef of Object.values(deps)) {
+          uniqueDeps.add(depDef);
+        }
+
+        for (const depDef of uniqueDeps) {
+          const labels = new Set<string>();
+          collectDeclaredLabels(depDef, labels);
+
+          for (const label of labels) {
+            if (!hiddenUriMap.has(label)) {
+              const hiddenUri = fdHidden.addSymbolDeclaration(label);
+
+              hiddenUriMap.set(label, hiddenUri);
+              visibleUriMap.set(label, hiddenUri); 
+            }
+          }
+
+          const rewrittenDep = rewriteNode(
+            deepClone(depDef),
+            hiddenUriMap,
+            docId,
+          );
           fdHidden.addElement(rewrittenDep);
         }
 
         for (const symbol of def.for_symbols) {
-          if (!uriMap.has(symbol) && !symbol.startsWith("http")) {
+          if (!symbol.startsWith("http") && !visibleUriMap.has(symbol)) {
             const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
-            fdVisible.addSymbolDeclaration(symbol);
-            uriMap.set(symbol, hiddenUri);
+            const visibleUri = fdVisible.addSymbolDeclaration(symbol);
+
+            hiddenUriMap.set(symbol, hiddenUri);
+            visibleUriMap.set(symbol, visibleUri);
           }
         }
 
-        const rewritten = rewriteNode(deepClone(def), uriMap, docId);
-        console.log(fdHidden.getStex())
-        console.log(fdVisible.getStex())
+        const rewritten = rewriteNode(deepClone(def), visibleUriMap, docId);
         fdVisible.addElement(rewritten);
       }
     })();
