@@ -23,8 +23,9 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
 
     const isLocalToMathHubConversion =
       data.operation.kind === "replaceSemantic" &&
-      data.operation.payload.type === "definiendum" &&
-      data.operation.payload.symdecl === false &&
+      (data.operation.payload.type === "symref" ||
+        (data.operation.payload.type === "definiendum" &&
+          data.operation.payload.symdecl === false)) &&
       data.operation.payload.uri.startsWith("http") &&
       !data.operation.target.uri.startsWith("http");
 

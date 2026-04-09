@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import {
   astReferencesUri,
-  definitionContainsLocalSymbol,
   propagateUriInAst,
 } from "@/server/ftml/convertLocalSymbolToMathHub";
 import { assertFtmlStatement, FtmlRoot } from "@/types/ftml.types";
@@ -81,7 +80,6 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
       selectedDefinitionIds,
       localSymbolUri,
       mathHubUri,
-      primaryDefinitionId,
     } = data;
 
     // if (selectedDefinitionIds.length === 0) {
@@ -130,7 +128,7 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
         });
       }
       //TODO: We need better way to delete symbols
-      
+
       // const primaryDef = await tx.definition.findUniqueOrThrow({
       //   where: { id: primaryDefinitionId },
       //   select: { statement: true },
