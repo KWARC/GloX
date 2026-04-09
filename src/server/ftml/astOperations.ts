@@ -1,5 +1,12 @@
 import { FtmlContent, FtmlNode, RootNode } from "@/types/ftml.types";
 
+export interface TextLocation {
+  paragraphIndex: number;
+  contentIndex: number;
+  offset: number;
+  occurrence: number;
+}
+
 export function cloneAst<T>(ast: T): T {
   return structuredClone(ast);
 }
@@ -49,21 +56,6 @@ export function extractTextContent(node: FtmlContent | FtmlContent[]): string {
   return "";
 }
 
-export function findNodesByType<T extends FtmlNode>(
-  root: FtmlContent | FtmlContent[],
-  type: string,
-): T[] {
-  const results: T[] = [];
-
-  walkAst(root, (node) => {
-    if (node.type === type) {
-      results.push(node as T);
-    }
-  });
-
-  return results;
-}
-
 export function pathTraversesSemanticNode(
   root: RootNode,
   targetPath: number[],
@@ -83,13 +75,6 @@ export function pathTraversesSemanticNode(
   });
 
   return traversesSemanticNode;
-}
-
-export interface TextLocation {
-  paragraphIndex: number;
-  contentIndex: number;
-  offset: number;
-  occurrence: number;
 }
 
 export function findAllTextOccurrences(
