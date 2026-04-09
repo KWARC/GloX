@@ -22,7 +22,7 @@ import {
 import { useMemo, useState } from "react";
 import { CurrentUriDisplay } from "./CurrentUriDisplay";
 import { DbResultItem } from "./DbResultItem";
-import { RenderSymbolicUri } from "./RenderUri";
+import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { ResultsSection } from "./ResultsSection";
 import { SearchBar } from "./SearchBar";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
@@ -269,19 +269,89 @@ export function SemanticPanel({
                               </Text>
 
                               {dbResults.map((r) => (
-                                <DbResultItem
+                                <Paper
                                   key={r.id}
-                                  r={r}
-                                  definition={definition}
-                                  mode={{
-                                    type: "definiendum",
-                                    selected: selectedDefiniendum,
-                                  }}
-                                  selectedUri={selectedUri}
-                                  setSelectedUri={setSelectedUri}
-                                  onReplaceNode={handleReplaceNode}
-                                  setSelectedNode={setSelectedNode}
-                                />
+                                  withBorder
+                                  p="xs"
+                                  style={{ cursor: "pointer" }}
+                                  bg={
+                                    selectedUri === r.symbolName
+                                      ? "blue.0"
+                                      : undefined
+                                  }
+                                  onClick={() => setSelectedUri(r.symbolName)}
+                                >
+                                  <Stack gap={6} style={{ width: "100%" }}>
+                                    <Group
+                                      justify="space-between"
+                                      align="center"
+                                      wrap="nowrap"
+                                      style={{ width: "100%" }}
+                                    >
+                                      <Box
+                                        style={{
+                                          flex: 1,
+                                          minWidth: 0,
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        <RenderDbSymbol
+                                          symbol={{
+                                            symbolName: r.symbolName,
+                                            source: "DB",
+                                            futureRepo: r.futureRepo,
+                                          }}
+                                        />
+                                      </Box>
+
+                                      <Button
+                                        size="xs"
+                                        style={{
+                                          flexShrink: 0,
+                                          width: 80,
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (!r.symbolName) return;
+
+                                          setPendingPropagation({
+                                            localSymbolUri:
+                                              selectedDefiniendum.uri,
+                                            mathHubUri: r.symbolName,
+                                            primaryDefinitionId: definition.id,
+                                          });
+                                          setSelectedNode({
+                                            type: "definiendum",
+                                            uri: r.symbolName,
+                                          });
+                                          setSelectedUri(r.symbolName);
+                                        }}
+                                      >
+                                        Use this
+                                      </Button>
+                                    </Group>
+
+                                    <Box
+                                      style={{
+                                        width: "100%",
+                                        overflow: "hidden",
+                                      }}
+                                    >
+                                      <DbResultItem
+                                        r={r}
+                                        definition={definition}
+                                        mode={{
+                                          type: "definiendum",
+                                          selected: selectedDefiniendum,
+                                        }}
+                                        selectedUri={selectedUri}
+                                        setSelectedUri={setSelectedUri}
+                                        onReplaceNode={handleReplaceNode}
+                                        setSelectedNode={setSelectedNode}
+                                      />
+                                    </Box>
+                                  </Stack>
+                                </Paper>
                               ))}
                             </Stack>
                           )}
@@ -404,17 +474,84 @@ export function SemanticPanel({
                               </Text>
 
                               {dbResults.map((r) => (
-                                <DbResultItem
+                                <Paper
                                   key={r.id}
-                                  r={r}
-                                  definition={definition}
-                                  mode={{
-                                    type: "symref",
-                                    selected: selectedSymref,
-                                  }}
-                                  onReplaceNode={handleReplaceNode}
-                                  setSelectedNode={setSelectedNode}
-                                />
+                                  withBorder
+                                  p="xs"
+                                  style={{ cursor: "pointer" }}
+                                >
+                                  <Stack gap={6} style={{ width: "100%" }}>
+                                    <Group
+                                      justify="space-between"
+                                      align="center"
+                                      wrap="nowrap"
+                                      style={{ width: "100%" }}
+                                    >
+                                      <Box
+                                        style={{
+                                          flex: 1,
+                                          minWidth: 0,
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        <RenderDbSymbol
+                                          symbol={{
+                                            symbolName: r.symbolName,
+                                            source: "DB",
+                                            futureRepo: r.futureRepo,
+                                          }}
+                                        />
+                                      </Box>
+
+                                      <Button
+                                        size="xs"
+                                        style={{ flexShrink: 0, width: 80 }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+
+                                          const newUri = r.symbolName;
+
+                                          onReplaceNode(
+                                            definition.id,
+                                            {
+                                              type: "symref",
+                                              uri: selectedSymref.uri,
+                                            },
+                                            {
+                                              type: "symref",
+                                              uri: newUri,
+                                            },
+                                          );
+
+                                          setSelectedNode({
+                                            type: "symref",
+                                            uri: newUri,
+                                          });
+                                        }}
+                                      >
+                                        Use this
+                                      </Button>
+                                    </Group>
+
+                                    <Box
+                                      style={{
+                                        width: "100%",
+                                        overflow: "hidden",
+                                      }}
+                                    >
+                                      <DbResultItem
+                                        r={r}
+                                        definition={definition}
+                                        mode={{
+                                          type: "symref",
+                                          selected: selectedSymref,
+                                        }}
+                                        onReplaceNode={handleReplaceNode}
+                                        setSelectedNode={setSelectedNode}
+                                      />
+                                    </Box>
+                                  </Stack>
+                                </Paper>
                               ))}
                             </Stack>
                           )}
@@ -506,7 +643,6 @@ export function SemanticPanel({
           onReplaceNode={onReplaceNode}
           onDone={() => {
             setPendingPropagation(null);
-            onClose();
           }}
           onSkip={() => setPendingPropagation(null)}
         />

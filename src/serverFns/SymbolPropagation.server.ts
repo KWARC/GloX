@@ -84,10 +84,10 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
       primaryDefinitionId,
     } = data;
 
-    if (selectedDefinitionIds.length === 0) {
-      await _maybeDeleteSymbol(primaryDefinitionId, localSymbolUri);
-      return { updated: 0 };
-    }
+    // if (selectedDefinitionIds.length === 0) {
+    //   // await _maybeDeleteSymbol(primaryDefinitionId, localSymbolUri);
+    //   return { updated: 0 };
+    // }
 
     const definitions = await prisma.definition.findMany({
       where: { id: { in: selectedDefinitionIds } },
@@ -129,35 +129,36 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
           },
         });
       }
+      //TODO: We need better way to delete symbols
+      
+      // const primaryDef = await tx.definition.findUniqueOrThrow({
+      //   where: { id: primaryDefinitionId },
+      //   select: { statement: true },
+      // });
+      // updatedAsts.push(assertFtmlStatement(primaryDef.statement));
 
-      const primaryDef = await tx.definition.findUniqueOrThrow({
-        where: { id: primaryDefinitionId },
-        select: { statement: true },
-      });
-      updatedAsts.push(assertFtmlStatement(primaryDef.statement));
-
-      if (!definitionContainsLocalSymbol(updatedAsts, localSymbolUri)) {
-        await tx.symbol.deleteMany({ where: { symbolName: localSymbolUri } });
-      }
+      // if (!definitionContainsLocalSymbol(updatedAsts, localSymbolUri)) {
+      //   await tx.symbol.deleteMany({ where: { symbolName: localSymbolUri } });
+      // }
     });
 
     return { updated: definitions.length };
   });
 
-async function _maybeDeleteSymbol(
-  primaryDefinitionId: string,
-  localSymbolUri: string,
-): Promise<void> {
-  const primaryDef = await prisma.definition.findUnique({
-    where: { id: primaryDefinitionId },
-    select: { statement: true },
-  });
+// async function _maybeDeleteSymbol(
+//   primaryDefinitionId: string,
+//   localSymbolUri: string,
+// ): Promise<void> {
+//   const primaryDef = await prisma.definition.findUnique({
+//     where: { id: primaryDefinitionId },
+//     select: { statement: true },
+//   });
 
-  if (!primaryDef) return;
+//   if (!primaryDef) return;
 
-  const ast = assertFtmlStatement(primaryDef.statement);
+//   const ast = assertFtmlStatement(primaryDef.statement);
 
-  if (!definitionContainsLocalSymbol([ast], localSymbolUri)) {
-    await prisma.symbol.deleteMany({ where: { symbolName: localSymbolUri } });
-  }
-}
+//   if (!definitionContainsLocalSymbol([ast], localSymbolUri)) {
+//     await prisma.symbol.deleteMany({ where: { symbolName: localSymbolUri } });
+//   }
+// }
