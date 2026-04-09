@@ -22,10 +22,6 @@ export type SelectedNode =
   | { type: "symref"; uri: string }
   | null;
 
-export type Mode =
-  | { type: "definiendum"; selected: DefiniendumNode }
-  | { type: "symref"; selected: SymrefNode };
-
 export type SemanticDefinition = {
   id: string;
   statement: FtmlStatement;

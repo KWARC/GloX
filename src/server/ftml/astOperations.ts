@@ -1,9 +1,4 @@
-import {
-  DefiniendumNode,
-  FtmlContent,
-  FtmlNode,
-  RootNode,
-} from "@/types/ftml.types";
+import { FtmlContent, FtmlNode, RootNode } from "@/types/ftml.types";
 
 export function cloneAst<T>(ast: T): T {
   return structuredClone(ast);
@@ -196,56 +191,4 @@ export function replaceTextWithNode(
   paragraphContent.splice(location.contentIndex, 1, ...replacement);
 
   return cloned;
-}
-
-export function insertDefiniendum(
-  content: FtmlContent[],
-  startOffset: number,
-  endOffset: number,
-  createNode: () => DefiniendumNode,
-): FtmlContent[] {
-  let currentOffset = 0;
-  const result: FtmlContent[] = [];
-  let inserted = false;
-
-  const fullText = content
-    .map((p) => (typeof p === "string" ? p : ""))
-    .join("");
-
-  const expected = fullText.slice(startOffset, endOffset);
-
-  for (const part of content) {
-    if (typeof part !== "string") {
-      result.push(part);
-      continue;
-    }
-
-    const nextOffset = currentOffset + part.length;
-
-    if (!inserted && startOffset >= currentOffset && endOffset <= nextOffset) {
-      const localStart = startOffset - currentOffset;
-      const localEnd = endOffset - currentOffset;
-
-      const actual = part.slice(localStart, localEnd);
-
-      if (localStart >= 0 && localEnd <= part.length && actual === expected) {
-        const before = part.slice(0, localStart);
-        const after = part.slice(localEnd);
-
-        if (before) result.push(before);
-        result.push(createNode());
-        if (after) result.push(after);
-
-        inserted = true;
-      } else {
-        result.push(part);
-      }
-    } else {
-      result.push(part);
-    }
-
-    currentOffset = nextOffset;
-  }
-
-  return result;
 }

@@ -1,6 +1,10 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
-import { insertDefiniendum } from "@/server/ftml/astOperations";
+import {
+  findAllTextOccurrences,
+  pathTraversesSemanticNode,
+  replaceTextWithNode,
+} from "@/server/ftml/astOperations";
 import { findDefiniendum } from "@/server/parseUri";
 import {
   assertFtmlStatement,
@@ -136,31 +140,49 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         throw new Error("Expected paragraph node inside definition");
       }
 
-      const paragraphNode = firstContent;
+      const occurrences = findAllTextOccurrences(root, selectedText);
 
-      const updatedContent = insertDefiniendum(
-        paragraphNode.content,
-        data.startOffset,
-        data.endOffset,
-        () => ({
-          type: "definiendum",
-          uri,
-          content: [alias || selectedText],
-          symdecl,
-        }),
+      const location = occurrences.find(
+        (loc) => loc.offset === data.startOffset,
       );
 
-      definitionNode.content = [
-        {
-          ...paragraphNode,
-          content: updatedContent,
-        },
-      ];
+      if (!location) {
+        throw new Error("Exact selection match not found in AST");
+      }
 
-      const existingSymbols = definitionNode.for_symbols ?? [];
+      const targetPath = [location.paragraphIndex, location.contentIndex];
+
+      if (pathTraversesSemanticNode(root, targetPath)) {
+        throw new Error(
+          "Cannot insert definiendum inside existing semantic node",
+        );
+      }
+
+      const definiendumNode = {
+        type: "definiendum",
+        uri,
+        content: [alias || selectedText],
+        symdecl,
+      };
+
+      const updatedRoot = replaceTextWithNode(
+        root,
+        location,
+        data.startOffset,
+        data.endOffset,
+        definiendumNode,
+      );
+
+      const updatedDefinition = updatedRoot.content.find(isDefinitionNode);
+
+      if (!updatedDefinition) {
+        throw new Error("Definition not found after update");
+      }
+
+      const existingSymbols = updatedDefinition.for_symbols ?? [];
 
       if (!existingSymbols.includes(uri)) {
-        definitionNode.for_symbols = [...existingSymbols, uri];
+        updatedDefinition.for_symbols = [...existingSymbols, uri];
       }
 
       const existing = await tx.definition.findUniqueOrThrow({
@@ -168,7 +190,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
       });
 
       const nextVersion = existing.currentVersion + 1;
-      const newStatement = JSON.parse(JSON.stringify(unwrapRoot(root)));
+      const newStatement = JSON.parse(JSON.stringify(unwrapRoot(updatedRoot)));
 
       await tx.definitionVersion.create({
         data: {

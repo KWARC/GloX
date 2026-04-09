@@ -8,6 +8,23 @@ import {
   type FtmlRoot,
 } from "@/types/ftml.types";
 
+type RemoveSemanticOperation = {
+  kind: "removeSemantic";
+  target: { type: "definiendum" | "symref"; uri: string };
+};
+
+type ReplaceSemanticOperation = {
+  kind: "replaceSemantic";
+  target: { type: "definiendum" | "symref"; uri: string };
+  payload: ReplacePayload;
+};
+
+export type SemanticOperation =
+  | RemoveSemanticOperation
+  | ReplaceSemanticOperation;
+
+type FtmlTree = FtmlRoot | FtmlNode | FtmlContent | FtmlContent[];
+
 export type ParsedMathHubUri = {
   archive: string;
   filePath: string;
@@ -110,23 +127,6 @@ export function findDefiniendum(
 
   return false;
 }
-
-type RemoveSemanticOperation = {
-  kind: "removeSemantic";
-  target: { type: "definiendum" | "symref"; uri: string };
-};
-
-type ReplaceSemanticOperation = {
-  kind: "replaceSemantic";
-  target: { type: "definiendum" | "symref"; uri: string };
-  payload: ReplacePayload;
-};
-
-export type SemanticOperation =
-  | RemoveSemanticOperation
-  | ReplaceSemanticOperation;
-
-type FtmlTree = FtmlRoot | FtmlNode | FtmlContent | FtmlContent[];
 
 export function transform(
   ast: FtmlTree,
