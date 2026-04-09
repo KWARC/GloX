@@ -45,6 +45,23 @@ function isMathHubUri(uri: string): boolean {
   );
 }
 
+function collectDeclaredLabels(
+  node: FtmlNode | FtmlContent,
+  acc: Set<string>,
+): void {
+  if (typeof node === "string") return;
+
+  if (isDefiniendumNode(node) && node.symdecl === true && node.uri) {
+    acc.add(node.uri);
+  }
+
+  if (node.content) {
+    for (const child of node.content) {
+      collectDeclaredLabels(child, acc);
+    }
+  }
+}
+
 function finalFTML(
   node: FtmlNode,
   uriMap: Map<string, string>,
@@ -184,15 +201,32 @@ export async function generateStexFromFtml(
           })
         : {};
 
-    const uriMap = new Map<string, string>();
+    const hiddenUriMap = new Map<string, string>();
+    const visibleUriMap = new Map<string, string>();
 
-    for (const [label, depDef] of Object.entries(deps)) {
-      const uri = fdHidden.addSymbolDeclaration(label);
-      uriMap.set(label, uri);
+    // Deduplicate definitions
+    const uniqueDeps = new Set<DefinitionNode>();
+    for (const depDef of Object.values(deps)) {
+      uniqueDeps.add(depDef);
+    }
+
+    // Register ALL declared symbols per definition
+    for (const depDef of uniqueDeps) {
+      const labels = new Set<string>();
+      collectDeclaredLabels(depDef, labels);
+
+      for (const label of labels) {
+        if (!hiddenUriMap.has(label)) {
+          const hiddenUri = fdHidden.addSymbolDeclaration(label);
+
+          hiddenUriMap.set(label, hiddenUri);
+          visibleUriMap.set(label, hiddenUri); // external symbols share URI
+        }
+      }
 
       const rewritten = finalFTML(
         depDef,
-        uriMap,
+        hiddenUriMap,
         futureRepo,
         filePath,
         fileName,
@@ -202,15 +236,22 @@ export async function generateStexFromFtml(
     }
 
     for (const symbol of def.for_symbols) {
-      if (!uriMap.has(symbol) && !symbol.startsWith("http")) {
+      if (!symbol.startsWith("http") && !visibleUriMap.has(symbol)) {
         const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
-        fdVisible.addSymbolDeclaration(symbol);
+        const visibleUri = fdVisible.addSymbolDeclaration(symbol);
 
-        uriMap.set(symbol, hiddenUri);
+        hiddenUriMap.set(symbol, hiddenUri);
+        visibleUriMap.set(symbol, visibleUri);
       }
     }
 
-    const rewritten = finalFTML(def, uriMap, futureRepo, filePath, fileName);
+    const rewritten = finalFTML(
+      def,
+      visibleUriMap,
+      futureRepo,
+      filePath,
+      fileName,
+    );
 
     fdVisible.addElement(rewritten);
   }
