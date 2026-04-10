@@ -203,14 +203,11 @@ export async function generateStexFromFtml(
 
     const hiddenUriMap = new Map<string, string>();
     const visibleUriMap = new Map<string, string>();
-
-    // Deduplicate definitions
     const uniqueDeps = new Set<DefinitionNode>();
     for (const depDef of Object.values(deps)) {
       uniqueDeps.add(depDef);
     }
 
-    // Register ALL declared symbols per definition
     for (const depDef of uniqueDeps) {
       const labels = new Set<string>();
       collectDeclaredLabels(depDef, labels);
@@ -220,7 +217,7 @@ export async function generateStexFromFtml(
           const hiddenUri = fdHidden.addSymbolDeclaration(label);
 
           hiddenUriMap.set(label, hiddenUri);
-          visibleUriMap.set(label, hiddenUri); // external symbols share URI
+          visibleUriMap.set(label, hiddenUri); 
         }
       }
 
