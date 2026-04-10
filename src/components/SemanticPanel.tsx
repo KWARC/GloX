@@ -19,6 +19,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { IconPencil } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { CurrentUriDisplay } from "./CurrentUriDisplay";
 import { DbResultItem } from "./DbResultItem";
@@ -52,6 +53,9 @@ export function SemanticPanel({
   const [selectedUri, setSelectedUri] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingNodeUri, setEditingNodeUri] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [savingRename, setSavingRename] = useState(false);
   const [pendingPropagation, setPendingPropagation] =
     useState<PendingPropagation | null>(null);
 
@@ -213,7 +217,60 @@ export function SemanticPanel({
 
                       <Paper withBorder p="sm">
                         <Group justify="space-between">
-                          <Text size="sm">{selectedDefiniendum.uri}</Text>
+                          {editingNodeUri === selectedDefiniendum.uri ? (
+                            <>
+                              <input
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                style={{ fontSize: 12, flex: 1 }}
+                              />
+
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                loading={savingRename}
+                                onClick={async () => {
+                                  setSavingRename(true);
+
+                                  await onReplaceNode(
+                                    definition.id,
+                                    {
+                                      type: "definiendum",
+                                      uri: selectedDefiniendum.uri,
+                                    },
+                                    {
+                                      type: "definiendum",
+                                      uri: selectedDefiniendum.uri,
+                                      content: [renameValue],
+                                      symdecl: selectedDefiniendum.symdecl,
+                                    },
+                                  );
+
+                                  setSavingRename(false);
+                                  setEditingNodeUri(null);
+                                }}
+                              >
+                                ✓
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Text size="sm" style={{ flex: 1 }}>
+                                {selectedDefiniendum.text}
+                              </Text>
+
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                onClick={() => {
+                                  setEditingNodeUri(selectedDefiniendum.uri);
+                                  setRenameValue(selectedDefiniendum.text);
+                                }}
+                              >
+                                <IconPencil size={14} />
+                              </Button>
+                            </>
+                          )}
 
                           <Group gap={6}>
                             <Button
@@ -446,7 +503,59 @@ export function SemanticPanel({
 
                       <Paper withBorder p="sm">
                         <Group justify="space-between">
-                          <Text size="sm">{selectedSymref.text}</Text>
+                          {editingNodeUri === selectedSymref.uri ? (
+                            <>
+                              <input
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                style={{ fontSize: 12, flex: 1 }}
+                              />
+
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                loading={savingRename}
+                                onClick={async () => {
+                                  setSavingRename(true);
+
+                                  await onReplaceNode(
+                                    definition.id,
+                                    {
+                                      type: "symref",
+                                      uri: selectedSymref.uri,
+                                    },
+                                    {
+                                      type: "symref",
+                                      uri: selectedSymref.uri,
+                                      content: [renameValue],
+                                    },
+                                  );
+
+                                  setSavingRename(false);
+                                  setEditingNodeUri(null);
+                                }}
+                              >
+                                ✓
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Text size="sm" style={{ flex: 1 }}>
+                                {selectedSymref.text}
+                              </Text>
+
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                onClick={() => {
+                                  setEditingNodeUri(selectedSymref.uri);
+                                  setRenameValue(selectedSymref.text);
+                                }}
+                              >
+                                <IconPencil size={14} />
+                              </Button>
+                            </>
+                          )}
 
                           <Group gap={6}>
                             <Button
