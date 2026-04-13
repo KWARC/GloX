@@ -19,10 +19,12 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { IconPencil } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { CurrentUriDisplay } from "./CurrentUriDisplay";
 import { DbResultItem } from "./DbResultItem";
-import { RenderSymbolicUri } from "./RenderUri";
+import { MathhubtoSymbolPropagationDialog } from "./MathhubtoSymbolPropagationDialog";
+import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { ResultsSection } from "./ResultsSection";
 import { SearchBar } from "./SearchBar";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
@@ -30,6 +32,13 @@ import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
 type PendingPropagation = {
   localSymbolUri: string;
   mathHubUri: string;
+  primaryDefinitionId: string;
+};
+
+type PendingMathHubToLocal = {
+  mathHubUri: string;
+  localSymbolUri: string;
+  targetType: "definiendum" | "symref";
   primaryDefinitionId: string;
 };
 
@@ -52,8 +61,13 @@ export function SemanticPanel({
   const [selectedUri, setSelectedUri] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingNodeUri, setEditingNodeUri] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [savingRename, setSavingRename] = useState(false);
   const [pendingPropagation, setPendingPropagation] =
     useState<PendingPropagation | null>(null);
+  const [pendingMathHubToLocal, setPendingMathHubToLocal] =
+    useState<PendingMathHubToLocal | null>(null);
 
   const { definienda, symbolicRefs } = useMemo(() => {
     if (!definition) return { definienda: [], symbolicRefs: [] };
@@ -213,7 +227,60 @@ export function SemanticPanel({
 
                       <Paper withBorder p="sm">
                         <Group justify="space-between">
-                          <Text size="sm">{selectedDefiniendum.uri}</Text>
+                          {editingNodeUri === selectedDefiniendum.uri ? (
+                            <>
+                              <input
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                style={{ fontSize: 12, flex: 1 }}
+                              />
+
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                loading={savingRename}
+                                onClick={async () => {
+                                  setSavingRename(true);
+
+                                  await onReplaceNode(
+                                    definition.id,
+                                    {
+                                      type: "definiendum",
+                                      uri: selectedDefiniendum.uri,
+                                    },
+                                    {
+                                      type: "definiendum",
+                                      uri: selectedDefiniendum.uri,
+                                      content: [renameValue],
+                                      symdecl: selectedDefiniendum.symdecl,
+                                    },
+                                  );
+
+                                  setSavingRename(false);
+                                  setEditingNodeUri(null);
+                                }}
+                              >
+                                ✓
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Text size="sm" style={{ flex: 1 }}>
+                                {selectedDefiniendum.text}
+                              </Text>
+
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                onClick={() => {
+                                  setEditingNodeUri(selectedDefiniendum.uri);
+                                  setRenameValue(selectedDefiniendum.text);
+                                }}
+                              >
+                                <IconPencil size={14} />
+                              </Button>
+                            </>
+                          )}
 
                           <Group gap={6}>
                             <Button
@@ -269,19 +336,106 @@ export function SemanticPanel({
                               </Text>
 
                               {dbResults.map((r) => (
-                                <DbResultItem
+                                <Paper
                                   key={r.id}
-                                  r={r}
-                                  definition={definition}
-                                  mode={{
-                                    type: "definiendum",
-                                    selected: selectedDefiniendum,
-                                  }}
-                                  selectedUri={selectedUri}
-                                  setSelectedUri={setSelectedUri}
-                                  onReplaceNode={handleReplaceNode}
-                                  setSelectedNode={setSelectedNode}
-                                />
+                                  withBorder
+                                  p="xs"
+                                  style={{ cursor: "pointer" }}
+                                  bg={
+                                    selectedUri === r.symbolName
+                                      ? "blue.0"
+                                      : undefined
+                                  }
+                                  onClick={() => setSelectedUri(r.symbolName)}
+                                >
+                                  <Stack gap={6} style={{ width: "100%" }}>
+                                    <Group
+                                      justify="space-between"
+                                      align="center"
+                                      wrap="nowrap"
+                                      style={{ width: "100%" }}
+                                    >
+                                      <Box
+                                        style={{
+                                          flex: 1,
+                                          minWidth: 0,
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        <RenderDbSymbol
+                                          symbol={{
+                                            symbolName: r.symbolName,
+                                            source: "DB",
+                                            futureRepo: r.futureRepo,
+                                          }}
+                                        />
+                                      </Box>
+
+                                      <Button
+                                        size="xs"
+                                        style={{
+                                          flexShrink: 0,
+                                          width: 80,
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (!r.symbolName) return;
+
+                                          if (
+                                            selectedDefiniendum.uri.startsWith(
+                                              "http",
+                                            )
+                                          ) {
+                                            // MathHub → local replacement
+                                            setPendingMathHubToLocal({
+                                              mathHubUri:
+                                                selectedDefiniendum.uri,
+                                              localSymbolUri: r.symbolName,
+                                              targetType: "definiendum",
+                                              primaryDefinitionId:
+                                                definition.id,
+                                            });
+                                          } else {
+                                            setPendingPropagation({
+                                              localSymbolUri:
+                                                selectedDefiniendum.uri,
+                                              mathHubUri: r.symbolName,
+                                              primaryDefinitionId:
+                                                definition.id,
+                                            });
+                                          }
+                                          setSelectedNode({
+                                            type: "definiendum",
+                                            uri: r.symbolName,
+                                          });
+                                          setSelectedUri(r.symbolName);
+                                        }}
+                                      >
+                                        Use this
+                                      </Button>
+                                    </Group>
+
+                                    <Box
+                                      style={{
+                                        width: "100%",
+                                        overflow: "hidden",
+                                      }}
+                                    >
+                                      <DbResultItem
+                                        r={r}
+                                        definition={definition}
+                                        mode={{
+                                          type: "definiendum",
+                                          selected: selectedDefiniendum,
+                                        }}
+                                        selectedUri={selectedUri}
+                                        setSelectedUri={setSelectedUri}
+                                        onReplaceNode={handleReplaceNode}
+                                        setSelectedNode={setSelectedNode}
+                                      />
+                                    </Box>
+                                  </Stack>
+                                </Paper>
                               ))}
                             </Stack>
                           )}
@@ -376,7 +530,59 @@ export function SemanticPanel({
 
                       <Paper withBorder p="sm">
                         <Group justify="space-between">
-                          <Text size="sm">{selectedSymref.text}</Text>
+                          {editingNodeUri === selectedSymref.uri ? (
+                            <>
+                              <input
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                style={{ fontSize: 12, flex: 1 }}
+                              />
+
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                loading={savingRename}
+                                onClick={async () => {
+                                  setSavingRename(true);
+
+                                  await onReplaceNode(
+                                    definition.id,
+                                    {
+                                      type: "symref",
+                                      uri: selectedSymref.uri,
+                                    },
+                                    {
+                                      type: "symref",
+                                      uri: selectedSymref.uri,
+                                      content: [renameValue],
+                                    },
+                                  );
+
+                                  setSavingRename(false);
+                                  setEditingNodeUri(null);
+                                }}
+                              >
+                                ✓
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Text size="sm" style={{ flex: 1 }}>
+                                {selectedSymref.text}
+                              </Text>
+
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                onClick={() => {
+                                  setEditingNodeUri(selectedSymref.uri);
+                                  setRenameValue(selectedSymref.text);
+                                }}
+                              >
+                                <IconPencil size={14} />
+                              </Button>
+                            </>
+                          )}
 
                           <Group gap={6}>
                             <Button
@@ -404,17 +610,103 @@ export function SemanticPanel({
                               </Text>
 
                               {dbResults.map((r) => (
-                                <DbResultItem
+                                <Paper
                                   key={r.id}
-                                  r={r}
-                                  definition={definition}
-                                  mode={{
-                                    type: "symref",
-                                    selected: selectedSymref,
-                                  }}
-                                  onReplaceNode={handleReplaceNode}
-                                  setSelectedNode={setSelectedNode}
-                                />
+                                  withBorder
+                                  p="xs"
+                                  style={{ cursor: "pointer" }}
+                                >
+                                  <Stack gap={6} style={{ width: "100%" }}>
+                                    <Group
+                                      justify="space-between"
+                                      align="center"
+                                      wrap="nowrap"
+                                      style={{ width: "100%" }}
+                                    >
+                                      <Box
+                                        style={{
+                                          flex: 1,
+                                          minWidth: 0,
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        <RenderDbSymbol
+                                          symbol={{
+                                            symbolName: r.symbolName,
+                                            source: "DB",
+                                            futureRepo: r.futureRepo,
+                                          }}
+                                        />
+                                      </Box>
+
+                                      <Button
+                                        size="xs"
+                                        style={{ flexShrink: 0, width: 80 }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+
+                                          const newUri = r.symbolName;
+
+                                          if (
+                                            selectedSymref.uri.startsWith(
+                                              "http",
+                                            )
+                                          ) {
+                                            // MathHub → local replacement
+                                            setPendingMathHubToLocal({
+                                              mathHubUri: selectedSymref.uri,
+                                              localSymbolUri: newUri,
+                                              targetType: "symref",
+                                              primaryDefinitionId:
+                                                definition.id,
+                                            });
+                                            setSelectedNode({
+                                              type: "symref",
+                                              uri: newUri,
+                                            });
+                                          } else {
+                                            onReplaceNode(
+                                              definition.id,
+                                              {
+                                                type: "symref",
+                                                uri: selectedSymref.uri,
+                                              },
+                                              {
+                                                type: "symref",
+                                                uri: newUri,
+                                              },
+                                            );
+
+                                            setSelectedNode({
+                                              type: "symref",
+                                              uri: newUri,
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        Use this
+                                      </Button>
+                                    </Group>
+
+                                    <Box
+                                      style={{
+                                        width: "100%",
+                                        overflow: "hidden",
+                                      }}
+                                    >
+                                      <DbResultItem
+                                        r={r}
+                                        definition={definition}
+                                        mode={{
+                                          type: "symref",
+                                          selected: selectedSymref,
+                                        }}
+                                        onReplaceNode={handleReplaceNode}
+                                        setSelectedNode={setSelectedNode}
+                                      />
+                                    </Box>
+                                  </Stack>
+                                </Paper>
                               ))}
                             </Stack>
                           )}
@@ -506,9 +798,21 @@ export function SemanticPanel({
           onReplaceNode={onReplaceNode}
           onDone={() => {
             setPendingPropagation(null);
-            onClose();
           }}
           onSkip={() => setPendingPropagation(null)}
+        />
+      )}
+
+      {pendingMathHubToLocal && (
+        <MathhubtoSymbolPropagationDialog
+          opened={pendingMathHubToLocal !== null}
+          mathHubUri={pendingMathHubToLocal.mathHubUri}
+          localSymbolUri={pendingMathHubToLocal.localSymbolUri}
+          targetType={pendingMathHubToLocal.targetType}
+          primaryDefinitionId={pendingMathHubToLocal.primaryDefinitionId}
+          onReplaceNode={onReplaceNode}
+          onDone={() => setPendingMathHubToLocal(null)}
+          onCancel={() => setPendingMathHubToLocal(null)}
         />
       )}
     </>

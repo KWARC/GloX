@@ -8,6 +8,23 @@ import {
   type FtmlRoot,
 } from "@/types/ftml.types";
 
+type RemoveSemanticOperation = {
+  kind: "removeSemantic";
+  target: { type: "definiendum" | "symref"; uri: string };
+};
+
+type ReplaceSemanticOperation = {
+  kind: "replaceSemantic";
+  target: { type: "definiendum" | "symref"; uri: string };
+  payload: ReplacePayload;
+};
+
+export type SemanticOperation =
+  | RemoveSemanticOperation
+  | ReplaceSemanticOperation;
+
+type FtmlTree = FtmlRoot | FtmlNode | FtmlContent | FtmlContent[];
+
 export type ParsedMathHubUri = {
   archive: string;
   filePath: string;
@@ -111,23 +128,6 @@ export function findDefiniendum(
   return false;
 }
 
-type RemoveSemanticOperation = {
-  kind: "removeSemantic";
-  target: { type: "definiendum" | "symref"; uri: string };
-};
-
-type ReplaceSemanticOperation = {
-  kind: "replaceSemantic";
-  target: { type: "definiendum" | "symref"; uri: string };
-  payload: ReplacePayload;
-};
-
-export type SemanticOperation =
-  | RemoveSemanticOperation
-  | ReplaceSemanticOperation;
-
-type FtmlTree = FtmlRoot | FtmlNode | FtmlContent | FtmlContent[];
-
 export function transform(
   ast: FtmlTree,
   operation: SemanticOperation,
@@ -212,6 +212,20 @@ function removeSemanticNodeWithIndex(
   return removeSemanticNode(node, target);
 }
 
+function normalizeUri(u: string | undefined): string | undefined {
+  if (!u) return u;
+
+  if (u.startsWith("http")) {
+    try {
+      return new URL(u).searchParams.get("s") ?? u;
+    } catch {
+      return u;
+    }
+  }
+
+  return u;
+}
+
 function replaceSemanticNode(
   node: FtmlTree,
   target: { type: "definiendum" | "symref"; uri: string },
@@ -237,8 +251,9 @@ function replaceSemanticNode(
       payload,
     ) as FtmlContent[];
 
+    const targetUriNorm = normalizeUri(target.uri);
     let symbols = Array.isArray(def.for_symbols)
-      ? def.for_symbols.filter((s) => s !== target.uri)
+      ? def.for_symbols.filter((s) => normalizeUri(s) !== targetUriNorm)
       : [];
 
     if (
@@ -258,7 +273,13 @@ function replaceSemanticNode(
     };
   }
 
-  if (current.type === target.type && current.uri === target.uri) {
+  const currentUri = normalizeUri(current.uri);
+  const targetUri = normalizeUri(target.uri);
+
+  const isSemanticNode =
+    current.type === "definiendum" || current.type === "symref";
+
+  if (isSemanticNode && currentUri === targetUri) {
     if (current.type === "definiendum" && payload.type === "definiendum") {
       return {
         ...(current as DefiniendumNode),
@@ -276,6 +297,7 @@ function replaceSemanticNode(
       };
     }
   }
+
   const copy: FtmlNode = { ...current };
 
   if (copy.content) {
