@@ -20,7 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 
-interface MathHubToLocalPropagationDialogProps {
+interface MathhubtoSymbolPropagationDialogProps {
   opened: boolean;
   mathHubUri: string;
   localSymbolUri: string;
@@ -31,7 +31,7 @@ interface MathHubToLocalPropagationDialogProps {
   onCancel: () => void;
 }
 
-export function MathHubToLocalPropagationDialog({
+export function MathhubtoSymbolPropagationDialog({
   opened,
   mathHubUri,
   localSymbolUri,
@@ -40,7 +40,7 @@ export function MathHubToLocalPropagationDialog({
   onReplaceNode,
   onDone,
   onCancel,
-}: MathHubToLocalPropagationDialogProps) {
+}: MathhubtoSymbolPropagationDialogProps) {
   const [applying, setApplying] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 

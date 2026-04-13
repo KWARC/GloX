@@ -23,7 +23,7 @@ import { IconPencil } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { CurrentUriDisplay } from "./CurrentUriDisplay";
 import { DbResultItem } from "./DbResultItem";
-import { MathHubToLocalPropagationDialog } from "./Mathhubtolocalpropagationdialog";
+import { MathhubtoSymbolPropagationDialog } from "./MathhubtoSymbolPropagationDialog";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { ResultsSection } from "./ResultsSection";
 import { SearchBar } from "./SearchBar";
@@ -804,7 +804,7 @@ export function SemanticPanel({
       )}
 
       {pendingMathHubToLocal && (
-        <MathHubToLocalPropagationDialog
+        <MathhubtoSymbolPropagationDialog
           opened={pendingMathHubToLocal !== null}
           mathHubUri={pendingMathHubToLocal.mathHubUri}
           localSymbolUri={pendingMathHubToLocal.localSymbolUri}
