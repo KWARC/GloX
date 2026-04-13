@@ -23,6 +23,7 @@ import { IconPencil } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { CurrentUriDisplay } from "./CurrentUriDisplay";
 import { DbResultItem } from "./DbResultItem";
+import { MathHubToLocalPropagationDialog } from "./Mathhubtolocalpropagationdialog";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { ResultsSection } from "./ResultsSection";
 import { SearchBar } from "./SearchBar";
@@ -31,6 +32,13 @@ import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
 type PendingPropagation = {
   localSymbolUri: string;
   mathHubUri: string;
+  primaryDefinitionId: string;
+};
+
+type PendingMathHubToLocal = {
+  mathHubUri: string;
+  localSymbolUri: string;
+  targetType: "definiendum" | "symref";
   primaryDefinitionId: string;
 };
 
@@ -58,6 +66,8 @@ export function SemanticPanel({
   const [savingRename, setSavingRename] = useState(false);
   const [pendingPropagation, setPendingPropagation] =
     useState<PendingPropagation | null>(null);
+  const [pendingMathHubToLocal, setPendingMathHubToLocal] =
+    useState<PendingMathHubToLocal | null>(null);
 
   const { definienda, symbolicRefs } = useMemo(() => {
     if (!definition) return { definienda: [], symbolicRefs: [] };
@@ -371,12 +381,29 @@ export function SemanticPanel({
                                           e.stopPropagation();
                                           if (!r.symbolName) return;
 
-                                          setPendingPropagation({
-                                            localSymbolUri:
-                                              selectedDefiniendum.uri,
-                                            mathHubUri: r.symbolName,
-                                            primaryDefinitionId: definition.id,
-                                          });
+                                          if (
+                                            selectedDefiniendum.uri.startsWith(
+                                              "http",
+                                            )
+                                          ) {
+                                            // MathHub → local replacement
+                                            setPendingMathHubToLocal({
+                                              mathHubUri:
+                                                selectedDefiniendum.uri,
+                                              localSymbolUri: r.symbolName,
+                                              targetType: "definiendum",
+                                              primaryDefinitionId:
+                                                definition.id,
+                                            });
+                                          } else {
+                                            setPendingPropagation({
+                                              localSymbolUri:
+                                                selectedDefiniendum.uri,
+                                              mathHubUri: r.symbolName,
+                                              primaryDefinitionId:
+                                                definition.id,
+                                            });
+                                          }
                                           setSelectedNode({
                                             type: "definiendum",
                                             uri: r.symbolName,
@@ -620,22 +647,41 @@ export function SemanticPanel({
 
                                           const newUri = r.symbolName;
 
-                                          onReplaceNode(
-                                            definition.id,
-                                            {
-                                              type: "symref",
-                                              uri: selectedSymref.uri,
-                                            },
-                                            {
+                                          if (
+                                            selectedSymref.uri.startsWith(
+                                              "http",
+                                            )
+                                          ) {
+                                            // MathHub → local replacement
+                                            setPendingMathHubToLocal({
+                                              mathHubUri: selectedSymref.uri,
+                                              localSymbolUri: newUri,
+                                              targetType: "symref",
+                                              primaryDefinitionId:
+                                                definition.id,
+                                            });
+                                            setSelectedNode({
                                               type: "symref",
                                               uri: newUri,
-                                            },
-                                          );
+                                            });
+                                          } else {
+                                            onReplaceNode(
+                                              definition.id,
+                                              {
+                                                type: "symref",
+                                                uri: selectedSymref.uri,
+                                              },
+                                              {
+                                                type: "symref",
+                                                uri: newUri,
+                                              },
+                                            );
 
-                                          setSelectedNode({
-                                            type: "symref",
-                                            uri: newUri,
-                                          });
+                                            setSelectedNode({
+                                              type: "symref",
+                                              uri: newUri,
+                                            });
+                                          }
                                         }}
                                       >
                                         Use this
@@ -754,6 +800,19 @@ export function SemanticPanel({
             setPendingPropagation(null);
           }}
           onSkip={() => setPendingPropagation(null)}
+        />
+      )}
+
+      {pendingMathHubToLocal && (
+        <MathHubToLocalPropagationDialog
+          opened={pendingMathHubToLocal !== null}
+          mathHubUri={pendingMathHubToLocal.mathHubUri}
+          localSymbolUri={pendingMathHubToLocal.localSymbolUri}
+          targetType={pendingMathHubToLocal.targetType}
+          primaryDefinitionId={pendingMathHubToLocal.primaryDefinitionId}
+          onReplaceNode={onReplaceNode}
+          onDone={() => setPendingMathHubToLocal(null)}
+          onCancel={() => setPendingMathHubToLocal(null)}
         />
       )}
     </>
