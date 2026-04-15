@@ -1,3 +1,4 @@
+import { convertPdfToImages, savePdfToDisk } from "@/PDF/PdfToImages";
 import crypto from "node:crypto";
 import prisma from "../../lib/prisma";
 import { UploadDocumentInput, UploadDocumentResult } from "./document.types";
@@ -15,6 +16,8 @@ export async function uploadDocument(
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
+
+  savePdfToDisk(buffer,file.name);
 
   const existing = await prisma.document.findUnique({
     where: { fileHash },
@@ -63,6 +66,9 @@ export async function uploadDocument(
     ]);
 
     console.log("EXTRACTION SUCCESS:", document.id);
+    console.log("IMAGE CONVERSION START:", document.id);
+    await convertPdfToImages(file.name, pages.length);
+    console.log("IMAGE CONVERSION SUCCESS:", document.id);
 
     return {
       status: "OK",

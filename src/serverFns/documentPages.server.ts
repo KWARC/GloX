@@ -11,14 +11,12 @@ export const getDocumentPages = createServerFn({ method: "POST" })
       throw new Error("Not authenticated");
     }
 
-    const role = res.user.role;
-
     return prisma.documentPage.findMany({
       where: {
         documentId: data.documentId,
-        ...(role !== "ADMIN" && {
-          document: { userId: res.user.id },
-        }),
+        document: {
+          userId: res.user.id,
+        },
       },
       orderBy: { pageNumber: "asc" },
     });

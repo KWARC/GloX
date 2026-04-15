@@ -11,8 +11,6 @@ export const getDocumentById = createServerFn({ method: "POST" })
       throw new Error("Not authenticated");
     }
 
-    const role = res.user.role;
-
     const doc = await prisma.document.findUnique({
       where: { id: data.id },
     });
@@ -21,7 +19,7 @@ export const getDocumentById = createServerFn({ method: "POST" })
       throw new Error("Document not found");
     }
 
-    if (role !== "ADMIN" && doc.userId !== res.user.id) {
+    if (doc.userId !== res.user.id) {
       throw new Error("Unauthorized");
     }
 
