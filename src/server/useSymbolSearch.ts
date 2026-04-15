@@ -20,19 +20,17 @@ const MATHHUB_RESULTS_LIMIT = 15;
 export function useSymbolSearch(query: string, enabled: boolean = true) {
   const isSearchValid = query.trim().length >= MIN_SEARCH_LENGTH;
 
-  const { data: mathHubResults = [], isFetching: isSearchingMathHub } =
-    useQuery({
-      queryKey: ["symbol-search-mathhub", query],
-      queryFn: () => ftmlSearchSymbols(query, MATHHUB_RESULTS_LIMIT),
-      enabled: isSearchValid && enabled,
-    });
+  const { data: mathHubResults = [], isFetching: isSearchingMathHub } = useQuery({
+    queryKey: ["symbol-search-mathhub", query],
+    queryFn: () => ftmlSearchSymbols(query, MATHHUB_RESULTS_LIMIT),
+    enabled: isSearchValid && enabled,
+  });
 
-  const { data: databaseResults = [], isFetching: isSearchingDatabase } =
-    useQuery({
-      queryKey: ["symbol-search-db", query],
-      queryFn: () => searchSymbol({ data: query }),
-      enabled: isSearchValid && enabled,
-    });
+  const { data: databaseResults = [], isFetching: isSearchingDatabase } = useQuery({
+    queryKey: ["symbol-search-db", query],
+    queryFn: () => searchSymbol({ data: query }),
+    enabled: isSearchValid && enabled,
+  });
 
   const combinedResults: SymbolSearchResult[] = [
     ...databaseResults.map(
