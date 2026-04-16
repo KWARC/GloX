@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import {
   astReferencesUri,
-  definitionContainsLocalSymbol,
   propagateUriInAst,
 } from "@/server/ftml/convertLocalSymbolToMathHub";
 import { assertFtmlStatement, FtmlRoot } from "@/types/ftml.types";
@@ -63,6 +62,110 @@ export const getDefinitionsReferencingSymbol = createServerFn({
     return candidates;
   });
 
+export const getDefinitionsReferencingMathHubUri = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    (data: { mathHubUri: string; excludeDefinitionId: string }) => data,
+  )
+  .handler(async ({ data }): Promise<PropagationCandidate[]> => {
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
+
+    const { mathHubUri, excludeDefinitionId } = data;
+
+    const definitions = await prisma.definition.findMany({
+      where: { id: { not: excludeDefinitionId } },
+      select: {
+        id: true,
+        statement: true,
+        futureRepo: true,
+        filePath: true,
+        fileName: true,
+        language: true,
+        pageNumber: true,
+      },
+    });
+
+    const candidates: PropagationCandidate[] = [];
+
+    for (const def of definitions) {
+      const ast = assertFtmlStatement(def.statement);
+      if (astReferencesUri(ast, mathHubUri)) {
+        candidates.push({
+          id: def.id,
+          futureRepo: def.futureRepo,
+          filePath: def.filePath,
+          fileName: def.fileName,
+          language: def.language,
+          pageNumber: def.pageNumber,
+          statement: ast,
+        });
+      }
+    }
+
+    return candidates;
+  });
+
+export const applyMathHubReplacement = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      selectedDefinitionIds: string[];
+      mathHubUri: string;
+      newUri: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
+    const userId = userRes.user.id;
+
+    const { selectedDefinitionIds, mathHubUri, newUri } = data;
+
+    if (selectedDefinitionIds.length === 0) return { updated: 0 };
+
+    const definitions = await prisma.definition.findMany({
+      where: { id: { in: selectedDefinitionIds } },
+      select: {
+        id: true,
+        statement: true,
+        originalText: true,
+        currentVersion: true,
+      },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      for (const def of definitions) {
+        const ast = assertFtmlStatement(def.statement);
+        const updated = propagateUriInAst(ast, mathHubUri, newUri);
+
+        const nextVersion = def.currentVersion + 1;
+        const serialized: FtmlRoot = JSON.parse(JSON.stringify(updated));
+
+        await tx.definitionVersion.create({
+          data: {
+            definitionId: def.id,
+            versionNumber: nextVersion,
+            originalText: def.originalText,
+            statement: serialized as object,
+            editedById: userId,
+          },
+        });
+
+        await tx.definition.update({
+          where: { id: def.id },
+          data: {
+            statement: serialized as object,
+            updatedById: userId,
+            currentVersion: nextVersion,
+          },
+        });
+      }
+    });
+
+    return { updated: definitions.length };
+  });
+
 export const applySymbolPropagation = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -77,17 +180,12 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
     if (!userRes.loggedIn) throw new Error("Unauthorized");
     const userId = userRes.user.id;
 
-    const {
-      selectedDefinitionIds,
-      localSymbolUri,
-      mathHubUri,
-      primaryDefinitionId,
-    } = data;
+    const { selectedDefinitionIds, localSymbolUri, mathHubUri } = data;
 
-    if (selectedDefinitionIds.length === 0) {
-      await _maybeDeleteSymbol(primaryDefinitionId, localSymbolUri);
-      return { updated: 0 };
-    }
+    // if (selectedDefinitionIds.length === 0) {
+    //   // await _maybeDeleteSymbol(primaryDefinitionId, localSymbolUri);
+    //   return { updated: 0 };
+    // }
 
     const definitions = await prisma.definition.findMany({
       where: { id: { in: selectedDefinitionIds } },
@@ -129,35 +227,36 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
           },
         });
       }
+      //TODO: We need better way to delete symbols
 
-      const primaryDef = await tx.definition.findUniqueOrThrow({
-        where: { id: primaryDefinitionId },
-        select: { statement: true },
-      });
-      updatedAsts.push(assertFtmlStatement(primaryDef.statement));
+      // const primaryDef = await tx.definition.findUniqueOrThrow({
+      //   where: { id: primaryDefinitionId },
+      //   select: { statement: true },
+      // });
+      // updatedAsts.push(assertFtmlStatement(primaryDef.statement));
 
-      if (!definitionContainsLocalSymbol(updatedAsts, localSymbolUri)) {
-        await tx.symbol.deleteMany({ where: { symbolName: localSymbolUri } });
-      }
+      // if (!definitionContainsLocalSymbol(updatedAsts, localSymbolUri)) {
+      //   await tx.symbol.deleteMany({ where: { symbolName: localSymbolUri } });
+      // }
     });
 
     return { updated: definitions.length };
   });
 
-async function _maybeDeleteSymbol(
-  primaryDefinitionId: string,
-  localSymbolUri: string,
-): Promise<void> {
-  const primaryDef = await prisma.definition.findUnique({
-    where: { id: primaryDefinitionId },
-    select: { statement: true },
-  });
+// async function _maybeDeleteSymbol(
+//   primaryDefinitionId: string,
+//   localSymbolUri: string,
+// ): Promise<void> {
+//   const primaryDef = await prisma.definition.findUnique({
+//     where: { id: primaryDefinitionId },
+//     select: { statement: true },
+//   });
 
-  if (!primaryDef) return;
+//   if (!primaryDef) return;
 
-  const ast = assertFtmlStatement(primaryDef.statement);
+//   const ast = assertFtmlStatement(primaryDef.statement);
 
-  if (!definitionContainsLocalSymbol([ast], localSymbolUri)) {
-    await prisma.symbol.deleteMany({ where: { symbolName: localSymbolUri } });
-  }
-}
+//   if (!definitionContainsLocalSymbol([ast], localSymbolUri)) {
+//     await prisma.symbol.deleteMany({ where: { symbolName: localSymbolUri } });
+//   }
+// }

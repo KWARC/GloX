@@ -10,18 +10,11 @@ import {
   normalizeToRoot,
 } from "@/types/ftml.types";
 
-function isHttp(uri: string) {
+export function isHttp(uri: string) {
   return uri.startsWith("http://") || uri.startsWith("https://");
 }
 
-function isMathHubUri(uri: string): boolean {
-  return (
-    uri.startsWith("http://mathhub.info?") ||
-    uri.startsWith("https://mathhub.info?")
-  );
-}
-
-function collectExternalLabels(
+export function collectExternalSymbols(
   node: FtmlNode | FtmlContent,
   acc: Set<string>,
 ): void {
@@ -41,7 +34,31 @@ function collectExternalLabels(
   }
 
   if (node.content) {
-    node.content.forEach((c) => collectExternalLabels(c, acc));
+    node.content.forEach((c) => collectExternalSymbols(c, acc));
+  }
+}
+
+function isMathHubUri(uri: string): boolean {
+  return (
+    uri.startsWith("http://mathhub.info?") ||
+    uri.startsWith("https://mathhub.info?")
+  );
+}
+
+function collectDeclaredLabels(
+  node: FtmlNode | FtmlContent,
+  acc: Set<string>,
+): void {
+  if (typeof node === "string") return;
+
+  if (isDefiniendumNode(node) && node.symdecl === true && node.uri) {
+    acc.add(node.uri);
+  }
+
+  if (node.content) {
+    for (const child of node.content) {
+      collectDeclaredLabels(child, acc);
+    }
   }
 }
 
@@ -175,7 +192,7 @@ export async function generateStexFromFtml(
     const def = block as DefinitionNode;
 
     const external = new Set<string>();
-    collectExternalLabels(def, external);
+    collectExternalSymbols(def, external);
 
     const deps =
       external.size > 0
@@ -184,15 +201,29 @@ export async function generateStexFromFtml(
           })
         : {};
 
-    const uriMap = new Map<string, string>();
+    const hiddenUriMap = new Map<string, string>();
+    const visibleUriMap = new Map<string, string>();
+    const uniqueDeps = new Set<DefinitionNode>();
+    for (const depDef of Object.values(deps)) {
+      uniqueDeps.add(depDef);
+    }
 
-    for (const [label, depDef] of Object.entries(deps)) {
-      const uri = fdHidden.addSymbolDeclaration(label);
-      uriMap.set(label, uri);
+    for (const depDef of uniqueDeps) {
+      const labels = new Set<string>();
+      collectDeclaredLabels(depDef, labels);
+
+      for (const label of labels) {
+        if (!hiddenUriMap.has(label)) {
+          const hiddenUri = fdHidden.addSymbolDeclaration(label);
+
+          hiddenUriMap.set(label, hiddenUri);
+          visibleUriMap.set(label, hiddenUri); 
+        }
+      }
 
       const rewritten = finalFTML(
         depDef,
-        uriMap,
+        hiddenUriMap,
         futureRepo,
         filePath,
         fileName,
@@ -202,15 +233,22 @@ export async function generateStexFromFtml(
     }
 
     for (const symbol of def.for_symbols) {
-      if (!uriMap.has(symbol) && !symbol.startsWith("http")) {
+      if (!symbol.startsWith("http") && !visibleUriMap.has(symbol)) {
         const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
-        fdVisible.addSymbolDeclaration(symbol);
+        const visibleUri = fdVisible.addSymbolDeclaration(symbol);
 
-        uriMap.set(symbol, hiddenUri);
+        hiddenUriMap.set(symbol, hiddenUri);
+        visibleUriMap.set(symbol, visibleUri);
       }
     }
 
-    const rewritten = finalFTML(def, uriMap, futureRepo, filePath, fileName);
+    const rewritten = finalFTML(
+      def,
+      visibleUriMap,
+      futureRepo,
+      filePath,
+      fileName,
+    );
 
     fdVisible.addElement(rewritten);
   }

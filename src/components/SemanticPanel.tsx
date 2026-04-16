@@ -8,11 +8,22 @@ import {
   SelectedNode,
   SemanticDefinition,
 } from "@/types/Semantic.types";
-import { Box, Button, Center, Flex, Group, Modal, Paper, Stack, Text } from "@mantine/core";
+import {
+  Box,
+  Button,
+  Center,
+  Flex,
+  Group,
+  Modal,
+  Paper,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { useMemo, useState } from "react";
 import { CurrentUriDisplay } from "./CurrentUriDisplay";
 import { DbResultItem } from "./DbResultItem";
-import { RenderSymbolicUri } from "./RenderUri";
+import { MathhubtoSymbolPropagationDialog } from "./MathhubtoSymbolPropagationDialog";
+import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { ResultsSection } from "./ResultsSection";
 import { SearchBar } from "./SearchBar";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
@@ -20,6 +31,13 @@ import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
 type PendingPropagation = {
   localSymbolUri: string;
   mathHubUri: string;
+  primaryDefinitionId: string;
+};
+
+type PendingMathHubToLocal = {
+  mathHubUri: string;
+  localSymbolUri: string;
+  targetType: "definiendum" | "symref";
   primaryDefinitionId: string;
 };
 
@@ -36,7 +54,8 @@ export function SemanticPanel({ opened, onClose, definition, onReplaceNode, onDe
   const [selectedUri, setSelectedUri] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [pendingPropagation, setPendingPropagation] = useState<PendingPropagation | null>(null);
+  const [pendingPropagation, setPendingPropagation] =
+    useState<PendingPropagation | null>(null);
 
   const { definienda, symbolicRefs } = useMemo(() => {
     if (!definition) return { definienda: [], symbolicRefs: [] };
@@ -183,9 +202,9 @@ export function SemanticPanel({ opened, onClose, definition, onReplaceNode, onDe
                       <CurrentUriDisplay uri={selectedDefiniendum.uri} />
                     </Group>
 
-                    <Paper withBorder p="sm">
-                      <Group justify="space-between">
-                        <Text size="sm">{selectedDefiniendum.uri}</Text>
+                      <Paper withBorder p="sm">
+                        <Group justify="space-between">
+                          <Text size="sm">{selectedDefiniendum.uri}</Text>
 
                         <Group gap={6}>
                           <Button
@@ -240,23 +259,23 @@ export function SemanticPanel({ opened, onClose, definition, onReplaceNode, onDe
                               Local DB
                             </Text>
 
-                            {dbResults.map((r) => (
-                              <DbResultItem
-                                key={r.id}
-                                r={r}
-                                definition={definition}
-                                mode={{
-                                  type: "definiendum",
-                                  selected: selectedDefiniendum,
-                                }}
-                                selectedUri={selectedUri}
-                                setSelectedUri={setSelectedUri}
-                                onReplaceNode={handleReplaceNode}
-                                setSelectedNode={setSelectedNode}
-                              />
-                            ))}
-                          </Stack>
-                        )}
+                              {dbResults.map((r) => (
+                                <DbResultItem
+                                  key={r.id}
+                                  r={r}
+                                  definition={definition}
+                                  mode={{
+                                    type: "definiendum",
+                                    selected: selectedDefiniendum,
+                                  }}
+                                  selectedUri={selectedUri}
+                                  setSelectedUri={setSelectedUri}
+                                  onReplaceNode={handleReplaceNode}
+                                  setSelectedNode={setSelectedNode}
+                                />
+                              ))}
+                            </Stack>
+                          )}
 
                         {mathhubResults.length > 0 && (
                           <Stack gap="xs" mt="sm">
@@ -338,9 +357,9 @@ export function SemanticPanel({ opened, onClose, definition, onReplaceNode, onDe
                       <CurrentUriDisplay uri={selectedSymref.uri} />
                     </Group>
 
-                    <Paper withBorder p="sm">
-                      <Group justify="space-between">
-                        <Text size="sm">{selectedSymref.text}</Text>
+                      <Paper withBorder p="sm">
+                        <Group justify="space-between">
+                          <Text size="sm">{selectedSymref.text}</Text>
 
                         <Group gap={6}>
                           <Button
@@ -367,21 +386,21 @@ export function SemanticPanel({ opened, onClose, definition, onReplaceNode, onDe
                               Local DB
                             </Text>
 
-                            {dbResults.map((r) => (
-                              <DbResultItem
-                                key={r.id}
-                                r={r}
-                                definition={definition}
-                                mode={{
-                                  type: "symref",
-                                  selected: selectedSymref,
-                                }}
-                                onReplaceNode={handleReplaceNode}
-                                setSelectedNode={setSelectedNode}
-                              />
-                            ))}
-                          </Stack>
-                        )}
+                              {dbResults.map((r) => (
+                                <DbResultItem
+                                  key={r.id}
+                                  r={r}
+                                  definition={definition}
+                                  mode={{
+                                    type: "symref",
+                                    selected: selectedSymref,
+                                  }}
+                                  onReplaceNode={handleReplaceNode}
+                                  setSelectedNode={setSelectedNode}
+                                />
+                              ))}
+                            </Stack>
+                          )}
 
                         {mathhubResults.length > 0 && (
                           <Stack gap="xs" mt="sm">
@@ -466,9 +485,21 @@ export function SemanticPanel({ opened, onClose, definition, onReplaceNode, onDe
           onReplaceNode={onReplaceNode}
           onDone={() => {
             setPendingPropagation(null);
-            onClose();
           }}
           onSkip={() => setPendingPropagation(null)}
+        />
+      )}
+
+      {pendingMathHubToLocal && (
+        <MathhubtoSymbolPropagationDialog
+          opened={pendingMathHubToLocal !== null}
+          mathHubUri={pendingMathHubToLocal.mathHubUri}
+          localSymbolUri={pendingMathHubToLocal.localSymbolUri}
+          targetType={pendingMathHubToLocal.targetType}
+          primaryDefinitionId={pendingMathHubToLocal.primaryDefinitionId}
+          onReplaceNode={onReplaceNode}
+          onDone={() => setPendingMathHubToLocal(null)}
+          onCancel={() => setPendingMathHubToLocal(null)}
         />
       )}
     </>

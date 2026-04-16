@@ -510,7 +510,14 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
             {actualSymbols.length > 0 ? (
               <Group gap={6} wrap="wrap">
                 {actualSymbols.map((symbol) => (
-                  <Badge key={symbol} size="sm" variant="light" color="blue" radius="sm">
+                  <Badge
+                    key={symbol}
+                    size="sm"
+                    variant="light"
+                    color="blue"
+                    radius="sm"
+                    style={{ textTransform: "none" }}
+                  >
                     {symbol}
                   </Badge>
                 ))}
@@ -790,18 +797,18 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         onClose={() => setLatexOpen(false)}
         title={
           <Group justify="space-between" w="100%">
-            <Group gap="xs">
-              <Text fw={600}>LaTeX Preview</Text>
-              <Badge size="sm" variant="light" color="violet">
-                {identity.fileName}.{identity.language}.tex
-              </Badge>
-            </Group>
+        <Group gap="xs">
+          <Text fw={600}>LaTeX Preview</Text>
+          <Badge size="sm" variant="light" color="violet" style={{ textTransform: "none" }}>
+            {identity.fileName}.{identity.language}.tex
+          </Badge>
+        </Group>
 
-            <Tooltip label="Download .tex">
-              <ActionIcon variant="light" onClick={handleDownload}>
-                <Download size={16} />
-              </ActionIcon>
-            </Tooltip>
+        <Tooltip label="Download .tex">
+          <ActionIcon variant="light" onClick={handleDownload}>
+            <Download size={16} />
+          </ActionIcon>
+        </Tooltip>
           </Group>
         }
         size="xl"
@@ -814,12 +821,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
           minRows={25}
           readOnly={status === "SUBMITTED_TO_MATHHUB" || status === "DISCARDED"}
           styles={{
-            input: {
-              fontFamily: "monospace",
-              fontSize: 13,
-              lineHeight: 1.6,
-              backgroundColor: "var(--mantine-color-gray-0)",
-            },
+        input: {
+          fontFamily: "monospace",
+          fontSize: 13,
+          lineHeight: 1.6,
+          backgroundColor: "var(--mantine-color-gray-0)",
+        },
           }}
         />
         <Group justify="flex-end" mt="md" gap="sm">
