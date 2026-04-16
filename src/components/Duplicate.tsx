@@ -1,23 +1,27 @@
-import { Box, Button, Group, Loader, Paper, Popover, Stack, Text } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-
 import { queryClient } from "@/queryClient";
+import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { useSymbolSearch } from "@/server/useSymbolSearch";
 import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
-
 import {
   updateDefinitionAst,
   UpdateDefinitionAstResult,
 } from "@/serverFns/updateDefinition.server";
-
-import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { assertFtmlStatement } from "@/types/ftml.types";
-
+import { OnReplaceNode } from "@/types/Semantic.types";
+import {
+  Box,
+  Button,
+  Group,
+  Loader,
+  Paper,
+  Popover,
+  Stack,
+  Text,
+} from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 import { RenderSymbolicUri } from "./RenderUri";
-
-import { OnReplaceNode } from "@/types/Semantic.types";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
 
 type DefinitionType = {
@@ -154,15 +158,23 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
       statement: parsedStatement,
     } as never);
 
-    return definienda.find((d) => d.text === symbolName) || definienda[0] || null;
+    return (
+      definienda.find((d) => d.text === symbolName) || definienda[0] || null
+    );
   }, [parsedStatement, definition, symbolName]);
 
-  const { results, isLoading: isSearching } = useSymbolSearch(symbolName, !!symbolName);
+  const { results, isLoading: isSearching } = useSymbolSearch(
+    symbolName,
+    !!symbolName,
+  );
 
   if (!isLoading && !definition) return null;
 
   const mathHubResults: MathHubResultType[] = results
-    .filter((r): r is MathHubResultType => r.source === "MATHHUB" && typeof r.uri === "string")
+    .filter(
+      (r): r is MathHubResultType =>
+        r.source === "MATHHUB" && typeof r.uri === "string",
+    )
     .slice(0, 2);
 
   return (
@@ -177,7 +189,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
             {parsedStatement && definition?.id && (
               <Paper mt="md" p="md" withBorder bg="blue.0">
                 <Box h={140}>
-                  <FtmlPreview ftmlAst={parsedStatement} docId={definition.id} />
+                  <FtmlPreview
+                    ftmlAst={parsedStatement}
+                    docId={definition.id}
+                  />
                 </Box>
               </Paper>
             )}

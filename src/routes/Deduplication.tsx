@@ -1,9 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Box, Stack, Title, Text } from "@mantine/core";
-
-import { getAllSymbols } from "@/serverFns/symbol.server";
 import { Duplicate } from "@/components/Duplicate";
+import { getAllSymbols } from "@/serverFns/symbol.server";
+import { Box, Stack, Text, Title } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 
 type SymbolType = {
   id: string;
@@ -42,7 +41,9 @@ function DeduplicationPage() {
     <Box p="lg">
       <Title mb="md">Deduplication</Title>
 
-      {duplicates.length === 0 && <Text c="dimmed">No duplicate symbols found</Text>}
+      {duplicates.length === 0 && (
+        <Text c="dimmed">No duplicate symbols found</Text>
+      )}
 
       <Stack>
         {duplicates.map(([symbolName]) => (
