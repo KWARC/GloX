@@ -4,30 +4,21 @@ import { Box, Stack, Title, Text } from "@mantine/core";
 
 import { getAllSymbols } from "@/serverFns/symbol.server";
 import { Duplicate } from "@/components/Duplicate";
-
-type SymbolType = {
-  id: string;
-  symbolName: string;
-  alias?: string | null;
-  futureRepo?: string;
-  filePath?: string;
-  fileName?: string;
-  language?: string;
-};
+import { Symbol } from "generated/prisma/client";
 
 export const Route = createFileRoute("/Deduplication")({
   component: DeduplicationPage,
 });
 
 function DeduplicationPage() {
-  const { data: symbols = [], isLoading } = useQuery<SymbolType[]>({
+  const { data: symbols = [], isLoading } = useQuery<Symbol[]>({
     queryKey: ["dedup-symbols"],
     queryFn: () => getAllSymbols(),
   });
 
   if (isLoading) return <div>Loading...</div>;
 
-  const grouped: Record<string, SymbolType[]> = {};
+  const grouped: Record<string, Symbol[]> = {};
 
   symbols.forEach((s) => {
     if (!grouped[s.symbolName]) {
