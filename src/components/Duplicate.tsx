@@ -1,23 +1,18 @@
-import { Box, Button, Group, Loader, Paper, Popover, Stack, Text } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-
 import { queryClient } from "@/queryClient";
+import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { useSymbolSearch } from "@/server/useSymbolSearch";
 import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
-
 import {
   updateDefinitionAst,
   UpdateDefinitionAstResult,
 } from "@/serverFns/updateDefinition.server";
-
-import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { assertFtmlStatement } from "@/types/ftml.types";
-
+import { OnReplaceNode } from "@/types/Semantic.types";
+import { Box, Button, Group, Loader, Paper, Popover, Stack, Text } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 import { RenderSymbolicUri } from "./RenderUri";
-
-import { OnReplaceNode } from "@/types/Semantic.types";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
 
 type DefinitionType = {
