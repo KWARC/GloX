@@ -63,7 +63,7 @@ export async function convertPdfToImages(
     savePath: imagesDir,
     format: "jpg",
     width: 1200,
-    height: 800,
+    height: 500,
   });
 
   for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {

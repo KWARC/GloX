@@ -14,9 +14,6 @@ export const getDocumentPages = createServerFn({ method: "POST" })
     return prisma.documentPage.findMany({
       where: {
         documentId: data.documentId,
-        document: {
-          userId: res.user.id,
-        },
       },
       orderBy: { pageNumber: "asc" },
     });
