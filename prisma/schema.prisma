@@ -51,12 +51,13 @@ model User {
   DefinitionsHistory DefinitionVersion[]
   createdDefinitions Definition[]        @relation("DefinitionCreatedBy")
   updatedDefinitions Definition[]        @relation("DefinitionUpdatedBy")
+  confirmedSymbols   Symbol[]
 }
 
 model Document {
   id       String @id @default(uuid())
   filename String
-  fileHash String @unique
+  fileHash String
   mimeType String
   fileSize Int
 
@@ -74,6 +75,8 @@ model Document {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([fileHash, userId])
 }
 
 model DocumentPage {
@@ -102,6 +105,10 @@ model Symbol {
   fileName   String
   language   String @default("en")
 
+  hasConfirmed  Boolean @default(false)
+  confirmedById String?
+  confirmedBy   User?   @relation(fields: [confirmedById], references: [id])
+
   symbolicReferences SymbolicReference[]
 
   createdAt DateTime @default(now())
@@ -109,6 +116,7 @@ model Symbol {
 
   @@unique([symbolName, futureRepo, filePath, fileName, language])
   @@index([symbolName])
+  @@index([confirmedById])
 }
 
 model SymbolicReference {

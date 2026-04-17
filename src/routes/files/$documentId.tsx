@@ -557,6 +557,7 @@ function RouteComponent() {
                 }}
               >
                 <DocumentPagesPanel
+                  documentId={documentId}
                   pages={pages}
                   onSelection={handleLeftSelection}
                 />
@@ -622,6 +623,7 @@ function RouteComponent() {
               </Group>
               <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
                 <DocumentPagesPanel
+                  documentId={documentId}
                   pages={pages}
                   onSelection={handleLeftSelection}
                 />
