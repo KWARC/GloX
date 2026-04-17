@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { queryClient } from "@/queryClient";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
-import { useSymbolSearch, SymbolSearchResult } from "@/server/useSymbolSearch";
+import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
 import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
 
 import {
@@ -15,6 +15,7 @@ import {
 import { assertFtmlStatement } from "@/types/ftml.types";
 import { OnReplaceNode, SemanticDefinition } from "@/types/Semantic.types";
 
+import { parseUri } from "@/server/parseUri";
 import { FtmlPreview } from "./FtmlPreview";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
@@ -42,12 +43,84 @@ const handleReplaceNode: OnReplaceNode = async (
   return result;
 };
 
+type MathHubItemProps = {
+  safeUri: string;
+  definition: SemanticDefinition;
+  selectedDefiniendum: { uri: string } | null;
+  setPendingPropagation: (data: {
+    localSymbolUri: string;
+    mathHubUri: string;
+    primaryDefinitionId: string;
+  }) => void;
+};
+
+function MathHubItem({
+  safeUri,
+  definition,
+  selectedDefiniendum,
+  setPendingPropagation,
+}: MathHubItemProps) {
+  const [opened, setOpened] = useState(false);
+
+  return (
+    <Popover opened={opened} position="right" withArrow width={350}>
+      <Popover.Target>
+        <Paper
+          p="xs"
+          withBorder
+          style={{ cursor: "pointer" }}
+          onMouseEnter={() => setOpened(true)}
+          onMouseLeave={() => setOpened(false)}
+        >
+          <Group justify="space-between">
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <RenderSymbolicUri uri={safeUri} />
+            </Box>
+
+            <Button
+              size="xs"
+              onClick={(e) => {
+                e.stopPropagation();
+
+                if (!selectedDefiniendum) return;
+
+                setPendingPropagation({
+                  localSymbolUri: selectedDefiniendum.uri,
+                  mathHubUri: safeUri,
+                  primaryDefinitionId: definition.id,
+                });
+              }}
+            >
+              Use this
+            </Button>
+          </Group>
+        </Paper>
+      </Popover.Target>
+
+      <Popover.Dropdown onMouseEnter={() => setOpened(true)} onMouseLeave={() => setOpened(false)}>
+        <Box h={150}>
+          <iframe
+            src={safeUri.replace("http:", "https:")}
+            style={{
+              width: "100%",
+              height: "100%",
+              border: "none",
+            }}
+          />
+        </Box>
+      </Popover.Dropdown>
+    </Popover>
+  );
+}
+
 export function Duplicate({ symbolName }: { symbolName: string }) {
   const [pendingPropagation, setPendingPropagation] = useState<{
     localSymbolUri: string;
     mathHubUri: string;
     primaryDefinitionId: string;
   } | null>(null);
+
+  const [visibleCount, setVisibleCount] = useState(2);
 
   const { data: rawDefinition, isLoading } = useQuery({
     queryKey: ["definition-by-symbol", symbolName],
@@ -80,7 +153,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     );
   }, [definition, symbolName]);
 
-  const { results, isLoading: isSearching } = useSymbolSearch(symbolName, !!symbolName);
+  const searchQuery = `${symbolName} definition`;
+  const hasSearched = searchQuery.trim().length > 0;
+
+  const { results, isLoading: isSearching } = useSymbolSearch(searchQuery, hasSearched);
 
   if (!isLoading && !definition) return null;
 
@@ -88,6 +164,8 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     (r): r is Extract<SymbolSearchResult, { source: "MATHHUB" }> =>
       r.source === "MATHHUB" && typeof r.uri === "string",
   );
+
+  const visibleResults = mathHubResults.slice(0, visibleCount);
 
   return (
     <>
@@ -110,55 +188,38 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           <Stack w="55%">
             {isSearching && <Loader size="xs" />}
 
-            {mathHubResults.length > 0
-              ? mathHubResults.map((r) => (
-                  <Popover key={r.uri} width={350} position="right" withArrow>
-                    <Popover.Target>
-                      <Paper p="xs" withBorder style={{ cursor: "pointer" }}>
-                        <Group justify="space-between">
-                          <Box style={{ flex: 1, minWidth: 0 }}>
-                            <RenderSymbolicUri uri={r.uri} />
-                          </Box>
+            {visibleResults.map((r) => {
+              const parsed = parseUri(r.uri);
+              const safeUri = parsed.conceptUri;
 
-                          <Button
-                            size="xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
+              return (
+                <MathHubItem
+                  key={safeUri}
+                  safeUri={safeUri}
+                  definition={definition!}
+                  selectedDefiniendum={selectedDefiniendum}
+                  setPendingPropagation={setPendingPropagation}
+                />
+              );
+            })}
 
-                              if (!definition || !selectedDefiniendum) return;
+            {mathHubResults.length > 2 && (
+              <Button
+                size="xs"
+                variant="subtle"
+                onClick={() =>
+                  setVisibleCount((prev) => (prev >= mathHubResults.length ? 2 : prev + 3))
+                }
+              >
+                {visibleCount >= mathHubResults.length ? "Show Less" : "Show More"}
+              </Button>
+            )}
 
-                              setPendingPropagation({
-                                localSymbolUri: selectedDefiniendum.uri,
-                                mathHubUri: r.uri,
-                                primaryDefinitionId: definition.id,
-                              });
-                            }}
-                          >
-                            Use this
-                          </Button>
-                        </Group>
-                      </Paper>
-                    </Popover.Target>
-
-                    <Popover.Dropdown>
-                      <Box h={150}>
-                        <iframe
-                          src={typeof r.uri === "string" ? r.uri.replace("http:", "https:") : ""}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            border: "none",
-                          }}
-                        />
-                      </Box>
-                    </Popover.Dropdown>
-                  </Popover>
-                ))
-              : !isSearching && (
-                  <Text size="xs" c="dimmed">
-                    No MathHub results found
-                  </Text>
-                )}
+            {hasSearched && mathHubResults.length === 0 && !isSearching && (
+              <Text size="xs" c="dimmed">
+                No results found in MathHub
+              </Text>
+            )}
 
             <Button size="xs" variant="light">
               NOT A DUPLICATE
@@ -167,7 +228,6 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
         </Group>
       </Paper>
 
-      {/* DIALOG */}
       {pendingPropagation && (
         <SymbolPropagationDialog
           opened={true}
