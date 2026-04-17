@@ -1,35 +1,23 @@
+import { Box, Button, Group, Loader, Paper, Popover, Stack, Text } from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+
 import { queryClient } from "@/queryClient";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
-import { useSymbolSearch } from "@/server/useSymbolSearch";
+import { useSymbolSearch, SymbolSearchResult } from "@/server/useSymbolSearch";
 import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
+
 import {
   updateDefinitionAst,
   UpdateDefinitionAstResult,
 } from "@/serverFns/updateDefinition.server";
+
 import { assertFtmlStatement } from "@/types/ftml.types";
-import { OnReplaceNode } from "@/types/Semantic.types";
-import { Box, Button, Group, Loader, Paper, Popover, Stack, Text } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { OnReplaceNode, SemanticDefinition } from "@/types/Semantic.types";
+
 import { FtmlPreview } from "./FtmlPreview";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
-
-type DefinitionType = {
-  id: string;
-  statement: unknown;
-};
-
-type DefiniendumType = {
-  uri: string;
-  text: string;
-  symdecl: boolean;
-};
-
-type MathHubResultType = {
-  uri: string;
-  source: "MATHHUB";
-};
 
 const handleReplaceNode: OnReplaceNode = async (
   definitionId,
@@ -54,72 +42,6 @@ const handleReplaceNode: OnReplaceNode = async (
   return result;
 };
 
-type MathHubItemProps = {
-  r: MathHubResultType;
-  definition: DefinitionType | null | undefined;
-  selectedDefiniendum: DefiniendumType | null;
-  setPendingPropagation: (data: {
-    localSymbolUri: string;
-    mathHubUri: string;
-    primaryDefinitionId: string;
-  }) => void;
-};
-
-function MathHubItem({
-  r,
-  definition,
-  selectedDefiniendum,
-  setPendingPropagation,
-}: MathHubItemProps) {
-  const [opened, setOpened] = useState(false);
-
-  return (
-    <Popover opened={opened} position="right" withArrow width={350}>
-      <Popover.Target>
-        <Paper
-          p="xs"
-          withBorder
-          style={{ cursor: "pointer" }}
-          onMouseEnter={() => setOpened(true)}
-          onMouseLeave={() => setOpened(false)}
-        >
-          <Group justify="space-between">
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              <RenderSymbolicUri uri={r.uri} />
-            </Box>
-
-            <Button
-              size="xs"
-              onClick={(e) => {
-                e.stopPropagation();
-
-                if (!definition?.id || !selectedDefiniendum?.uri) return;
-
-                setPendingPropagation({
-                  localSymbolUri: selectedDefiniendum.uri,
-                  mathHubUri: r.uri,
-                  primaryDefinitionId: definition.id,
-                });
-              }}
-            >
-              Use this
-            </Button>
-          </Group>
-        </Paper>
-      </Popover.Target>
-
-      <Popover.Dropdown>
-        <Box h={150}>
-          <iframe
-            src={r.uri.replace("http:", "https:")}
-            style={{ width: "100%", height: "100%", border: "none" }}
-          />
-        </Box>
-      </Popover.Dropdown>
-    </Popover>
-  );
-}
-
 export function Duplicate({ symbolName }: { symbolName: string }) {
   const [pendingPropagation, setPendingPropagation] = useState<{
     localSymbolUri: string;
@@ -127,38 +49,45 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     primaryDefinitionId: string;
   } | null>(null);
 
-  const { data: definition, isLoading } = useQuery<DefinitionType | null>({
+  const { data: rawDefinition, isLoading } = useQuery({
     queryKey: ["definition-by-symbol", symbolName],
     queryFn: () => getDefinitionBySymbol({ data: symbolName }),
   });
 
-  const parsedStatement = useMemo(() => {
-    if (!definition?.statement) return null;
+  const definition = useMemo<SemanticDefinition | null>(() => {
+    if (!rawDefinition?.statement) return null;
+
     try {
-      return assertFtmlStatement(definition.statement);
+      return {
+        id: rawDefinition.id,
+        statement: assertFtmlStatement(rawDefinition.statement),
+      };
     } catch {
       return null;
     }
-  }, [definition]);
+  }, [rawDefinition]);
 
-  const selectedDefiniendum = useMemo<DefiniendumType | null>(() => {
-    if (!parsedStatement || !definition) return null;
+  const selectedDefiniendum = useMemo(() => {
+    if (!definition) return null;
 
-    const { definienda } = extractSemanticIndex(parsedStatement, {
-      id: definition.id,
-      statement: parsedStatement,
-    } as never);
+    const { definienda } = extractSemanticIndex(definition.statement, definition);
 
-    return definienda.find((d) => d.text === symbolName) || definienda[0] || null;
-  }, [parsedStatement, definition, symbolName]);
+    return (
+      definienda.find((d) => d.uri === symbolName) ||
+      definienda.find((d) => d.text === symbolName) ||
+      definienda[0] ||
+      null
+    );
+  }, [definition, symbolName]);
 
   const { results, isLoading: isSearching } = useSymbolSearch(symbolName, !!symbolName);
 
   if (!isLoading && !definition) return null;
 
-  const mathHubResults: MathHubResultType[] = results
-    .filter((r): r is MathHubResultType => r.source === "MATHHUB" && typeof r.uri === "string")
-    .slice(0, 2);
+  const mathHubResults = results.filter(
+    (r): r is Extract<SymbolSearchResult, { source: "MATHHUB" }> =>
+      r.source === "MATHHUB" && typeof r.uri === "string",
+  );
 
   return (
     <>
@@ -169,10 +98,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
 
             {isLoading && <Loader size="xs" mt="sm" />}
 
-            {parsedStatement && definition?.id && (
+            {definition && (
               <Paper mt="md" p="md" withBorder bg="blue.0">
                 <Box h={140}>
-                  <FtmlPreview ftmlAst={parsedStatement} docId={definition.id} />
+                  <FtmlPreview ftmlAst={definition.statement} docId={definition.id} />
                 </Box>
               </Paper>
             )}
@@ -183,13 +112,47 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
 
             {mathHubResults.length > 0
               ? mathHubResults.map((r) => (
-                  <MathHubItem
-                    key={r.uri}
-                    r={r}
-                    definition={definition}
-                    selectedDefiniendum={selectedDefiniendum}
-                    setPendingPropagation={setPendingPropagation}
-                  />
+                  <Popover key={r.uri} width={350} position="right" withArrow>
+                    <Popover.Target>
+                      <Paper p="xs" withBorder style={{ cursor: "pointer" }}>
+                        <Group justify="space-between">
+                          <Box style={{ flex: 1, minWidth: 0 }}>
+                            <RenderSymbolicUri uri={r.uri} />
+                          </Box>
+
+                          <Button
+                            size="xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+
+                              if (!definition || !selectedDefiniendum) return;
+
+                              setPendingPropagation({
+                                localSymbolUri: selectedDefiniendum.uri,
+                                mathHubUri: r.uri,
+                                primaryDefinitionId: definition.id,
+                              });
+                            }}
+                          >
+                            Use this
+                          </Button>
+                        </Group>
+                      </Paper>
+                    </Popover.Target>
+
+                    <Popover.Dropdown>
+                      <Box h={150}>
+                        <iframe
+                          src={typeof r.uri === "string" ? r.uri.replace("http:", "https:") : ""}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            border: "none",
+                          }}
+                        />
+                      </Box>
+                    </Popover.Dropdown>
+                  </Popover>
                 ))
               : !isSearching && (
                   <Text size="xs" c="dimmed">
@@ -197,13 +160,14 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
                   </Text>
                 )}
 
-            <Button size="xs" variant="light" color="gray">
+            <Button size="xs" variant="light">
               NOT A DUPLICATE
             </Button>
           </Stack>
         </Group>
       </Paper>
 
+      {/* DIALOG */}
       {pendingPropagation && (
         <SymbolPropagationDialog
           opened={true}
