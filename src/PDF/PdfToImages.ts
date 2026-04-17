@@ -4,6 +4,7 @@ import { fromPath } from "pdf2pic";
 
 const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
 
+
 function ensureDir(dir: string): void {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
