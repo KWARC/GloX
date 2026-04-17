@@ -19,5 +19,9 @@ export const getDocumentById = createServerFn({ method: "POST" })
       throw new Error("Document not found");
     }
 
+    if (doc.userId !== res.user.id) {
+      throw new Error("Unauthorized");
+    }
+
     return doc;
   });
