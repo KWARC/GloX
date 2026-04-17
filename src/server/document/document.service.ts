@@ -17,10 +17,13 @@ export async function uploadDocument(
 
   const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
 
-  savePdfToDisk(buffer,file.name);
+  savePdfToDisk(buffer, file.name);
 
-  const existing = await prisma.document.findUnique({
-    where: { fileHash },
+  const existing = await prisma.document.findFirst({
+    where: {
+      fileHash,
+      userId,
+    },
   });
 
   if (existing) {
