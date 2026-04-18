@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Symbol } from "generated/prisma/client";
 
-export const Route = createFileRoute("/Deduplication")({
+export const Route = createFileRoute("/deduplication")({
   component: DeduplicationPage,
 });
 
@@ -32,7 +32,9 @@ function DeduplicationPage() {
     <Box p="lg">
       <Title mb="md">Deduplication</Title>
 
-      {duplicates.length === 0 && <Text c="dimmed">No duplicate symbols found</Text>}
+      {duplicates.length === 0 && (
+        <Text c="dimmed">No duplicate symbols found</Text>
+      )}
 
       <Stack>
         {duplicates.map(([symbolName]) => (

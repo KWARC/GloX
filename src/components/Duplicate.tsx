@@ -1,21 +1,26 @@
-import { Box, Button, Group, Loader, Paper, Popover, Stack, Text } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-
 import { queryClient } from "@/queryClient";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
+import { parseUri } from "@/server/parseUri";
 import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
 import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
-
 import {
   updateDefinitionAst,
   UpdateDefinitionAstResult,
 } from "@/serverFns/updateDefinition.server";
-
 import { assertFtmlStatement } from "@/types/ftml.types";
 import { OnReplaceNode, SemanticDefinition } from "@/types/Semantic.types";
-
-import { parseUri } from "@/server/parseUri";
+import {
+  Box,
+  Button,
+  Group,
+  Loader,
+  Paper,
+  Popover,
+  Stack,
+  Text,
+} from "@mantine/core";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
@@ -97,7 +102,10 @@ function MathHubItem({
         </Paper>
       </Popover.Target>
 
-      <Popover.Dropdown onMouseEnter={() => setOpened(true)} onMouseLeave={() => setOpened(false)}>
+      <Popover.Dropdown
+        onMouseEnter={() => setOpened(true)}
+        onMouseLeave={() => setOpened(false)}
+      >
         <Box h={150}>
           <iframe
             src={safeUri.replace("http:", "https:")}
@@ -143,7 +151,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
   const selectedDefiniendum = useMemo(() => {
     if (!definition) return null;
 
-    const { definienda } = extractSemanticIndex(definition.statement, definition);
+    const { definienda } = extractSemanticIndex(
+      definition.statement,
+      definition,
+    );
 
     return (
       definienda.find((d) => d.uri === symbolName) ||
@@ -156,7 +167,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
   const searchQuery = `${symbolName} definition`;
   const hasSearched = searchQuery.trim().length > 0;
 
-  const { results, isLoading: isSearching } = useSymbolSearch(searchQuery, hasSearched);
+  const { results, isLoading: isSearching } = useSymbolSearch(
+    searchQuery,
+    hasSearched,
+  );
 
   if (!isLoading && !definition) return null;
 
@@ -179,7 +193,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
             {definition && (
               <Paper mt="md" p="md" withBorder bg="blue.0">
                 <Box h={140}>
-                  <FtmlPreview ftmlAst={definition.statement} docId={definition.id} />
+                  <FtmlPreview
+                    ftmlAst={definition.statement}
+                    docId={definition.id}
+                  />
                 </Box>
               </Paper>
             )}
@@ -208,10 +225,14 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
                 size="xs"
                 variant="subtle"
                 onClick={() =>
-                  setVisibleCount((prev) => (prev >= mathHubResults.length ? 2 : prev + 3))
+                  setVisibleCount((prev) =>
+                    prev >= mathHubResults.length ? 2 : prev + 3,
+                  )
                 }
               >
-                {visibleCount >= mathHubResults.length ? "Show Less" : "Show More"}
+                {visibleCount >= mathHubResults.length
+                  ? "Show Less"
+                  : "Show More"}
               </Button>
             )}
 
