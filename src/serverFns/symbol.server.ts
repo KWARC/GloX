@@ -36,11 +36,22 @@ export type CreateSymbolDefiniendumInput = {
   selectedSymbolUri?: string;
 };
 
-export const getAllSymbols = createServerFn({ method: "GET" }).handler(async () => {
-  return prisma.symbol.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-});
+export const getAllSymbols = createServerFn({ method: "GET" }).handler(
+  async () => {
+    return prisma.symbol.findMany({
+      include: {
+        confirmedBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+);
 
 export const createSymbolDefiniendum = createServerFn({ method: "POST" })
   .inputValidator((data: CreateSymbolDefiniendumInput) => data)
@@ -124,7 +135,9 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         }
       }
 
-      const root: RootNode = normalizeToRoot(assertFtmlStatement(definition.statement));
+      const root: RootNode = normalizeToRoot(
+        assertFtmlStatement(definition.statement),
+      );
 
       const firstNode = root.content[0];
 
@@ -136,7 +149,11 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
 
       const firstContent = definitionNode.content?.[0];
 
-      if (!firstContent || typeof firstContent === "string" || !isParagraphNode(firstContent)) {
+      if (
+        !firstContent ||
+        typeof firstContent === "string" ||
+        !isParagraphNode(firstContent)
+      ) {
         throw new Error("Expected paragraph node inside definition");
       }
 

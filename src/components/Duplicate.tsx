@@ -2,7 +2,14 @@ import { queryClient } from "@/queryClient";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { parseUri } from "@/server/parseUri";
 import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
-import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
+import {
+  getAllSymbols,
+  getDefinitionBySymbol,
+} from "@/serverFns/symbol.server";
+import {
+  confirmSymbolNotDuplicate,
+  undoSymbolConfirmation,
+} from "@/serverFns/symbolDuplicate.server";
 import {
   updateDefinitionAst,
   UpdateDefinitionAstResult,
@@ -14,16 +21,28 @@ import {
   Button,
   Group,
   Loader,
+  Modal,
   Paper,
   Popover,
   Stack,
   Text,
+  ThemeIcon,
+  Tooltip,
 } from "@mantine/core";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
+
+type PendingPropagation = {
+  localSymbolUri: string;
+  mathHubUri: string;
+  primaryDefinitionId: string;
+};
+
+type ConfirmDialogKind = "confirm" | "undo";
 
 const handleReplaceNode: OnReplaceNode = async (
   definitionId,
@@ -33,30 +52,176 @@ const handleReplaceNode: OnReplaceNode = async (
   const result = await updateDefinitionAst({
     data: {
       definitionId,
-      operation: {
-        kind: "replaceSemantic",
-        target,
-        payload,
-      },
+      operation: { kind: "replaceSemantic", target, payload },
     },
   });
-
-  await queryClient.invalidateQueries({
-    queryKey: ["dedup-symbols"],
-  });
-
+  await queryClient.invalidateQueries({ queryKey: ["dedup-symbols"] });
   return result;
 };
+
+type ConfirmationModalProps = {
+  kind: ConfirmDialogKind;
+  symbolName: string;
+  opened: boolean;
+  loading: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+};
+
+function ConfirmationModal({
+  kind,
+  symbolName,
+  opened,
+  loading,
+  onConfirm,
+  onCancel,
+}: ConfirmationModalProps) {
+  const isConfirm = kind === "confirm";
+
+  return (
+    <Modal
+      opened={opened}
+      onClose={onCancel}
+      title={
+        <Group gap="xs">
+          <ThemeIcon
+            size="sm"
+            radius="xl"
+            color={isConfirm ? "blue" : "orange"}
+            variant="light"
+          >
+            <IconInfoCircle size={14} />
+          </ThemeIcon>
+          <Text fw={700} size="sm">
+            {isConfirm ? "Confirm Action" : "Undo Confirmation"}
+          </Text>
+        </Group>
+      }
+      centered
+      size="sm"
+      padding="lg"
+      radius="md"
+    >
+      <Stack gap="md">
+        {isConfirm ? (
+          <Stack gap="xs">
+            <Text size="sm">
+              You are marking{" "}
+              <Text span fw={700} ff="monospace">
+                {symbolName}
+              </Text>{" "}
+              as{" "}
+              <Text span fw={700}>
+                NOT a duplicate
+              </Text>
+              .
+            </Text>
+            <Paper
+              p="sm"
+              radius="md"
+              bg="blue.0"
+              withBorder
+              style={{ borderColor: "var(--mantine-color-blue-3)" }}
+            >
+              <Text size="sm" c="blue.8">
+                This means you have verified that it does not exist on MathHub.
+              </Text>
+            </Paper>
+            <Text size="sm" c="dimmed">
+              Do you want to proceed?
+            </Text>
+          </Stack>
+        ) : (
+          <Stack gap="xs">
+            <Text size="sm">
+              This symbol was previously confirmed as{" "}
+              <Text span fw={700}>
+                NOT a duplicate
+              </Text>
+              .
+            </Text>
+            <Paper
+              p="sm"
+              radius="md"
+              bg="orange.0"
+              withBorder
+              style={{ borderColor: "var(--mantine-color-orange-3)" }}
+            >
+              <Text size="sm" c="orange.8">
+                Undoing this will remove the confirmation and attribution.
+              </Text>
+            </Paper>
+            <Text size="sm" c="dimmed">
+              Do you want to undo this decision?
+            </Text>
+          </Stack>
+        )}
+
+        <Group justify="flex-end" gap="sm" mt="xs">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            color={isConfirm ? "blue" : "orange"}
+            loading={loading}
+            onClick={onConfirm}
+          >
+            {isConfirm ? "Confirm" : "Undo"}
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  );
+}
+
+type ConfirmedIconProps = {
+  confirmedByName: string | null;
+};
+
+function ConfirmedIcon({ confirmedByName }: ConfirmedIconProps) {
+  return (
+    <Tooltip
+      label={
+        <Stack gap={2}>
+          <Text size="xs" fw={600}>
+            This symbol is not a duplicate.
+          </Text>
+          {confirmedByName && (
+            <Text size="xs" c="dimmed">
+              Confirmed by: {confirmedByName}
+            </Text>
+          )}
+        </Stack>
+      }
+      withArrow
+      multiline
+      w={220}
+      position="top"
+    >
+      <ThemeIcon
+        size="sm"
+        radius="xl"
+        color="green"
+        variant="light"
+        style={{ cursor: "help" }}
+      >
+        <IconInfoCircle size={13} />
+      </ThemeIcon>
+    </Tooltip>
+  );
+}
 
 type MathHubItemProps = {
   safeUri: string;
   definition: SemanticDefinition;
   selectedDefiniendum: { uri: string } | null;
-  setPendingPropagation: (data: {
-    localSymbolUri: string;
-    mathHubUri: string;
-    primaryDefinitionId: string;
-  }) => void;
+  setPendingPropagation: (data: PendingPropagation) => void;
 };
 
 function MathHubItem({
@@ -81,14 +246,11 @@ function MathHubItem({
             <Box style={{ flex: 1, minWidth: 0 }}>
               <RenderSymbolicUri uri={safeUri} />
             </Box>
-
             <Button
               size="xs"
               onClick={(e) => {
                 e.stopPropagation();
-
                 if (!selectedDefiniendum) return;
-
                 setPendingPropagation({
                   localSymbolUri: selectedDefiniendum.uri,
                   mathHubUri: safeUri,
@@ -109,11 +271,7 @@ function MathHubItem({
         <Box h={150}>
           <iframe
             src={safeUri.replace("http:", "https:")}
-            style={{
-              width: "100%",
-              height: "100%",
-              border: "none",
-            }}
+            style={{ width: "100%", height: "100%", border: "none" }}
           />
         </Box>
       </Popover.Dropdown>
@@ -122,22 +280,44 @@ function MathHubItem({
 }
 
 export function Duplicate({ symbolName }: { symbolName: string }) {
-  const [pendingPropagation, setPendingPropagation] = useState<{
-    localSymbolUri: string;
-    mathHubUri: string;
-    primaryDefinitionId: string;
-  } | null>(null);
-
+  const [pendingPropagation, setPendingPropagation] =
+    useState<PendingPropagation | null>(null);
   const [visibleCount, setVisibleCount] = useState(2);
+  const [dialogKind, setDialogKind] = useState<ConfirmDialogKind | null>(null);
+  const [dialogLoading, setDialogLoading] = useState(false);
 
   const { data: rawDefinition, isLoading } = useQuery({
     queryKey: ["definition-by-symbol", symbolName],
     queryFn: () => getDefinitionBySymbol({ data: symbolName }),
   });
 
+  const { data: symbols = [] } = useQuery({
+    queryKey: ["dedup-symbols"],
+    queryFn: () => getAllSymbols(),
+  });
+
+  const symbol = symbols.find((s) => s.symbolName === symbolName);
+
+  const confirmedByName = useMemo<string | null>(() => {
+    if (!symbol?.confirmedById) return null;
+    const withRelation = symbol as typeof symbol & {
+      confirmedBy?: {
+        firstName?: string | null;
+        lastName?: string | null;
+        email?: string | null;
+      } | null;
+    };
+    if (withRelation.confirmedBy) {
+      const { firstName, lastName, email } = withRelation.confirmedBy;
+      if (firstName || lastName)
+        return [firstName, lastName].filter(Boolean).join(" ");
+      if (email) return email;
+    }
+    return symbol.confirmedById;
+  }, [symbol]);
+
   const definition = useMemo<SemanticDefinition | null>(() => {
     if (!rawDefinition?.statement) return null;
-
     try {
       return {
         id: rawDefinition.id,
@@ -150,12 +330,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
 
   const selectedDefiniendum = useMemo(() => {
     if (!definition) return null;
-
     const { definienda } = extractSemanticIndex(
       definition.statement,
       definition,
     );
-
     return (
       definienda.find((d) => d.uri === symbolName) ||
       definienda.find((d) => d.text === symbolName) ||
@@ -165,11 +343,9 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
   }, [definition, symbolName]);
 
   const searchQuery = `${symbolName} definition`;
-  const hasSearched = searchQuery.trim().length > 0;
-
   const { results, isLoading: isSearching } = useSymbolSearch(
     searchQuery,
-    hasSearched,
+    true,
   );
 
   if (!isLoading && !definition) return null;
@@ -180,18 +356,46 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
   );
 
   const visibleResults = mathHubResults.slice(0, visibleCount);
+  const isConfirmed = symbol?.hasConfirmed === true;
+
+  async function handleConfirmAction() {
+    if (!symbol) return;
+    setDialogLoading(true);
+    try {
+      await confirmSymbolNotDuplicate({ data: { symbolId: symbol.id } });
+      await queryClient.invalidateQueries({ queryKey: ["dedup-symbols"] });
+    } finally {
+      setDialogLoading(false);
+      setDialogKind(null);
+    }
+  }
+
+  async function handleUndoAction() {
+    if (!symbol) return;
+    setDialogLoading(true);
+    try {
+      await undoSymbolConfirmation({ data: { symbolId: symbol.id } });
+      await queryClient.invalidateQueries({ queryKey: ["dedup-symbols"] });
+    } finally {
+      setDialogLoading(false);
+      setDialogKind(null);
+    }
+  }
 
   return (
     <>
-      <Paper withBorder p="lg" mb="md">
+      <Paper withBorder p="lg" mb="md" radius="md">
         <Group align="flex-start" justify="space-between">
+          {/* ── Left: symbol name + preview ── */}
           <Box w="40%">
-            <Text fw={700}>{symbolName}</Text>
+            <Text fw={700} mb={4}>
+              {symbolName}
+            </Text>
 
             {isLoading && <Loader size="xs" mt="sm" />}
 
             {definition && (
-              <Paper mt="md" p="md" withBorder bg="blue.0">
+              <Paper mt="sm" p="md" withBorder bg="blue.0">
                 <Box h={140}>
                   <FtmlPreview
                     ftmlAst={definition.statement}
@@ -202,13 +406,12 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
             )}
           </Box>
 
-          <Stack w="55%">
+          <Stack w="55%" gap="sm">
             {isSearching && <Loader size="xs" />}
 
             {visibleResults.map((r) => {
               const parsed = parseUri(r.uri);
               const safeUri = parsed.conceptUri;
-
               return (
                 <MathHubItem
                   key={safeUri}
@@ -236,18 +439,58 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
               </Button>
             )}
 
-            {hasSearched && mathHubResults.length === 0 && !isSearching && (
+            {mathHubResults.length === 0 && !isSearching && (
               <Text size="xs" c="dimmed">
                 No results found in MathHub
               </Text>
             )}
 
-            <Button size="xs" variant="light">
-              NOT A DUPLICATE
-            </Button>
+            <Group gap="xs" mt="xs">
+              <Button
+                size="xs"
+                variant="light"
+                color="blue"
+                disabled={isConfirmed}
+                onClick={() => {
+                  if (!symbol || isConfirmed) return;
+                  setDialogKind("confirm");
+                }}
+              >
+                NOT A DUPLICATE
+              </Button>
+
+              {isConfirmed && (
+                <>
+                  <ConfirmedIcon confirmedByName={confirmedByName} />
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    color="gray"
+                    onClick={() => setDialogKind("undo")}
+                  >
+                    Undo
+                  </Button>
+                </>
+              )}
+            </Group>
           </Stack>
         </Group>
       </Paper>
+
+      {dialogKind !== null && symbol && (
+        <ConfirmationModal
+          kind={dialogKind}
+          symbolName={symbolName}
+          opened={dialogKind !== null}
+          loading={dialogLoading}
+          onConfirm={
+            dialogKind === "confirm" ? handleConfirmAction : handleUndoAction
+          }
+          onCancel={() => {
+            if (!dialogLoading) setDialogKind(null);
+          }}
+        />
+      )}
 
       {pendingPropagation && (
         <SymbolPropagationDialog
