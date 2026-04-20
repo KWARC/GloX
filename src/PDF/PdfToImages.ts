@@ -54,10 +54,6 @@ export async function convertPdfToImages(
   }
 
   ensureDir(imagesDir);
-    throw new Error(`PDF file not found: ${pdfPath}`);
-  }
-
-  ensureDir(imagesDir);
 
   const allExist = Array.from({ length: pageCount }, (_, i) => i + 1).every(
     (n) => fs.existsSync(getPageImagePath(filename, n)),
