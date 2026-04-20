@@ -1,13 +1,14 @@
 import { queryClient } from "@/queryClient";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { parseUri, ReplacePayload } from "@/server/parseUri";
-import { ExtractedItem } from "@/server/text-selection";
+import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
 import {
   deleteDefinition,
   updateDefinition,
 } from "@/serverFns/extractDefinition.server";
 import {
+  createSymbolDefiniendum,
   getAllSymbols,
   getDefinitionBySymbol,
 } from "@/serverFns/symbol.server";
@@ -15,40 +16,25 @@ import {
   confirmSymbolNotDuplicate,
   undoSymbolConfirmation,
 } from "@/serverFns/symbolDuplicate.server";
+import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import {
   updateDefinitionAst,
   UpdateDefinitionAstResult,
 } from "@/serverFns/updateDefinition.server";
 import { assertFtmlStatement, FtmlStatement } from "@/types/ftml.types";
 import { OnReplaceNode, SemanticDefinition } from "@/types/Semantic.types";
-import {
-  Box,
-  Button,
-  Group,
-  Loader,
-  Modal,
-  Paper,
-  Popover,
-  Stack,
-  Text,
-  ThemeIcon,
-  Tooltip,
-} from "@mantine/core";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { Box, Button, Group, Loader, Paper, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { ConfirmationModal, ConfirmDialogKind } from "./ConfirmationModal";
+import { ConfirmedIcon } from "./ConfirmedIcon";
+import { DefiniendumDialog } from "./DefiniendumDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
-import { RenderSymbolicUri } from "./RenderUri";
+import { MathHubSearchResult, PendingPropagation } from "./MathHubSearchResult";
+import { SelectionPopup } from "./SelectionPopup";
 import { SemanticPanel } from "./SemanticPanel";
+import { SymbolicRef } from "./SymbolicRef";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
-
-type PendingPropagation = {
-  localSymbolUri: string;
-  mathHubUri: string;
-  primaryDefinitionId: string;
-};
-
-type ConfirmDialogKind = "confirm" | "undo";
 
 const handleReplaceNode: OnReplaceNode = async (
   definitionId,
@@ -65,226 +51,6 @@ const handleReplaceNode: OnReplaceNode = async (
   return result;
 };
 
-type ConfirmationModalProps = {
-  kind: ConfirmDialogKind;
-  symbolName: string;
-  opened: boolean;
-  loading: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-};
-
-function ConfirmationModal({
-  kind,
-  symbolName,
-  opened,
-  loading,
-  onConfirm,
-  onCancel,
-}: ConfirmationModalProps) {
-  const isConfirm = kind === "confirm";
-
-  return (
-    <Modal
-      opened={opened}
-      onClose={onCancel}
-      title={
-        <Group gap="xs">
-          <ThemeIcon
-            size="sm"
-            radius="xl"
-            color={isConfirm ? "blue" : "orange"}
-            variant="light"
-          >
-            <IconInfoCircle size={14} />
-          </ThemeIcon>
-          <Text fw={700} size="sm">
-            {isConfirm ? "Confirm Action" : "Undo Confirmation"}
-          </Text>
-        </Group>
-      }
-      centered
-      size="sm"
-      padding="lg"
-      radius="md"
-    >
-      <Stack gap="md">
-        {isConfirm ? (
-          <Stack gap="xs">
-            <Text size="sm">
-              You are marking{" "}
-              <Text span fw={700} ff="monospace">
-                {symbolName}
-              </Text>{" "}
-              as{" "}
-              <Text span fw={700}>
-                NOT a duplicate
-              </Text>
-              .
-            </Text>
-            <Paper
-              p="sm"
-              radius="md"
-              bg="blue.0"
-              withBorder
-              style={{ borderColor: "var(--mantine-color-blue-3)" }}
-            >
-              <Text size="sm" c="blue.8">
-                This means you have verified that it does not exist on MathHub.
-              </Text>
-            </Paper>
-            <Text size="sm" c="dimmed">
-              Do you want to proceed?
-            </Text>
-          </Stack>
-        ) : (
-          <Stack gap="xs">
-            <Text size="sm">
-              This symbol was previously confirmed as{" "}
-              <Text span fw={700}>
-                NOT a duplicate
-              </Text>
-              .
-            </Text>
-            <Paper
-              p="sm"
-              radius="md"
-              bg="orange.0"
-              withBorder
-              style={{ borderColor: "var(--mantine-color-orange-3)" }}
-            >
-              <Text size="sm" c="orange.8">
-                Undoing this will remove the confirmation and attribution.
-              </Text>
-            </Paper>
-            <Text size="sm" c="dimmed">
-              Do you want to undo this decision?
-            </Text>
-          </Stack>
-        )}
-
-        <Group justify="flex-end" gap="sm" mt="xs">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onCancel}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            color={isConfirm ? "blue" : "orange"}
-            loading={loading}
-            onClick={onConfirm}
-          >
-            {isConfirm ? "Confirm" : "Undo"}
-          </Button>
-        </Group>
-      </Stack>
-    </Modal>
-  );
-}
-
-type ConfirmedIconProps = {
-  confirmedByName: string | null;
-};
-
-function ConfirmedIcon({ confirmedByName }: ConfirmedIconProps) {
-  return (
-    <Tooltip
-      label={
-        <Stack gap={2}>
-          <Text size="xs" fw={600}>
-            This symbol is not a duplicate.
-          </Text>
-          {confirmedByName && (
-            <Text size="xs" c="dimmed">
-              Confirmed by: {confirmedByName}
-            </Text>
-          )}
-        </Stack>
-      }
-      withArrow
-      multiline
-      w={220}
-      position="top"
-    >
-      <ThemeIcon
-        size="sm"
-        radius="xl"
-        color="green"
-        variant="light"
-        style={{ cursor: "help" }}
-      >
-        <IconInfoCircle size={13} />
-      </ThemeIcon>
-    </Tooltip>
-  );
-}
-
-type MathHubItemProps = {
-  safeUri: string;
-  definition: SemanticDefinition;
-  selectedDefiniendum: { uri: string } | null;
-  setPendingPropagation: (data: PendingPropagation) => void;
-};
-
-function MathHubItem({
-  safeUri,
-  definition,
-  selectedDefiniendum,
-  setPendingPropagation,
-}: MathHubItemProps) {
-  const [opened, setOpened] = useState(false);
-
-  return (
-    <Popover opened={opened} position="right" withArrow width={350}>
-      <Popover.Target>
-        <Paper
-          p="xs"
-          withBorder
-          style={{ cursor: "pointer" }}
-          onMouseEnter={() => setOpened(true)}
-          onMouseLeave={() => setOpened(false)}
-        >
-          <Group justify="space-between">
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              <RenderSymbolicUri uri={safeUri} />
-            </Box>
-            <Button
-              size="xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!selectedDefiniendum) return;
-                setPendingPropagation({
-                  localSymbolUri: selectedDefiniendum.uri,
-                  mathHubUri: safeUri,
-                  primaryDefinitionId: definition.id,
-                });
-              }}
-            >
-              Use this
-            </Button>
-          </Group>
-        </Paper>
-      </Popover.Target>
-
-      <Popover.Dropdown
-        onMouseEnter={() => setOpened(true)}
-        onMouseLeave={() => setOpened(false)}
-      >
-        <Box h={150}>
-          <iframe
-            src={safeUri.replace("http:", "https:")}
-            style={{ width: "100%", height: "100%", border: "none" }}
-          />
-        </Box>
-      </Popover.Dropdown>
-    </Popover>
-  );
-}
-
 export function Duplicate({ symbolName }: { symbolName: string }) {
   const [pendingPropagation, setPendingPropagation] =
     useState<PendingPropagation | null>(null);
@@ -293,6 +59,22 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
   const [dialogLoading, setDialogLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
+  const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
+    useTextSelection();
+
+  const [defDialogOpen, setDefDialogOpen] = useState(false);
+
+  const [defExtractText, setDefExtractText] = useState<string | null>(null);
+
+  const [defExtractId, setDefExtractId] = useState<string | null>(null);
+
+  const [mode, setMode] = useState<"SymbolicRef" | null>(null);
+
+  const [conceptUri, setConceptUri] = useState("");
+
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+
+  const [savedSelection, setSavedSelection] = useState<any>(null);
 
   const { data: rawDefinition, isLoading } = useQuery({
     queryKey: ["definition-by-symbol", symbolName],
@@ -424,6 +206,97 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     );
   }
 
+  async function handleDefiniendumSubmit(params: any) {
+    if (!defExtractId || !defExtractText || !selection) return;
+
+    if (params.mode === "CREATE") {
+      await createSymbolDefiniendum({
+        data: {
+          definitionId: defExtractId,
+          selectedText: defExtractText,
+          startOffset: selection.startOffset,
+          endOffset: selection.endOffset,
+          symdecl: true,
+          futureRepo: "",
+          filePath: "",
+          fileName: "",
+          language: "en",
+          symbolName: params.symbolName,
+          alias: params.alias || null,
+        },
+      });
+    } else {
+      await createSymbolDefiniendum({
+        data: {
+          definitionId: defExtractId,
+          selectedText: defExtractText,
+          startOffset: selection.startOffset,
+          endOffset: selection.endOffset,
+          symdecl: false,
+          futureRepo: "",
+          filePath: "",
+          fileName: "",
+          language: "en",
+          selectedSymbolSource: params.selectedSymbol.source,
+          selectedSymbolId: params.selectedSymbol.id,
+          selectedSymbolUri: params.selectedSymbol.uri,
+          symbolName: "",
+        },
+      });
+    }
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definition-by-symbol", symbolName],
+    });
+
+    setDefDialogOpen(false);
+    setDefExtractId(null);
+    setDefExtractText(null);
+    clearAll();
+  }
+
+  async function handleSaveSymbolicRef(symRef: any) {
+    if (!defExtractId || !selection) return;
+
+    if (editingNodeId) {
+      await updateDefinitionAst({
+        data: {
+          definitionId: defExtractId,
+          operation: {
+            kind: "replaceSemantic",
+            target: { type: "symref", uri: editingNodeId },
+            payload: {
+              type: "symref",
+              uri:
+                symRef.source === "MATHHUB"
+                  ? symRef.uri
+                  : `${symRef.futureRepo}/${symRef.symbolName}`,
+            },
+          },
+        },
+      });
+    } else {
+      await symbolicRef({
+        data: {
+          definitionId: defExtractId,
+          selection: {
+            text: savedSelection.text,
+            startOffset: selection.startOffset,
+            endOffset: selection.endOffset,
+          },
+          symRef,
+        },
+      });
+    }
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definition-by-symbol", symbolName],
+    });
+
+    setMode(null);
+    setEditingNodeId(null);
+  }
+
   if (!isLoading && !definition) return null;
 
   const mathHubResults = results.filter(
@@ -479,7 +352,9 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
                   onToggleEdit={handleToggleEdit}
                   onUpdate={handleUpdate}
                   onDelete={handleDelete}
-                  onSelection={() => {}}
+                  onSelection={(extractId) => {
+                    handleSelection("right", { extractId });
+                  }}
                   onOpenSemanticPanel={() => setSemanticPanelOpen(true)}
                   showPageNumber={false}
                   showDefinitionMeta={false}
@@ -496,7 +371,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
               const parsed = parseUri(r.uri);
               const safeUri = parsed.conceptUri;
               return (
-                <MathHubItem
+                <MathHubSearchResult
                   key={safeUri}
                   safeUri={safeUri}
                   definition={definition!}
@@ -594,6 +469,46 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           definition={definition}
           onReplaceNode={handleReplaceNodeLocal}
           onDeleteNode={handleDeleteNode}
+        />
+      )}
+
+      {popup && (
+        <SelectionPopup
+          popup={popup}
+          onClose={clearPopupOnly}
+          onDefiniendum={() => {
+            if (!selection?.extractId || !selection.text) return;
+
+            setDefExtractId(selection.extractId);
+            setDefExtractText(selection.text);
+            setDefDialogOpen(true);
+          }}
+          onSymbolicRef={() => {
+            if (!selection?.extractId || !selection.text) return;
+
+            setSavedSelection(selection);
+            setDefExtractId(selection.extractId);
+            setConceptUri(selection.text);
+            setEditingNodeId(null);
+            setMode("SymbolicRef");
+
+            clearPopupOnly();
+          }}
+        />
+      )}
+
+      <DefiniendumDialog
+        opened={defDialogOpen}
+        extractedText={defExtractText}
+        onSubmit={handleDefiniendumSubmit}
+        onClose={() => setDefDialogOpen(false)}
+      />
+
+      {mode === "SymbolicRef" && (
+        <SymbolicRef
+          conceptUri={conceptUri}
+          onClose={() => setMode(null)}
+          onSelect={handleSaveSymbolicRef}
         />
       )}
     </>
