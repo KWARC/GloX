@@ -4,7 +4,6 @@ import { fromPath } from "pdf2pic";
 
 const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
 
-
 function ensureDir(dir: string): void {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -24,7 +23,7 @@ export function getPdfPath(filename: string): string {
 }
 
 export function getPageImagesDir(filename: string): string {
-  return path.join(UPLOADS_DIR, getBaseName(filename)); // <-- FIX
+  return path.join(UPLOADS_DIR, getBaseName(filename)); 
 }
 
 export function getPageImagePath(filename: string, pageNumber: number): string {
@@ -64,7 +63,7 @@ export async function convertPdfToImages(
     savePath: imagesDir,
     format: "jpg",
     width: 1200,
-    height: 800,
+    height: 600,
   });
 
   for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
