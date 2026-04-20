@@ -31,11 +31,11 @@ export async function ftmlSearchSymbols(
       return [];
     }
 
-    const json = (await resp.json()) as [string, unknown[]][] | undefined;
+    const json = (await resp.json()) as [number, string, string][];
 
     if (!Array.isArray(json)) return [];
 
-    return json.map(([symbolUri]) => symbolUri);
+    return json.map(([, symbolUri]) => symbolUri);
   } catch (err) {
     console.warn("FTML search crashed:", err);
     return [];

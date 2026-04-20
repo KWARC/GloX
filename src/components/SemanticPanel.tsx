@@ -98,6 +98,8 @@ export function SemanticPanel({
     [results],
   );
 
+  const hasSearched = searchQuery.trim().length > 0;
+
   function handleClose() {
     setSearchInput("");
     setSearchQuery("");
@@ -329,6 +331,12 @@ export function SemanticPanel({
 
                       <ResultsSection isLoading={searchLoading}>
                         <>
+                          {hasSearched && dbResults.length === 0 && (
+                            <Text size="xs" c="dimmed">
+                              No results found in Local DB
+                            </Text>
+                          )}
+
                           {dbResults.length > 0 && (
                             <Stack gap="xs">
                               <Text size="xs" fw={600} c="dimmed">
@@ -348,20 +356,12 @@ export function SemanticPanel({
                                   }
                                   onClick={() => setSelectedUri(r.symbolName)}
                                 >
-                                  <Stack gap={6} style={{ width: "100%" }}>
+                                  <Stack gap={6}>
                                     <Group
                                       justify="space-between"
-                                      align="center"
                                       wrap="nowrap"
-                                      style={{ width: "100%" }}
                                     >
-                                      <Box
-                                        style={{
-                                          flex: 1,
-                                          minWidth: 0,
-                                          overflow: "hidden",
-                                        }}
-                                      >
+                                      <Box style={{ flex: 1, minWidth: 0 }}>
                                         <RenderDbSymbol
                                           symbol={{
                                             symbolName: r.symbolName,
@@ -373,20 +373,15 @@ export function SemanticPanel({
 
                                       <Button
                                         size="xs"
-                                        style={{
-                                          flexShrink: 0,
-                                          width: 80,
-                                        }}
+                                        style={{ width: 80 }}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          if (!r.symbolName) return;
 
                                           if (
                                             selectedDefiniendum.uri.startsWith(
                                               "http",
                                             )
                                           ) {
-                                            // MathHub → local replacement
                                             setPendingMathHubToLocal({
                                               mathHubUri:
                                                 selectedDefiniendum.uri,
@@ -404,6 +399,7 @@ export function SemanticPanel({
                                                 definition.id,
                                             });
                                           }
+
                                           setSelectedNode({
                                             type: "definiendum",
                                             uri: r.symbolName,
@@ -415,29 +411,28 @@ export function SemanticPanel({
                                       </Button>
                                     </Group>
 
-                                    <Box
-                                      style={{
-                                        width: "100%",
-                                        overflow: "hidden",
+                                    <DbResultItem
+                                      r={r}
+                                      definition={definition}
+                                      mode={{
+                                        type: "definiendum",
+                                        selected: selectedDefiniendum,
                                       }}
-                                    >
-                                      <DbResultItem
-                                        r={r}
-                                        definition={definition}
-                                        mode={{
-                                          type: "definiendum",
-                                          selected: selectedDefiniendum,
-                                        }}
-                                        selectedUri={selectedUri}
-                                        setSelectedUri={setSelectedUri}
-                                        onReplaceNode={handleReplaceNode}
-                                        setSelectedNode={setSelectedNode}
-                                      />
-                                    </Box>
+                                      selectedUri={selectedUri}
+                                      setSelectedUri={setSelectedUri}
+                                      onReplaceNode={handleReplaceNode}
+                                      setSelectedNode={setSelectedNode}
+                                    />
                                   </Stack>
                                 </Paper>
                               ))}
                             </Stack>
+                          )}
+
+                          {hasSearched && mathhubResults.length === 0 && (
+                            <Text size="xs" c="dimmed" mt="sm">
+                              No results found in MathHub
+                            </Text>
                           )}
 
                           {mathhubResults.length > 0 && (
@@ -457,38 +452,27 @@ export function SemanticPanel({
                                   }
                                   onClick={() => setSelectedUri(r.uri)}
                                 >
-                                  <Group
-                                    justify="space-between"
-                                    wrap="nowrap"
-                                    align="center"
-                                  >
-                                    <Box
-                                      style={{
-                                        flex: 1,
-                                        minWidth: 0,
-                                        overflow: "hidden",
-                                      }}
-                                    >
+                                  <Group justify="space-between" wrap="nowrap">
+                                    <Box style={{ flex: 1, minWidth: 0 }}>
                                       <RenderSymbolicUri uri={r.uri} />
                                     </Box>
 
                                     <Button
                                       size="xs"
-                                      style={{ flexShrink: 0 }}
-                                      onClick={async (e) => {
+                                      onClick={(e) => {
                                         e.stopPropagation();
-                                        const newUri = r.uri;
                                         setPendingPropagation({
                                           localSymbolUri:
                                             selectedDefiniendum.uri,
-                                          mathHubUri: newUri,
+                                          mathHubUri: r.uri,
                                           primaryDefinitionId: definition.id,
                                         });
+
                                         setSelectedNode({
                                           type: "definiendum",
-                                          uri: newUri,
+                                          uri: r.uri,
                                         });
-                                        setSelectedUri(newUri);
+                                        setSelectedUri(r.uri);
                                       }}
                                     >
                                       Use this
@@ -603,6 +587,12 @@ export function SemanticPanel({
 
                       <ResultsSection isLoading={searchLoading}>
                         <>
+                          {hasSearched && dbResults.length === 0 && (
+                            <Text size="xs" c="dimmed">
+                              No results found in Local DB
+                            </Text>
+                          )}
+
                           {dbResults.length > 0 && (
                             <Stack gap="xs">
                               <Text size="xs" fw={600} c="dimmed">
@@ -616,20 +606,12 @@ export function SemanticPanel({
                                   p="xs"
                                   style={{ cursor: "pointer" }}
                                 >
-                                  <Stack gap={6} style={{ width: "100%" }}>
+                                  <Stack gap={6}>
                                     <Group
                                       justify="space-between"
-                                      align="center"
                                       wrap="nowrap"
-                                      style={{ width: "100%" }}
                                     >
-                                      <Box
-                                        style={{
-                                          flex: 1,
-                                          minWidth: 0,
-                                          overflow: "hidden",
-                                        }}
-                                      >
+                                      <Box style={{ flex: 1, minWidth: 0 }}>
                                         <RenderDbSymbol
                                           symbol={{
                                             symbolName: r.symbolName,
@@ -641,7 +623,7 @@ export function SemanticPanel({
 
                                       <Button
                                         size="xs"
-                                        style={{ flexShrink: 0, width: 80 }}
+                                        style={{ width: 80 }}
                                         onClick={(e) => {
                                           e.stopPropagation();
 
@@ -652,17 +634,12 @@ export function SemanticPanel({
                                               "http",
                                             )
                                           ) {
-                                            // MathHub → local replacement
                                             setPendingMathHubToLocal({
                                               mathHubUri: selectedSymref.uri,
                                               localSymbolUri: newUri,
                                               targetType: "symref",
                                               primaryDefinitionId:
                                                 definition.id,
-                                            });
-                                            setSelectedNode({
-                                              type: "symref",
-                                              uri: newUri,
                                             });
                                           } else {
                                             onReplaceNode(
@@ -676,39 +653,38 @@ export function SemanticPanel({
                                                 uri: newUri,
                                               },
                                             );
-
-                                            setSelectedNode({
-                                              type: "symref",
-                                              uri: newUri,
-                                            });
                                           }
+
+                                          setSelectedNode({
+                                            type: "symref",
+                                            uri: newUri,
+                                          });
                                         }}
                                       >
                                         Use this
                                       </Button>
                                     </Group>
 
-                                    <Box
-                                      style={{
-                                        width: "100%",
-                                        overflow: "hidden",
+                                    <DbResultItem
+                                      r={r}
+                                      definition={definition}
+                                      mode={{
+                                        type: "symref",
+                                        selected: selectedSymref,
                                       }}
-                                    >
-                                      <DbResultItem
-                                        r={r}
-                                        definition={definition}
-                                        mode={{
-                                          type: "symref",
-                                          selected: selectedSymref,
-                                        }}
-                                        onReplaceNode={handleReplaceNode}
-                                        setSelectedNode={setSelectedNode}
-                                      />
-                                    </Box>
+                                      onReplaceNode={handleReplaceNode}
+                                      setSelectedNode={setSelectedNode}
+                                    />
                                   </Stack>
                                 </Paper>
                               ))}
                             </Stack>
+                          )}
+
+                          {hasSearched && mathhubResults.length === 0 && (
+                            <Text size="xs" c="dimmed" mt="sm">
+                              No results found in MathHub
+                            </Text>
                           )}
 
                           {mathhubResults.length > 0 && (
@@ -719,18 +695,14 @@ export function SemanticPanel({
 
                               {mathhubResults.map((r) => (
                                 <Paper key={r.uri} withBorder p="xs">
-                                  <Group
-                                    justify="space-between"
-                                    wrap="nowrap"
-                                    align="center"
-                                  >
+                                  <Group justify="space-between" wrap="nowrap">
                                     <RenderSymbolicUri uri={r.uri} />
 
                                     <Button
                                       size="xs"
-                                      style={{ flexShrink: 0 }}
                                       onClick={async () => {
                                         const newUri = r.uri;
+
                                         await handleReplaceNode(
                                           definition.id,
                                           {
@@ -739,6 +711,7 @@ export function SemanticPanel({
                                           },
                                           { type: "symref", uri: newUri },
                                         );
+
                                         setSelectedNode({
                                           type: "symref",
                                           uri: newUri,

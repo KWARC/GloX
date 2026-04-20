@@ -26,7 +26,7 @@ import {
 } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileText } from "lucide-react";
+import { FileText, FolderCheck } from "lucide-react";
 import { useState } from "react";
 
 export default function Header() {
@@ -230,19 +230,35 @@ export default function Header() {
             </>
           )}
           {loggedIn && isAdmin && (
-            <NavLink
-              label="Curation"
-              component={Link}
-              to="/curation"
-              onClick={() => setOpened(false)}
-              leftSection={<FileText size={18} />}
-              styles={{
-                root: {
-                  borderRadius: "8px",
-                  padding: "12px",
-                },
-              }}
-            />
+            <>
+              <NavLink
+                label="Curation"
+                component={Link}
+                to="/curation"
+                onClick={() => setOpened(false)}
+                leftSection={<FileText size={18} />}
+                styles={{
+                  root: {
+                    borderRadius: "8px",
+                    padding: "12px",
+                  },
+                }}
+              />
+
+              <NavLink
+                label="Deduplication"
+                component={Link}
+                to="/deduplication"
+                onClick={() => setOpened(false)}
+                leftSection={<FolderCheck size={18} />}
+                styles={{
+                  root: {
+                    borderRadius: "8px",
+                    padding: "12px",
+                  },
+                }}
+              />
+            </>
           )}
           {loggedIn && (
             <>

@@ -95,12 +95,10 @@ function normalizeContent(content: FtmlContent[]): FtmlContent[] {
   return result;
 }
 
-export function findDefiniendum(
-  content: FtmlContent[],
-  symbolName: string,
-): boolean {
+export function findDefiniendum(content: FtmlContent[], symbolName: string): boolean {
   const normalize = (u: string) => {
     if (!u) return u;
+
     if (u.startsWith("http")) {
       try {
         return new URL(u).searchParams.get("s") ?? u;
@@ -108,6 +106,7 @@ export function findDefiniendum(
         return u;
       }
     }
+
     return u;
   };
 
@@ -115,7 +114,9 @@ export function findDefiniendum(
     if (typeof c === "string") continue;
 
     if (isDefiniendumNode(c)) {
-      if (c.symdecl === true && normalize(c.uri) === symbolName) {
+      const uri = normalize(c.uri);
+
+      if (uri === symbolName) {
         return true;
       }
     }
@@ -128,10 +129,7 @@ export function findDefiniendum(
   return false;
 }
 
-export function transform(
-  ast: FtmlTree,
-  operation: SemanticOperation,
-): FtmlTree {
+export function transform(ast: FtmlTree, operation: SemanticOperation): FtmlTree {
   if (operation.kind === "removeSemantic") {
     return removeSemanticNodeWithIndex(ast, operation.target);
   }
@@ -181,10 +179,7 @@ function removeSemanticNode(
   const copy: FtmlNode = { ...(node as FtmlNode) };
   if (copy.content) {
     copy.content = normalizeContent(
-      removeSemanticNode(
-        copy.content as FtmlContent[],
-        target,
-      ) as FtmlContent[],
+      removeSemanticNode(copy.content as FtmlContent[], target) as FtmlContent[],
     );
   }
   return copy;
@@ -202,10 +197,7 @@ function removeSemanticNodeWithIndex(
       for_symbols: Array.isArray(definitionNode.for_symbols)
         ? definitionNode.for_symbols.filter((s: string) => s !== target.uri)
         : definitionNode.for_symbols,
-      content: removeSemanticNode(
-        definitionNode.content as FtmlContent[],
-        target,
-      ) as FtmlContent[],
+      content: removeSemanticNode(definitionNode.content as FtmlContent[], target) as FtmlContent[],
     };
   }
 
@@ -256,11 +248,7 @@ function replaceSemanticNode(
       ? def.for_symbols.filter((s) => normalizeUri(s) !== targetUriNorm)
       : [];
 
-    if (
-      payload.type === "definiendum" &&
-      payload.uri &&
-      !payload.uri.startsWith("http")
-    ) {
+    if (payload.type === "definiendum" && payload.uri && !payload.uri.startsWith("http")) {
       symbols.push(payload.uri);
     }
 

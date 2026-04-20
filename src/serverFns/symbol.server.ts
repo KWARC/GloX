@@ -36,6 +36,23 @@ export type CreateSymbolDefiniendumInput = {
   selectedSymbolUri?: string;
 };
 
+export const getAllSymbols = createServerFn({ method: "GET" }).handler(
+  async () => {
+    return prisma.symbol.findMany({
+      include: {
+        confirmedBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+);
+
 export const createSymbolDefiniendum = createServerFn({ method: "POST" })
   .inputValidator((data: CreateSymbolDefiniendumInput) => data)
   .handler(async ({ data }) => {

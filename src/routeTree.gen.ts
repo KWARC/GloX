@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DeduplicationRouteImport } from './routes/deduplication'
 import { Route as CurationRouteImport } from './routes/curation'
 import { Route as CreateLatexRouteImport } from './routes/create-latex'
 import { Route as IndexRouteImport } from './routes/index'
@@ -32,6 +33,11 @@ const SignupRoute = SignupRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeduplicationRoute = DeduplicationRouteImport.update({
+  id: '/deduplication',
+  path: '/deduplication',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CurationRoute = CurationRouteImport.update({
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create-latex': typeof CreateLatexRoute
   '/curation': typeof CurationRoute
+  '/deduplication': typeof DeduplicationRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/verify': typeof VerifyRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create-latex': typeof CreateLatexRoute
   '/curation': typeof CurationRoute
+  '/deduplication': typeof DeduplicationRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/verify': typeof VerifyRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/create-latex': typeof CreateLatexRoute
   '/curation': typeof CurationRoute
+  '/deduplication': typeof DeduplicationRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/verify': typeof VerifyRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/create-latex'
     | '/curation'
+    | '/deduplication'
     | '/login'
     | '/signup'
     | '/verify'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/'
     | '/create-latex'
     | '/curation'
+    | '/deduplication'
     | '/login'
     | '/signup'
     | '/verify'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/'
     | '/create-latex'
     | '/curation'
+    | '/deduplication'
     | '/login'
     | '/signup'
     | '/verify'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateLatexRoute: typeof CreateLatexRoute
   CurationRoute: typeof CurationRoute
+  DeduplicationRoute: typeof DeduplicationRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   VerifyRoute: typeof VerifyRoute
@@ -168,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/deduplication': {
+      id: '/deduplication'
+      path: '/deduplication'
+      fullPath: '/deduplication'
+      preLoaderRoute: typeof DeduplicationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/curation': {
@@ -219,6 +239,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateLatexRoute: CreateLatexRoute,
   CurationRoute: CurationRoute,
+  DeduplicationRoute: DeduplicationRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   VerifyRoute: VerifyRoute,
