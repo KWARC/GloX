@@ -1,7 +1,12 @@
 import { queryClient } from "@/queryClient";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
-import { parseUri } from "@/server/parseUri";
+import { parseUri, ReplacePayload } from "@/server/parseUri";
+import { ExtractedItem } from "@/server/text-selection";
 import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
+import {
+  deleteDefinition,
+  updateDefinition,
+} from "@/serverFns/extractDefinition.server";
 import {
   getAllSymbols,
   getDefinitionBySymbol,
@@ -14,7 +19,7 @@ import {
   updateDefinitionAst,
   UpdateDefinitionAstResult,
 } from "@/serverFns/updateDefinition.server";
-import { assertFtmlStatement } from "@/types/ftml.types";
+import { assertFtmlStatement, FtmlStatement } from "@/types/ftml.types";
 import { OnReplaceNode, SemanticDefinition } from "@/types/Semantic.types";
 import {
   Box,
@@ -32,8 +37,9 @@ import {
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { FtmlPreview } from "./FtmlPreview";
+import { ExtractedTextPanel } from "./ExtractedTextList";
 import { RenderSymbolicUri } from "./RenderUri";
+import { SemanticPanel } from "./SemanticPanel";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
 
 type PendingPropagation = {
@@ -285,6 +291,8 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
   const [visibleCount, setVisibleCount] = useState(2);
   const [dialogKind, setDialogKind] = useState<ConfirmDialogKind | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
 
   const { data: rawDefinition, isLoading } = useQuery({
     queryKey: ["definition-by-symbol", symbolName],
@@ -328,6 +336,22 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     }
   }, [rawDefinition]);
 
+  const extractedItems = useMemo<ExtractedItem[]>(() => {
+    if (!rawDefinition?.statement) return [];
+    return [
+      {
+        id: rawDefinition.id,
+        pageNumber: 0,
+        statement: assertFtmlStatement(rawDefinition.statement),
+        futureRepo: "",
+        filePath: "",
+        fileName: "",
+        language: "",
+        symbolicRefs: [],
+      },
+    ];
+  }, [rawDefinition]);
+
   const selectedDefiniendum = useMemo(() => {
     if (!definition) return null;
     const { definienda } = extractSemanticIndex(
@@ -347,6 +371,58 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     searchQuery,
     true,
   );
+
+  function handleToggleEdit(id: string) {
+    setEditingId((prev) => (prev === id ? null : id));
+  }
+
+  async function handleUpdate(id: string, statement: FtmlStatement) {
+    await updateDefinition({ data: { id, statement } });
+    setEditingId(null);
+    await queryClient.invalidateQueries({
+      queryKey: ["definition-by-symbol", symbolName],
+    });
+  }
+
+  async function handleDelete(id: string) {
+    await deleteDefinition({ data: { id } });
+    await queryClient.invalidateQueries({
+      queryKey: ["definition-by-symbol", symbolName],
+    });
+  }
+
+  async function handleReplaceNodeLocal(
+    definitionId: string,
+    target: { type: "definiendum" | "symref"; uri: string },
+    payload: ReplacePayload,
+  ): Promise<UpdateDefinitionAstResult> {
+    const result = await updateDefinitionAst({
+      data: {
+        definitionId,
+        operation: { kind: "replaceSemantic", target, payload },
+      },
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["definition-by-symbol", symbolName],
+    });
+    return result;
+  }
+
+  function handleDeleteNode(
+    definitionId: string,
+    target: { type: "definiendum" | "symref"; uri: string },
+  ) {
+    void updateDefinitionAst({
+      data: {
+        definitionId,
+        operation: { kind: "removeSemantic", target },
+      },
+    }).then(() =>
+      queryClient.invalidateQueries({
+        queryKey: ["definition-by-symbol", symbolName],
+      }),
+    );
+  }
 
   if (!isLoading && !definition) return null;
 
@@ -395,14 +471,21 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
             {isLoading && <Loader size="xs" mt="sm" />}
 
             {definition && (
-              <Paper mt="sm" p="md" withBorder bg="blue.0">
-                <Box h={140}>
-                  <FtmlPreview
-                    ftmlAst={definition.statement}
-                    docId={definition.id}
-                  />
-                </Box>
-              </Paper>
+              <Box mt="sm">
+                <ExtractedTextPanel
+                  extracts={extractedItems}
+                  editingId={editingId}
+                  selectedId={null}
+                  onToggleEdit={handleToggleEdit}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                  onSelection={() => {}}
+                  onOpenSemanticPanel={() => setSemanticPanelOpen(true)}
+                  showPageNumber={false}
+                  showDefinitionMeta={false}
+                  isLocked={false}
+                />
+              </Box>
             )}
           </Box>
 
@@ -501,6 +584,16 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           onReplaceNode={handleReplaceNode}
           onDone={() => setPendingPropagation(null)}
           onSkip={() => setPendingPropagation(null)}
+        />
+      )}
+
+      {semanticPanelOpen && definition && (
+        <SemanticPanel
+          opened={semanticPanelOpen}
+          onClose={() => setSemanticPanelOpen(false)}
+          definition={definition}
+          onReplaceNode={handleReplaceNodeLocal}
+          onDeleteNode={handleDeleteNode}
         />
       )}
     </>
