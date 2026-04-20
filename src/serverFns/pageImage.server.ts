@@ -24,7 +24,7 @@ export const getPageImage = createServerFn({ method: "GET" })
     const imagePath = getPageImagePath(doc.filename, data.pageNumber);
 
     if (!fs.existsSync(imagePath)) {
-      throw new Error(`IMAGE_NOT_FOUND: ${imagePath}`);
+      throw new Error("IMAGE_NOT_FOUND");
     }
 
     const buffer = fs.readFileSync(imagePath);

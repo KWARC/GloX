@@ -23,7 +23,7 @@ export function getPdfPath(filename: string): string {
 }
 
 export function getPageImagesDir(filename: string): string {
-  return path.join(UPLOADS_DIR, getBaseName(filename)); 
+  return path.join(UPLOADS_DIR, getBaseName(filename));
 }
 
 export function getPageImagePath(filename: string, pageNumber: number): string {
@@ -49,6 +49,14 @@ export async function convertPdfToImages(
   const imagesDir = getPageImagesDir(filename);
   const pdfPath = getPdfPath(filename);
 
+  if (!fs.existsSync(pdfPath)) {
+    throw new Error(`PDF file not found: ${pdfPath}`);
+  }
+
+  ensureDir(imagesDir);
+    throw new Error(`PDF file not found: ${pdfPath}`);
+  }
+
   ensureDir(imagesDir);
 
   const allExist = Array.from({ length: pageCount }, (_, i) => i + 1).every(
@@ -73,7 +81,9 @@ export async function convertPdfToImages(
 
     const result = await converter(pageNumber, { responseType: "image" });
 
-    if (!result?.path) throw new Error(`Failed page ${pageNumber}`);
+    if (!result?.path) {
+      throw new Error(`Failed to generate image for page ${pageNumber}`);
+    }
 
     const generated = path.join(imagesDir, `page.${pageNumber}.jpg`);
 
@@ -82,7 +92,7 @@ export async function convertPdfToImages(
     }
 
     if (!fs.existsSync(finalPath)) {
-      throw new Error(`Missing page ${pageNumber}`);
+      throw new Error(`Image missing after conversion for page ${pageNumber}`);
     }
   }
 }

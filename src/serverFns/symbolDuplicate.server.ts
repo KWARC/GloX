@@ -7,11 +7,15 @@ export const confirmSymbolNotDuplicate = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const user = await currentUser();
 
+    if (!user.user?.id) {
+      throw new Error("Authentication required");
+    }
+
     return prisma.symbol.update({
       where: { id: data.symbolId },
       data: {
         hasConfirmed: true,
-        confirmedById: user.user?.id,
+        confirmedById: user.user.id,
       },
     });
   });

@@ -63,6 +63,8 @@ export function MathHubSearchResult({
         <Box h={150}>
           <iframe
             src={safeUri.replace("http:", "https:")}
+            sandbox="allow-scripts allow-same-origin"
+            title="MathHub content preview"
             style={{ width: "100%", height: "100%", border: "none" }}
           />
         </Box>
