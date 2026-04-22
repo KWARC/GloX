@@ -3,10 +3,7 @@ import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { parseUri, ReplacePayload } from "@/server/parseUri";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
-import {
-  deleteDefinition,
-  updateDefinition,
-} from "@/serverFns/extractDefinition.server";
+import { deleteDefinition, updateDefinition } from "@/serverFns/extractDefinition.server";
 import {
   createSymbolDefiniendum,
   getAllSymbols,
@@ -52,15 +49,13 @@ const handleReplaceNode: OnReplaceNode = async (
 };
 
 export function Duplicate({ symbolName }: { symbolName: string }) {
-  const [pendingPropagation, setPendingPropagation] =
-    useState<PendingPropagation | null>(null);
+  const [pendingPropagation, setPendingPropagation] = useState<PendingPropagation | null>(null);
   const [visibleCount, setVisibleCount] = useState(2);
   const [dialogKind, setDialogKind] = useState<ConfirmDialogKind | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
-  const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
-    useTextSelection();
+  const { selection, popup, handleSelection, clearPopupOnly, clearAll } = useTextSelection();
 
   const [defDialogOpen, setDefDialogOpen] = useState(false);
 
@@ -99,8 +94,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     };
     if (withRelation.confirmedBy) {
       const { firstName, lastName, email } = withRelation.confirmedBy;
-      if (firstName || lastName)
-        return [firstName, lastName].filter(Boolean).join(" ");
+      if (firstName || lastName) return [firstName, lastName].filter(Boolean).join(" ");
       if (email) return email;
     }
     return symbol.confirmedById;
@@ -136,10 +130,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
 
   const selectedDefiniendum = useMemo(() => {
     if (!definition) return null;
-    const { definienda } = extractSemanticIndex(
-      definition.statement,
-      definition,
-    );
+    const { definienda } = extractSemanticIndex(definition.statement, definition);
     return (
       definienda.find((d) => d.uri === symbolName) ||
       definienda.find((d) => d.text === symbolName) ||
@@ -149,10 +140,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
   }, [definition, symbolName]);
 
   const searchQuery = `${symbolName} definition`;
-  const { results, isLoading: isSearching } = useSymbolSearch(
-    searchQuery,
-    true,
-  );
+  const { results, isLoading: isSearching } = useSymbolSearch(searchQuery, true);
 
   function handleToggleEdit(id: string) {
     setEditingId((prev) => (prev === id ? null : id));
@@ -297,12 +285,14 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     setEditingNodeId(null);
   }
 
-  if (!isLoading && !definition) return null;
-
   const mathHubResults = results.filter(
     (r): r is Extract<SymbolSearchResult, { source: "MATHHUB" }> =>
       r.source === "MATHHUB" && typeof r.uri === "string",
   );
+
+  if (!isLoading && !isSearching && (!definition || mathHubResults.length === 0)) {
+    return null;
+  }
 
   const visibleResults = mathHubResults.slice(0, visibleCount);
   const isConfirmed = symbol?.hasConfirmed === true;
@@ -386,14 +376,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
                 size="xs"
                 variant="subtle"
                 onClick={() =>
-                  setVisibleCount((prev) =>
-                    prev >= mathHubResults.length ? 2 : prev + 3,
-                  )
+                  setVisibleCount((prev) => (prev >= mathHubResults.length ? 2 : prev + 3))
                 }
               >
-                {visibleCount >= mathHubResults.length
-                  ? "Show Less"
-                  : "Show More"}
+                {visibleCount >= mathHubResults.length ? "Show Less" : "Show More"}
               </Button>
             )}
 
@@ -441,9 +427,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           symbolName={symbolName}
           opened={dialogKind !== null}
           loading={dialogLoading}
-          onConfirm={
-            dialogKind === "confirm" ? handleConfirmAction : handleUndoAction
-          }
+          onConfirm={dialogKind === "confirm" ? handleConfirmAction : handleUndoAction}
           onCancel={() => {
             if (!dialogLoading) setDialogKind(null);
           }}
