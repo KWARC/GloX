@@ -28,6 +28,7 @@ import {
 import {
   DEFAULT_LLM_SYSTEM_PROMPT,
   getLlmSuggestions,
+  getLlmSuggestionsByDocument,
   LlmSuggestion,
 } from "@/serverFns/llmSuggestion.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
@@ -131,96 +132,27 @@ function RouteComponent() {
     useTextSelection();
   const { extractText, updateExtract } = useExtractionActions(documentId);
 
-  const [llmSuggestions, setLlmSuggestions] = useState<
-    Record<string, LlmSuggestion[]>
-  >({});
+  const { data: llmSuggestions = {} } = useQuery({
+    queryKey: ["llm-suggestions", documentId],
+    queryFn: () => getLlmSuggestionsByDocument({ data: { documentId } }),
+  });
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmEnabled, setLlmEnabled] = useState(false);
   const [llmPrompt, setLlmPrompt] = useState(DEFAULT_LLM_SYSTEM_PROMPT);
-  const [selectedTextForLlm, setSelectedTextForLlm] = useState("");
   const [recomputeDialogOpen, setRecomputeDialogOpen] = useState(false);
   const [recomputePromptDraft, setRecomputePromptDraft] = useState(llmPrompt);
   const canRunLlm = !llmLoading && pages.length > 0;
 
-  type PageOffsetEntry = {
-    pageId: string;
-    globalStart: number;
-    length: number;
-  };
-
-  function buildPageOffsetMap(): PageOffsetEntry[] {
-    const SEP = "\n\n";
-    const map: PageOffsetEntry[] = [];
-    let cursor = 0;
-    for (const page of pages) {
-      map.push({
-        pageId: page.id,
-        globalStart: cursor,
-        length: page.text.length,
-      });
-      cursor += page.text.length + SEP.length;
-    }
-    return map;
-  }
-
-  function mapGlobalSuggestionsToPages(
-    globalSuggestions: LlmSuggestion[],
-    offsetMap: PageOffsetEntry[],
-  ): Record<string, LlmSuggestion[]> {
-    const result: Record<string, LlmSuggestion[]> = {};
-
-    for (const s of globalSuggestions) {
-      for (const entry of offsetMap) {
-        const pageEnd = entry.globalStart + entry.length;
-
-        if (s.startOffset < entry.globalStart || s.startOffset >= pageEnd) {
-          continue;
-        }
-
-        const clampedEnd = Math.min(s.endOffset, pageEnd);
-        const localStart = s.startOffset - entry.globalStart;
-        const localEnd = clampedEnd - entry.globalStart;
-
-        const page = pages.find((p) => p.id === entry.pageId);
-        if (!page) continue;
-
-        const localSlice = page.text.slice(localStart, localEnd);
-        const expectedText =
-          clampedEnd === s.endOffset
-            ? s.text
-            : s.text.slice(0, localEnd - localStart);
-
-        if (localSlice !== expectedText) continue;
-
-        const pageSuggestion: LlmSuggestion = {
-          text: localSlice,
-          startOffset: localStart,
-          endOffset: localEnd,
-          label: s.label,
-        };
-
-        if (!result[entry.pageId]) result[entry.pageId] = [];
-        result[entry.pageId].push(pageSuggestion);
-        break;
-      }
-    }
-
-    return result;
-  }
-
-  async function runLlm(fullDocText: string, prompt: string) {
+  async function runLlm(prompt: string) {
     setLlmLoading(true);
     try {
-      const result = await getLlmSuggestions({
-        data: { selectedText: fullDocText, systemPrompt: prompt },
+      await getLlmSuggestions({
+        data: { documentId, systemPrompt: prompt },
       });
 
-      const offsetMap = buildPageOffsetMap();
-      const perPage = mapGlobalSuggestionsToPages(
-        result.suggestions,
-        offsetMap,
-      );
-      setLlmSuggestions(perPage);
+      await queryClient.invalidateQueries({
+        queryKey: ["llm-suggestions", documentId],
+      });
       setLlmEnabled(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "LLM request failed";
@@ -231,9 +163,7 @@ function RouteComponent() {
   }
 
   function handleLlmSuggestion() {
-    const fullDocText = pages.map((p) => p.text).join("\n\n");
-    setSelectedTextForLlm(fullDocText);
-    void runLlm(fullDocText, llmPrompt);
+    void runLlm(llmPrompt);
   }
 
   function handleOpenRecompute() {
@@ -242,10 +172,10 @@ function RouteComponent() {
   }
 
   function handleRecomputeSubmit() {
-    if (!selectedTextForLlm) return;
+    if (!pages.length) return;
     setLlmPrompt(recomputePromptDraft);
     setRecomputeDialogOpen(false);
-    void runLlm(selectedTextForLlm, recomputePromptDraft);
+    void runLlm(recomputePromptDraft);
   }
 
   function handleLlmSuggestionClick(suggestion: LlmSuggestion, pageId: string) {
@@ -664,7 +594,7 @@ function RouteComponent() {
 
       <Tooltip
         label={
-          hasAnySuggestions || selectedTextForLlm
+          hasAnySuggestions || pages.length > 0
             ? "Edit the prompt and recompute suggestions"
             : "Run LLM Suggestion first"
         }
@@ -676,7 +606,7 @@ function RouteComponent() {
           variant="subtle"
           color="violet"
           leftSection={<IconRefresh size={13} />}
-          disabled={llmLoading || (!hasAnySuggestions && !selectedTextForLlm)}
+          disabled={llmLoading || pages.length === 0}
           onClick={handleOpenRecompute}
         >
           Recompute LLM
@@ -1037,35 +967,11 @@ function RouteComponent() {
               System Prompt
             </Text>
             <Text size="xs" c="dimmed">
-              This is the exact prompt sent to the LLM together with your
-              selected text. Edit it to refine how definitions are detected,
+              This is the exact prompt sent to the LLM together with the full
+              document text. Edit it to refine how definitions are detected,
               then click <strong>Recompute</strong>.
             </Text>
           </Stack>
-
-          {/* {selectedTextForLlm && (
-            <Box
-              p="sm"
-              style={{
-                borderRadius: 6,
-                border: "1px solid var(--mantine-color-violet-3)",
-                backgroundColor: "var(--mantine-color-violet-0)",
-              }}
-            >
-              <Text size="xs" fw={600} c="violet.7" mb={4}>
-                Document text sent to LLM (preview):
-              </Text>
-              <Text
-                size="xs"
-                ff="monospace"
-                style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-              >
-                {selectedTextForLlm.length > 300
-                  ? `${selectedTextForLlm.slice(0, 300)}…`
-                  : selectedTextForLlm}
-              </Text>
-            </Box>
-          )} */}
 
           <Textarea
             value={recomputePromptDraft}
@@ -1105,7 +1011,7 @@ function RouteComponent() {
                   llmLoading ? <Loader size={12} /> : <IconRefresh size={14} />
                 }
                 loading={llmLoading}
-                disabled={!recomputePromptDraft.trim() || !selectedTextForLlm}
+                disabled={!recomputePromptDraft.trim() || pages.length === 0}
                 onClick={handleRecomputeSubmit}
               >
                 Recompute

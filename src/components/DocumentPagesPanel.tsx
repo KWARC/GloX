@@ -23,7 +23,10 @@ function buildSegments(
   suggestions: LlmSuggestion[],
 ): TextSegment[] {
   const valid = suggestions
-    .filter((s) => pageText.slice(s.startOffset, s.endOffset) === s.text)
+    .map((s) => ({
+      ...s,
+      text: pageText.slice(s.startOffset, s.endOffset),
+    }))
     .sort((a, b) =>
       a.startOffset !== b.startOffset
         ? a.startOffset - b.startOffset
