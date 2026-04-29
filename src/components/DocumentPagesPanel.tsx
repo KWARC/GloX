@@ -1,4 +1,3 @@
-import { LlmSuggestion } from "@/serverFns/llmSuggestion.server";
 import {
   Box,
   Button,
@@ -10,7 +9,7 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
-import { DocumentPage } from "generated/prisma/browser";
+import { LlmSuggestion } from "@/types/llm.types";
 import { useState } from "react";
 import { PageImage } from "./PageImage";
 
