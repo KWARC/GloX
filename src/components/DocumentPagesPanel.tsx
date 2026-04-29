@@ -1,3 +1,4 @@
+import { LlmSuggestion } from "@/types/llm.types";
 import {
   Box,
   Button,
@@ -9,7 +10,7 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
-import { LlmSuggestion } from "@/types/llm.types";
+import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
 import { PageImage } from "./PageImage";
 
@@ -118,7 +119,6 @@ function HighlightedPageText({
               }}
               style={{
                 backgroundColor: "rgba(234, 179, 8, 0.25)",
-                borderBottom: "2px solid #ca8a04",
                 borderRadius: "2px",
                 cursor: "pointer",
                 padding: "1px 0",
