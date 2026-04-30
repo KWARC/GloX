@@ -78,7 +78,7 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
     const fullDocTextHash = getFullTextHash(fullDocText);
 
     const response = await openai.responses.create({
-      model: "gpt-5.4-nano",
+      model: "gpt-5.4-mini",
       temperature: 0,
       text: {
         format: {
