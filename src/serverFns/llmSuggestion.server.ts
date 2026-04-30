@@ -144,13 +144,6 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
     }
 
     const llmSuggestionId = await prisma.$transaction(async (tx) => {
-      await tx.llmSuggestedDefinition.deleteMany({
-        where: { llmSuggestion: { documentId: data.documentId } },
-      });
-      await tx.llmSuggestion.deleteMany({
-        where: { documentId: data.documentId },
-      });
-
       const llmSuggestion = await tx.llmSuggestion.create({
         data: {
           documentId: data.documentId,
