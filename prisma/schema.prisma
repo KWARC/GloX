@@ -68,10 +68,11 @@ model Document {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  status      DocumentStatus @default(UPLOADED)
-  pages       DocumentPage[]
-  definitions Definition[]
-  latexTables LatexTable[]
+  status        DocumentStatus  @default(UPLOADED)
+  pages         DocumentPage[]
+  definitions   Definition[]
+  latexTables   LatexTable[]
+  llmSuggestion LlmSuggestion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -87,7 +88,8 @@ model DocumentPage {
   pageNumber Int
   text       String @db.Text
 
-  definitions Definition[]
+  definitions            Definition[]
+  llmSuggestedDefinition LlmSuggestedDefinition[]
 
   createdAt DateTime @default(now())
 
@@ -237,4 +239,37 @@ model DefinitionVersion {
 
   @@unique([definitionId, versionNumber])
   @@index([definitionId])
+}
+
+model LlmSuggestion {
+  id String @id @default(uuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  customPrompt String @db.Text
+  createdAt DateTime @default(now())
+
+  pages LlmSuggestedDefinition[]
+
+  @@index([documentId])
+}
+
+model LlmSuggestedDefinition {
+  id String @id @default(uuid())
+
+  llmSuggestionId String
+  llmSuggestion   LlmSuggestion @relation(fields: [llmSuggestionId], references: [id], onDelete: Cascade)
+
+  documentPageId String
+  documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
+  pageNumber     Int
+
+  suggestions Json // [{ text, startOffset, endOffset, label }]
+  definitionText String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@unique([llmSuggestionId, documentPageId])
+  @@index([documentPageId])
 }

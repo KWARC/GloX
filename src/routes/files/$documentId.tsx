@@ -12,7 +12,8 @@ import { documentPagesQuery } from "@/queries/documentPages";
 import { queryClient } from "@/queryClient";
 import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
-import { normalizeSymRef, parseUri } from "@/server/parseUri";
+import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
+import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import {
   ActivePage,
   ExtractedItem,
@@ -25,10 +26,15 @@ import {
   deleteDefinition,
   listDefinition,
 } from "@/serverFns/extractDefinition.server";
+import {
+  getLlmSuggestions,
+  getLlmSuggestionsByDocument,
+} from "@/serverFns/llmSuggestion.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
+import { LlmSuggestion } from "@/types/llm.types";
 import {
   Badge,
   Box,
@@ -37,14 +43,24 @@ import {
   Flex,
   Group,
   Loader,
+  Modal,
   Paper,
   Stack,
   Tabs,
   Text,
+  Textarea,
   ThemeIcon,
+  Tooltip,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconFileAlert, IconFileText, IconList } from "@tabler/icons-react";
+import {
+  IconBrain,
+  IconFileAlert,
+  IconFileText,
+  IconList,
+  IconRefresh,
+  IconSparkles,
+} from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -115,6 +131,61 @@ function RouteComponent() {
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
   const { extractText, updateExtract } = useExtractionActions(documentId);
+
+  const { data: llmSuggestions = {} } = useQuery({
+    queryKey: ["llm-suggestions", documentId],
+    queryFn: () => getLlmSuggestionsByDocument({ data: { documentId } }),
+  });
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [llmEnabled, setLlmEnabled] = useState(false);
+  const [llmPrompt, setLlmPrompt] = useState(DEFAULT_LLM_SYSTEM_PROMPT);
+  const [recomputeDialogOpen, setRecomputeDialogOpen] = useState(false);
+  const [recomputePromptDraft, setRecomputePromptDraft] = useState(llmPrompt);
+  const canRunLlm = !llmLoading && pages.length > 0;
+
+  async function runLlm(prompt: string) {
+    setLlmLoading(true);
+    try {
+      await getLlmSuggestions({
+        data: { documentId, systemPrompt: prompt },
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["llm-suggestions", documentId],
+      });
+      setLlmEnabled(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "LLM request failed";
+      alert(`LLM Suggestion failed: ${message}`);
+    } finally {
+      setLlmLoading(false);
+    }
+  }
+
+  function handleLlmSuggestion() {
+    void runLlm(llmPrompt);
+  }
+
+  function handleOpenRecompute() {
+    setRecomputePromptDraft(llmPrompt);
+    setRecomputeDialogOpen(true);
+  }
+
+  function handleRecomputeSubmit() {
+    if (!pages.length) return;
+    setLlmPrompt(recomputePromptDraft);
+    setRecomputeDialogOpen(false);
+    void runLlm(recomputePromptDraft);
+  }
+
+  function handleLlmSuggestionClick(suggestion: LlmSuggestion, pageId: string) {
+    const page = pages.find((p) => p.id === pageId);
+    if (!page) return;
+
+    setActivePage({ id: page.id, pageNumber: page.pageNumber });
+    setPendingExtractText(suggestion.text);
+    setExtractDialogOpen(true);
+  }
 
   async function handleDeleteDefinition(id: string) {
     if (!confirm("Delete this extracted definition?")) return;
@@ -214,13 +285,8 @@ function RouteComponent() {
         const parsed = parseUri(params.selectedSymbol.uri);
         newUri = parsed.conceptUri;
       }
-      let isDeclared: boolean;
 
-      if (params.mode === "CREATE") {
-        isDeclared = true;
-      } else {
-        isDeclared = false;
-      }
+      const isDeclared = params.mode === "CREATE";
 
       const payload: DefiniendumNode = {
         type: "definiendum",
@@ -271,14 +337,11 @@ function RouteComponent() {
               startOffset: selection!.startOffset,
               endOffset: selection!.endOffset,
               symdecl: false,
-
               futureRepo: futureRepo.trim(),
               filePath: filePath.trim(),
               fileName: fileName.trim(),
               language: language.trim(),
-
               symbolName: "",
-
               selectedSymbolSource: "DB",
               selectedSymbolId: params.selectedSymbol.id,
             },
@@ -291,14 +354,11 @@ function RouteComponent() {
               startOffset: selection!.startOffset,
               endOffset: selection!.endOffset,
               symdecl: false,
-
               futureRepo: futureRepo.trim(),
               filePath: filePath.trim(),
               fileName: fileName.trim(),
               language: language.trim(),
-
               symbolName: "",
-
               selectedSymbolSource: "MATHHUB",
               selectedSymbolUri: params.selectedSymbol.uri,
             },
@@ -380,7 +440,7 @@ function RouteComponent() {
   async function handleReplaceNode(
     definitionId: string,
     target: { type: "definiendum" | "symref"; uri: string },
-    payload: any,
+    payload: ReplacePayload,
   ) {
     const result = await updateDefinitionAst({
       data: {
@@ -496,6 +556,82 @@ function RouteComponent() {
 
   const pad = isMobile ? "xs" : isTablet ? "md" : "lg";
   const gap = isMobile ? "xs" : "md";
+  const totalSuggestions = Object.values(llmSuggestions).reduce(
+    (acc, s) => acc + s.length,
+    0,
+  );
+  const hasAnySuggestions = totalSuggestions > 0;
+
+  const llmButtons = (
+    <Group gap={6} wrap="nowrap">
+      <Tooltip
+        label={
+          canRunLlm
+            ? "Analyse full document for definition spans"
+            : "Document is loading…"
+        }
+        withArrow
+        position="bottom"
+      >
+        <Button
+          size="xs"
+          variant="light"
+          color="violet"
+          leftSection={
+            llmLoading ? (
+              <Loader size={12} color="violet" />
+            ) : (
+              <IconBrain size={14} />
+            )
+          }
+          loading={llmLoading}
+          disabled={!canRunLlm}
+          onClick={handleLlmSuggestion}
+        >
+          LLM Suggestion
+        </Button>
+      </Tooltip>
+
+      <Tooltip
+        label={
+          hasAnySuggestions || pages.length > 0
+            ? "Edit the prompt and recompute suggestions"
+            : "Run LLM Suggestion first"
+        }
+        withArrow
+        position="bottom"
+      >
+        <Button
+          size="xs"
+          variant="subtle"
+          color="violet"
+          leftSection={<IconRefresh size={13} />}
+          disabled={llmLoading || pages.length === 0}
+          onClick={handleOpenRecompute}
+        >
+          Recompute LLM
+        </Button>
+      </Tooltip>
+
+      {hasAnySuggestions && (
+        <Tooltip
+          label={llmEnabled ? "Hide highlights" : "Show highlights"}
+          withArrow
+          position="bottom"
+        >
+          <Button
+            size="xs"
+            variant={llmEnabled ? "filled" : "outline"}
+            color="yellow"
+            leftSection={<IconSparkles size={13} />}
+            onClick={() => setLlmEnabled((v) => !v)}
+          >
+            {totalSuggestions}
+          </Button>
+        </Tooltip>
+      )}
+    </Group>
+  );
 
   return (
     <Box h="100%" p={pad} style={{ overflow: "hidden" }}>
@@ -522,29 +658,39 @@ function RouteComponent() {
                 height: "100%",
               }}
             >
-              <Tabs.List px="sm" pt="xs">
-                <Tabs.Tab
-                  value="document"
-                  leftSection={<IconFileText size={15} />}
-                  fw={500}
-                >
-                  {document.filename}
-                </Tabs.Tab>
-                <Tabs.Tab
-                  value="extracts"
-                  leftSection={<IconList size={15} />}
-                  fw={500}
-                  rightSection={
-                    extracts.length > 0 ? (
-                      <Badge size="xs" variant="filled" color="blue" circle>
-                        {extracts.length}
-                      </Badge>
-                    ) : undefined
-                  }
-                >
-                  Extracts
-                </Tabs.Tab>
-              </Tabs.List>
+              <Box
+                px="sm"
+                pt="xs"
+                style={{
+                  borderBottom: "1px solid var(--mantine-color-gray-2)",
+                }}
+              >
+                <Tabs.List mb="xs">
+                  <Tabs.Tab
+                    value="document"
+                    leftSection={<IconFileText size={15} />}
+                    fw={500}
+                  >
+                    {document.filename}
+                  </Tabs.Tab>
+                  <Tabs.Tab
+                    value="extracts"
+                    leftSection={<IconList size={15} />}
+                    fw={500}
+                    rightSection={
+                      extracts.length > 0 ? (
+                        <Badge size="xs" variant="filled" color="blue" circle>
+                          {extracts.length}
+                        </Badge>
+                      ) : undefined
+                    }
+                  >
+                    Extracts
+                  </Tabs.Tab>
+                </Tabs.List>
+
+                {activeTab === "document" && <Box pb="xs">{llmButtons}</Box>}
+              </Box>
 
               <Tabs.Panel
                 value="document"
@@ -560,6 +706,9 @@ function RouteComponent() {
                   documentId={documentId}
                   pages={pages}
                   onSelection={handleLeftSelection}
+                  llmSuggestions={llmSuggestions}
+                  llmEnabled={llmEnabled}
+                  onLlmSuggestionClick={handleLlmSuggestionClick}
                 />
               </Tabs.Panel>
 
@@ -611,21 +760,34 @@ function RouteComponent() {
                 gap="xs"
                 style={{
                   borderBottom: "1px solid var(--mantine-color-gray-2)",
+                  flexWrap: "nowrap",
                 }}
               >
                 <IconFileText size={16} color="var(--mantine-color-blue-6)" />
-                <Text size="sm" fw={600} c="gray.7">
+                <Text size="sm" fw={600} c="gray.7" style={{ flexShrink: 0 }}>
                   {document.filename}
                 </Text>
-                <Badge size="xs" variant="light" color="gray" ml="auto">
+                <Badge
+                  size="xs"
+                  variant="light"
+                  color="gray"
+                  style={{ flexShrink: 0 }}
+                >
                   {pages.length} {pages.length === 1 ? "page" : "pages"}
                 </Badge>
+                <Box style={{ flex: 1 }} />
+
+                {llmButtons}
               </Group>
+
               <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
                 <DocumentPagesPanel
                   documentId={documentId}
                   pages={pages}
                   onSelection={handleLeftSelection}
+                  llmSuggestions={llmSuggestions}
+                  llmEnabled={llmEnabled}
+                  onLlmSuggestionClick={handleLlmSuggestionClick}
                 />
               </Box>
             </Paper>
@@ -671,6 +833,7 @@ function RouteComponent() {
                   LaTeX
                 </Button>
               </Group>
+
               <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
                 <ExtractedTextPanel
                   extracts={extracts}
@@ -706,12 +869,10 @@ function RouteComponent() {
             popup.source === "right"
               ? () => {
                   if (!selection) return;
-
                   const extract = extracts.find(
                     (e) => e.id === selection.extractId,
                   );
                   if (!extract) return;
-
                   setDefExtractId(extract.id);
                   setDefExtractText(selection.text);
                   setDefDialogOpen(true);
@@ -725,9 +886,7 @@ function RouteComponent() {
                   const extract = extracts.find(
                     (e) => e.id === selection.extractId,
                   );
-
                   if (!extract) return;
-
                   handleOpenSymbolicRef(extract.id);
                 }
               : undefined
@@ -785,6 +944,82 @@ function RouteComponent() {
         definition={definitionMetaTarget}
         invalidateKey={["definitions", documentId]}
       />
+
+      <Modal
+        opened={recomputeDialogOpen}
+        onClose={() => setRecomputeDialogOpen(false)}
+        title={
+          <Group gap="xs">
+            <IconRefresh size={16} color="var(--mantine-color-violet-6)" />
+            <Text fw={600} size="md">
+              Recompute LLM Suggestions
+            </Text>
+          </Group>
+        }
+        size="lg"
+        centered
+        padding="lg"
+        radius="md"
+      >
+        <Stack gap="md">
+          <Stack gap={4}>
+            <Text size="sm" fw={500}>
+              System Prompt
+            </Text>
+            <Text size="xs" c="dimmed">
+              This is the exact prompt sent to the LLM together with the full
+              document text. Edit it to refine how definitions are detected,
+              then click <strong>Recompute</strong>.
+            </Text>
+          </Stack>
+
+          <Textarea
+            value={recomputePromptDraft}
+            onChange={(e) => setRecomputePromptDraft(e.currentTarget.value)}
+            autosize
+            minRows={10}
+            styles={{
+              input: {
+                fontFamily: "monospace",
+                fontSize: 12,
+                lineHeight: 1.6,
+                backgroundColor: "var(--mantine-color-gray-0)",
+              },
+            }}
+          />
+
+          <Group justify="space-between" align="center">
+            <Button
+              size="xs"
+              variant="subtle"
+              color="gray"
+              onClick={() => setRecomputePromptDraft(DEFAULT_LLM_SYSTEM_PROMPT)}
+            >
+              Reset to default
+            </Button>
+
+            <Group gap="sm">
+              <Button
+                variant="default"
+                onClick={() => setRecomputeDialogOpen(false)}
+                disabled={llmLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                leftSection={
+                  llmLoading ? <Loader size={12} /> : <IconRefresh size={14} />
+                }
+                loading={llmLoading}
+                disabled={!recomputePromptDraft.trim() || pages.length === 0}
+                onClick={handleRecomputeSubmit}
+              >
+                Recompute
+              </Button>
+            </Group>
+          </Group>
+        </Stack>
+      </Modal>
     </Box>
   );
 }

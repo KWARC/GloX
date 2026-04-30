@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { getPageImagePath } from "@/PDF/PdfToImages";
+import { getPageImagePath } from "@/pdfToImage/PdfToImages";
 import { requireUserId } from "@/server/auth/requireUser";
 import { createServerFn } from "@tanstack/react-start";
 import fs from "node:fs";
