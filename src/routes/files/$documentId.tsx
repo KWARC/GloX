@@ -4,6 +4,7 @@ import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { ExtractTextDialog } from "@/components/ExtractTextDialog";
 import { LatexConfigModel } from "@/components/LatexConfigModel";
+import { ReferenceSuggestionDialog } from "@/components/ReferenceSuggestionDialog";
 import { SelectionPopup } from "@/components/SelectionPopup";
 import { SemanticPanel } from "@/components/SemanticPanel";
 import { SymbolicRef } from "@/components/SymbolicRef";
@@ -14,6 +15,12 @@ import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
 import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
+import {
+  buildFullCatalog,
+  extractPlainText,
+  SuggestedRef,
+  suggestRefsForDefinition,
+} from "@/server/symbolic-suggestions";
 import {
   ActivePage,
   ExtractedItem,
@@ -30,6 +37,7 @@ import {
   getLlmSuggestions,
   getLlmSuggestionsByDocument,
 } from "@/serverFns/llmSuggestion.server";
+import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
@@ -63,7 +71,7 @@ import {
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/files/$documentId")({
   loader: async () => {
@@ -93,6 +101,11 @@ function RouteComponent() {
   const { data: extracts = [] } = useQuery({
     queryKey: ["definitions", documentId],
     queryFn: () => listDefinition({ data: { documentId } }),
+  });
+
+  const { data: staticCatalog = [] } = useQuery({
+    queryKey: ["static-symbolic-catalog"],
+    queryFn: () => listStaticSymbolicCatalog(),
   });
 
   const [futureRepo, setFutureRepo] = useState("smglom/softeng");
@@ -127,10 +140,18 @@ function RouteComponent() {
   const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
   const [definitionMetaTarget, setDefinitionMetaTarget] =
     useState<ExtractedItem | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<SuggestedRef[]>([]);
+  const [activeDefId, setActiveDefId] = useState<string | null>(null);
+  const [activeDefText, setActiveDefText] = useState("");
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
   const { extractText, updateExtract } = useExtractionActions(documentId);
+  const fullCatalog = useMemo(
+    () => buildFullCatalog(extracts, staticCatalog),
+    [extracts, staticCatalog],
+  );
 
   const { data: llmSuggestions = {} } = useQuery({
     queryKey: ["llm-suggestions", documentId],
@@ -222,6 +243,39 @@ function RouteComponent() {
   function handleOpenSemanticPanel(definitionId: string) {
     setSemanticPanelDefId(definitionId);
     setSemanticPanelOpen(true);
+  }
+
+  function handleRecomputeReferences(definitionId: string) {
+    const def = extracts.find((e) => e.id === definitionId);
+    if (!def) return;
+
+    const text = extractPlainText(def.statement);
+    const refs = suggestRefsForDefinition(def, fullCatalog);
+
+    setActiveDefId(definitionId);
+    setActiveDefText(text);
+    setSuggestions(refs);
+    setSuggestOpen(true);
+  }
+
+  async function handleAcceptSuggestion(s: SuggestedRef) {
+    if (!activeDefId) return;
+
+    await symbolicRef({
+      data: {
+        definitionId: activeDefId,
+        selection: {
+          text: s.text,
+          startOffset: s.startOffset,
+          endOffset: s.endOffset,
+        },
+        symRef: s.symRef,
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
+    });
   }
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
@@ -731,6 +785,7 @@ function RouteComponent() {
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
                   onOpenSemanticPanel={handleOpenSemanticPanel}
+                  onRecomputeReferences={handleRecomputeReferences}
                   onEditDefinitionMeta={handleEditDefinitionMeta}
                 />
               </Tabs.Panel>
@@ -844,6 +899,7 @@ function RouteComponent() {
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
                   onOpenSemanticPanel={handleOpenSemanticPanel}
+                  onRecomputeReferences={handleRecomputeReferences}
                   onEditDefinitionMeta={handleEditDefinitionMeta}
                 />
               </Box>
@@ -943,6 +999,15 @@ function RouteComponent() {
         }}
         definition={definitionMetaTarget}
         invalidateKey={["definitions", documentId]}
+      />
+
+      <ReferenceSuggestionDialog
+        opened={suggestOpen}
+        onClose={() => setSuggestOpen(false)}
+        definitionId={activeDefId ?? ""}
+        definitionText={activeDefText}
+        suggestions={suggestions}
+        onAccept={handleAcceptSuggestion}
       />
 
       <Modal
