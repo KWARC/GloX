@@ -28,6 +28,10 @@ export type StoredSuggestion = {
   startOffset: number;
   endOffset: number;
   label: string;
+  definienda?: {
+    text: string;
+    label: string;
+  }[];
 };
 
 export type PageOffset = {
