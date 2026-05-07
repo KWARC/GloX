@@ -1,4 +1,4 @@
-import { LlmSuggestion } from "@/serverFns/llmSuggestion.server";
+import { LlmSuggestion } from "@/types/llm.types";
 import {
   Box,
   Button,
@@ -119,7 +119,6 @@ function HighlightedPageText({
               }}
               style={{
                 backgroundColor: "rgba(234, 179, 8, 0.25)",
-                borderBottom: "2px solid #ca8a04",
                 borderRadius: "2px",
                 cursor: "pointer",
                 padding: "1px 0",

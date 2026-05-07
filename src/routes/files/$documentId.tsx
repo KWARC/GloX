@@ -13,6 +13,7 @@ import { queryClient } from "@/queryClient";
 import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
+import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import {
   ActivePage,
   ExtractedItem,
@@ -26,15 +27,14 @@ import {
   listDefinition,
 } from "@/serverFns/extractDefinition.server";
 import {
-  DEFAULT_LLM_SYSTEM_PROMPT,
   getLlmSuggestions,
   getLlmSuggestionsByDocument,
-  LlmSuggestion,
 } from "@/serverFns/llmSuggestion.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
+import { LlmSuggestion } from "@/types/llm.types";
 import {
   Badge,
   Box,
