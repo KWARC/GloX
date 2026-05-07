@@ -1,6 +1,23 @@
 import { openai } from "@/lib/openai";
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
+import {
+  buildPageOffsets,
+  buildStoredPrompt,
+  getFullTextHash,
+  getStoredFullTextHash,
+  getStoredSuggestionsBySuggestionId,
+  mapGlobalSuggestionsToPages,
+  resolveOffsets,
+  validateSuggestions,
+} from "@/server/llm";
+import {
+  LlmSuggestion,
+  LlmSuggestionsInput,
+  LlmSuggestionsOutput,
+  RawPayload,
+  RawSuggestion,
+} from "@/types/llm.types";
 import { createServerFn } from "@tanstack/react-start";
 import { createHash } from "node:crypto";
 import { getLlmDefiniendaSuggestions } from "./getLlmDefiniendaSuggestions.server";
@@ -368,6 +385,10 @@ export const getLlmSuggestionsByDocument = createServerFn({ method: "POST" })
     const user = await currentUser();
     if (!user.loggedIn) throw new Error("Unauthorized");
 
+    const document = await prisma.document.findFirst({
+      where: { id: data.documentId, userId: user.user.id },
+    });
+    if (!document) throw new Error("Document not found or access denied");
     const latest = await prisma.llmSuggestion.findFirst({
       where: { documentId: data.documentId },
       orderBy: { createdAt: "desc" },
@@ -413,7 +434,7 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
     const fullDocTextHash = getFullTextHash(fullDocText);
 
     const response = await openai.responses.create({
-      model: "gpt-5.4-nano",
+      model: "gpt-5.4-mini",
       temperature: 0,
       text: {
         format: {
