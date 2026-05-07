@@ -475,34 +475,88 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
       return { suggestions: {} };
     }
 
-    for (const entry of perPage.values()) {
-      for (const suggestion of entry.suggestions) {
-        try {
-          const res = await getLlmDefiniendaSuggestions({
-            data: {
-              definitionText: suggestion.text,
-              llmSuggestionId: `${entry.page.pageId}-${suggestion.startOffset}`,
-              documentPageId: entry.page.pageId,
-              pageNumber: entry.page.pageNumber,
-            },
-          });
+    // for (const entry of perPage.values()) {
+    //   for (const suggestion of entry.suggestions) {
+    //     try {
+    //       const res = await getLlmDefiniendaSuggestions({
+    //         data: {
+    //           definitionText: suggestion.text,
+    //           llmSuggestionId: `${entry.page.pageId}-${suggestion.startOffset}`,
+    //           documentPageId: entry.page.pageId,
+    //           pageNumber: entry.page.pageNumber,
+    //         },
+    //       });
 
-          suggestion.definienda = res.definienda;
-        } catch (e) {
-          console.error("Definienda LLM failed", e);
-        }
-      }
-    }
+    //       suggestion.definienda = res.definienda;
+    //     } catch (e) {
+    //       console.error("Definienda LLM failed", e);
+    //     }
+    //   }
+    // }
+
+    // const llmSuggestionId = await prisma.$transaction(async (tx) => {
+    //   await tx.llmSuggestedDefinition.deleteMany({
+    //     where: { llmSuggestion: { documentId: data.documentId } },
+    //   });
+    //   await tx.llmSuggestion.deleteMany({
+    //     where: { documentId: data.documentId },
+    //   });
+
+    //   const llmSuggestion = await tx.llmSuggestion.create({
+    //     data: {
+    //       documentId: data.documentId,
+    //       customPrompt: buildStoredPrompt(data.systemPrompt, fullDocTextHash),
+    //     },
+    //   });
+
+    //   for (const { page, suggestions } of perPage.values()) {
+    //     for (const suggestion of suggestions) {
+    //       try {
+    //         const res = await getLlmDefiniendaSuggestions({
+    //           data: {
+    //             definitionText: suggestion.text,
+    //             llmSuggestionId: llmSuggestion.id,
+    //             documentPageId: page.pageId,
+    //             pageNumber: page.pageNumber,
+    //           },
+    //         });
+
+    //         suggestion.definienda = res.definienda;
+    //       } catch (e) {
+    //         console.error("Definienda LLM failed", e);
+    //       }
+    //     }
+
+    //     await tx.llmSuggestedDefinition.create({
+    //       data: {
+    //         llmSuggestionId: llmSuggestion.id,
+    //         documentPageId: page.pageId,
+    //         pageNumber: page.pageNumber,
+    //         suggestions,
+    //         definitionText: suggestions.map((s) => s.text).join("\n\n"),
+    //       },
+    //     });
+    //   }
+
+    //   return llmSuggestion.id;
+    // });
 
     const llmSuggestionId = await prisma.$transaction(async (tx) => {
       await tx.llmSuggestedDefinition.deleteMany({
-        where: { llmSuggestion: { documentId: data.documentId } },
-      });
-      await tx.llmSuggestion.deleteMany({
-        where: { documentId: data.documentId },
+        where: {
+          llmSuggestion: {
+            documentId: data.documentId,
+          },
+        },
       });
 
-      const llmSuggestion = await tx.llmSuggestion.create({
+      await tx.llmSuggestion.deleteMany({
+        where: {
+          documentId: data.documentId,
+        },
+      });
+
+      const createdLlmSuggestion = await tx.llmSuggestion.create({
         data: {
           documentId: data.documentId,
           customPrompt: buildStoredPrompt(data.systemPrompt, fullDocTextHash),
@@ -515,7 +569,7 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
             const res = await getLlmDefiniendaSuggestions({
               data: {
                 definitionText: suggestion.text,
-                llmSuggestionId: llmSuggestion.id,
+                llmSuggestionId: createdLlmSuggestion.id,
                 documentPageId: page.pageId,
                 pageNumber: page.pageNumber,
               },
@@ -529,7 +583,7 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
 
         await tx.llmSuggestedDefinition.create({
           data: {
-            llmSuggestionId: llmSuggestion.id,
+            llmSuggestionId: createdLlmSuggestion.id,
             documentPageId: page.pageId,
             pageNumber: page.pageNumber,
             suggestions,
@@ -538,7 +592,7 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
         });
       }
 
-      return llmSuggestion.id;
+      return createdLlmSuggestion.id;
     });
 
     const suggestions = await getStoredSuggestionsBySuggestionId(llmSuggestionId);
