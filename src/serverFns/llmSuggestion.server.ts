@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { createServerFn } from "@tanstack/react-start";
 import { createHash } from "node:crypto";
+import { getLlmDefiniendaSuggestions } from "./getLlmDefiniendaSuggestions.server";
 
 export const DEFAULT_LLM_SYSTEM_PROMPT = `You are a deterministic definition-span extractor for mathematical and scientific documents.
 
@@ -68,6 +69,10 @@ export type LlmSuggestion = {
   startOffset: number;
   endOffset: number;
   label: string;
+  definienda?: {
+    text: string;
+    label: string;
+  }[];
 };
 
 export type LlmSuggestionsInput = {
@@ -93,6 +98,10 @@ type StoredSuggestion = {
   startOffset: number;
   endOffset: number;
   label: string;
+  definienda?: {
+    text: string;
+    label: string;
+  }[];
 };
 
 type PageOffset = {
@@ -135,10 +144,7 @@ function fuzzyFind(
   return null;
 }
 
-function resolveOffsets(
-  fullText: string,
-  suggestions: RawSuggestion[],
-): StoredSuggestion[] {
+function resolveOffsets(fullText: string, suggestions: RawSuggestion[]): StoredSuggestion[] {
   const results: StoredSuggestion[] = [];
   const used = new Set<number>();
 
@@ -170,17 +176,12 @@ function resolveOffsets(
   return results;
 }
 
-function validateSuggestions(
-  raw: StoredSuggestion[],
-  sourceText: string,
-): StoredSuggestion[] {
+function validateSuggestions(raw: StoredSuggestion[], sourceText: string): StoredSuggestion[] {
   const valid = raw
     .flatMap((s): StoredSuggestion[] => {
-      if (typeof s.startOffset !== "number" || typeof s.endOffset !== "number")
-        return [];
+      if (typeof s.startOffset !== "number" || typeof s.endOffset !== "number") return [];
 
-      if (!Number.isInteger(s.startOffset) || !Number.isInteger(s.endOffset))
-        return [];
+      if (!Number.isInteger(s.startOffset) || !Number.isInteger(s.endOffset)) return [];
       if (s.startOffset < 0 || s.endOffset > sourceText.length) return [];
       if (s.startOffset >= s.endOffset) return [];
 
@@ -194,9 +195,7 @@ function validateSuggestions(
       ];
     })
     .sort((a, b) =>
-      a.startOffset !== b.startOffset
-        ? a.startOffset - b.startOffset
-        : b.endOffset - a.endOffset,
+      a.startOffset !== b.startOffset ? a.startOffset - b.startOffset : b.endOffset - a.endOffset,
     );
 
   const nonOverlapping: StoredSuggestion[] = [];
@@ -210,9 +209,7 @@ function validateSuggestions(
   return nonOverlapping;
 }
 
-function buildPageOffsets(
-  pages: { id: string; pageNumber: number; text: string }[],
-): PageOffset[] {
+function buildPageOffsets(pages: { id: string; pageNumber: number; text: string }[]): PageOffset[] {
   const pageSeparator = "\n\n";
   const offsets: PageOffset[] = [];
   let cursor = 0;
@@ -235,18 +232,12 @@ function mapGlobalSuggestionsToPages(
   suggestions: StoredSuggestion[],
   pageOffsets: PageOffset[],
 ): Map<string, { page: PageOffset; suggestions: StoredSuggestion[] }> {
-  const byPage = new Map<
-    string,
-    { page: PageOffset; suggestions: StoredSuggestion[] }
-  >();
+  const byPage = new Map<string, { page: PageOffset; suggestions: StoredSuggestion[] }>();
 
   let pageIndex = 0;
 
   for (const suggestion of suggestions) {
-    while (
-      pageIndex < pageOffsets.length &&
-      pageOffsets[pageIndex].end <= suggestion.startOffset
-    ) {
+    while (pageIndex < pageOffsets.length && pageOffsets[pageIndex].end <= suggestion.startOffset) {
       pageIndex += 1;
     }
 
@@ -285,9 +276,7 @@ function mapGlobalSuggestionsToPages(
 
   for (const entry of byPage.values()) {
     entry.suggestions.sort((a, b) =>
-      a.startOffset !== b.startOffset
-        ? a.startOffset - b.startOffset
-        : b.endOffset - a.endOffset,
+      a.startOffset !== b.startOffset ? a.startOffset - b.startOffset : b.endOffset - a.endOffset,
     );
   }
 
@@ -308,17 +297,13 @@ function isStoredSuggestion(value: unknown): value is StoredSuggestion {
   );
 }
 
-function toClientSuggestions(
-  pageText: string,
-  suggestions: unknown,
-): LlmSuggestion[] {
+function toClientSuggestions(pageText: string, suggestions: unknown): LlmSuggestion[] {
   if (!Array.isArray(suggestions)) return [];
 
   return suggestions
     .flatMap((s): LlmSuggestion[] => {
       if (!isStoredSuggestion(s)) return [];
-      if (typeof s.startOffset !== "number" || typeof s.endOffset !== "number")
-        return [];
+      if (typeof s.startOffset !== "number" || typeof s.endOffset !== "number") return [];
 
       if (s.startOffset < 0 || s.endOffset > pageText.length) return [];
       if (s.startOffset >= s.endOffset) return [];
@@ -333,13 +318,12 @@ function toClientSuggestions(
           startOffset: s.startOffset,
           endOffset: s.endOffset,
           label: s.label,
+          definienda: s.definienda || [],
         },
       ];
     })
     .sort((a, b) =>
-      a.startOffset !== b.startOffset
-        ? a.startOffset - b.startOffset
-        : b.endOffset - a.endOffset,
+      a.startOffset !== b.startOffset ? a.startOffset - b.startOffset : b.endOffset - a.endOffset,
     );
 }
 
@@ -353,10 +337,7 @@ async function getStoredSuggestionsBySuggestionId(
   });
 
   return rows.reduce<Record<string, LlmSuggestion[]>>((acc, row) => {
-    acc[row.documentPageId] = toClientSuggestions(
-      row.documentPage.text,
-      row.suggestions,
-    );
+    acc[row.documentPageId] = toClientSuggestions(row.documentPage.text, row.suggestions);
     return acc;
   }, {});
 }
@@ -365,19 +346,14 @@ function getFullTextHash(fullDocText: string): string {
   return createHash("sha256").update(fullDocText).digest("hex");
 }
 
-function buildStoredPrompt(
-  systemPrompt: string,
-  fullDocTextHash: string,
-): string {
+function buildStoredPrompt(systemPrompt: string, fullDocTextHash: string): string {
   return JSON.stringify({ systemPrompt, fullDocTextHash });
 }
 
 function getStoredFullTextHash(customPrompt: string): string | null {
   try {
     const parsed = JSON.parse(customPrompt) as { fullDocTextHash?: unknown };
-    return typeof parsed.fullDocTextHash === "string"
-      ? parsed.fullDocTextHash
-      : null;
+    return typeof parsed.fullDocTextHash === "string" ? parsed.fullDocTextHash : null;
   } catch {
     return null;
   }
@@ -490,16 +466,32 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
 
     console.log("RAW:", raw.length);
     const resolvedSuggestions = resolveOffsets(fullDocText, raw);
-    const globalSuggestions = validateSuggestions(
-      resolvedSuggestions,
-      fullDocText,
-    );
+    const globalSuggestions = validateSuggestions(resolvedSuggestions, fullDocText);
     console.log("VALID:", globalSuggestions.length);
 
     const pageOffsets = buildPageOffsets(pages);
     const perPage = mapGlobalSuggestionsToPages(globalSuggestions, pageOffsets);
     if (perPage.size === 0) {
       return { suggestions: {} };
+    }
+
+    for (const entry of perPage.values()) {
+      for (const suggestion of entry.suggestions) {
+        try {
+          const res = await getLlmDefiniendaSuggestions({
+            data: {
+              definitionText: suggestion.text,
+              llmSuggestionId: `${entry.page.pageId}-${suggestion.startOffset}`,
+              documentPageId: entry.page.pageId,
+              pageNumber: entry.page.pageNumber,
+            },
+          });
+
+          suggestion.definienda = res.definienda;
+        } catch (e) {
+          console.error("Definienda LLM failed", e);
+        }
+      }
     }
 
     const llmSuggestionId = await prisma.$transaction(async (tx) => {
@@ -518,6 +510,23 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
       });
 
       for (const { page, suggestions } of perPage.values()) {
+        for (const suggestion of suggestions) {
+          try {
+            const res = await getLlmDefiniendaSuggestions({
+              data: {
+                definitionText: suggestion.text,
+                llmSuggestionId: llmSuggestion.id,
+                documentPageId: page.pageId,
+                pageNumber: page.pageNumber,
+              },
+            });
+
+            suggestion.definienda = res.definienda;
+          } catch (e) {
+            console.error("Definienda LLM failed", e);
+          }
+        }
+
         await tx.llmSuggestedDefinition.create({
           data: {
             llmSuggestionId: llmSuggestion.id,
@@ -532,8 +541,7 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
       return llmSuggestion.id;
     });
 
-    const suggestions =
-      await getStoredSuggestionsBySuggestionId(llmSuggestionId);
+    const suggestions = await getStoredSuggestionsBySuggestionId(llmSuggestionId);
 
     return { suggestions };
   });

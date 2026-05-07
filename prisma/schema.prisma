@@ -174,8 +174,9 @@ model Definition {
   currentVersion Int                 @default(1)
   versionHistory DefinitionVersion[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  llmSuggestedDefiniendas LlmSuggestedDefinienda[]
 
   @@index([documentPageId])
   @@index([documentId])
@@ -247,8 +248,8 @@ model LlmSuggestion {
   documentId String
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  customPrompt String @db.Text
-  createdAt DateTime @default(now())
+  customPrompt String   @db.Text
+  createdAt    DateTime @default(now())
 
   pages LlmSuggestedDefinition[]
 
@@ -265,11 +266,26 @@ model LlmSuggestedDefinition {
   documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
   pageNumber     Int
 
-  suggestions Json // [{ text, startOffset, endOffset, label }]
+  suggestions    Json // [{ text, startOffset, endOffset, label }]
   definitionText String? @db.Text
 
   createdAt DateTime @default(now())
 
   @@unique([llmSuggestionId, documentPageId])
   @@index([documentPageId])
+}
+
+model LlmSuggestedDefinienda {
+  id String @id @default(uuid())
+
+  definienda String
+
+  definitionId String
+  definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  prompt String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([definitionId])
 }
