@@ -29,9 +29,10 @@ GOAL:
 Identify the primary definienda being defined.
 
 RULES:
-- Extract ONLY the exact technical concept being defined
-- Usually return ONLY 1 definiendum
-- Maximum 3 if multiple concepts are clearly defined
+- Extract ALL technical concepts being defined
+- Return multiple definienda whenever present
+- Maximum 5 definienda
+- Do not skip parallel concepts
 - Prefer short noun phrases
 - Avoid verbs, explanations, actions, or descriptive clauses
 - Avoid partial sentences

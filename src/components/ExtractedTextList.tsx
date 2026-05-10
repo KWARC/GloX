@@ -15,7 +15,6 @@ import { IconPencil, IconSettings, IconTrash } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
 import { FtmlPreview } from "./FtmlPreview";
 import { useState } from "react";
-import { getLlmDefiniendaSuggestions } from "@/serverFns/getLlmDefiniendaSuggestions.server";
 import { SuggestedDefinienda } from "./SuggestedDefinienda";
 
 interface ExtractedTextPanelProps {
@@ -147,54 +146,8 @@ export function ExtractedTextPanel({
                       onMouseUp={() => onSelection(item.id)}
                     >
                       <FtmlPreview key={item.id} docId={item.id} ftmlAst={item.statement} />
-                      {item.definitionSymbols && item.definitionSymbols.length > 0 && (
-                        <Group gap={6} mt={10} wrap="wrap">
-                          {item.definitionSymbols.map((item, index) => (
-                            <Badge
-                              key={`${item.symbol.symbolName}-${index}`}
-                              size="sm"
-                              radius="sm"
-                              variant="light"
-                              color="violet"
-                            >
-                              {item.symbol.symbolName}
-                            </Badge>
-                          ))}
-                        </Group>
-                      )}
-                      <Group justify="flex-end" mt="xs">
-                        <Button
-                          size="xs"
-                          variant="light"
-                          color="violet"
-                          onClick={async () => {
-                            try {
-                              const res = await getLlmDefiniendaSuggestions({
-                                data: {
-                                  definitionText: JSON.stringify(item.statement),
-                                  llmSuggestionId: item.id,
-                                  documentPageId: item.id,
-                                  pageNumber: item.pageNumber,
-                                },
-                              });
 
-                              console.log("LLM RESPONSE:", res);
-                              setSuggestedDefinienda((prev) => ({
-                                ...prev,
-                                [item.id]: res.definienda || [],
-                              }));
-                            } catch (e) {
-                              console.error("Definienda suggestion failed", e);
-                            }
-                          }}
-                        >
-                          Suggest Definienda
-                        </Button>
-                      </Group>
-
-                      <SuggestedDefinienda
-                        definienda={suggestedDefinienda[item.id] || item.symbols || []}
-                      />
+                      <SuggestedDefinienda item={item} />
                     </div>
                   )}
 

@@ -243,7 +243,7 @@ export const getLlmSuggestions = createServerFn({
       };
     }
 
-    const createdSuggestionId = await prisma.$transaction(async (tx) => {
+    const llmSuggestionId = await prisma.$transaction(async (tx) => {
       await tx.llmSuggestedDefinition.deleteMany({
         where: {
           llmSuggestion: {
@@ -258,7 +258,7 @@ export const getLlmSuggestions = createServerFn({
         },
       });
 
-      const createdLlmSuggestion = await tx.llmSuggestion.create({
+      const llmSuggestion = await tx.llmSuggestion.create({
         data: {
           documentId: data.documentId,
           customPrompt: buildStoredPrompt(data.systemPrompt, fullDocTextHash),
@@ -271,7 +271,7 @@ export const getLlmSuggestions = createServerFn({
             const res = await getLlmDefiniendaSuggestions({
               data: {
                 definitionText: suggestion.text,
-                llmSuggestionId: createdLlmSuggestion.id,
+                llmSuggestionId: llmSuggestion.id,
                 documentPageId: page.pageId,
                 pageNumber: page.pageNumber,
               },
@@ -285,7 +285,7 @@ export const getLlmSuggestions = createServerFn({
 
         await tx.llmSuggestedDefinition.create({
           data: {
-            llmSuggestionId: createdLlmSuggestion.id,
+            llmSuggestionId: llmSuggestion.id,
             documentPageId: page.pageId,
             pageNumber: page.pageNumber,
             suggestions: pageSuggestions,
@@ -294,10 +294,10 @@ export const getLlmSuggestions = createServerFn({
         });
       }
 
-      return createdLlmSuggestion.id;
+      return llmSuggestion.id;
     });
 
-    const storedSuggestionsByPage = await getStoredSuggestionsBySuggestionId(createdSuggestionId);
+    const storedSuggestionsByPage = await getStoredSuggestionsBySuggestionId(llmSuggestionId);
 
     return {
       suggestions: storedSuggestionsByPage,
