@@ -10,8 +10,8 @@ import {
   Tooltip,
 } from "@mantine/core";
 import {
+  IconDog,
   IconPencil,
-  IconRefresh,
   IconSettings,
   IconTrash,
 } from "@tabler/icons-react";
@@ -135,7 +135,7 @@ export function ExtractedTextPanel({
                             disabled={isLocked}
                             onClick={() => onRecomputeReferences(item.id)}
                           >
-                            <IconRefresh size={15} />
+                            <IconDog size={15} />
                           </ActionIcon>
                         </Tooltip>
                       )}

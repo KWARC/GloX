@@ -18,7 +18,9 @@ import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import {
   buildFullCatalog,
   extractPlainText,
-  SuggestedRef,
+  getSuggestedReferenceCandidateKey,
+  SuggestedReference,
+  SuggestedReferenceCandidate,
   suggestRefsForDefinition,
 } from "@/server/symbolic-suggestions";
 import {
@@ -141,9 +143,14 @@ function RouteComponent() {
   const [definitionMetaTarget, setDefinitionMetaTarget] =
     useState<ExtractedItem | null>(null);
   const [suggestOpen, setSuggestOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<SuggestedRef[]>([]);
+  const [suggestions, setSuggestions] = useState<SuggestedReference[]>([]);
+  const [suggestCandidateSymRefs, setSuggestCandidateSymRefs] = useState<
+    Record<string, UnifiedSymbolicReference>
+  >({});
   const [activeDefId, setActiveDefId] = useState<string | null>(null);
   const [activeDefText, setActiveDefText] = useState("");
+  const [activeDefStatement, setActiveDefStatement] =
+    useState<FtmlStatement | null>(null);
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
@@ -250,26 +257,34 @@ function RouteComponent() {
     if (!def) return;
 
     const text = extractPlainText(def.statement);
-    const refs = suggestRefsForDefinition(def, fullCatalog);
+    const session = suggestRefsForDefinition(def, fullCatalog);
 
     setActiveDefId(definitionId);
     setActiveDefText(text);
-    setSuggestions(refs);
+    setActiveDefStatement(def.statement);
+    setSuggestions(session.suggestions);
+    setSuggestCandidateSymRefs(session.candidateSymRefs);
     setSuggestOpen(true);
   }
 
-  async function handleAcceptSuggestion(s: SuggestedRef) {
+  async function handleAcceptSuggestion(
+    s: SuggestedReference,
+    candidate: SuggestedReferenceCandidate,
+  ) {
     if (!activeDefId) return;
+    const symRef =
+      suggestCandidateSymRefs[getSuggestedReferenceCandidateKey(candidate)];
+    if (!symRef) return;
 
     await symbolicRef({
       data: {
         definitionId: activeDefId,
         selection: {
           text: s.text,
-          startOffset: s.startOffset,
-          endOffset: s.endOffset,
+          startOffset: s.localStartOffset,
+          endOffset: s.localEndOffset,
         },
-        symRef: s.symRef,
+        symRef,
       },
     });
 
@@ -1005,6 +1020,7 @@ function RouteComponent() {
         opened={suggestOpen}
         onClose={() => setSuggestOpen(false)}
         definitionId={activeDefId ?? ""}
+        definitionStatement={activeDefStatement}
         definitionText={activeDefText}
         suggestions={suggestions}
         onAccept={handleAcceptSuggestion}
