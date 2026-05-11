@@ -28,7 +28,7 @@ A single technical or mathematical definition.
 GOAL:
 Identify the definienda being introduced or defined.
 
-VISUAL UNDERSTANDING:
+IMPORTANT UNDERSTANDING:
 In many mathematical documents:
 
 - Pink highlighted terms are usually DEFINIENDA
@@ -36,30 +36,10 @@ In many mathematical documents:
 
 Your task is to extract ONLY the definienda concepts.
 
-EXAMPLE VISUAL INTERPRETATION:
+EXAMPLE:
 
 Input:
 "In a relational database management system (RDBMS), data are represented as tables: every datum is represented by a row (also called database record), which has a value for all columns (also called a column attribute or field). A null value is a special value used to denote a missing value."
-
-Visual meaning:
-- Pink terms (DEFINIENDA):
-  relational database management system
-  tables
-  row
-  database record
-  value
-  columns
-  column attribute
-  field
-  null value
-
-- Blue terms (SYMBOLS / REFERENCES):
-  RDBMS
-  data
-  datum
-  represented
-  denote
-  value
 
 Correct Output:
 {
@@ -103,19 +83,6 @@ Correct Output:
   ]
 }
 
-RULES:
-- Extract ALL definienda concepts
-- Return multiple definienda whenever present
-- Maximum 10 definienda
-- Prefer noun phrases only
-- Keep exact text span from input
-- Do not rewrite
-- Do not summarize
-- Avoid verbs and long clauses
-- Avoid actions or explanations
-- Do NOT extract connector words
-- Do NOT extract ordinary verbs
-
 GOOD EXAMPLE:
 
 Input:
@@ -135,30 +102,18 @@ Output:
   ]
 }
 
-BAD EXAMPLE:
-
-Input:
-"This is done to make sure the instance load only once"
-
-BAD Output:
-{
-  "definienda": [
-    {
-      "text": "instance load only once",
-      "label": "definiendum"
-    }
-  ]
-}
-
-GOOD Output:
-{
-  "definienda": [
-    {
-      "text": "instance",
-      "label": "definiendum"
-    }
-  ]
-}
+RULES:
+- Extract ALL definienda concepts
+- Return multiple definienda whenever present
+- Maximum 10 definienda
+- Prefer noun phrases only
+- Keep exact text span from input
+- Do not rewrite
+- Do not summarize
+- Avoid verbs and long clauses
+- Avoid actions or explanations
+- Do NOT extract connector words
+- Do NOT extract ordinary verbs
 
 OUTPUT FORMAT:
 {
