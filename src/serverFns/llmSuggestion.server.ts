@@ -271,12 +271,11 @@ export const getLlmSuggestions = createServerFn({
             const res = await getLlmDefiniendaSuggestions({
               data: {
                 definitionText: suggestion.text,
-                llmSuggestionId: llmSuggestion.id,
+                definitionId: llmSuggestion.id,
                 documentPageId: page.pageId,
                 pageNumber: page.pageNumber,
               },
             });
-
             suggestion.definienda = res.definienda;
           } catch (e) {
             console.error("Definienda LLM failed", e);

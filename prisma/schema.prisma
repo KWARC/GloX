@@ -278,7 +278,7 @@ model LlmSuggestedDefinition {
 model LlmSuggestedDefinienda {
   id String @id @default(uuid())
 
-  definienda String
+  definienda String[]
 
   definitionId String
   definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)

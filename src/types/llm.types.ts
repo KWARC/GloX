@@ -24,7 +24,7 @@ export type RawPayload = {
 };
 
 export type StoredSuggestion = {
-  text: string;
+  text: string[];
   startOffset: number;
   endOffset: number;
   label: string;

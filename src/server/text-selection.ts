@@ -49,6 +49,11 @@ export type ExtractedItem = {
     text: string;
     label: string;
   }[];
+
+  definienda?: {
+    text: string[];
+    label: string;
+  }[];
 };
 
 export function useTextSelection() {

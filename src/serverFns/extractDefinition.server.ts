@@ -373,7 +373,7 @@ export const listDefinition = createServerFn({ method: "GET" })
         symbolicRefs: def.symbolicRefs,
         status: def.status,
 
-        symbols:
+        definienda:
           def.llmSuggestedDefiniendas?.map((d) => ({
             text: d.definienda,
             label: "definiendum",

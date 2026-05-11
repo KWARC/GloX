@@ -4,13 +4,13 @@ import { currentUser } from "@/server/auth/currentUser";
 import { createServerFn } from "@tanstack/react-start";
 
 export type LlmDefiniendum = {
-  text: string;
+  text: string[];
   label: string;
 };
 
 export type LlmDefiniendumInput = {
   definitionText: string;
-  llmSuggestionId: string;
+  definitionId: string;
   documentPageId: string;
   pageNumber: number;
 };
@@ -23,36 +23,100 @@ const DEFINIENDA_PROMPT = `
 You are a precise definienda extraction engine.
 
 INPUT:
-A single technical definition.
+A single technical or mathematical definition.
 
 GOAL:
-Identify the primary definienda being defined.
+Identify the definienda being introduced or defined.
 
-RULES:
-- Extract ALL technical concepts being defined
-- Return multiple definienda whenever present
-- Maximum 5 definienda
-- Do not skip parallel concepts
-- Prefer short noun phrases
-- Avoid verbs, explanations, actions, or descriptive clauses
-- Avoid partial sentences
-- Keep exact text span from input
-- Do not rewrite or summarize
+VISUAL UNDERSTANDING:
+In many mathematical documents:
 
-GOOD EXAMPLES:
+- Pink highlighted terms are usually DEFINIENDA
+- Blue highlighted terms are usually SYMBOLS, references, linked concepts, or semantic links
+
+Your task is to extract ONLY the definienda concepts.
+
+EXAMPLE VISUAL INTERPRETATION:
 
 Input:
-"CTS ensures that data types defined in different languages are treated consistently."
+"In a relational database management system (RDBMS), data are represented as tables: every datum is represented by a row (also called database record), which has a value for all columns (also called a column attribute or field). A null value is a special value used to denote a missing value."
 
-Output:
+Visual meaning:
+- Pink terms (DEFINIENDA):
+  relational database management system
+  tables
+  row
+  database record
+  value
+  columns
+  column attribute
+  field
+  null value
+
+- Blue terms (SYMBOLS / REFERENCES):
+  RDBMS
+  data
+  datum
+  represented
+  denote
+  value
+
+Correct Output:
 {
   "definienda": [
     {
-      "text": "CTS",
+      "text": "relational database management system",
+      "label": "definiendum"
+    },
+    {
+      "text": "tables",
+      "label": "definiendum"
+    },
+    {
+      "text": "row",
+      "label": "definiendum"
+    },
+    {
+      "text": "database record",
+      "label": "definiendum"
+    },
+    {
+      "text": "value",
+      "label": "definiendum"
+    },
+    {
+      "text": "columns",
+      "label": "definiendum"
+    },
+    {
+      "text": "column attribute",
+      "label": "definiendum"
+    },
+    {
+      "text": "field",
+      "label": "definiendum"
+    },
+    {
+      "text": "null value",
       "label": "definiendum"
     }
   ]
 }
+
+RULES:
+- Extract ALL definienda concepts
+- Return multiple definienda whenever present
+- Maximum 10 definienda
+- Prefer noun phrases only
+- Keep exact text span from input
+- Do not rewrite
+- Do not summarize
+- Avoid verbs and long clauses
+- Avoid actions or explanations
+- Do NOT extract connector words
+- Do NOT extract ordinary verbs
+
+GOOD EXAMPLE:
 
 Input:
 "Value types contain actual data while reference types contain pointers."
@@ -77,10 +141,24 @@ Input:
 "This is done to make sure the instance load only once"
 
 BAD Output:
-"instance load only once"
+{
+  "definienda": [
+    {
+      "text": "instance load only once",
+      "label": "definiendum"
+    }
+  ]
+}
 
 GOOD Output:
-"instance"
+{
+  "definienda": [
+    {
+      "text": "instance",
+      "label": "definiendum"
+    }
+  ]
+}
 
 OUTPUT FORMAT:
 {
@@ -96,7 +174,6 @@ IMPORTANT:
 - Return STRICT JSON only
 - No explanations
 `;
-
 export const getLlmDefiniendaSuggestions = createServerFn({
   method: "POST",
 })
@@ -105,13 +182,14 @@ export const getLlmDefiniendaSuggestions = createServerFn({
       throw new Error("definitionText is required");
     }
 
-    if (!data.llmSuggestionId) {
-      throw new Error("llmSuggestionId is required");
+    if (!data.definitionId) {
+      throw new Error("definitionId is required");
     }
 
     return data;
   })
   .handler(async ({ data }): Promise<LlmDefiniendumOutput> => {
+    console.log("SERVER INPUT DATA:", data);
     const user = await currentUser();
 
     if (!user.loggedIn) {
@@ -181,21 +259,26 @@ export const getLlmDefiniendaSuggestions = createServerFn({
     try {
       const parsed = JSON.parse(response.output_text || "{}");
 
-      definienda = Array.isArray(parsed.definienda) ? parsed.definienda : [];
+      definienda = Array.isArray(parsed.definienda)
+        ? parsed.definienda.map((item: any) => ({
+            text: [item.text],
+            label: item.label,
+          }))
+        : [];
     } catch {
       definienda = [];
     }
 
     await prisma.llmSuggestedDefinienda.deleteMany({
       where: {
-        definitionId: data.llmSuggestionId,
+        definitionId: data.definitionId,
       },
     });
 
     await prisma.llmSuggestedDefinienda.createMany({
       data: definienda.map((item) => ({
         definienda: item.text,
-        definitionId: data.llmSuggestionId,
+        definitionId: data.definitionId,
         prompt: DEFINIENDA_PROMPT,
       })),
     });

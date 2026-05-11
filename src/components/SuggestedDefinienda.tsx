@@ -6,7 +6,13 @@ interface SuggestedDefiniendaProps {
   item: {
     id: string;
     statement: unknown;
+    originalText: string;
     pageNumber: number;
+
+    definienda?: {
+      text: string[];
+      label: string;
+    }[];
 
     definitionSymbols?: {
       symbol: {
@@ -19,7 +25,7 @@ interface SuggestedDefiniendaProps {
 export function SuggestedDefinienda({ item }: SuggestedDefiniendaProps) {
   const [suggestedDefinienda, setSuggestedDefinienda] = useState<
     {
-      text: string;
+      text: string[];
       label: string;
     }[]
   >([]);
@@ -42,19 +48,21 @@ export function SuggestedDefinienda({ item }: SuggestedDefiniendaProps) {
         </Group>
       )}
 
-      {suggestedDefinienda.length > 0 && (
+      {(suggestedDefinienda.length > 0 || item.definienda?.length) && (
         <Group gap={6} mt="xs">
-          {suggestedDefinienda.map((item, index) => (
-            <Badge
-              key={`${item.text}-${index}`}
-              size="xs"
-              radius="sm"
-              variant="light"
-              color="violet"
-            >
-              {item.text}
-            </Badge>
-          ))}
+          {(suggestedDefinienda.length > 0 ? suggestedDefinienda : item.definienda || []).map(
+            (item, index) => (
+              <Badge
+                key={`${Array.isArray(item.text) ? item.text.join("-") : item.text}-${index}`}
+                size="xs"
+                radius="sm"
+                variant="light"
+                color="violet"
+              >
+                {Array.isArray(item.text) ? item.text.join(", ") : item.text}
+              </Badge>
+            ),
+          )}
         </Group>
       )}
 
@@ -68,7 +76,7 @@ export function SuggestedDefinienda({ item }: SuggestedDefiniendaProps) {
               const res = await getLlmDefiniendaSuggestions({
                 data: {
                   definitionText: JSON.stringify(item.statement),
-                  llmSuggestionId: item.id,
+                  definitionId: item.id,
                   documentPageId: item.id,
                   pageNumber: item.pageNumber,
                 },

@@ -51,7 +51,7 @@ export function ExtractedTextPanel({
   isLocked = false,
 }: ExtractedTextPanelProps) {
   const [suggestedDefinienda, setSuggestedDefinienda] = useState<
-    Record<string, { text: string; label: string }[]>
+    Record<string, { text: string[]; label: string }[]>
   >({});
   return (
     <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
