@@ -28,10 +28,10 @@ A single technical or mathematical definition.
 GOAL:
 Identify the definienda being introduced or defined.
 
-GOOD EXAMPLE:
+EXAMPLE:
 
 Input:
-"In a relational database management system (RDBMS), data are represented as tables: every datum is represented by a row (also called database record)."
+"In a relational database management system (RDBMS), data are represented as tables: every datum is represented by a row (also called database record), which has a value for all columns (also called a column attribute or field). A null value is a special value used to denote a missing value."
 
 Output:
 {
@@ -55,24 +55,44 @@ Output:
     {
       "text": "database record",
       "label": "definiendum"
+    },
+    {
+      "text": "columns",
+      "label": "definiendum"
+    },
+    {
+      "text": "column attribute",
+      "label": "definiendum"
+    },
+    {
+      "text": "field",
+      "label": "definiendum"
+    },
+    {
+      "text": "null value",
+      "label": "definiendum"
     }
   ]
 }
 
-GOOD EXAMPLE:
+EXAMPLE:
 
 Input:
-"Value types contain actual data while reference types contain pointers."
+"In Alea, a theory graph consists of theories connected by imports."
 
 Output:
 {
   "definienda": [
     {
-      "text": "Value types",
+      "text": "theory graph",
       "label": "definiendum"
     },
     {
-      "text": "reference types",
+      "text": "theories",
+      "label": "definiendum"
+    },
+    {
+      "text": "imports",
       "label": "definiendum"
     }
   ]
