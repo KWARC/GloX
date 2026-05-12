@@ -6,7 +6,6 @@ interface SuggestedDefiniendaProps {
   item: {
     id: string;
     statement: unknown;
-    originalText: string;
     pageNumber: number;
 
     definienda?: {

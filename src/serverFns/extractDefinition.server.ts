@@ -364,7 +364,6 @@ export const listDefinition = createServerFn({ method: "GET" })
       return {
         id: def.id,
         pageNumber: def.pageNumber,
-        originalText: def.originalText,
         statement,
         futureRepo: def.futureRepo,
         filePath: def.filePath,

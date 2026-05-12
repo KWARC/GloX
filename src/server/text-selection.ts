@@ -25,7 +25,6 @@ export type TextSelection = {
 export type ExtractedItem = {
   id: string;
   pageNumber: number;
-  originalText: string;
   statement: FtmlStatement;
   futureRepo: string;
   filePath: string;
@@ -43,11 +42,6 @@ export type ExtractedItem = {
       id: string;
       conceptUri: string;
     };
-  }[];
-
-  symbols?: {
-    text: string;
-    label: string;
   }[];
 
   definienda?: {

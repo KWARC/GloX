@@ -270,7 +270,7 @@ export const getLlmSuggestions = createServerFn({
           try {
             const res = await getLlmDefiniendaSuggestions({
               data: {
-                definitionText: suggestion.text,
+                definitionText: suggestion.text.join(" "),
                 definitionId: llmSuggestion.id,
                 documentPageId: page.pageId,
                 pageNumber: page.pageNumber,

@@ -28,24 +28,20 @@ A single technical or mathematical definition.
 GOAL:
 Identify the definienda being introduced or defined.
 
-IMPORTANT UNDERSTANDING:
-In many mathematical documents:
-
-- Pink highlighted terms are usually DEFINIENDA
-- Blue highlighted terms are usually SYMBOLS, references, linked concepts, or semantic links
-
-Your task is to extract ONLY the definienda concepts.
-
-EXAMPLE:
+GOOD EXAMPLE:
 
 Input:
-"In a relational database management system (RDBMS), data are represented as tables: every datum is represented by a row (also called database record), which has a value for all columns (also called a column attribute or field). A null value is a special value used to denote a missing value."
+"In a relational database management system (RDBMS), data are represented as tables: every datum is represented by a row (also called database record)."
 
-Correct Output:
+Output:
 {
   "definienda": [
     {
       "text": "relational database management system",
+      "label": "definiendum"
+    },
+    {
+      "text": "RDBMS",
       "label": "definiendum"
     },
     {
@@ -58,26 +54,6 @@ Correct Output:
     },
     {
       "text": "database record",
-      "label": "definiendum"
-    },
-    {
-      "text": "value",
-      "label": "definiendum"
-    },
-    {
-      "text": "columns",
-      "label": "definiendum"
-    },
-    {
-      "text": "column attribute",
-      "label": "definiendum"
-    },
-    {
-      "text": "field",
-      "label": "definiendum"
-    },
-    {
-      "text": "null value",
       "label": "definiendum"
     }
   ]
@@ -103,7 +79,7 @@ Output:
 }
 
 RULES:
-- Extract ALL definienda concepts
+- Extract all definienda concepts
 - Return multiple definienda whenever present
 - Maximum 10 definienda
 - Prefer noun phrases only
@@ -111,9 +87,7 @@ RULES:
 - Do not rewrite
 - Do not summarize
 - Avoid verbs and long clauses
-- Avoid actions or explanations
-- Do NOT extract connector words
-- Do NOT extract ordinary verbs
+- Avoid explanations
 
 OUTPUT FORMAT:
 {

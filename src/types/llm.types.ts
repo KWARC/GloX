@@ -1,5 +1,5 @@
 export type LlmSuggestion = {
-  text: string;
+  text: string[];
   startOffset: number;
   endOffset: number;
   label: string;
@@ -29,7 +29,7 @@ export type StoredSuggestion = {
   endOffset: number;
   label: string;
   definienda?: {
-    text: string;
+    text: string[];
     label: string;
   }[];
 };
