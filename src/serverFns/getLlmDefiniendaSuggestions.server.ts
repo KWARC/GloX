@@ -77,8 +77,10 @@ Output:
 
 EXAMPLE:
 
+EXAMPLE 2:
+
 Input:
-"In Alea, a theory graph consists of theories connected by imports."
+"A theory graph consists of theories connected by imports. A theory is a collection of symbol declarations and axioms."
 
 Output:
 {
@@ -93,6 +95,18 @@ Output:
     },
     {
       "text": "imports",
+      "label": "definiendum"
+    },
+    {
+      "text": "theory",
+      "label": "definiendum"
+    },
+    {
+      "text": "symbol declarations",
+      "label": "definiendum"
+    },
+    {
+      "text": "axioms",
       "label": "definiendum"
     }
   ]
