@@ -6,6 +6,7 @@ import {
   buildStoredPrompt,
   getFullTextHash,
   getStoredFullTextHash,
+  getStoredPageNumbers,
   getStoredSuggestionsBySuggestionId,
   mapGlobalSuggestionsToPages,
   resolveOffsets,
@@ -46,8 +47,14 @@ export const getLlmSuggestionsByDocument = createServerFn({ method: "POST" })
 
     if (!latest) return {};
 
+    const storedPageNumbers = getStoredPageNumbers(latest.customPrompt);
     const pages = await prisma.documentPage.findMany({
-      where: { documentId: data.documentId },
+      where: {
+        documentId: data.documentId,
+        ...(storedPageNumbers
+          ? { pageNumber: { in: storedPageNumbers } }
+          : {}),
+      },
       orderBy: { pageNumber: "asc" },
     });
     const fullDocText = pages.map((p) => p.text).join("\n\n");
@@ -61,6 +68,9 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
   .inputValidator((data: LlmSuggestionsInput) => {
     if (!data.documentId) throw new Error("documentId is required");
     if (!data.systemPrompt?.trim()) throw new Error("systemPrompt is required");
+    if (data.pageNumbers && data.pageNumbers.length === 0) {
+      return { ...data, pageNumbers: [] };
+    }
     return data;
   })
   .handler(async ({ data }): Promise<LlmSuggestionsOutput> => {
@@ -68,7 +78,12 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
     if (!user.loggedIn) throw new Error("Unauthorized");
 
     const pages = await prisma.documentPage.findMany({
-      where: { documentId: data.documentId },
+      where: {
+        documentId: data.documentId,
+        ...(data.pageNumbers
+          ? { pageNumber: { in: data.pageNumbers } }
+          : {}),
+      },
       orderBy: { pageNumber: "asc" },
     });
 
@@ -147,7 +162,11 @@ export const getLlmSuggestions = createServerFn({ method: "POST" })
       const llmSuggestion = await tx.llmSuggestion.create({
         data: {
           documentId: data.documentId,
-          customPrompt: buildStoredPrompt(data.systemPrompt, fullDocTextHash),
+          customPrompt: buildStoredPrompt(
+            data.systemPrompt,
+            fullDocTextHash,
+            data.pageNumbers ? pages.map((page) => page.pageNumber) : undefined,
+          ),
         },
       });
 

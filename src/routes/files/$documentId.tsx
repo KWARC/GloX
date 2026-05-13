@@ -190,8 +190,49 @@ function RouteComponent() {
     }
   }
 
+  async function runLlmForUnextractedPages() {
+    const extractedPageNumbers = new Set(extracts.map((e) => e.pageNumber));
+    const unextractedPageNumbers = pages
+      .filter((page) => !extractedPageNumbers.has(page.pageNumber))
+      .map((page) => page.pageNumber);
+
+    if (unextractedPageNumbers.length === 0) {
+      queryClient.setQueryData(["llm-suggestions", documentId], {});
+      setLlmEnabled(false);
+      return;
+    }
+
+    setLlmLoading(true);
+    try {
+      const result = await getLlmSuggestions({
+        data: {
+          documentId,
+          systemPrompt: llmPrompt,
+          pageNumbers: unextractedPageNumbers,
+        },
+      });
+
+      queryClient.setQueryData(
+        ["llm-suggestions", documentId],
+        result.suggestions,
+      );
+      setLlmEnabled(
+        Object.values(result.suggestions).some((s) => s.length > 0),
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "LLM request failed";
+      alert(`LLM Suggestion failed: ${message}`);
+    } finally {
+      setLlmLoading(false);
+    }
+  }
+
   function handleLlmSuggestion() {
     void runLlm(llmPrompt);
+  }
+
+  function handleDidIMissSomething() {
+    void runLlmForUnextractedPages();
   }
 
   function handleOpenRecompute() {
@@ -630,6 +671,37 @@ function RouteComponent() {
     0,
   );
   const hasAnySuggestions = totalSuggestions > 0;
+  const hasExtractedDefinitions = extracts.length > 0;
+
+  const didIMissSomethingButton = hasExtractedDefinitions ? (
+    <Tooltip
+      label={
+        canRunLlm
+          ? "Check whether any definitions were missed"
+          : "Document is loading…"
+      }
+      withArrow
+      position="bottom"
+    >
+      <Button
+        size="xs"
+        variant="light"
+        color="teal"
+        leftSection={
+          llmLoading ? (
+            <Loader size={12} color="teal" />
+          ) : (
+            <IconBrain size={14} />
+          )
+        }
+        loading={llmLoading}
+        disabled={!canRunLlm}
+        onClick={handleDidIMissSomething}
+      >
+        Did I miss something?
+      </Button>
+    </Tooltip>
+  ) : null;
 
   const llmButtons = (
     <Group gap={6} wrap="nowrap">
@@ -759,6 +831,9 @@ function RouteComponent() {
                 </Tabs.List>
 
                 {activeTab === "document" && <Box pb="xs">{llmButtons}</Box>}
+                {activeTab === "extracts" && didIMissSomethingButton && (
+                  <Box pb="xs">{didIMissSomethingButton}</Box>
+                )}
               </Box>
 
               <Tabs.Panel
@@ -893,6 +968,8 @@ function RouteComponent() {
                     {extracts.length}
                   </Badge>
                 )}
+
+                {didIMissSomethingButton}
 
                 <Button
                   size="xs"
