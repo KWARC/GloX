@@ -580,7 +580,15 @@ export function buildFullCatalog(
   staticCatalog: StaticCatalogDef[],
 ): CatalogEntry[] {
   const dynamic = buildDefinitionCatalog(extracts);
-  const staticDefs = staticCatalog.map(
+  const staticDefs = buildStaticCatalog(staticCatalog);
+
+  return [...dynamic, ...staticDefs];
+}
+
+export function buildStaticCatalog(
+  staticCatalog: StaticCatalogDef[],
+): CatalogEntry[] {
+  return staticCatalog.map(
     (d): CatalogEntry => ({
       id: d.id,
       name: d.name,
@@ -593,8 +601,6 @@ export function buildFullCatalog(
       },
     }),
   );
-
-  return [...dynamic, ...staticDefs];
 }
 
 export function suggestRefsForDefinition(

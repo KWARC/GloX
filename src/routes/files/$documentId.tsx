@@ -17,7 +17,7 @@ import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
 import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import {
   buildCandidateSymRefMap,
-  buildFullCatalog,
+  buildStaticCatalog,
   extractPlainText,
   getSuggestedReferenceCandidateKey,
   SuggestedReference,
@@ -169,9 +169,9 @@ function RouteComponent() {
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
   const { extractText, updateExtract } = useExtractionActions(documentId);
-  const fullCatalog = useMemo(
-    () => buildFullCatalog(extracts, staticCatalog),
-    [extracts, staticCatalog],
+  const sniffyCatalog = useMemo(
+    () => buildStaticCatalog(staticCatalog),
+    [staticCatalog],
   );
 
   const { data: llmSuggestions = {} } = useQuery({
@@ -345,7 +345,11 @@ function RouteComponent() {
     }
 
     setActivePage({ id: page.id, pageNumber: page.pageNumber });
-    setPendingExtractText(Array.isArray(suggestion.text) ? suggestion.text.join(" ") : suggestion.text);
+    setPendingExtractText(
+      Array.isArray(suggestion.text)
+        ? suggestion.text.join(" ")
+        : suggestion.text,
+    );
     setExtractDialogOpen(true);
   }
 
@@ -391,14 +395,14 @@ function RouteComponent() {
     if (!def) return;
 
     const text = extractPlainText(def.statement);
-    const session = suggestRefsForDefinition(def, fullCatalog);
+    const session = suggestRefsForDefinition(def, sniffyCatalog);
 
     setActiveDefId(definitionId);
     setActiveDefText(text);
     setActiveDefStatement(def.statement);
     setSuggestions(session.suggestions);
     setSuggestCandidateSymRefs({
-      ...buildCandidateSymRefMap(fullCatalog, definitionId),
+      ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
       ...session.candidateSymRefs,
     });
     setSuggestOpen(true);
@@ -1240,7 +1244,7 @@ function RouteComponent() {
         definitionStatement={activeDefStatement}
         definitionText={activeDefText}
         suggestions={suggestions}
-        catalog={fullCatalog}
+        catalog={sniffyCatalog}
         onAccept={handleAcceptSuggestion}
       />
 
