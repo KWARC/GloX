@@ -16,6 +16,7 @@ import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
 import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import {
+  buildCandidateSymRefMap,
   buildFullCatalog,
   extractPlainText,
   getSuggestedReferenceCandidateKey,
@@ -39,8 +40,8 @@ import {
   getLlmSuggestions,
   getLlmSuggestionsByDocument,
 } from "@/serverFns/llmSuggestion.server";
-import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
+import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
@@ -65,6 +66,8 @@ import {
 import { useMediaQuery } from "@mantine/hooks";
 import {
   IconBrain,
+  IconChevronLeft,
+  IconChevronRight,
   IconFileAlert,
   IconFileText,
   IconList,
@@ -73,7 +76,7 @@ import {
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/files/$documentId")({
   loader: async () => {
@@ -85,6 +88,17 @@ export const Route = createFileRoute("/files/$documentId")({
   },
   component: RouteComponent,
 });
+
+type FlattenedLlmSuggestion = {
+  id: string;
+  pageId: string;
+  pageNumber: number;
+  suggestion: LlmSuggestion;
+};
+
+function getLlmSuggestionId(pageId: string, suggestion: LlmSuggestion): string {
+  return `llm-suggestion-${pageId}-${suggestion.startOffset}-${suggestion.endOffset}`;
+}
 
 function RouteComponent() {
   const navigate = useNavigate();
@@ -166,10 +180,48 @@ function RouteComponent() {
   });
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmEnabled, setLlmEnabled] = useState(false);
+  const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState<
+    number | null
+  >(null);
   const [llmPrompt, setLlmPrompt] = useState(DEFAULT_LLM_SYSTEM_PROMPT);
   const [recomputeDialogOpen, setRecomputeDialogOpen] = useState(false);
   const [recomputePromptDraft, setRecomputePromptDraft] = useState(llmPrompt);
   const canRunLlm = !llmLoading && pages.length > 0;
+  const flattenedSuggestions = useMemo<FlattenedLlmSuggestion[]>(() => {
+    const pageNumbersById = new Map(
+      pages.map((page) => [page.id, page.pageNumber]),
+    );
+
+    return Object.entries(llmSuggestions)
+      .flatMap(([pageId, suggestions]) => {
+        const pageNumber = pageNumbersById.get(pageId);
+        if (pageNumber === undefined) return [];
+
+        return suggestions.map((suggestion) => ({
+          id: getLlmSuggestionId(pageId, suggestion),
+          pageId,
+          pageNumber,
+          suggestion,
+        }));
+      })
+      .sort((a, b) =>
+        a.pageNumber !== b.pageNumber
+          ? a.pageNumber - b.pageNumber
+          : a.suggestion.startOffset - b.suggestion.startOffset,
+      );
+  }, [llmSuggestions, pages]);
+
+  useEffect(() => {
+    if (flattenedSuggestions.length === 0) {
+      setFocusedSuggestionIndex(null);
+      return;
+    }
+
+    setFocusedSuggestionIndex((index) => {
+      if (index === null) return index;
+      return Math.min(index, flattenedSuggestions.length - 1);
+    });
+  }, [flattenedSuggestions.length]);
 
   async function runLlm(prompt: string) {
     setLlmLoading(true);
@@ -247,9 +299,50 @@ function RouteComponent() {
     void runLlm(recomputePromptDraft);
   }
 
+  function scrollSuggestionIntoView(suggestionId: string) {
+    window.setTimeout(() => {
+      const el = window.document.getElementById(suggestionId);
+      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 0);
+  }
+
+  function focusSuggestion(index: number) {
+    const suggestion = flattenedSuggestions[index];
+    if (!suggestion) return;
+
+    setFocusedSuggestionIndex(index);
+    setLlmEnabled(true);
+    if (isMobile) setActiveTab("document");
+    scrollSuggestionIntoView(suggestion.id);
+  }
+
+  function goToSuggestion(direction: "previous" | "next") {
+    if (flattenedSuggestions.length === 0) return;
+
+    const lastIndex = flattenedSuggestions.length - 1;
+    const nextIndex =
+      focusedSuggestionIndex === null
+        ? direction === "next"
+          ? 0
+          : lastIndex
+        : direction === "next"
+          ? Math.min(focusedSuggestionIndex + 1, lastIndex)
+          : Math.max(focusedSuggestionIndex - 1, 0);
+
+    focusSuggestion(nextIndex);
+  }
+
   function handleLlmSuggestionClick(suggestion: LlmSuggestion, pageId: string) {
     const page = pages.find((p) => p.id === pageId);
     if (!page) return;
+
+    const suggestionId = getLlmSuggestionId(pageId, suggestion);
+    const suggestionIndex = flattenedSuggestions.findIndex(
+      (entry) => entry.id === suggestionId,
+    );
+    if (suggestionIndex !== -1) {
+      setFocusedSuggestionIndex(suggestionIndex);
+    }
 
     setActivePage({ id: page.id, pageNumber: page.pageNumber });
     setPendingExtractText(suggestion.text);
@@ -304,7 +397,10 @@ function RouteComponent() {
     setActiveDefText(text);
     setActiveDefStatement(def.statement);
     setSuggestions(session.suggestions);
-    setSuggestCandidateSymRefs(session.candidateSymRefs);
+    setSuggestCandidateSymRefs({
+      ...buildCandidateSymRefMap(fullCatalog, definitionId),
+      ...session.candidateSymRefs,
+    });
     setSuggestOpen(true);
   }
 
@@ -602,6 +698,12 @@ function RouteComponent() {
     setPendingExtractText("");
     setDefinitionName("");
     clearAll();
+
+    if (focusedSuggestionIndex !== null && flattenedSuggestions.length > 0) {
+      focusSuggestion(
+        Math.min(focusedSuggestionIndex + 1, flattenedSuggestions.length - 1),
+      );
+    }
   }
 
   async function handleLatexConfigSubmit(config: {
@@ -666,11 +768,15 @@ function RouteComponent() {
 
   const pad = isMobile ? "xs" : isTablet ? "md" : "lg";
   const gap = isMobile ? "xs" : "md";
-  const totalSuggestions = Object.values(llmSuggestions).reduce(
-    (acc, s) => acc + s.length,
-    0,
-  );
+  const totalSuggestions = flattenedSuggestions.length;
   const hasAnySuggestions = totalSuggestions > 0;
+  const focusedSuggestion =
+    focusedSuggestionIndex !== null
+      ? flattenedSuggestions[focusedSuggestionIndex]
+      : null;
+  const focusedSuggestionId = focusedSuggestion?.id ?? null;
+  const suggestionCounter =
+    focusedSuggestionIndex === null ? 1 : focusedSuggestionIndex + 1;
   const hasExtractedDefinitions = extracts.length > 0;
 
   const didIMissSomethingButton = hasExtractedDefinitions ? (
@@ -755,21 +861,53 @@ function RouteComponent() {
       </Tooltip>
 
       {hasAnySuggestions && (
-        <Tooltip
-          label={llmEnabled ? "Hide highlights" : "Show highlights"}
-          withArrow
-          position="bottom"
-        >
-          <Button
-            size="xs"
-            variant={llmEnabled ? "filled" : "outline"}
-            color="yellow"
-            leftSection={<IconSparkles size={13} />}
-            onClick={() => setLlmEnabled((v) => !v)}
+        <>
+          <Group gap={2} wrap="nowrap">
+            <Tooltip label="Previous suggestion" withArrow position="bottom">
+              <Button
+                size="xs"
+                variant="subtle"
+                color="yellow"
+                px={6}
+                onClick={() => goToSuggestion("previous")}
+              >
+                <IconChevronLeft size={14} />
+              </Button>
+            </Tooltip>
+
+            <Text size="xs" c="dimmed" miw={42} ta="center">
+              {suggestionCounter} / {totalSuggestions}
+            </Text>
+
+            <Tooltip label="Next suggestion" withArrow position="bottom">
+              <Button
+                size="xs"
+                variant="subtle"
+                color="yellow"
+                px={6}
+                onClick={() => goToSuggestion("next")}
+              >
+                <IconChevronRight size={14} />
+              </Button>
+            </Tooltip>
+          </Group>
+
+          <Tooltip
+            label={llmEnabled ? "Hide highlights" : "Show highlights"}
+            withArrow
+            position="bottom"
           >
-            {totalSuggestions}
-          </Button>
-        </Tooltip>
+            <Button
+              size="xs"
+              variant={llmEnabled ? "filled" : "outline"}
+              color="yellow"
+              leftSection={<IconSparkles size={13} />}
+              onClick={() => setLlmEnabled((v) => !v)}
+            >
+              {totalSuggestions}
+            </Button>
+          </Tooltip>
+        </>
       )}
     </Group>
   );
@@ -852,6 +990,7 @@ function RouteComponent() {
                   onSelection={handleLeftSelection}
                   llmSuggestions={llmSuggestions}
                   llmEnabled={llmEnabled}
+                  focusedSuggestionId={focusedSuggestionId}
                   onLlmSuggestionClick={handleLlmSuggestionClick}
                 />
               </Tabs.Panel>
@@ -932,6 +1071,7 @@ function RouteComponent() {
                   onSelection={handleLeftSelection}
                   llmSuggestions={llmSuggestions}
                   llmEnabled={llmEnabled}
+                  focusedSuggestionId={focusedSuggestionId}
                   onLlmSuggestionClick={handleLlmSuggestionClick}
                 />
               </Box>
@@ -1100,6 +1240,7 @@ function RouteComponent() {
         definitionStatement={activeDefStatement}
         definitionText={activeDefText}
         suggestions={suggestions}
+        catalog={fullCatalog}
         onAccept={handleAcceptSuggestion}
       />
 

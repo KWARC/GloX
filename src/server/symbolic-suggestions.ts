@@ -1,14 +1,8 @@
 import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { parseUri } from "@/server/parseUri";
 import type { ExtractedItem } from "@/server/text-selection";
-import {
-  normalizeToRoot,
-} from "@/types/ftml.types";
-import type {
-  FtmlContent,
-  FtmlNode,
-  FtmlStatement,
-} from "@/types/ftml.types";
+import type { FtmlContent, FtmlNode, FtmlStatement } from "@/types/ftml.types";
+import { normalizeToRoot } from "@/types/ftml.types";
 import {
   Catalog,
   stringToStemmedWordSequenceSimplified,
@@ -16,7 +10,7 @@ import {
 } from "./symbolic-catalog/catalogSearch";
 import type { StaticCatalogDef } from "./symbolic-catalog/loadCatalog";
 
-type CatalogEntry = {
+export type CatalogEntry = {
   id: string;
   name: string;
   canonicalForm: string;
@@ -72,12 +66,10 @@ function tokenize(v: string) {
 }
 
 function candidateKey(candidate: SuggestedReferenceCandidate) {
-  return [
-    candidate.source,
-    candidate.definitionId ?? "",
-    candidate.uri ?? "",
-    candidate.label,
-  ].join("::");
+  if (candidate.source === "DB") {
+    return `DB:${candidate.definitionId ?? ""}`;
+  }
+  return `MATHHUB:${candidate.uri ?? ""}`;
 }
 
 export function getSuggestedReferenceCandidateKey(
@@ -122,7 +114,13 @@ function walkTextNodes(
       if (!nextInsideSemantic) visit(child, cursor, childPath);
       cursor += child.length;
     } else {
-      cursor = walkTextNodes(child, visit, nextInsideSemantic, cursor, childPath);
+      cursor = walkTextNodes(
+        child,
+        visit,
+        nextInsideSemantic,
+        cursor,
+        childPath,
+      );
     }
   }
 
@@ -208,8 +206,168 @@ function getCandidateConfidence(term: string, entry: CatalogEntry): number {
     const nameTokens = tokenize(name);
     const overlap = nameTokens.filter((token) => termTokens.has(token)).length;
     if (overlap > 0) {
-      best = Math.max(best, 0.5 + overlap / Math.max(nameTokens.length, 1) * 0.2);
+      best = Math.max(
+        best,
+        0.5 + (overlap / Math.max(nameTokens.length, 1)) * 0.2,
+      );
     }
+  }
+
+  return best;
+}
+
+function normalizeSearchValue(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s_-]+/gu, " ")
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function tokenizeSearchValue(value: string) {
+  return normalizeSearchValue(value).split(" ").filter(Boolean);
+}
+
+function acronym(value: string) {
+  return tokenizeSearchValue(value)
+    .map((token) => token[0])
+    .join("");
+}
+
+function tokenPrefixMatch(queryTokens: string[], targetTokens: string[]) {
+  if (!queryTokens.length || queryTokens.length > targetTokens.length) {
+    return false;
+  }
+
+  return queryTokens.every((queryToken, index) => {
+    const targetToken = targetTokens[index];
+    return (
+      targetToken?.startsWith(queryToken) || queryToken.startsWith(targetToken)
+    );
+  });
+}
+
+function levenshteinDistance(a: string, b: string) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const current = Array.from({ length: b.length + 1 }, () => 0);
+
+  for (let i = 1; i <= a.length; i++) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1;
+      current[j] = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + substitutionCost,
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+
+  return previous[b.length];
+}
+
+function characterDiceCoefficient(a: string, b: string) {
+  if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return 0;
+
+  const bigramCounts = new Map<string, number>();
+  for (let i = 0; i < a.length - 1; i++) {
+    const bigram = a.slice(i, i + 2);
+    bigramCounts.set(bigram, (bigramCounts.get(bigram) ?? 0) + 1);
+  }
+
+  let intersection = 0;
+  for (let i = 0; i < b.length - 1; i++) {
+    const bigram = b.slice(i, i + 2);
+    const count = bigramCounts.get(bigram) ?? 0;
+    if (count > 0) {
+      intersection += 1;
+      bigramCounts.set(bigram, count - 1);
+    }
+  }
+
+  return (2 * intersection) / (a.length + b.length - 2);
+}
+
+function tokenDiceCoefficient(queryTokens: string[], targetTokens: string[]) {
+  if (!queryTokens.length || !targetTokens.length) return 0;
+
+  const targetSet = new Set(targetTokens);
+  const overlap = queryTokens.filter(
+    (token) =>
+      targetSet.has(token) ||
+      targetTokens.some((target) => target.startsWith(token)),
+  ).length;
+
+  return (2 * overlap) / (queryTokens.length + targetTokens.length);
+}
+
+function fuzzyScore(query: string, target: string) {
+  const queryTokens = tokenizeSearchValue(query);
+  const targetTokens = tokenizeSearchValue(target);
+  const normalizedQuery = queryTokens.join(" ");
+  const normalizedTarget = targetTokens.join(" ");
+  if (!normalizedQuery || !normalizedTarget) return 0;
+
+  const maxLength = Math.max(normalizedQuery.length, normalizedTarget.length);
+  const editSimilarity =
+    maxLength === 0
+      ? 0
+      : 1 - levenshteinDistance(normalizedQuery, normalizedTarget) / maxLength;
+  const charSimilarity = characterDiceCoefficient(
+    normalizedQuery,
+    normalizedTarget,
+  );
+  const tokenSimilarity = tokenDiceCoefficient(queryTokens, targetTokens);
+
+  return Math.max(editSimilarity, charSimilarity, tokenSimilarity);
+}
+
+export function scoreCandidate(
+  query: string,
+  candidateTerms: string[],
+): number {
+  const normalizedQuery = normalizeSearchValue(query);
+  const queryTokens = tokenizeSearchValue(query);
+  if (!normalizedQuery || !queryTokens.length) return 0;
+
+  let best = 0;
+  for (const term of candidateTerms.filter(isSurfaceTerm)) {
+    const normalizedTerm = normalizeSearchValue(term);
+    if (!normalizedTerm) continue;
+
+    if (normalizedTerm === normalizedQuery) {
+      best = Math.max(best, 1);
+      continue;
+    }
+
+    if (normalizedTerm.startsWith(normalizedQuery)) {
+      best = Math.max(best, 0.92);
+      continue;
+    }
+
+    if (acronym(normalizedTerm) === normalizedQuery) {
+      best = Math.max(best, 0.88);
+      continue;
+    }
+
+    if (tokenPrefixMatch(queryTokens, tokenizeSearchValue(normalizedTerm))) {
+      best = Math.max(best, 0.82);
+      continue;
+    }
+
+    if (normalizedTerm.includes(normalizedQuery)) {
+      best = Math.max(best, 0.72);
+      continue;
+    }
+
+    best = Math.max(best, fuzzyScore(normalizedQuery, normalizedTerm));
   }
 
   return best;
@@ -238,19 +396,81 @@ function toCandidate(
       entry.symRef.filePath,
       entry.symRef.fileName,
       entry.symRef.language,
-    ].filter(Boolean).join("/"),
+    ]
+      .filter(Boolean)
+      .join("/"),
     confidence,
     definitionId: entry.sourceDefinitionId,
   };
 }
 
 function formatMathHubPath(parsed: ReturnType<typeof parseUri>) {
-  return [
-    parsed.archive,
-    parsed.filePath,
-    parsed.fileName,
-    parsed.language,
-  ].filter(Boolean).join("/");
+  return [parsed.archive, parsed.filePath, parsed.fileName, parsed.language]
+    .filter(Boolean)
+    .join("/");
+}
+
+function getSearchTerms(entry: CatalogEntry) {
+  return [entry.name, ...entry.aliases].filter(isSurfaceTerm);
+}
+
+export function buildCandidateSymRefMap(
+  catalog: CatalogEntry[],
+  currentDefinitionId?: string,
+): Record<string, UnifiedSymbolicReference> {
+  const candidateSymRefs: Record<string, UnifiedSymbolicReference> = {};
+
+  for (const entry of catalog) {
+    if (
+      entry.symRef.source === "DB" &&
+      entry.sourceDefinitionId === currentDefinitionId
+    ) {
+      continue;
+    }
+
+    const candidate = toCandidate(entry, 1);
+    candidateSymRefs[getSuggestedReferenceCandidateKey(candidate)] =
+      entry.symRef;
+  }
+
+  return candidateSymRefs;
+}
+
+export function searchReferenceCandidates(
+  query: string,
+  catalog: CatalogEntry[],
+  currentDefinitionId?: string,
+): SuggestedReferenceCandidate[] {
+  const seen = new Set<string>();
+
+  return catalog
+    .flatMap((entry) => {
+      if (
+        entry.symRef.source === "DB" &&
+        entry.sourceDefinitionId === currentDefinitionId
+      ) {
+        return [];
+      }
+
+      const terms = getSearchTerms(entry);
+      if (!terms.length) return [];
+
+      const score = scoreCandidate(query, terms);
+      if (score < 0.5) return [];
+
+      const candidate = toCandidate(entry, score);
+      const key = getSuggestedReferenceCandidateKey(candidate);
+      if (seen.has(key)) return [];
+      seen.add(key);
+
+      return [{ candidate, score }];
+    })
+    .sort(
+      (a, b) =>
+        b.score - a.score || a.candidate.label.localeCompare(b.candidate.label),
+    )
+    .slice(0, 10)
+    .map(({ candidate }) => candidate);
 }
 
 function getRankedCandidates(
@@ -320,7 +540,9 @@ function findAllCatalogMatches(
   return matches;
 }
 
-export function buildDefinitionCatalog(extracts: ExtractedItem[]): CatalogEntry[] {
+export function buildDefinitionCatalog(
+  extracts: ExtractedItem[],
+): CatalogEntry[] {
   return extracts.flatMap((extract) => {
     const root = normalizeToRoot(extract.statement);
     const entries: CatalogEntry[] = [];
@@ -358,17 +580,19 @@ export function buildFullCatalog(
   staticCatalog: StaticCatalogDef[],
 ): CatalogEntry[] {
   const dynamic = buildDefinitionCatalog(extracts);
-  const staticDefs = staticCatalog.map((d): CatalogEntry => ({
-    id: d.id,
-    name: d.name,
-    canonicalForm: d.name.toLowerCase(),
-    aliases: d.aliases,
-    symbolicUri: d.symbolicUri,
-    symRef: {
-      source: "MATHHUB",
-      uri: d.symbolicUri,
-    },
-  }));
+  const staticDefs = staticCatalog.map(
+    (d): CatalogEntry => ({
+      id: d.id,
+      name: d.name,
+      canonicalForm: d.name.toLowerCase(),
+      aliases: d.aliases,
+      symbolicUri: d.symbolicUri,
+      symRef: {
+        source: "MATHHUB",
+        uri: d.symbolicUri,
+      },
+    }),
+  );
 
   return [...dynamic, ...staticDefs];
 }

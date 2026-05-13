@@ -58,15 +58,23 @@ function buildSegments(
 }
 
 interface HighlightedPageTextProps {
+  pageId: string;
   pageText: string;
   suggestions: LlmSuggestion[];
+  focusedSuggestionId?: string | null;
   onSelection: () => void;
   onSuggestionClick: (suggestion: LlmSuggestion) => void;
 }
 
+function getLlmSuggestionId(pageId: string, suggestion: LlmSuggestion): string {
+  return `llm-suggestion-${pageId}-${suggestion.startOffset}-${suggestion.endOffset}`;
+}
+
 function HighlightedPageText({
+  pageId,
   pageText,
   suggestions,
+  focusedSuggestionId,
   onSelection,
   onSuggestionClick,
 }: HighlightedPageTextProps) {
@@ -91,6 +99,15 @@ function HighlightedPageText({
           return <span key={i}>{seg.content}</span>;
         }
 
+        const suggestionId = getLlmSuggestionId(pageId, seg.suggestion);
+        const isFocused = suggestionId === focusedSuggestionId;
+        const defaultBg = isFocused
+          ? "rgba(234, 179, 8, 0.62)"
+          : "rgba(234, 179, 8, 0.25)";
+        const hoverBg = isFocused
+          ? "rgba(234, 179, 8, 0.72)"
+          : "rgba(234, 179, 8, 0.5)";
+
         return (
           <Tooltip
             key={i}
@@ -112,25 +129,29 @@ function HighlightedPageText({
             zIndex={5000}
           >
             <Box
+              id={suggestionId}
+              data-suggestion-id={suggestionId}
               component="mark"
               onClick={(e) => {
                 e.stopPropagation();
                 onSuggestionClick(seg.suggestion);
               }}
               style={{
-                backgroundColor: "rgba(234, 179, 8, 0.25)",
+                backgroundColor: defaultBg,
                 borderRadius: "2px",
+                boxShadow: isFocused
+                  ? "0 0 0 2px rgba(202, 138, 4, 0.75)"
+                  : undefined,
                 cursor: "pointer",
                 padding: "1px 0",
-                transition: "background-color 100ms ease",
+                transition:
+                  "background-color 100ms ease, box-shadow 100ms ease",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor =
-                  "rgba(234, 179, 8, 0.5)";
+                e.currentTarget.style.backgroundColor = hoverBg;
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor =
-                  "rgba(234, 179, 8, 0.25)";
+                e.currentTarget.style.backgroundColor = defaultBg;
               }}
             >
               {seg.content}
@@ -148,6 +169,7 @@ interface DocumentPagesPanelProps {
   onSelection: (pageId: string) => void;
   llmSuggestions?: Record<string, LlmSuggestion[]>;
   llmEnabled?: boolean;
+  focusedSuggestionId?: string | null;
   onLlmSuggestionClick?: (suggestion: LlmSuggestion, pageId: string) => void;
 }
 
@@ -157,6 +179,7 @@ export function DocumentPagesPanel({
   onSelection,
   llmSuggestions,
   llmEnabled = false,
+  focusedSuggestionId,
   onLlmSuggestionClick,
 }: DocumentPagesPanelProps) {
   const [collapsedPages, setCollapsedPages] = useState<Record<string, boolean>>(
@@ -218,8 +241,10 @@ export function DocumentPagesPanel({
 
                 {hasHighlights ? (
                   <HighlightedPageText
+                    pageId={page.id}
                     pageText={page.text}
                     suggestions={pageSuggestions}
+                    focusedSuggestionId={focusedSuggestionId}
                     onSelection={() => onSelection(page.id)}
                     onSuggestionClick={(s) =>
                       onLlmSuggestionClick?.(s, page.id)
