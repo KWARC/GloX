@@ -1,5 +1,5 @@
 export type LlmSuggestion = {
-  text: string;
+  text: string[];
   startOffset: number;
   endOffset: number;
   label: string;
@@ -8,6 +8,7 @@ export type LlmSuggestion = {
 export type LlmSuggestionsInput = {
   documentId: string;
   systemPrompt: string;
+  pageNumbers?: number[];
 };
 
 export type LlmSuggestionsOutput = {
@@ -24,10 +25,14 @@ export type RawPayload = {
 };
 
 export type StoredSuggestion = {
-  text: string;
+  text: string[];
   startOffset: number;
   endOffset: number;
   label: string;
+  definienda?: {
+    text: string[];
+    label: string;
+  }[];
 };
 
 export type PageOffset = {

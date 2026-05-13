@@ -55,7 +55,7 @@ export function parseUri(uri: string): ParsedMathHubUri {
   return {
     archive: params.get("a") || "",
     filePath: params.get("p") || "",
-    fileName: params.get("d") || "",
+    fileName: params.get("d") || params.get("m") || "",
     language: params.get("l") || "en",
     symbol: params.get("s") || "",
     conceptUri: uri,

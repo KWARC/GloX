@@ -1,8 +1,5 @@
 import { queryClient } from "@/queryClient";
-import {
-  createDefinition,
-  updateDefinition,
-} from "@/serverFns/extractDefinition.server";
+import { createDefinition, updateDefinition } from "@/serverFns/extractDefinition.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import { useState } from "react";
 
@@ -46,6 +43,11 @@ export type ExtractedItem = {
       conceptUri: string;
     };
   }[];
+
+  definienda?: {
+    text: string[];
+    label: string;
+  }[];
 };
 
 export function useTextSelection() {
@@ -71,11 +73,8 @@ export function useTextSelection() {
     const startContainer = range.startContainer;
     const endContainer = range.endContainer;
 
-    if (
-      startContainer !== endContainer ||
-      startContainer.nodeType !== Node.TEXT_NODE
-    ) {
-      return; 
+    if (startContainer !== endContainer || startContainer.nodeType !== Node.TEXT_NODE) {
+      return;
     }
 
     const startOffset = range.startOffset;

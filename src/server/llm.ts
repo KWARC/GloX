@@ -271,8 +271,9 @@ export function getFullTextHash(fullDocText: string): string {
 export function buildStoredPrompt(
   systemPrompt: string,
   fullDocTextHash: string,
+  pageNumbers?: number[],
 ): string {
-  return JSON.stringify({ systemPrompt, fullDocTextHash });
+  return JSON.stringify({ systemPrompt, fullDocTextHash, pageNumbers });
 }
 
 export function getStoredFullTextHash(customPrompt: string): string | null {
@@ -280,6 +281,22 @@ export function getStoredFullTextHash(customPrompt: string): string | null {
     const parsed = JSON.parse(customPrompt) as { fullDocTextHash?: unknown };
     return typeof parsed.fullDocTextHash === "string"
       ? parsed.fullDocTextHash
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getStoredPageNumbers(customPrompt: string): number[] | null {
+  try {
+    const parsed = JSON.parse(customPrompt) as { pageNumbers?: unknown };
+    if (!Array.isArray(parsed.pageNumbers)) return null;
+
+    const pageNumbers = parsed.pageNumbers.filter(
+      (value): value is number => Number.isInteger(value),
+    );
+    return pageNumbers.length === parsed.pageNumbers.length
+      ? pageNumbers
       : null;
   } catch {
     return null;
