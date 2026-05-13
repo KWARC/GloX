@@ -8,6 +8,7 @@ export type LlmSuggestion = {
 export type LlmSuggestionsInput = {
   documentId: string;
   systemPrompt: string;
+  pageNumbers?: number[];
 };
 
 export type LlmSuggestionsOutput = {

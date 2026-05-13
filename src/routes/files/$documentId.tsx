@@ -4,6 +4,7 @@ import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { ExtractTextDialog } from "@/components/ExtractTextDialog";
 import { LatexConfigModel } from "@/components/LatexConfigModel";
+import { ReferenceSuggestionDialog } from "@/components/ReferenceSuggestionDialog";
 import { SelectionPopup } from "@/components/SelectionPopup";
 import { SemanticPanel } from "@/components/SemanticPanel";
 import { SymbolicRef } from "@/components/SymbolicRef";
@@ -14,6 +15,15 @@ import { currentUser } from "@/server/auth/currentUser";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
 import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
+import {
+  buildCandidateSymRefMap,
+  buildFullCatalog,
+  extractPlainText,
+  getSuggestedReferenceCandidateKey,
+  SuggestedReference,
+  SuggestedReferenceCandidate,
+  suggestRefsForDefinition,
+} from "@/server/symbolic-suggestions";
 import {
   ActivePage,
   ExtractedItem,
@@ -31,6 +41,7 @@ import {
   getLlmSuggestionsByDocument,
 } from "@/serverFns/llmSuggestion.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
+import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
@@ -55,6 +66,8 @@ import {
 import { useMediaQuery } from "@mantine/hooks";
 import {
   IconBrain,
+  IconChevronLeft,
+  IconChevronRight,
   IconFileAlert,
   IconFileText,
   IconList,
@@ -63,7 +76,7 @@ import {
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/files/$documentId")({
   loader: async () => {
@@ -75,6 +88,17 @@ export const Route = createFileRoute("/files/$documentId")({
   },
   component: RouteComponent,
 });
+
+type FlattenedLlmSuggestion = {
+  id: string;
+  pageId: string;
+  pageNumber: number;
+  suggestion: LlmSuggestion;
+};
+
+function getLlmSuggestionId(pageId: string, suggestion: LlmSuggestion): string {
+  return `llm-suggestion-${pageId}-${suggestion.startOffset}-${suggestion.endOffset}`;
+}
 
 function RouteComponent() {
   const navigate = useNavigate();
@@ -93,6 +117,11 @@ function RouteComponent() {
   const { data: extracts = [] } = useQuery({
     queryKey: ["definitions", documentId],
     queryFn: () => listDefinition({ data: { documentId } }),
+  });
+
+  const { data: staticCatalog = [] } = useQuery({
+    queryKey: ["static-symbolic-catalog"],
+    queryFn: () => listStaticSymbolicCatalog(),
   });
 
   const [futureRepo, setFutureRepo] = useState("smglom/softeng");
@@ -127,10 +156,23 @@ function RouteComponent() {
   const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
   const [definitionMetaTarget, setDefinitionMetaTarget] =
     useState<ExtractedItem | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<SuggestedReference[]>([]);
+  const [suggestCandidateSymRefs, setSuggestCandidateSymRefs] = useState<
+    Record<string, UnifiedSymbolicReference>
+  >({});
+  const [activeDefId, setActiveDefId] = useState<string | null>(null);
+  const [activeDefText, setActiveDefText] = useState("");
+  const [activeDefStatement, setActiveDefStatement] =
+    useState<FtmlStatement | null>(null);
 
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
   const { extractText, updateExtract } = useExtractionActions(documentId);
+  const fullCatalog = useMemo(
+    () => buildFullCatalog(extracts, staticCatalog),
+    [extracts, staticCatalog],
+  );
 
   const { data: llmSuggestions = {} } = useQuery({
     queryKey: ["llm-suggestions", documentId],
@@ -138,10 +180,48 @@ function RouteComponent() {
   });
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmEnabled, setLlmEnabled] = useState(false);
+  const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState<
+    number | null
+  >(null);
   const [llmPrompt, setLlmPrompt] = useState(DEFAULT_LLM_SYSTEM_PROMPT);
   const [recomputeDialogOpen, setRecomputeDialogOpen] = useState(false);
   const [recomputePromptDraft, setRecomputePromptDraft] = useState(llmPrompt);
   const canRunLlm = !llmLoading && pages.length > 0;
+  const flattenedSuggestions = useMemo<FlattenedLlmSuggestion[]>(() => {
+    const pageNumbersById = new Map(
+      pages.map((page) => [page.id, page.pageNumber]),
+    );
+
+    return Object.entries(llmSuggestions)
+      .flatMap(([pageId, suggestions]) => {
+        const pageNumber = pageNumbersById.get(pageId);
+        if (pageNumber === undefined) return [];
+
+        return suggestions.map((suggestion) => ({
+          id: getLlmSuggestionId(pageId, suggestion),
+          pageId,
+          pageNumber,
+          suggestion,
+        }));
+      })
+      .sort((a, b) =>
+        a.pageNumber !== b.pageNumber
+          ? a.pageNumber - b.pageNumber
+          : a.suggestion.startOffset - b.suggestion.startOffset,
+      );
+  }, [llmSuggestions, pages]);
+
+  useEffect(() => {
+    if (flattenedSuggestions.length === 0) {
+      setFocusedSuggestionIndex(null);
+      return;
+    }
+
+    setFocusedSuggestionIndex((index) => {
+      if (index === null) return index;
+      return Math.min(index, flattenedSuggestions.length - 1);
+    });
+  }, [flattenedSuggestions.length]);
 
   async function runLlm(prompt: string) {
     setLlmLoading(true);
@@ -162,8 +242,49 @@ function RouteComponent() {
     }
   }
 
+  async function runLlmForUnextractedPages() {
+    const extractedPageNumbers = new Set(extracts.map((e) => e.pageNumber));
+    const unextractedPageNumbers = pages
+      .filter((page) => !extractedPageNumbers.has(page.pageNumber))
+      .map((page) => page.pageNumber);
+
+    if (unextractedPageNumbers.length === 0) {
+      queryClient.setQueryData(["llm-suggestions", documentId], {});
+      setLlmEnabled(false);
+      return;
+    }
+
+    setLlmLoading(true);
+    try {
+      const result = await getLlmSuggestions({
+        data: {
+          documentId,
+          systemPrompt: llmPrompt,
+          pageNumbers: unextractedPageNumbers,
+        },
+      });
+
+      queryClient.setQueryData(
+        ["llm-suggestions", documentId],
+        result.suggestions,
+      );
+      setLlmEnabled(
+        Object.values(result.suggestions).some((s) => s.length > 0),
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "LLM request failed";
+      alert(`LLM Suggestion failed: ${message}`);
+    } finally {
+      setLlmLoading(false);
+    }
+  }
+
   function handleLlmSuggestion() {
     void runLlm(llmPrompt);
+  }
+
+  function handleDidIMissSomething() {
+    void runLlmForUnextractedPages();
   }
 
   function handleOpenRecompute() {
@@ -178,9 +299,50 @@ function RouteComponent() {
     void runLlm(recomputePromptDraft);
   }
 
+  function scrollSuggestionIntoView(suggestionId: string) {
+    window.setTimeout(() => {
+      const el = window.document.getElementById(suggestionId);
+      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 0);
+  }
+
+  function focusSuggestion(index: number) {
+    const suggestion = flattenedSuggestions[index];
+    if (!suggestion) return;
+
+    setFocusedSuggestionIndex(index);
+    setLlmEnabled(true);
+    if (isMobile) setActiveTab("document");
+    scrollSuggestionIntoView(suggestion.id);
+  }
+
+  function goToSuggestion(direction: "previous" | "next") {
+    if (flattenedSuggestions.length === 0) return;
+
+    const lastIndex = flattenedSuggestions.length - 1;
+    const nextIndex =
+      focusedSuggestionIndex === null
+        ? direction === "next"
+          ? 0
+          : lastIndex
+        : direction === "next"
+          ? Math.min(focusedSuggestionIndex + 1, lastIndex)
+          : Math.max(focusedSuggestionIndex - 1, 0);
+
+    focusSuggestion(nextIndex);
+  }
+
   function handleLlmSuggestionClick(suggestion: LlmSuggestion, pageId: string) {
     const page = pages.find((p) => p.id === pageId);
     if (!page) return;
+
+    const suggestionId = getLlmSuggestionId(pageId, suggestion);
+    const suggestionIndex = flattenedSuggestions.findIndex(
+      (entry) => entry.id === suggestionId,
+    );
+    if (suggestionIndex !== -1) {
+      setFocusedSuggestionIndex(suggestionIndex);
+    }
 
     setActivePage({ id: page.id, pageNumber: page.pageNumber });
     setPendingExtractText(suggestion.text);
@@ -222,6 +384,50 @@ function RouteComponent() {
   function handleOpenSemanticPanel(definitionId: string) {
     setSemanticPanelDefId(definitionId);
     setSemanticPanelOpen(true);
+  }
+
+  function handleRecomputeReferences(definitionId: string) {
+    const def = extracts.find((e) => e.id === definitionId);
+    if (!def) return;
+
+    const text = extractPlainText(def.statement);
+    const session = suggestRefsForDefinition(def, fullCatalog);
+
+    setActiveDefId(definitionId);
+    setActiveDefText(text);
+    setActiveDefStatement(def.statement);
+    setSuggestions(session.suggestions);
+    setSuggestCandidateSymRefs({
+      ...buildCandidateSymRefMap(fullCatalog, definitionId),
+      ...session.candidateSymRefs,
+    });
+    setSuggestOpen(true);
+  }
+
+  async function handleAcceptSuggestion(
+    s: SuggestedReference,
+    candidate: SuggestedReferenceCandidate,
+  ) {
+    if (!activeDefId) return;
+    const symRef =
+      suggestCandidateSymRefs[getSuggestedReferenceCandidateKey(candidate)];
+    if (!symRef) return;
+
+    await symbolicRef({
+      data: {
+        definitionId: activeDefId,
+        selection: {
+          text: s.text,
+          startOffset: s.localStartOffset,
+          endOffset: s.localEndOffset,
+        },
+        symRef,
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
+    });
   }
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
@@ -492,6 +698,12 @@ function RouteComponent() {
     setPendingExtractText("");
     setDefinitionName("");
     clearAll();
+
+    if (focusedSuggestionIndex !== null && flattenedSuggestions.length > 0) {
+      focusSuggestion(
+        Math.min(focusedSuggestionIndex + 1, flattenedSuggestions.length - 1),
+      );
+    }
   }
 
   async function handleLatexConfigSubmit(config: {
@@ -556,11 +768,46 @@ function RouteComponent() {
 
   const pad = isMobile ? "xs" : isTablet ? "md" : "lg";
   const gap = isMobile ? "xs" : "md";
-  const totalSuggestions = Object.values(llmSuggestions).reduce(
-    (acc, s) => acc + s.length,
-    0,
-  );
+  const totalSuggestions = flattenedSuggestions.length;
   const hasAnySuggestions = totalSuggestions > 0;
+  const focusedSuggestion =
+    focusedSuggestionIndex !== null
+      ? flattenedSuggestions[focusedSuggestionIndex]
+      : null;
+  const focusedSuggestionId = focusedSuggestion?.id ?? null;
+  const suggestionCounter =
+    focusedSuggestionIndex === null ? 1 : focusedSuggestionIndex + 1;
+  const hasExtractedDefinitions = extracts.length > 0;
+
+  const didIMissSomethingButton = hasExtractedDefinitions ? (
+    <Tooltip
+      label={
+        canRunLlm
+          ? "Check whether any definitions were missed"
+          : "Document is loading…"
+      }
+      withArrow
+      position="bottom"
+    >
+      <Button
+        size="xs"
+        variant="light"
+        color="teal"
+        leftSection={
+          llmLoading ? (
+            <Loader size={12} color="teal" />
+          ) : (
+            <IconBrain size={14} />
+          )
+        }
+        loading={llmLoading}
+        disabled={!canRunLlm}
+        onClick={handleDidIMissSomething}
+      >
+        Did I miss something?
+      </Button>
+    </Tooltip>
+  ) : null;
 
   const llmButtons = (
     <Group gap={6} wrap="nowrap">
@@ -614,21 +861,53 @@ function RouteComponent() {
       </Tooltip>
 
       {hasAnySuggestions && (
-        <Tooltip
-          label={llmEnabled ? "Hide highlights" : "Show highlights"}
-          withArrow
-          position="bottom"
-        >
-          <Button
-            size="xs"
-            variant={llmEnabled ? "filled" : "outline"}
-            color="yellow"
-            leftSection={<IconSparkles size={13} />}
-            onClick={() => setLlmEnabled((v) => !v)}
+        <>
+          <Group gap={2} wrap="nowrap">
+            <Tooltip label="Previous suggestion" withArrow position="bottom">
+              <Button
+                size="xs"
+                variant="subtle"
+                color="yellow"
+                px={6}
+                onClick={() => goToSuggestion("previous")}
+              >
+                <IconChevronLeft size={14} />
+              </Button>
+            </Tooltip>
+
+            <Text size="xs" c="dimmed" miw={42} ta="center">
+              {suggestionCounter} / {totalSuggestions}
+            </Text>
+
+            <Tooltip label="Next suggestion" withArrow position="bottom">
+              <Button
+                size="xs"
+                variant="subtle"
+                color="yellow"
+                px={6}
+                onClick={() => goToSuggestion("next")}
+              >
+                <IconChevronRight size={14} />
+              </Button>
+            </Tooltip>
+          </Group>
+
+          <Tooltip
+            label={llmEnabled ? "Hide highlights" : "Show highlights"}
+            withArrow
+            position="bottom"
           >
-            {totalSuggestions}
-          </Button>
-        </Tooltip>
+            <Button
+              size="xs"
+              variant={llmEnabled ? "filled" : "outline"}
+              color="yellow"
+              leftSection={<IconSparkles size={13} />}
+              onClick={() => setLlmEnabled((v) => !v)}
+            >
+              {totalSuggestions}
+            </Button>
+          </Tooltip>
+        </>
       )}
     </Group>
   );
@@ -690,6 +969,9 @@ function RouteComponent() {
                 </Tabs.List>
 
                 {activeTab === "document" && <Box pb="xs">{llmButtons}</Box>}
+                {activeTab === "extracts" && didIMissSomethingButton && (
+                  <Box pb="xs">{didIMissSomethingButton}</Box>
+                )}
               </Box>
 
               <Tabs.Panel
@@ -708,6 +990,7 @@ function RouteComponent() {
                   onSelection={handleLeftSelection}
                   llmSuggestions={llmSuggestions}
                   llmEnabled={llmEnabled}
+                  focusedSuggestionId={focusedSuggestionId}
                   onLlmSuggestionClick={handleLlmSuggestionClick}
                 />
               </Tabs.Panel>
@@ -731,6 +1014,7 @@ function RouteComponent() {
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
                   onOpenSemanticPanel={handleOpenSemanticPanel}
+                  onRecomputeReferences={handleRecomputeReferences}
                   onEditDefinitionMeta={handleEditDefinitionMeta}
                 />
               </Tabs.Panel>
@@ -787,6 +1071,7 @@ function RouteComponent() {
                   onSelection={handleLeftSelection}
                   llmSuggestions={llmSuggestions}
                   llmEnabled={llmEnabled}
+                  focusedSuggestionId={focusedSuggestionId}
                   onLlmSuggestionClick={handleLlmSuggestionClick}
                 />
               </Box>
@@ -824,6 +1109,8 @@ function RouteComponent() {
                   </Badge>
                 )}
 
+                {didIMissSomethingButton}
+
                 <Button
                   size="xs"
                   variant="subtle"
@@ -844,6 +1131,7 @@ function RouteComponent() {
                   onSelection={handleRightSelection}
                   onToggleEdit={handleToggleEdit}
                   onOpenSemanticPanel={handleOpenSemanticPanel}
+                  onRecomputeReferences={handleRecomputeReferences}
                   onEditDefinitionMeta={handleEditDefinitionMeta}
                 />
               </Box>
@@ -943,6 +1231,17 @@ function RouteComponent() {
         }}
         definition={definitionMetaTarget}
         invalidateKey={["definitions", documentId]}
+      />
+
+      <ReferenceSuggestionDialog
+        opened={suggestOpen}
+        onClose={() => setSuggestOpen(false)}
+        definitionId={activeDefId ?? ""}
+        definitionStatement={activeDefStatement}
+        definitionText={activeDefText}
+        suggestions={suggestions}
+        catalog={fullCatalog}
+        onAccept={handleAcceptSuggestion}
       />
 
       <Modal

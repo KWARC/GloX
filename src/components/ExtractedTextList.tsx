@@ -11,7 +11,12 @@ import {
   Textarea,
   Tooltip,
 } from "@mantine/core";
-import { IconPencil, IconSettings, IconTrash } from "@tabler/icons-react";
+import {
+  IconDog,
+  IconPencil,
+  IconSettings,
+  IconTrash,
+} from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
 import { FtmlPreview } from "./FtmlPreview";
 import { useState } from "react";
@@ -28,6 +33,7 @@ interface ExtractedTextPanelProps {
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
   onOpenSemanticPanel: (definitionId: string) => void;
+  onRecomputeReferences?: (definitionId: string) => void;
   onOpenLatexPreview?: (item: ExtractedItem) => void;
   showPageNumber?: boolean;
   showDefinitionMeta?: boolean;
@@ -44,6 +50,7 @@ export function ExtractedTextPanel({
   onDelete,
   onSelection,
   onOpenSemanticPanel,
+  onRecomputeReferences,
   showPageNumber = true,
   showDefinitionMeta = true,
   showDefinitionMetaIconOnly = false,
@@ -118,6 +125,20 @@ export function ExtractedTextPanel({
                           <IconSettings size={16} />
                         </ActionIcon>
                       </Tooltip>
+
+                      {onRecomputeReferences && (
+                        <Tooltip label="Sniffy" withArrow>
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            color="teal"
+                            disabled={isLocked}
+                            onClick={() => onRecomputeReferences(item.id)}
+                          >
+                            <IconDog size={15} />
+                          </ActionIcon>
+                        </Tooltip>
+                      )}
                     </Group>
                   </Group>
 

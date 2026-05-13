@@ -6,6 +6,7 @@ import {
   buildStoredPrompt,
   getFullTextHash,
   getStoredFullTextHash,
+  getStoredPageNumbers,
   getStoredSuggestionsBySuggestionId,
   mapGlobalSuggestionsToPages,
   resolveOffsets,
@@ -111,13 +112,15 @@ export const getLlmSuggestionsByDocument = createServerFn({
       return {};
     }
 
+    const storedPageNumbers = getStoredPageNumbers(latest.customPrompt);
     const pages = await prisma.documentPage.findMany({
       where: {
         documentId: data.documentId,
+        ...(storedPageNumbers
+          ? { pageNumber: { in: storedPageNumbers } }
+          : {}),
       },
-      orderBy: {
-        pageNumber: "asc",
-      },
+      orderBy: { pageNumber: "asc" },
     });
 
     const fullDocText = pages.map((p) => p.text).join("\n\n");
@@ -135,14 +138,11 @@ export const getLlmSuggestions = createServerFn({
   method: "POST",
 })
   .inputValidator((data: LlmSuggestionsInput) => {
-    if (!data.documentId) {
-      throw new Error("documentId is required");
+    if (!data.documentId) throw new Error("documentId is required");
+    if (!data.systemPrompt?.trim()) throw new Error("systemPrompt is required");
+    if (data.pageNumbers && data.pageNumbers.length === 0) {
+      return { ...data, pageNumbers: [] };
     }
-
-    if (!data.systemPrompt?.trim()) {
-      throw new Error("systemPrompt is required");
-    }
-
     return data;
   })
   .handler(async ({ data }): Promise<LlmSuggestionsOutput> => {
@@ -155,10 +155,11 @@ export const getLlmSuggestions = createServerFn({
     const pages = await prisma.documentPage.findMany({
       where: {
         documentId: data.documentId,
+        ...(data.pageNumbers
+          ? { pageNumber: { in: data.pageNumbers } }
+          : {}),
       },
-      orderBy: {
-        pageNumber: "asc",
-      },
+      orderBy: { pageNumber: "asc" },
     });
 
     if (pages.length === 0) {
@@ -244,24 +245,14 @@ export const getLlmSuggestions = createServerFn({
     }
 
     const llmSuggestionId = await prisma.$transaction(async (tx) => {
-      await tx.llmSuggestedDefinition.deleteMany({
-        where: {
-          llmSuggestion: {
-            documentId: data.documentId,
-          },
-        },
-      });
-
-      await tx.llmSuggestion.deleteMany({
-        where: {
-          documentId: data.documentId,
-        },
-      });
-
       const llmSuggestion = await tx.llmSuggestion.create({
         data: {
           documentId: data.documentId,
-          customPrompt: buildStoredPrompt(data.systemPrompt, fullDocTextHash),
+          customPrompt: buildStoredPrompt(
+            data.systemPrompt,
+            fullDocTextHash,
+            data.pageNumbers ? pages.map((page) => page.pageNumber) : undefined,
+          ),
         },
       });
 
