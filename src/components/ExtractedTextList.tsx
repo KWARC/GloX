@@ -1,8 +1,6 @@
 import { ExtractedItem } from "@/server/text-selection";
 import {
   ActionIcon,
-  Badge,
-  Button,
   Group,
   Paper,
   ScrollArea,
@@ -19,7 +17,6 @@ import {
 } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
 import { FtmlPreview } from "./FtmlPreview";
-import { useState } from "react";
 import { SuggestedDefinienda } from "./SuggestedDefinienda";
 
 interface ExtractedTextPanelProps {
@@ -28,7 +25,10 @@ interface ExtractedTextPanelProps {
   editingId: string | null;
   selectedId: string | null;
   onToggleEdit: (id: string) => void;
-  onUpdate: (id: string, statement: ExtractedItem["statement"]) => Promise<void>;
+  onUpdate: (
+    id: string,
+    statement: ExtractedItem["statement"],
+  ) => Promise<void>;
   onDownload?: (item: ExtractedItem) => void;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
@@ -57,9 +57,6 @@ export function ExtractedTextPanel({
   onEditDefinitionMeta,
   isLocked = false,
 }: ExtractedTextPanelProps) {
-  const [suggestedDefinienda, setSuggestedDefinienda] = useState<
-    Record<string, { text: string[]; label: string }[]>
-  >({});
   return (
     <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
       <ScrollArea h="100%">
@@ -90,7 +87,11 @@ export function ExtractedTextPanel({
                   }}
                 >
                   <Group justify="space-between" mb={4}>
-                    {showPageNumber ? <Text size="xs">Page {item.pageNumber}</Text> : <div />}
+                    {showPageNumber ? (
+                      <Text size="xs">Page {item.pageNumber}</Text>
+                    ) : (
+                      <div />
+                    )}
 
                     <Group gap="xs">
                       <Tooltip label="Delete definition" withArrow>
@@ -166,7 +167,11 @@ export function ExtractedTextPanel({
                       style={{ userSelect: "text", cursor: "text" }}
                       onMouseUp={() => onSelection(item.id)}
                     >
-                      <FtmlPreview key={item.id} docId={item.id} ftmlAst={item.statement} />
+                      <FtmlPreview
+                        key={item.id}
+                        docId={item.id}
+                        ftmlAst={item.statement}
+                      />
 
                       <SuggestedDefinienda item={item} />
                     </div>
@@ -185,7 +190,8 @@ export function ExtractedTextPanel({
                       <FolderSymlink size={14} />
                       {!showDefinitionMetaIconOnly && (
                         <Text size="10px" c="dimmed" ff="monospace">
-                          {item.futureRepo} / {item.filePath} / {item.fileName} [{item.language}]
+                          {item.futureRepo} / {item.filePath} / {item.fileName}{" "}
+                          [{item.language}]
                         </Text>
                       )}
                     </Group>

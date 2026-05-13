@@ -24,30 +24,30 @@ function buildSegments(
 ): TextSegment[] {
   const valid = suggestions
     .map((s) => ({
-      ...s,
+      suggestion: s,
       text: pageText.slice(s.startOffset, s.endOffset),
     }))
     .sort((a, b) =>
-      a.startOffset !== b.startOffset
-        ? a.startOffset - b.startOffset
-        : b.endOffset - a.endOffset,
+      a.suggestion.startOffset !== b.suggestion.startOffset
+        ? a.suggestion.startOffset - b.suggestion.startOffset
+        : b.suggestion.endOffset - a.suggestion.endOffset,
     );
 
   const segments: TextSegment[] = [];
   let cursor = 0;
 
   for (const s of valid) {
-    if (s.startOffset < cursor) continue;
+    if (s.suggestion.startOffset < cursor) continue;
 
-    if (s.startOffset > cursor) {
+    if (s.suggestion.startOffset > cursor) {
       segments.push({
         kind: "plain",
-        content: pageText.slice(cursor, s.startOffset),
+        content: pageText.slice(cursor, s.suggestion.startOffset),
       });
     }
 
-    segments.push({ kind: "highlight", content: s.text, suggestion: s });
-    cursor = s.endOffset;
+    segments.push({ kind: "highlight", content: s.text, suggestion: s.suggestion });
+    cursor = s.suggestion.endOffset;
   }
 
   if (cursor < pageText.length) {

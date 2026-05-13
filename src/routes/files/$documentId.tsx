@@ -345,7 +345,7 @@ function RouteComponent() {
     }
 
     setActivePage({ id: page.id, pageNumber: page.pageNumber });
-    setPendingExtractText(suggestion.text);
+    setPendingExtractText(Array.isArray(suggestion.text) ? suggestion.text.join(" ") : suggestion.text);
     setExtractDialogOpen(true);
   }
 
