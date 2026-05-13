@@ -286,6 +286,7 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
             symbolicReference: true,
           },
         },
+        llmSuggestedDefiniendas: true,
       },
       orderBy: { createdAt: "asc" },
     });
@@ -302,6 +303,11 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
         fileName: def.fileName,
         language: def.language,
         symbolicRefs: def.symbolicRefs,
+        definienda:
+          def.llmSuggestedDefiniendas?.map((d) => ({
+            text: d.definienda,
+            label: "definiendum",
+          })) || [],
       };
     });
 

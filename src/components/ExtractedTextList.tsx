@@ -115,18 +115,7 @@ export function ExtractedTextPanel({
                           <IconPencil size={16} />
                         </ActionIcon>
                       </Tooltip>
-
-                      <Tooltip label="Manage semantics" withArrow>
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          disabled={isLocked}
-                          onClick={() => onOpenSemanticPanel(item.id)}
-                        >
-                          <IconSettings size={16} />
-                        </ActionIcon>
-                      </Tooltip>
-
+                      
                       {onRecomputeReferences && (
                         <Tooltip label="Sniffy" withArrow>
                           <ActionIcon
@@ -140,6 +129,16 @@ export function ExtractedTextPanel({
                           </ActionIcon>
                         </Tooltip>
                       )}
+                      <Tooltip label="Manage semantics" withArrow>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          disabled={isLocked}
+                          onClick={() => onOpenSemanticPanel(item.id)}
+                        >
+                          <IconSettings size={16} />
+                        </ActionIcon>
+                      </Tooltip>
                     </Group>
                   </Group>
 

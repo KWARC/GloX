@@ -1,7 +1,17 @@
 import { queryClient } from "@/queryClient";
+import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { injectProvenance } from "@/server/ftml/addProvenanceData";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
 import { ReplacePayload } from "@/server/parseUri";
+import {
+  buildCandidateSymRefMap,
+  buildStaticCatalog,
+  extractPlainText,
+  getSuggestedReferenceCandidateKey,
+  SuggestedReference,
+  SuggestedReferenceCandidate,
+  suggestRefsForDefinition,
+} from "@/server/symbolic-suggestions";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
@@ -20,6 +30,7 @@ import {
   saveLatexFinal,
 } from "@/serverFns/latex.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
+import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import {
   updateDefinitionAst,
@@ -51,10 +62,11 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown, Download, FolderSymlink } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DefiniendumDialog } from "./DefiniendumDialog";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
+import { ReferenceSuggestionDialog } from "./ReferenceSuggestionDialog";
 import { SelectionPopup } from "./SelectionPopup";
 import { SemanticPanel } from "./SemanticPanel";
 import { SymbolicRef } from "./SymbolicRef";
@@ -137,6 +149,16 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
       }),
   });
 
+  const { data: staticCatalog = [] } = useQuery({
+    queryKey: ["static-symbolic-catalog"],
+    queryFn: () => listStaticSymbolicCatalog(),
+  });
+
+  const sniffyCatalog = useMemo(
+    () => buildStaticCatalog(staticCatalog),
+    [staticCatalog],
+  );
+
   const actualSymbols = Array.from(
     new Set(
       data?.definitions.flatMap((def) =>
@@ -162,6 +184,15 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [conceptUri, setConceptUri] = useState("");
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [savedSelection, setSavedSelection] = useState<any>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<SuggestedReference[]>([]);
+  const [suggestCandidateSymRefs, setSuggestCandidateSymRefs] = useState<
+    Record<string, UnifiedSymbolicReference>
+  >({});
+  const [activeDefId, setActiveDefId] = useState<string | null>(null);
+  const [activeDefText, setActiveDefText] = useState("");
+  const [activeDefStatement, setActiveDefStatement] =
+    useState<FtmlStatement | null>(null);
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
@@ -171,6 +202,50 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   function handleOpenSemanticPanel(definitionId: string) {
     setSemanticPanelDefId(definitionId);
     setSemanticPanelOpen(true);
+  }
+
+  function handleRecomputeReferences(definitionId: string) {
+    const def = data?.definitions.find((e) => e.id === definitionId);
+    if (!def) return;
+
+    const text = extractPlainText(def.statement);
+    const session = suggestRefsForDefinition(def, sniffyCatalog);
+
+    setActiveDefId(definitionId);
+    setActiveDefText(text);
+    setActiveDefStatement(def.statement);
+    setSuggestions(session.suggestions);
+    setSuggestCandidateSymRefs({
+      ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
+      ...session.candidateSymRefs,
+    });
+    setSuggestOpen(true);
+  }
+
+  async function handleAcceptSuggestion(
+    s: SuggestedReference,
+    candidate: SuggestedReferenceCandidate,
+  ) {
+    if (!activeDefId) return;
+    const symRef =
+      suggestCandidateSymRefs[getSuggestedReferenceCandidateKey(candidate)];
+    if (!symRef) return;
+
+    await symbolicRef({
+      data: {
+        definitionId: activeDefId,
+        selection: {
+          text: s.text,
+          startOffset: s.localStartOffset,
+          endOffset: s.localEndOffset,
+        },
+        symRef,
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
   }
 
   async function handleReplaceNode(
@@ -725,6 +800,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       handleSelection("right", { extractId });
                     }}
                     onOpenSemanticPanel={handleOpenSemanticPanel}
+                    onRecomputeReferences={handleRecomputeReferences}
                     showPageNumber={false}
                     showDefinitionMeta
                     showDefinitionMetaIconOnly
@@ -995,6 +1071,16 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         definition={definitionMetaTarget}
         multipleDefinitions={!definitionMetaTarget ? identity : undefined}
         invalidateKey={["definitionsByIdentity", identity]}
+      />
+      <ReferenceSuggestionDialog
+        opened={suggestOpen}
+        onClose={() => setSuggestOpen(false)}
+        definitionId={activeDefId ?? ""}
+        definitionStatement={activeDefStatement}
+        definitionText={activeDefText}
+        suggestions={suggestions}
+        catalog={sniffyCatalog}
+        onAccept={handleAcceptSuggestion}
       />
       {popup && (
         <SelectionPopup
