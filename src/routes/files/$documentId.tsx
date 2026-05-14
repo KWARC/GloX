@@ -174,6 +174,18 @@ function RouteComponent() {
     [staticCatalog],
   );
 
+  useEffect(() => {
+    if (!activeDefId) return;
+
+    const activeDefinition = extracts.find(
+      (definition) => definition.id === activeDefId,
+    );
+    if (!activeDefinition) return;
+
+    setActiveDefStatement(activeDefinition.statement);
+    setActiveDefText(extractPlainText(activeDefinition.statement));
+  }, [activeDefId, extracts]);
+
   const { data: llmSuggestions = {} } = useQuery({
     queryKey: ["llm-suggestions", documentId],
     queryFn: () => getLlmSuggestionsByDocument({ data: { documentId } }),

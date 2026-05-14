@@ -62,7 +62,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown, Download, FolderSymlink } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DefiniendumDialog } from "./DefiniendumDialog";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
@@ -193,6 +193,18 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [activeDefText, setActiveDefText] = useState("");
   const [activeDefStatement, setActiveDefStatement] =
     useState<FtmlStatement | null>(null);
+
+  useEffect(() => {
+    if (!activeDefId) return;
+
+    const activeDefinition = data?.definitions.find(
+      (definition) => definition.id === activeDefId,
+    );
+    if (!activeDefinition) return;
+
+    setActiveDefStatement(activeDefinition.statement);
+    setActiveDefText(extractPlainText(activeDefinition.statement));
+  }, [activeDefId, data?.definitions]);
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
