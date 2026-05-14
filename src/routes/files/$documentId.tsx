@@ -420,6 +420,39 @@ function RouteComponent() {
     setSuggestOpen(true);
   }
 
+  async function reloadSniffySession(definitionId: string) {
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
+      refetchType: "none",
+    });
+
+    const updatedDefinitions = await queryClient.fetchQuery({
+      queryKey: ["definitions", documentId],
+      queryFn: () => listDefinition({ data: { documentId } }),
+    });
+    const updatedDef = updatedDefinitions.find(
+      (definition) => definition.id === definitionId,
+    );
+
+    if (!updatedDef) {
+      setActiveDefText("");
+      setActiveDefStatement(null);
+      setSuggestions([]);
+      setSuggestCandidateSymRefs({});
+      return;
+    }
+
+    const session = suggestRefsForDefinition(updatedDef, sniffyCatalog);
+
+    setActiveDefText(extractPlainText(updatedDef.statement));
+    setActiveDefStatement(updatedDef.statement);
+    setSuggestions(session.suggestions);
+    setSuggestCandidateSymRefs({
+      ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
+      ...session.candidateSymRefs,
+    });
+  }
+
   async function handleAcceptSuggestion(
     s: SuggestedReference,
     candidate: SuggestedReferenceCandidate,
@@ -441,9 +474,7 @@ function RouteComponent() {
       },
     });
 
-    await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
-    });
+    await reloadSniffySession(activeDefId);
   }
 
   function handleEditDefinitionMeta(item: ExtractedItem) {

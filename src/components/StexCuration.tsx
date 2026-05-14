@@ -234,6 +234,42 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     setSuggestOpen(true);
   }
 
+  async function reloadSniffySession(definitionId: string) {
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+      refetchType: "none",
+    });
+
+    const updatedData = await queryClient.fetchQuery({
+      queryKey: ["definitionsByIdentity", identity],
+      queryFn: () =>
+        getDefinitionsByIdentity({
+          data: identity,
+        }),
+    });
+    const updatedDef = updatedData.definitions.find(
+      (definition) => definition.id === definitionId,
+    );
+
+    if (!updatedDef) {
+      setActiveDefText("");
+      setActiveDefStatement(null);
+      setSuggestions([]);
+      setSuggestCandidateSymRefs({});
+      return;
+    }
+
+    const session = suggestRefsForDefinition(updatedDef, sniffyCatalog);
+
+    setActiveDefText(extractPlainText(updatedDef.statement));
+    setActiveDefStatement(updatedDef.statement);
+    setSuggestions(session.suggestions);
+    setSuggestCandidateSymRefs({
+      ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
+      ...session.candidateSymRefs,
+    });
+  }
+
   async function handleAcceptSuggestion(
     s: SuggestedReference,
     candidate: SuggestedReferenceCandidate,
@@ -255,9 +291,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
       },
     });
 
-    await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
-    });
+    await reloadSniffySession(activeDefId);
   }
 
   async function handleReplaceNode(

@@ -78,6 +78,13 @@ export function ReferenceSuggestionDialog({
     }
   }, [opened, definitionId]);
 
+  useEffect(() => {
+    setIndex((i) => Math.min(i, Math.max(0, suggestions.length - 1)));
+    setSelectedCandidate(null);
+    setError(null);
+    setSearchQuery("");
+  }, [suggestions]);
+
   const current = suggestions[index];
   const sniffyCandidateKeys = useMemo(
     () =>
@@ -128,7 +135,6 @@ export function ReferenceSuggestionDialog({
     setError(null);
     try {
       await onAccept(current, selectedCandidate);
-      goNext();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Could not insert reference.";
