@@ -172,7 +172,7 @@ export function ExtractedTextPanel({
                         ftmlAst={item.statement}
                       />
 
-                      <SuggestedDefinienda item={item} />
+                      {/* <SuggestedDefinienda item={item} /> */}
                     </div>
                   )}
 

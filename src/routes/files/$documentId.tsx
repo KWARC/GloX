@@ -858,7 +858,7 @@ function RouteComponent() {
 
   const llmButtons = (
     <Group gap={6} wrap="nowrap">
-      <Tooltip
+      {/* <Tooltip
         label={
           canRunLlm
             ? "Analyse full document for definition spans"
@@ -905,7 +905,7 @@ function RouteComponent() {
         >
           Recompute LLM
         </Button>
-      </Tooltip>
+      </Tooltip> */}
 
       {hasAnySuggestions && (
         <>
