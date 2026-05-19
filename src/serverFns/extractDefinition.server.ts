@@ -7,8 +7,8 @@ import { FileIdentity } from "./latex.server";
 
 export type CreateDefinitionInput = {
   documentId: string;
-  documentPageId: string;
-  pageNumber: number;
+  documentPageId?: string | null;
+  pageNumber?: number | null;
   originalText: string;
   futureRepo: string;
   filePath: string;
@@ -19,10 +19,12 @@ export type CreateDefinitionInput = {
 export const createDefinition = createServerFn({ method: "POST" })
   .inputValidator((data: CreateDefinitionInput) => data)
   .handler(async ({ data }) => {
+    const hasPageNumber =
+      typeof data.pageNumber === "number" || data.pageNumber === null;
+
     if (
       !data.documentId ||
-      !data.documentPageId ||
-      typeof data.pageNumber !== "number" ||
+      !hasPageNumber ||
       !data.originalText?.trim() ||
       !data.futureRepo?.trim() ||
       !data.filePath?.trim() ||
@@ -36,6 +38,19 @@ export const createDefinition = createServerFn({ method: "POST" })
     if (!userRes.loggedIn) throw new Error("Unauthorized");
 
     const userId = userRes.user.id;
+    const documentPageId =
+      data.documentPageId ??
+      (
+        await prisma.documentPage.findFirst({
+          where: { documentId: data.documentId },
+          orderBy: { pageNumber: "asc" },
+          select: { id: true },
+        })
+      )?.id;
+
+    if (!documentPageId) {
+      throw new Error("Document has no pages");
+    }
 
     const statement: DefinitionNode = {
       type: "definition",
@@ -52,9 +67,9 @@ export const createDefinition = createServerFn({ method: "POST" })
       const def = await tx.definition.create({
         data: {
           documentId: data.documentId,
-          documentPageId: data.documentPageId,
+          documentPageId,
           pageNumber: data.pageNumber,
-          originalText: data.originalText,
+          originalText: data.originalText.trim(),
           statement: JSON.parse(JSON.stringify(statement)),
           futureRepo: data.futureRepo,
           filePath: data.filePath,
@@ -71,7 +86,7 @@ export const createDefinition = createServerFn({ method: "POST" })
         data: {
           definitionId: def.id,
           versionNumber: 1,
-          originalText: data.originalText,
+          originalText: data.originalText.trim(),
           statement: JSON.parse(JSON.stringify(statement)),
           editedById: userId,
         },

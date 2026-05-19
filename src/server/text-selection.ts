@@ -24,7 +24,7 @@ export type TextSelection = {
 
 export type ExtractedItem = {
   id: string;
-  pageNumber: number;
+  pageNumber: number | null;
   statement: FtmlStatement;
   futureRepo: string;
   filePath: string;
@@ -118,8 +118,8 @@ export function useTextSelection() {
 
 export function useExtractionActions(documentId: string) {
   async function extractText(params: {
-    documentPageId: string;
-    pageNumber: number;
+    documentPageId?: string | null;
+    pageNumber?: number | null;
     text: string;
     futureRepo: string;
     filePath: string;

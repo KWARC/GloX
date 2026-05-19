@@ -88,7 +88,11 @@ export function ExtractedTextPanel({
                 >
                   <Group justify="space-between" mb={4}>
                     {showPageNumber ? (
-                      <Text size="xs">Page {item.pageNumber}</Text>
+                      <Text size="xs">
+                        {item.pageNumber === null
+                          ? "Manual"
+                          : `Page ${item.pageNumber}`}
+                      </Text>
                     ) : (
                       <div />
                     )}

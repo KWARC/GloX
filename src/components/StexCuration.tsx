@@ -185,6 +185,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [savedSelection, setSavedSelection] = useState<any>(null);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<SuggestedReference[]>([]);
   const [suggestCandidateSymRefs, setSuggestCandidateSymRefs] = useState<
     Record<string, UnifiedSymbolicReference>
@@ -216,22 +217,29 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     setSemanticPanelOpen(true);
   }
 
-  function handleRecomputeReferences(definitionId: string) {
+  async function handleRecomputeReferences(definitionId: string) {
     const def = data?.definitions.find((e) => e.id === definitionId);
     if (!def) return;
 
     const text = extractPlainText(def.statement);
-    const session = suggestRefsForDefinition(def, sniffyCatalog);
-
     setActiveDefId(definitionId);
     setActiveDefText(text);
     setActiveDefStatement(def.statement);
-    setSuggestions(session.suggestions);
-    setSuggestCandidateSymRefs({
-      ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
-      ...session.candidateSymRefs,
-    });
     setSuggestOpen(true);
+    setSuggestLoading(true);
+
+    try {
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      const session = suggestRefsForDefinition(def, sniffyCatalog);
+
+      setSuggestions(session.suggestions);
+      setSuggestCandidateSymRefs({
+        ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
+        ...session.candidateSymRefs,
+      });
+    } finally {
+      setSuggestLoading(false);
+    }
   }
 
   async function reloadSniffySession(definitionId: string) {
@@ -291,7 +299,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
       },
     });
 
-    await reloadSniffySession(activeDefId);
+    setSuggestLoading(true);
+    try {
+      await reloadSniffySession(activeDefId);
+    } finally {
+      setSuggestLoading(false);
+    }
   }
 
   async function handleReplaceNode(
@@ -1126,6 +1139,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         definitionText={activeDefText}
         suggestions={suggestions}
         catalog={sniffyCatalog}
+        loading={suggestLoading}
         onAccept={handleAcceptSuggestion}
       />
       {popup && (

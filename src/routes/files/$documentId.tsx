@@ -47,6 +47,7 @@ import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
 import { LlmSuggestion } from "@/types/llm.types";
 import {
+  ActionIcon,
   Badge,
   Box,
   Button,
@@ -71,6 +72,7 @@ import {
   IconFileAlert,
   IconFileText,
   IconList,
+  IconPlus,
   IconRefresh,
   IconSparkles,
 } from "@tabler/icons-react";
@@ -153,10 +155,13 @@ function RouteComponent() {
   );
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
   const [pendingExtractText, setPendingExtractText] = useState("");
+  const [isManualDefinitionCreate, setIsManualDefinitionCreate] =
+    useState(false);
   const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
   const [definitionMetaTarget, setDefinitionMetaTarget] =
     useState<ExtractedItem | null>(null);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<SuggestedReference[]>([]);
   const [suggestCandidateSymRefs, setSuggestCandidateSymRefs] = useState<
     Record<string, UnifiedSymbolicReference>
@@ -357,6 +362,7 @@ function RouteComponent() {
     }
 
     setActivePage({ id: page.id, pageNumber: page.pageNumber });
+    setIsManualDefinitionCreate(false);
     setPendingExtractText(
       Array.isArray(suggestion.text)
         ? suggestion.text.join(" ")
@@ -395,6 +401,7 @@ function RouteComponent() {
       id: page.id,
       pageNumber: page.pageNumber,
     });
+    setIsManualDefinitionCreate(false);
   }
 
   function handleOpenSemanticPanel(definitionId: string) {
@@ -402,22 +409,29 @@ function RouteComponent() {
     setSemanticPanelOpen(true);
   }
 
-  function handleRecomputeReferences(definitionId: string) {
+  async function handleRecomputeReferences(definitionId: string) {
     const def = extracts.find((e) => e.id === definitionId);
     if (!def) return;
 
     const text = extractPlainText(def.statement);
-    const session = suggestRefsForDefinition(def, sniffyCatalog);
-
     setActiveDefId(definitionId);
     setActiveDefText(text);
     setActiveDefStatement(def.statement);
-    setSuggestions(session.suggestions);
-    setSuggestCandidateSymRefs({
-      ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
-      ...session.candidateSymRefs,
-    });
     setSuggestOpen(true);
+    setSuggestLoading(true);
+
+    try {
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      const session = suggestRefsForDefinition(def, sniffyCatalog);
+
+      setSuggestions(session.suggestions);
+      setSuggestCandidateSymRefs({
+        ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
+        ...session.candidateSymRefs,
+      });
+    } finally {
+      setSuggestLoading(false);
+    }
   }
 
   async function reloadSniffySession(definitionId: string) {
@@ -474,7 +488,12 @@ function RouteComponent() {
       },
     });
 
-    await reloadSniffySession(activeDefId);
+    setSuggestLoading(true);
+    try {
+      await reloadSniffySession(activeDefId);
+    } finally {
+      setSuggestLoading(false);
+    }
   }
 
   function handleEditDefinitionMeta(item: ExtractedItem) {
@@ -726,27 +745,53 @@ function RouteComponent() {
     setLatexConfigOpen(true);
   }
 
+  function handleCreateDefinition() {
+    setActivePage(null);
+    setPendingExtractText("");
+    setDefinitionName("");
+    setIsManualDefinitionCreate(true);
+    setExtractDialogOpen(true);
+  }
+
   async function handleExtractSubmit(editedText: string) {
-    if (!activePage) return;
     if (!document) return;
     if (!validate(futureRepo, filePath, fileName, language)) return;
 
-    await extractText({
-      documentPageId: activePage.id,
-      pageNumber: activePage.pageNumber,
-      text: editedText,
-      futureRepo: document.futureRepo,
-      filePath: document.filePath,
-      fileName: definitionName.trim(),
-      language: document.language,
-    });
+    if (isManualDefinitionCreate) {
+      await extractText({
+        documentPageId: pages[0]?.id ?? null,
+        pageNumber: null,
+        text: editedText,
+        futureRepo: document.futureRepo,
+        filePath: document.filePath,
+        fileName: definitionName.trim(),
+        language: document.language,
+      });
+    } else {
+      if (!activePage) return;
+
+      await extractText({
+        documentPageId: activePage.id,
+        pageNumber: activePage.pageNumber,
+        text: editedText,
+        futureRepo: document.futureRepo,
+        filePath: document.filePath,
+        fileName: definitionName.trim(),
+        language: document.language,
+      });
+    }
 
     setExtractDialogOpen(false);
     setPendingExtractText("");
     setDefinitionName("");
+    setIsManualDefinitionCreate(false);
     clearAll();
 
-    if (focusedSuggestionIndex !== null && flattenedSuggestions.length > 0) {
+    if (
+      !isManualDefinitionCreate &&
+      focusedSuggestionIndex !== null &&
+      flattenedSuggestions.length > 0
+    ) {
       focusSuggestion(
         Math.min(focusedSuggestionIndex + 1, flattenedSuggestions.length - 1),
       );
@@ -1147,7 +1192,7 @@ function RouteComponent() {
                 <IconList size={16} color="var(--mantine-color-teal-6)" />
 
                 <Text size="sm" fw={600} c="gray.7">
-                  Extracted Definitions
+                  Extracted Content
                 </Text>
 
                 {extracts.length > 0 && (
@@ -1166,6 +1211,17 @@ function RouteComponent() {
                 >
                   LaTeX
                 </Button>
+
+                <Tooltip label="Create definition" withArrow>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color="teal"
+                    onClick={handleCreateDefinition}
+                  >
+                    <IconPlus size={16} />
+                  </ActionIcon>
+                </Tooltip>
               </Group>
 
               <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
@@ -1194,6 +1250,7 @@ function RouteComponent() {
             popup.source === "left"
               ? () => {
                   if (!selection) return;
+                  setIsManualDefinitionCreate(false);
                   setPendingExtractText(selection.text);
                   setExtractDialogOpen(true);
                   clearAll();
@@ -1266,7 +1323,10 @@ function RouteComponent() {
         definitionName={definitionName}
         setDefinitionName={setDefinitionName}
         filePath={`${futureRepo}/ ${filePath}`}
-        onClose={() => setExtractDialogOpen(false)}
+        onClose={() => {
+          setExtractDialogOpen(false);
+          setIsManualDefinitionCreate(false);
+        }}
         onSubmit={handleExtractSubmit}
       />
 
@@ -1288,6 +1348,7 @@ function RouteComponent() {
         definitionText={activeDefText}
         suggestions={suggestions}
         catalog={sniffyCatalog}
+        loading={suggestLoading}
         onAccept={handleAcceptSuggestion}
       />
 
