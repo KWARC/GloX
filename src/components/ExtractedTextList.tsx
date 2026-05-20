@@ -121,7 +121,7 @@ export function ExtractedTextPanel({
                       </Tooltip>
                       
                       {onRecomputeReferences && (
-                        <Tooltip label="Sniffy" withArrow>
+                        <Tooltip label="sn-ify" withArrow>
                           <ActionIcon
                             size="sm"
                             variant="subtle"

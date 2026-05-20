@@ -1212,7 +1212,7 @@ function RouteComponent() {
                   LaTeX
                 </Button>
 
-                <Tooltip label="Create definition" withArrow>
+                <Tooltip label="Create new definition" withArrow>
                   <ActionIcon
                     size="sm"
                     variant="subtle"
