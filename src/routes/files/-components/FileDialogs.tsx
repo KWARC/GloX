@@ -18,191 +18,195 @@ import {
   Textarea,
 } from "@mantine/core";
 import { IconRefresh } from "@tabler/icons-react";
-import { ComponentProps } from "react";
+import { ComponentProps, Dispatch, SetStateAction } from "react";
 
-export function FileDialogs({
-  popup,
-  onClosePopup,
-  onExtractSelection,
-  onDefiniendumSelection,
-  onSymbolicRefSelection,
-  mode,
-  conceptUri,
-  onSaveSymbolicRef,
-  onCloseSymbolicRefDialog,
-  defDialogOpen,
-  defExtractText,
-  onCloseDefDialog,
-  onDefiniendumSubmit,
-  latexConfigOpen,
-  onCloseLatexConfig,
-  onLatexConfigSubmit,
-  extracts,
-  semanticPanelOpen,
-  onCloseSemanticPanel,
-  semanticDefinition,
-  onReplaceNode,
-  onDeleteNode,
-  extractDialogOpen,
-  pendingExtractText,
-  definitionName,
-  setDefinitionName,
-  filePathLabel,
-  onCloseExtractDialog,
-  onExtractSubmit,
-  definitionMetaEditOpen,
-  onCloseDefinitionMeta,
-  definitionMetaTarget,
-  definitionInvalidateKey,
-  suggestOpen,
-  onCloseSuggest,
-  activeDefId,
-  activeDefStatement,
-  activeDefText,
-  suggestions,
-  sniffyCatalog,
-  suggestLoading,
-  onAcceptSuggestion,
-  recomputeDialogOpen,
-  onCloseRecomputeDialog,
-  recomputePromptDraft,
-  setRecomputePromptDraft,
-  llmLoading,
-  pagesLength,
-  onRecomputeSubmit,
-}: {
+export type SelectionDialogProps = {
   popup: PopupState | null;
   onClosePopup: () => void;
   onExtractSelection: () => void;
   onDefiniendumSelection: () => void;
   onSymbolicRefSelection: () => void;
+};
+
+export type SymbolicRefDialogProps = {
   mode: "SymbolicRef" | null;
   conceptUri: string;
-  onSaveSymbolicRef: ComponentProps<typeof SymbolicRef>["onSelect"];
-  onCloseSymbolicRefDialog: () => void;
-  defDialogOpen: boolean;
-  defExtractText: string;
-  onCloseDefDialog: () => void;
-  onDefiniendumSubmit: ComponentProps<typeof DefiniendumDialog>["onSubmit"];
-  latexConfigOpen: boolean;
-  onCloseLatexConfig: () => void;
-  onLatexConfigSubmit: ComponentProps<typeof LatexConfigModel>["onSubmit"];
+  onSave: ComponentProps<typeof SymbolicRef>["onSelect"];
+  onClose: () => void;
+};
+
+export type DefiniendumDialogProps = {
+  opened: boolean;
+  extractedText: string;
+  onClose: () => void;
+  onSubmit: ComponentProps<typeof DefiniendumDialog>["onSubmit"];
+};
+
+export type LatexDialogProps = {
+  opened: boolean;
+  onClose: () => void;
+  onSubmit: ComponentProps<typeof LatexConfigModel>["onSubmit"];
   extracts: ExtractedItem[];
-  semanticPanelOpen: boolean;
-  onCloseSemanticPanel: () => void;
-  semanticDefinition: ExtractedItem | null;
+};
+
+export type SemanticDialogProps = {
+  opened: boolean;
+  onClose: () => void;
+  definition: ExtractedItem | null;
   onReplaceNode: ComponentProps<typeof SemanticPanel>["onReplaceNode"];
   onDeleteNode: ComponentProps<typeof SemanticPanel>["onDeleteNode"];
-  extractDialogOpen: boolean;
-  pendingExtractText: string;
+};
+
+export type ExtractionDialogProps = {
+  opened: boolean;
+  initialText: string;
   definitionName: string;
-  setDefinitionName: (value: string) => void;
-  filePathLabel: string;
-  onCloseExtractDialog: () => void;
-  onExtractSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
-  definitionMetaEditOpen: boolean;
-  onCloseDefinitionMeta: () => void;
-  definitionMetaTarget: ExtractedItem | null;
-  definitionInvalidateKey: unknown[];
-  suggestOpen: boolean;
-  onCloseSuggest: () => void;
+  setDefinitionName: Dispatch<SetStateAction<string>>;
+  filePath: string;
+  onClose: () => void;
+  onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
+};
+
+export type MetadataDialogProps = {
+  opened: boolean;
+  onClose: () => void;
+  definition: ExtractedItem | null;
+  invalidateKey: unknown[];
+};
+
+export type SniffyDialogProps = {
+  opened: boolean;
+  onClose: () => void;
   activeDefId: string | null;
   activeDefStatement: ComponentProps<
     typeof ReferenceSuggestionDialog
   >["definitionStatement"];
   activeDefText: string;
   suggestions: ComponentProps<typeof ReferenceSuggestionDialog>["suggestions"];
-  sniffyCatalog: ComponentProps<typeof ReferenceSuggestionDialog>["catalog"];
-  suggestLoading: boolean;
-  onAcceptSuggestion: ComponentProps<
-    typeof ReferenceSuggestionDialog
-  >["onAccept"];
-  recomputeDialogOpen: boolean;
-  onCloseRecomputeDialog: () => void;
-  recomputePromptDraft: string;
-  setRecomputePromptDraft: (value: string) => void;
+  catalog: ComponentProps<typeof ReferenceSuggestionDialog>["catalog"];
+  loading: boolean;
+  onAccept: ComponentProps<typeof ReferenceSuggestionDialog>["onAccept"];
+};
+
+export type RecomputeDialogProps = {
+  opened: boolean;
+  onClose: () => void;
+  promptDraft: string;
+  setPromptDraft: Dispatch<SetStateAction<string>>;
   llmLoading: boolean;
   pagesLength: number;
-  onRecomputeSubmit: () => void;
-}) {
+  onSubmit: () => void;
+};
+
+export type FileDialogsProps = {
+  selection: SelectionDialogProps;
+  symbolicRef: SymbolicRefDialogProps;
+  definiendum: DefiniendumDialogProps;
+  latex: LatexDialogProps;
+  semantic: SemanticDialogProps;
+  extraction: ExtractionDialogProps;
+  metadata: MetadataDialogProps;
+  sniffy: SniffyDialogProps;
+  recompute: RecomputeDialogProps;
+};
+
+export function FileDialogs({
+  selection,
+  symbolicRef,
+  definiendum,
+  latex,
+  semantic,
+  extraction,
+  metadata,
+  sniffy,
+  recompute,
+}: FileDialogsProps) {
   return (
     <>
-      {popup && (
+      {selection.popup && (
         <SelectionPopup
-          popup={popup}
-          onExtract={popup.source === "left" ? onExtractSelection : undefined}
+          popup={selection.popup}
+          onExtract={
+            selection.popup.source === "left"
+              ? selection.onExtractSelection
+              : undefined
+          }
           onDefiniendum={
-            popup.source === "right" ? onDefiniendumSelection : undefined
+            selection.popup.source === "right"
+              ? selection.onDefiniendumSelection
+              : undefined
           }
           onSymbolicRef={
-            popup.source === "right" ? onSymbolicRefSelection : undefined
+            selection.popup.source === "right"
+              ? selection.onSymbolicRefSelection
+              : undefined
           }
-          onClose={onClosePopup}
+          onClose={selection.onClosePopup}
         />
       )}
 
-      {mode === "SymbolicRef" && (
+      {symbolicRef.mode === "SymbolicRef" && (
         <SymbolicRef
-          conceptUri={conceptUri}
-          onSelect={onSaveSymbolicRef}
-          onClose={onCloseSymbolicRefDialog}
+          conceptUri={symbolicRef.conceptUri}
+          onSelect={symbolicRef.onSave}
+          onClose={symbolicRef.onClose}
         />
       )}
 
       <DefiniendumDialog
-        opened={defDialogOpen}
-        extractedText={defExtractText}
-        onClose={onCloseDefDialog}
-        onSubmit={onDefiniendumSubmit}
+        opened={definiendum.opened}
+        extractedText={definiendum.extractedText}
+        onClose={definiendum.onClose}
+        onSubmit={definiendum.onSubmit}
       />
 
       <LatexConfigModel
-        opened={latexConfigOpen}
-        onClose={onCloseLatexConfig}
-        onSubmit={onLatexConfigSubmit}
-        extracts={extracts}
+        opened={latex.opened}
+        onClose={latex.onClose}
+        onSubmit={latex.onSubmit}
+        extracts={latex.extracts}
       />
 
       <SemanticPanel
-        opened={semanticPanelOpen}
-        onClose={onCloseSemanticPanel}
-        definition={semanticDefinition}
-        onReplaceNode={onReplaceNode}
-        onDeleteNode={onDeleteNode}
+        opened={semantic.opened}
+        onClose={semantic.onClose}
+        definition={semantic.definition}
+        onReplaceNode={semantic.onReplaceNode}
+        onDeleteNode={semantic.onDeleteNode}
       />
 
       <ExtractTextDialog
-        opened={extractDialogOpen}
-        initialText={pendingExtractText}
-        definitionName={definitionName}
-        setDefinitionName={setDefinitionName}
-        filePath={filePathLabel}
-        onClose={onCloseExtractDialog}
-        onSubmit={onExtractSubmit}
+        opened={extraction.opened}
+        initialText={extraction.initialText}
+        definitionName={extraction.definitionName}
+        setDefinitionName={extraction.setDefinitionName}
+        filePath={extraction.filePath}
+        onClose={extraction.onClose}
+        onSubmit={extraction.onSubmit}
       />
 
       <DefinitionIdentityDialog
-        opened={definitionMetaEditOpen}
-        onClose={onCloseDefinitionMeta}
-        definition={definitionMetaTarget}
-        invalidateKey={definitionInvalidateKey}
+        opened={metadata.opened}
+        onClose={metadata.onClose}
+        definition={metadata.definition}
+        invalidateKey={metadata.invalidateKey}
       />
 
       <ReferenceSuggestionDialog
-        opened={suggestOpen}
-        onClose={onCloseSuggest}
-        definitionId={activeDefId ?? ""}
-        definitionStatement={activeDefStatement}
-        definitionText={activeDefText}
-        suggestions={suggestions}
-        catalog={sniffyCatalog}
-        loading={suggestLoading}
-        onAccept={onAcceptSuggestion}
+        opened={sniffy.opened}
+        onClose={sniffy.onClose}
+        definitionId={sniffy.activeDefId ?? ""}
+        definitionStatement={sniffy.activeDefStatement}
+        definitionText={sniffy.activeDefText}
+        suggestions={sniffy.suggestions}
+        catalog={sniffy.catalog}
+        loading={sniffy.loading}
+        onAccept={sniffy.onAccept}
       />
 
       <Modal
-        opened={recomputeDialogOpen}
-        onClose={onCloseRecomputeDialog}
+        opened={recompute.opened}
+        onClose={recompute.onClose}
         title={
           <Group gap="xs">
             <IconRefresh size={16} color="var(--mantine-color-violet-6)" />
@@ -229,8 +233,8 @@ export function FileDialogs({
           </Stack>
 
           <Textarea
-            value={recomputePromptDraft}
-            onChange={(e) => setRecomputePromptDraft(e.currentTarget.value)}
+            value={recompute.promptDraft}
+            onChange={(e) => recompute.setPromptDraft(e.currentTarget.value)}
             autosize
             minRows={10}
             styles={{
@@ -248,7 +252,7 @@ export function FileDialogs({
               size="xs"
               variant="subtle"
               color="gray"
-              onClick={() => setRecomputePromptDraft(DEFAULT_LLM_SYSTEM_PROMPT)}
+              onClick={() => recompute.setPromptDraft(DEFAULT_LLM_SYSTEM_PROMPT)}
             >
               Reset to default
             </Button>
@@ -256,18 +260,24 @@ export function FileDialogs({
             <Group gap="sm">
               <Button
                 variant="default"
-                onClick={onCloseRecomputeDialog}
-                disabled={llmLoading}
+                onClick={recompute.onClose}
+                disabled={recompute.llmLoading}
               >
                 Cancel
               </Button>
               <Button
                 leftSection={
-                  llmLoading ? <Loader size={12} /> : <IconRefresh size={14} />
+                  recompute.llmLoading ? (
+                    <Loader size={12} />
+                  ) : (
+                    <IconRefresh size={14} />
+                  )
                 }
-                loading={llmLoading}
-                disabled={!recomputePromptDraft.trim() || pagesLength === 0}
-                onClick={onRecomputeSubmit}
+                loading={recompute.llmLoading}
+                disabled={
+                  !recompute.promptDraft.trim() || recompute.pagesLength === 0
+                }
+                onClick={recompute.onSubmit}
               >
                 Recompute
               </Button>

@@ -11,59 +11,78 @@ import { ReactNode } from "react";
 import { ExtractedContentToolbar } from "./ExtractedContentToolbar";
 import { FileDocumentToolbar } from "./FileDocumentToolbar";
 
-export function FileDocumentLayout({
-  documentId,
-  document,
-  pages,
-  extracts,
-  isMobile,
-  isTablet,
-  activeTab,
-  setActiveTab,
-  llmButtons,
-  llmSuggestions,
-  llmEnabled,
-  focusedSuggestionId,
-  editingId,
-  selectedId,
-  onLeftSelection,
-  onLlmSuggestionClick,
-  onUpdateExtract,
-  onDeleteDefinition,
-  onRightSelection,
-  onToggleEdit,
-  onOpenSemanticPanel,
-  onRecomputeReferences,
-  onEditDefinitionMeta,
-  onOpenLatexConfig,
-  onCreateDefinition,
-}: {
+export type DocumentPanelProps = {
   documentId: string;
   document: MyDocument;
   pages: DocumentPage[];
-  extracts: ExtractedItem[];
-  isMobile: boolean;
-  isTablet: boolean;
-  activeTab: string | null;
-  setActiveTab: (tab: string | null) => void;
   llmButtons: ReactNode;
   llmSuggestions: Record<string, LlmSuggestion[]>;
   llmEnabled: boolean;
   focusedSuggestionId: string | null;
+  onSelection: (pageId: string) => void;
+  onLlmSuggestionClick: (suggestion: LlmSuggestion, pageId: string) => void;
+};
+
+export type ExtractsPanelProps = {
+  extracts: ExtractedItem[];
   editingId: string | null;
   selectedId: string | null;
-  onLeftSelection: (pageId: string) => void;
-  onLlmSuggestionClick: (suggestion: LlmSuggestion, pageId: string) => void;
-  onUpdateExtract: (id: string, statement: FtmlStatement) => Promise<void>;
-  onDeleteDefinition: (id: string) => void;
-  onRightSelection: (extractId: string) => void;
+  onUpdate: (id: string, statement: FtmlStatement) => Promise<void>;
+  onDelete: (id: string) => void;
+  onSelection: (extractId: string) => void;
   onToggleEdit: (id: string) => void;
   onOpenSemanticPanel: (definitionId: string) => void;
   onRecomputeReferences: (definitionId: string) => void;
   onEditDefinitionMeta: (item: ExtractedItem) => void;
   onOpenLatexConfig: () => void;
   onCreateDefinition: () => void;
-}) {
+};
+
+export type ResponsiveProps = {
+  isMobile: boolean;
+  isTablet: boolean;
+  activeTab: string | null;
+  setActiveTab: (tab: string | null) => void;
+};
+
+export type FileDocumentLayoutProps = {
+  documentPanel: DocumentPanelProps;
+  extractsPanel: ExtractsPanelProps;
+  responsive: ResponsiveProps;
+};
+
+export function FileDocumentLayout({
+  documentPanel,
+  extractsPanel,
+  responsive,
+}: FileDocumentLayoutProps) {
+  const {
+    documentId,
+    document,
+    pages,
+    llmButtons,
+    llmSuggestions,
+    llmEnabled,
+    focusedSuggestionId,
+    onSelection: onDocumentSelection,
+    onLlmSuggestionClick,
+  } = documentPanel;
+  const {
+    extracts,
+    editingId,
+    selectedId,
+    onUpdate,
+    onDelete,
+    onSelection: onExtractSelection,
+    onToggleEdit,
+    onOpenSemanticPanel,
+    onRecomputeReferences,
+    onEditDefinitionMeta,
+    onOpenLatexConfig,
+    onCreateDefinition,
+  } = extractsPanel;
+  const { isMobile, isTablet, activeTab, setActiveTab } = responsive;
+
   if (isMobile) {
     return (
       <Paper
@@ -119,6 +138,15 @@ export function FileDocumentLayout({
             </Tabs.List>
 
             {activeTab === "document" && <Box pb="xs">{llmButtons}</Box>}
+            {activeTab === "extracts" && (
+              <Box pb="xs">
+                <ExtractedContentToolbar
+                  extractCount={extracts.length}
+                  onOpenLatexConfig={onOpenLatexConfig}
+                  onCreateDefinition={onCreateDefinition}
+                />
+              </Box>
+            )}
           </Box>
 
           <Tabs.Panel
@@ -134,7 +162,7 @@ export function FileDocumentLayout({
             <DocumentPagesPanel
               documentId={documentId}
               pages={pages}
-              onSelection={onLeftSelection}
+              onSelection={onDocumentSelection}
               llmSuggestions={llmSuggestions}
               llmEnabled={llmEnabled}
               focusedSuggestionId={focusedSuggestionId}
@@ -156,9 +184,9 @@ export function FileDocumentLayout({
               extracts={extracts}
               editingId={editingId}
               selectedId={selectedId}
-              onUpdate={onUpdateExtract}
-              onDelete={onDeleteDefinition}
-              onSelection={onRightSelection}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+              onSelection={onExtractSelection}
               onToggleEdit={onToggleEdit}
               onOpenSemanticPanel={onOpenSemanticPanel}
               onRecomputeReferences={onRecomputeReferences}
@@ -198,7 +226,7 @@ export function FileDocumentLayout({
           <DocumentPagesPanel
             documentId={documentId}
             pages={pages}
-            onSelection={onLeftSelection}
+            onSelection={onDocumentSelection}
             llmSuggestions={llmSuggestions}
             llmEnabled={llmEnabled}
             focusedSuggestionId={focusedSuggestionId}
@@ -230,9 +258,9 @@ export function FileDocumentLayout({
             extracts={extracts}
             editingId={editingId}
             selectedId={selectedId}
-            onUpdate={onUpdateExtract}
-            onDelete={onDeleteDefinition}
-            onSelection={onRightSelection}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            onSelection={onExtractSelection}
             onToggleEdit={onToggleEdit}
             onOpenSemanticPanel={onOpenSemanticPanel}
             onRecomputeReferences={onRecomputeReferences}

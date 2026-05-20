@@ -255,95 +255,119 @@ function RouteComponent() {
     <Box h="100%" p={pad} style={{ overflow: "hidden" }}>
       <Stack gap={gap} h="100%" style={{ overflow: "hidden" }}>
         <FileDocumentLayout
-          documentId={documentId}
-          document={document}
-          pages={pages}
-          extracts={extracts}
-          isMobile={isMobile}
-          isTablet={isTablet}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          llmButtons={llmButtons}
-          llmSuggestions={llmFlow.llmSuggestions}
-          llmEnabled={llmFlow.llmEnabled}
-          focusedSuggestionId={llmFlow.focusedSuggestionId}
-          editingId={semanticFlow.editingId}
-          selectedId={semanticFlow.lockedByExtractId}
-          onLeftSelection={extractionFlow.handleLeftSelection}
-          onLlmSuggestionClick={llmFlow.handleLlmSuggestionClick}
-          onUpdateExtract={semanticFlow.handleUpdateExtract}
-          onDeleteDefinition={semanticFlow.handleDeleteDefinition}
-          onRightSelection={semanticFlow.handleRightSelection}
-          onToggleEdit={semanticFlow.handleToggleEdit}
-          onOpenSemanticPanel={semanticFlow.handleOpenSemanticPanel}
-          onRecomputeReferences={sniffyFlow.handleRecomputeReferences}
-          onEditDefinitionMeta={semanticFlow.handleEditDefinitionMeta}
-          onOpenLatexConfig={semanticFlow.handleOpenLatexConfig}
-          onCreateDefinition={extractionFlow.handleCreateDefinition}
+          responsive={{
+            isMobile,
+            isTablet,
+            activeTab,
+            setActiveTab,
+          }}
+          documentPanel={{
+            documentId,
+            document,
+            pages,
+            llmButtons,
+            llmSuggestions: llmFlow.llmSuggestions,
+            llmEnabled: llmFlow.llmEnabled,
+            focusedSuggestionId: llmFlow.focusedSuggestionId,
+            onSelection: extractionFlow.handleLeftSelection,
+            onLlmSuggestionClick: llmFlow.handleLlmSuggestionClick,
+          }}
+          extractsPanel={{
+            extracts,
+            editingId: semanticFlow.editingId,
+            selectedId: semanticFlow.lockedByExtractId,
+            onUpdate: semanticFlow.handleUpdateExtract,
+            onDelete: semanticFlow.handleDeleteDefinition,
+            onSelection: semanticFlow.handleRightSelection,
+            onToggleEdit: semanticFlow.handleToggleEdit,
+            onOpenSemanticPanel: semanticFlow.handleOpenSemanticPanel,
+            onRecomputeReferences: sniffyFlow.handleRecomputeReferences,
+            onEditDefinitionMeta: semanticFlow.handleEditDefinitionMeta,
+            onOpenLatexConfig: semanticFlow.handleOpenLatexConfig,
+            onCreateDefinition: extractionFlow.handleCreateDefinition,
+          }}
         />
       </Stack>
 
       <FileDialogs
-        popup={popup}
-        onClosePopup={clearAll}
-        onExtractSelection={extractionFlow.handleOpenSelectionExtract}
-        onDefiniendumSelection={semanticFlow.openDefiniendumFromSelection}
-        onSymbolicRefSelection={semanticFlow.openSymbolicRefFromSelection}
-        mode={semanticFlow.mode}
-        conceptUri={semanticFlow.conceptUri}
-        onSaveSymbolicRef={semanticFlow.handleSaveSymbolicRef}
-        onCloseSymbolicRefDialog={semanticFlow.handleCloseSymbolicRefDialog}
-        defDialogOpen={semanticFlow.defDialogOpen}
-        defExtractText={semanticFlow.defExtractText}
-        onCloseDefDialog={() => semanticFlow.setDefDialogOpen(false)}
-        onDefiniendumSubmit={semanticFlow.handleDefiniendumSubmit}
-        latexConfigOpen={semanticFlow.latexConfigOpen}
-        onCloseLatexConfig={() => semanticFlow.setLatexConfigOpen(false)}
-        onLatexConfigSubmit={semanticFlow.handleLatexConfigSubmit}
-        extracts={extracts}
-        semanticPanelOpen={semanticFlow.semanticPanelOpen}
-        onCloseSemanticPanel={() => {
-          semanticFlow.setSemanticPanelOpen(false);
-          semanticFlow.setSemanticPanelDefId(null);
+        selection={{
+          popup,
+          onClosePopup: clearAll,
+          onExtractSelection: extractionFlow.handleOpenSelectionExtract,
+          onDefiniendumSelection: semanticFlow.openDefiniendumFromSelection,
+          onSymbolicRefSelection: semanticFlow.openSymbolicRefFromSelection,
         }}
-        semanticDefinition={
-          extracts.find((e) => e.id === semanticFlow.semanticPanelDefId) ?? null
-        }
-        onReplaceNode={semanticFlow.handleReplaceNode}
-        onDeleteNode={semanticFlow.handleDeleteNode}
-        extractDialogOpen={extractionFlow.extractDialogOpen}
-        pendingExtractText={extractionFlow.pendingExtractText}
-        definitionName={extractionFlow.definitionName}
-        setDefinitionName={extractionFlow.setDefinitionName}
-        filePathLabel={`${semanticFlow.futureRepo}/ ${semanticFlow.filePath}`}
-        onCloseExtractDialog={() => {
-          extractionFlow.setExtractDialogOpen(false);
-          extractionFlow.setIsManualDefinitionCreate(false);
+        symbolicRef={{
+          mode: semanticFlow.mode,
+          conceptUri: semanticFlow.conceptUri,
+          onSave: semanticFlow.handleSaveSymbolicRef,
+          onClose: semanticFlow.handleCloseSymbolicRefDialog,
         }}
-        onExtractSubmit={extractionFlow.handleExtractSubmit}
-        definitionMetaEditOpen={semanticFlow.definitionMetaEditOpen}
-        onCloseDefinitionMeta={() => {
-          semanticFlow.setDefinitionMetaEditOpen(false);
-          semanticFlow.setDefinitionMetaTarget(null);
+        definiendum={{
+          opened: semanticFlow.defDialogOpen,
+          extractedText: semanticFlow.defExtractText,
+          onClose: () => semanticFlow.setDefDialogOpen(false),
+          onSubmit: semanticFlow.handleDefiniendumSubmit,
         }}
-        definitionMetaTarget={semanticFlow.definitionMetaTarget}
-        definitionInvalidateKey={["definitions", documentId]}
-        suggestOpen={sniffyFlow.suggestOpen}
-        onCloseSuggest={() => sniffyFlow.setSuggestOpen(false)}
-        activeDefId={sniffyFlow.activeDefId}
-        activeDefStatement={sniffyFlow.activeDefStatement}
-        activeDefText={sniffyFlow.activeDefText}
-        suggestions={sniffyFlow.suggestions}
-        sniffyCatalog={sniffyCatalog}
-        suggestLoading={sniffyFlow.suggestLoading}
-        onAcceptSuggestion={sniffyFlow.handleAcceptSuggestion}
-        recomputeDialogOpen={llmFlow.recomputeDialogOpen}
-        onCloseRecomputeDialog={() => llmFlow.setRecomputeDialogOpen(false)}
-        recomputePromptDraft={llmFlow.recomputePromptDraft}
-        setRecomputePromptDraft={llmFlow.setRecomputePromptDraft}
-        llmLoading={llmFlow.llmLoading}
-        pagesLength={pages.length}
-        onRecomputeSubmit={llmFlow.handleRecomputeSubmit}
+        latex={{
+          opened: semanticFlow.latexConfigOpen,
+          onClose: () => semanticFlow.setLatexConfigOpen(false),
+          onSubmit: semanticFlow.handleLatexConfigSubmit,
+          extracts,
+        }}
+        semantic={{
+          opened: semanticFlow.semanticPanelOpen,
+          onClose: () => {
+            semanticFlow.setSemanticPanelOpen(false);
+            semanticFlow.setSemanticPanelDefId(null);
+          },
+          definition:
+            extracts.find((e) => e.id === semanticFlow.semanticPanelDefId) ??
+            null,
+          onReplaceNode: semanticFlow.handleReplaceNode,
+          onDeleteNode: semanticFlow.handleDeleteNode,
+        }}
+        extraction={{
+          opened: extractionFlow.extractDialogOpen,
+          initialText: extractionFlow.pendingExtractText,
+          definitionName: extractionFlow.definitionName,
+          setDefinitionName: extractionFlow.setDefinitionName,
+          filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}`,
+          onClose: () => {
+            extractionFlow.setExtractDialogOpen(false);
+            extractionFlow.setIsManualDefinitionCreate(false);
+          },
+          onSubmit: extractionFlow.handleExtractSubmit,
+        }}
+        metadata={{
+          opened: semanticFlow.definitionMetaEditOpen,
+          onClose: () => {
+            semanticFlow.setDefinitionMetaEditOpen(false);
+            semanticFlow.setDefinitionMetaTarget(null);
+          },
+          definition: semanticFlow.definitionMetaTarget,
+          invalidateKey: ["definitions", documentId],
+        }}
+        sniffy={{
+          opened: sniffyFlow.suggestOpen,
+          onClose: () => sniffyFlow.setSuggestOpen(false),
+          activeDefId: sniffyFlow.activeDefId,
+          activeDefStatement: sniffyFlow.activeDefStatement,
+          activeDefText: sniffyFlow.activeDefText,
+          suggestions: sniffyFlow.suggestions,
+          catalog: sniffyCatalog,
+          loading: sniffyFlow.suggestLoading,
+          onAccept: sniffyFlow.handleAcceptSuggestion,
+        }}
+        recompute={{
+          opened: llmFlow.recomputeDialogOpen,
+          onClose: () => llmFlow.setRecomputeDialogOpen(false),
+          promptDraft: llmFlow.recomputePromptDraft,
+          setPromptDraft: llmFlow.setRecomputePromptDraft,
+          llmLoading: llmFlow.llmLoading,
+          pagesLength: pages.length,
+          onSubmit: llmFlow.handleRecomputeSubmit,
+        }}
       />
     </Box>
   );
