@@ -75,6 +75,7 @@ import {
   IconPlus,
   IconRefresh,
   IconSparkles,
+  IconX,
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
@@ -197,6 +198,8 @@ function RouteComponent() {
   });
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmEnabled, setLlmEnabled] = useState(false);
+  const [llmSuggestionsDismissed, setLlmSuggestionsDismissed] =
+    useState(false);
   const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState<
     number | null
   >(null);
@@ -240,7 +243,27 @@ function RouteComponent() {
     });
   }, [flattenedSuggestions.length]);
 
+  useEffect(() => {
+    if (
+      !llmEnabled ||
+      llmSuggestionsDismissed ||
+      flattenedSuggestions.length === 0 ||
+      focusedSuggestionIndex !== null
+    ) {
+      return;
+    }
+
+    setFocusedSuggestionIndex(0);
+    scrollSuggestionIntoView(flattenedSuggestions[0].id);
+  }, [
+    flattenedSuggestions,
+    focusedSuggestionIndex,
+    llmEnabled,
+    llmSuggestionsDismissed,
+  ]);
+
   async function runLlm(prompt: string) {
+    setLlmSuggestionsDismissed(false);
     setLlmLoading(true);
     try {
       await getLlmSuggestions({
@@ -260,6 +283,7 @@ function RouteComponent() {
   }
 
   async function runLlmForUnextractedPages() {
+    setLlmSuggestionsDismissed(false);
     const extractedPageNumbers = new Set(extracts.map((e) => e.pageNumber));
     const unextractedPageNumbers = pages
       .filter((page) => !extractedPageNumbers.has(page.pageNumber))
@@ -285,9 +309,14 @@ function RouteComponent() {
         ["llm-suggestions", documentId],
         result.suggestions,
       );
-      setLlmEnabled(
-        Object.values(result.suggestions).some((s) => s.length > 0),
+      const hasSuggestions = Object.values(result.suggestions).some(
+        (s) => s.length > 0,
       );
+      setLlmEnabled(hasSuggestions);
+      if (hasSuggestions) {
+        setFocusedSuggestionIndex(0);
+        if (isMobile) setActiveTab("document");
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "LLM request failed";
       alert(`LLM Suggestion failed: ${message}`);
@@ -301,7 +330,22 @@ function RouteComponent() {
   }
 
   function handleDidIMissSomething() {
+    if (flattenedSuggestions.length > 0) {
+      setLlmSuggestionsDismissed(false);
+      setLlmEnabled(true);
+      if (isMobile) setActiveTab("document");
+      focusSuggestion(focusedSuggestionIndex ?? 0);
+      return;
+    }
+
+    setLlmSuggestionsDismissed(false);
     void runLlmForUnextractedPages();
+  }
+
+  function handleDismissSuggestions() {
+    setLlmEnabled(false);
+    setFocusedSuggestionIndex(null);
+    setLlmSuggestionsDismissed(true);
   }
 
   function handleOpenRecompute() {
@@ -901,6 +945,71 @@ function RouteComponent() {
     </Tooltip>
   ) : null;
 
+  const suggestionControls =
+    hasAnySuggestions && !llmSuggestionsDismissed ? (
+      <>
+        <Group gap={2} wrap="nowrap">
+          <Tooltip label="Previous suggestion" withArrow position="bottom">
+            <Button
+              size="xs"
+              variant="subtle"
+              color="yellow"
+              px={6}
+              onClick={() => goToSuggestion("previous")}
+            >
+              <IconChevronLeft size={14} />
+            </Button>
+          </Tooltip>
+
+          <Text size="xs" c="dimmed" miw={42} ta="center">
+            {suggestionCounter} / {totalSuggestions}
+          </Text>
+
+          <Tooltip label="Next suggestion" withArrow position="bottom">
+            <Button
+              size="xs"
+              variant="subtle"
+              color="yellow"
+              px={6}
+              onClick={() => goToSuggestion("next")}
+            >
+              <IconChevronRight size={14} />
+            </Button>
+          </Tooltip>
+        </Group>
+
+        <Tooltip
+          label={llmEnabled ? "Hide suggestions" : "Show suggestions"}
+          withArrow
+          position="bottom"
+        >
+          <Button
+            size="xs"
+            variant={llmEnabled ? "filled" : "outline"}
+            color="yellow"
+            leftSection={<IconSparkles size={13} />}
+            onClick={() => setLlmEnabled((v) => !v)}
+          >
+            {totalSuggestions}
+          </Button>
+        </Tooltip>
+
+        <Tooltip label="Dismiss suggestions" withArrow position="bottom">
+          <Button
+            size="xs"
+            variant="subtle"
+            color="gray"
+            px={6}
+            onClick={handleDismissSuggestions}
+          >
+            <IconX size={14} />
+          </Button>
+        </Tooltip>
+      </>
+    ) : (
+      didIMissSomethingButton
+    );
+
   const llmButtons = (
     <Group gap={6} wrap="nowrap">
       {/* <Tooltip
@@ -952,55 +1061,7 @@ function RouteComponent() {
         </Button>
       </Tooltip> */}
 
-      {hasAnySuggestions && (
-        <>
-          <Group gap={2} wrap="nowrap">
-            <Tooltip label="Previous suggestion" withArrow position="bottom">
-              <Button
-                size="xs"
-                variant="subtle"
-                color="yellow"
-                px={6}
-                onClick={() => goToSuggestion("previous")}
-              >
-                <IconChevronLeft size={14} />
-              </Button>
-            </Tooltip>
-
-            <Text size="xs" c="dimmed" miw={42} ta="center">
-              {suggestionCounter} / {totalSuggestions}
-            </Text>
-
-            <Tooltip label="Next suggestion" withArrow position="bottom">
-              <Button
-                size="xs"
-                variant="subtle"
-                color="yellow"
-                px={6}
-                onClick={() => goToSuggestion("next")}
-              >
-                <IconChevronRight size={14} />
-              </Button>
-            </Tooltip>
-          </Group>
-
-          <Tooltip
-            label={llmEnabled ? "Hide highlights" : "Show highlights"}
-            withArrow
-            position="bottom"
-          >
-            <Button
-              size="xs"
-              variant={llmEnabled ? "filled" : "outline"}
-              color="yellow"
-              leftSection={<IconSparkles size={13} />}
-              onClick={() => setLlmEnabled((v) => !v)}
-            >
-              {totalSuggestions}
-            </Button>
-          </Tooltip>
-        </>
-      )}
+      {suggestionControls}
     </Group>
   );
 
@@ -1061,9 +1122,6 @@ function RouteComponent() {
                 </Tabs.List>
 
                 {activeTab === "document" && <Box pb="xs">{llmButtons}</Box>}
-                {activeTab === "extracts" && didIMissSomethingButton && (
-                  <Box pb="xs">{didIMissSomethingButton}</Box>
-                )}
               </Box>
 
               <Tabs.Panel
@@ -1200,8 +1258,6 @@ function RouteComponent() {
                     {extracts.length}
                   </Badge>
                 )}
-
-                {didIMissSomethingButton}
 
                 <Button
                   size="xs"
