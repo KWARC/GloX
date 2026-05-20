@@ -1,17 +1,9 @@
+import { useSniffyReferenceSuggestions } from "@/hooks/useSniffyReferenceSuggestions";
 import { queryClient } from "@/queryClient";
-import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { injectProvenance } from "@/server/ftml/addProvenanceData";
 import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
 import { ReplacePayload } from "@/server/parseUri";
-import {
-  buildCandidateSymRefMap,
-  buildStaticCatalog,
-  extractPlainText,
-  getSuggestedReferenceCandidateKey,
-  SuggestedReference,
-  SuggestedReferenceCandidate,
-  suggestRefsForDefinition,
-} from "@/server/symbolic-suggestions";
+import { buildStaticCatalog } from "@/server/symbolic-suggestions";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
 import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
@@ -62,7 +54,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown, Download, FolderSymlink } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { DefiniendumDialog } from "./DefiniendumDialog";
 import { DefinitionIdentityDialog } from "./DefinitionFilePathDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
@@ -158,6 +150,25 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     () => buildStaticCatalog(staticCatalog),
     [staticCatalog],
   );
+  const sniffyFlow = useSniffyReferenceSuggestions({
+    definitions: data?.definitions ?? [],
+    catalog: sniffyCatalog,
+    invalidate: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["definitionsByIdentity", identity],
+        refetchType: "none",
+      }),
+    refetchDefinitions: async () => {
+      const updatedData = await queryClient.fetchQuery({
+        queryKey: ["definitionsByIdentity", identity],
+        queryFn: () =>
+          getDefinitionsByIdentity({
+            data: identity,
+          }),
+      });
+      return updatedData.definitions;
+    },
+  });
 
   const actualSymbols = Array.from(
     new Set(
@@ -184,29 +195,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const [conceptUri, setConceptUri] = useState("");
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [savedSelection, setSavedSelection] = useState<any>(null);
-  const [suggestOpen, setSuggestOpen] = useState(false);
-  const [suggestLoading, setSuggestLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<SuggestedReference[]>([]);
-  const [suggestCandidateSymRefs, setSuggestCandidateSymRefs] = useState<
-    Record<string, UnifiedSymbolicReference>
-  >({});
-  const [activeDefId, setActiveDefId] = useState<string | null>(null);
-  const [activeDefText, setActiveDefText] = useState("");
-  const [activeDefStatement, setActiveDefStatement] =
-    useState<FtmlStatement | null>(null);
-
-  useEffect(() => {
-    if (!activeDefId) return;
-
-    const activeDefinition = data?.definitions.find(
-      (definition) => definition.id === activeDefId,
-    );
-    if (!activeDefinition) return;
-
-    setActiveDefStatement(activeDefinition.statement);
-    setActiveDefText(extractPlainText(activeDefinition.statement));
-  }, [activeDefId, data?.definitions]);
-
   function handleEditDefinitionMeta(item: ExtractedItem) {
     setDefinitionMetaTarget(item);
     setDefinitionMetaEditOpen(true);
@@ -215,96 +203,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   function handleOpenSemanticPanel(definitionId: string) {
     setSemanticPanelDefId(definitionId);
     setSemanticPanelOpen(true);
-  }
-
-  async function handleRecomputeReferences(definitionId: string) {
-    const def = data?.definitions.find((e) => e.id === definitionId);
-    if (!def) return;
-
-    const text = extractPlainText(def.statement);
-    setActiveDefId(definitionId);
-    setActiveDefText(text);
-    setActiveDefStatement(def.statement);
-    setSuggestOpen(true);
-    setSuggestLoading(true);
-
-    try {
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-      const session = suggestRefsForDefinition(def, sniffyCatalog);
-
-      setSuggestions(session.suggestions);
-      setSuggestCandidateSymRefs({
-        ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
-        ...session.candidateSymRefs,
-      });
-    } finally {
-      setSuggestLoading(false);
-    }
-  }
-
-  async function reloadSniffySession(definitionId: string) {
-    await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
-      refetchType: "none",
-    });
-
-    const updatedData = await queryClient.fetchQuery({
-      queryKey: ["definitionsByIdentity", identity],
-      queryFn: () =>
-        getDefinitionsByIdentity({
-          data: identity,
-        }),
-    });
-    const updatedDef = updatedData.definitions.find(
-      (definition) => definition.id === definitionId,
-    );
-
-    if (!updatedDef) {
-      setActiveDefText("");
-      setActiveDefStatement(null);
-      setSuggestions([]);
-      setSuggestCandidateSymRefs({});
-      return;
-    }
-
-    const session = suggestRefsForDefinition(updatedDef, sniffyCatalog);
-
-    setActiveDefText(extractPlainText(updatedDef.statement));
-    setActiveDefStatement(updatedDef.statement);
-    setSuggestions(session.suggestions);
-    setSuggestCandidateSymRefs({
-      ...buildCandidateSymRefMap(sniffyCatalog, definitionId),
-      ...session.candidateSymRefs,
-    });
-  }
-
-  async function handleAcceptSuggestion(
-    s: SuggestedReference,
-    candidate: SuggestedReferenceCandidate,
-  ) {
-    if (!activeDefId) return;
-    const symRef =
-      suggestCandidateSymRefs[getSuggestedReferenceCandidateKey(candidate)];
-    if (!symRef) return;
-
-    await symbolicRef({
-      data: {
-        definitionId: activeDefId,
-        selection: {
-          text: s.text,
-          startOffset: s.localStartOffset,
-          endOffset: s.localEndOffset,
-        },
-        symRef,
-      },
-    });
-
-    setSuggestLoading(true);
-    try {
-      await reloadSniffySession(activeDefId);
-    } finally {
-      setSuggestLoading(false);
-    }
   }
 
   async function handleReplaceNode(
@@ -859,7 +757,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       handleSelection("right", { extractId });
                     }}
                     onOpenSemanticPanel={handleOpenSemanticPanel}
-                    onRecomputeReferences={handleRecomputeReferences}
+                    onRecomputeReferences={sniffyFlow.handleRecomputeReferences}
                     showPageNumber={false}
                     showDefinitionMeta
                     showDefinitionMetaIconOnly
@@ -1132,15 +1030,15 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
         invalidateKey={["definitionsByIdentity", identity]}
       />
       <ReferenceSuggestionDialog
-        opened={suggestOpen}
-        onClose={() => setSuggestOpen(false)}
-        definitionId={activeDefId ?? ""}
-        definitionStatement={activeDefStatement}
-        definitionText={activeDefText}
-        suggestions={suggestions}
+        opened={sniffyFlow.suggestOpen}
+        onClose={() => sniffyFlow.setSuggestOpen(false)}
+        definitionId={sniffyFlow.activeDefId ?? ""}
+        definitionStatement={sniffyFlow.activeDefStatement}
+        definitionText={sniffyFlow.activeDefText}
+        suggestions={sniffyFlow.suggestions}
         catalog={sniffyCatalog}
-        loading={suggestLoading}
-        onAccept={handleAcceptSuggestion}
+        loading={sniffyFlow.suggestLoading}
+        onAccept={sniffyFlow.handleAcceptSuggestion}
       />
       {popup && (
         <SelectionPopup
