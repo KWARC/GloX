@@ -151,7 +151,7 @@ model Definition {
   documentPageId String
   documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
 
-  pageNumber Int
+  pageNumber Int? //optional
 
   originalText String @db.Text
   statement    Json

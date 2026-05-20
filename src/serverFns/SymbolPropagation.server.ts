@@ -13,7 +13,7 @@ export type PropagationCandidate = {
   filePath: string;
   fileName: string;
   language: string;
-  pageNumber: number;
+  pageNumber: number | null;
   statement: FtmlRoot;
 };
 

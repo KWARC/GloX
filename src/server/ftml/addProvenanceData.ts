@@ -2,7 +2,7 @@ export function injectProvenance(
   stexSource: string,
   provenance?: {
     documentName: string;
-    pageNumber: number;
+    pageNumber: number | null;
   }[],
 ) {
   if (!stexSource || !provenance?.length) return stexSource;
@@ -15,7 +15,9 @@ export function injectProvenance(
 
   const lines = unique.map(
     (p) =>
-      `%%% The content of this file was extracted from ${p.documentName}(page ${p.pageNumber}) using Glox`,
+      p.pageNumber === null
+        ? `%%% The content of this file was manually created from ${p.documentName} using Glox`
+        : `%%% The content of this file was extracted from ${p.documentName}(page ${p.pageNumber}) using Glox`,
   );
 
   return `${stexSource.trim()}

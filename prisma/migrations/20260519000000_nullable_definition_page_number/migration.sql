@@ -1,0 +1,1 @@
+ALTER TABLE "Definition" ALTER COLUMN "pageNumber" DROP NOT NULL;

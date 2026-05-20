@@ -6,7 +6,7 @@ interface SuggestedDefiniendaProps {
   item: {
     id: string;
     statement: unknown;
-    pageNumber: number;
+    pageNumber: number | null;
 
     definienda?: {
       text: string[];
@@ -44,6 +44,11 @@ export function SuggestedDefinienda({ item }: SuggestedDefiniendaProps) {
     (suggestedDefinienda.length > 0 || !!item.definienda?.length);
 
   async function handleSuggestDefinienda() {
+    if (item.pageNumber === null) {
+      setError("Definienda suggestions require a source page");
+      return;
+    }
+
     setSuggestedDefinienda([]);
     setError(null);
     setLoading(true);

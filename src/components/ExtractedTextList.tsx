@@ -88,7 +88,11 @@ export function ExtractedTextPanel({
                 >
                   <Group justify="space-between" mb={4}>
                     {showPageNumber ? (
-                      <Text size="xs">Page {item.pageNumber}</Text>
+                      <Text size="xs">
+                        {item.pageNumber === null
+                          ? "Manual"
+                          : `Page ${item.pageNumber}`}
+                      </Text>
                     ) : (
                       <div />
                     )}
@@ -117,7 +121,7 @@ export function ExtractedTextPanel({
                       </Tooltip>
                       
                       {onRecomputeReferences && (
-                        <Tooltip label="Sniffy" withArrow>
+                        <Tooltip label="sn-ify" withArrow>
                           <ActionIcon
                             size="sm"
                             variant="subtle"

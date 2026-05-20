@@ -13,6 +13,7 @@ import {
   Box,
   Button,
   Group,
+  Loader,
   Mark,
   Modal,
   Paper,
@@ -34,6 +35,7 @@ type Props = {
   definitionText: string;
   suggestions: SuggestedReference[];
   catalog: CatalogEntry[];
+  loading?: boolean;
   onAccept: (
     s: SuggestedReference,
     candidate: SuggestedReferenceCandidate,
@@ -59,6 +61,7 @@ export function ReferenceSuggestionDialog({
   definitionText,
   suggestions,
   catalog,
+  loading = false,
   onAccept,
 }: Props) {
   const [index, setIndex] = useState(0);
@@ -148,16 +151,18 @@ export function ReferenceSuggestionDialog({
     goNext();
   }
 
-  function handleRestart() {
-    setIndex(0);
-    resetPerSuggestionState();
-  }
-
   const context = current ? getContext(definitionText, current) : null;
   const complete = index >= suggestions.length;
   const selectedCandidateKey = selectedCandidate
     ? getSuggestedReferenceCandidateKey(selectedCandidate)
     : null;
+  const title = loading
+    ? "Finding symbolic references"
+    : suggestions.length === 0
+      ? "No suggestions found"
+      : complete || !current || !context
+        ? "Suggestions complete"
+        : `Suggestion ${index + 1} of ${suggestions.length}`;
 
   function renderCandidate(candidate: SuggestedReferenceCandidate) {
     const candidateKey = getSuggestedReferenceCandidateKey(candidate);
@@ -215,39 +220,43 @@ export function ReferenceSuggestionDialog({
     <Modal
       opened={opened}
       onClose={onClose}
-      title={
-        <Text fw={600}>
-          {complete || !current
-            ? "All suggestions reviewed"
-            : `Suggestion ${index + 1} of ${suggestions.length}`}
-        </Text>
-      }
+      title={<Text fw={600}>{title}</Text>}
       size="lg"
       centered
       padding="lg"
       radius="md"
       styles={{ body: { overflow: "hidden" } }}
     >
-      {complete || !current || !context ? (
+      {loading ? (
+        <Stack gap="md" align="center" py="xl">
+          <Loader />
+          <Text size="sm" c="dimmed" ta="center">
+            Sniffy is checking this definition...
+          </Text>
+        </Stack>
+      ) : suggestions.length === 0 ? (
         <Stack gap="md">
-          <Text size="sm" fw={600}>
-            All suggestions reviewed
+          <Text size="sm">
+            Sniffy did not find any symbolic references for this definition.
+          </Text>
+          <Group justify="flex-end">
+            <Button onClick={onClose}>Close</Button>
+          </Group>
+        </Stack>
+      ) : complete || !current || !context ? (
+        <Stack gap="md">
+          <Text size="sm">
+            No more symbolic reference suggestions.
           </Text>
           <Group justify="space-between">
-            <Button
-              variant="subtle"
-              color="gray"
-              onClick={goToLastSuggestion}
-              disabled={suggestions.length === 0}
-            >
-              Previous
-            </Button>
+            {suggestions.length > 0 ? (
+              <Button variant="subtle" color="gray" onClick={goToLastSuggestion}>
+                Previous
+              </Button>
+            ) : (
+              <Box />
+            )}
             <Group justify="flex-end">
-              {suggestions.length > 0 && (
-                <Button variant="subtle" color="gray" onClick={handleRestart}>
-                  Review Again
-                </Button>
-              )}
               <Button onClick={onClose}>Close</Button>
             </Group>
           </Group>
