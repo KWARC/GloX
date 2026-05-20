@@ -4,7 +4,7 @@ import { ExtractTextDialog } from "@/components/ExtractTextDialog";
 import { LatexConfigModel } from "@/components/LatexConfigModel";
 import { ReferenceSuggestionDialog } from "@/components/ReferenceSuggestionDialog";
 import { SelectionPopup } from "@/components/SelectionPopup";
-import { SemanticPanel } from "@/components/SemanticPanel";
+import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
 import { SymbolicRef } from "@/components/SymbolicRef";
 import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import { ExtractedItem, PopupState } from "@/server/text-selection";
@@ -252,7 +252,9 @@ export function FileDialogs({
               size="xs"
               variant="subtle"
               color="gray"
-              onClick={() => recompute.setPromptDraft(DEFAULT_LLM_SYSTEM_PROMPT)}
+              onClick={() =>
+                recompute.setPromptDraft(DEFAULT_LLM_SYSTEM_PROMPT)
+              }
             >
               Reset to default
             </Button>

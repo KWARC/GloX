@@ -1,3 +1,4 @@
+import { StexCuration } from "@/components/stex-curation/StexCuration";
 import { DefinitionStatus } from "@/routes/curation";
 import { getFileIdentities } from "@/serverFns/latex.server";
 import {
@@ -12,7 +13,6 @@ import {
   Title,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { StexCuration } from "./StexCuration";
 
 type Props = {
   curationLevel: DefinitionStatus | null;
