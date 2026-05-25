@@ -1,12 +1,16 @@
 import { MyDocument } from "@/queries/document";
+import { queryClient } from "@/queryClient";
 import {
   ActivePage,
   TextSelection,
   useExtractionActions,
 } from "@/server/text-selection";
+import { createDefinitionWithDeclaredSymbol } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
 import { FlattenedLlmSuggestion } from "./useLlmDefinitionSuggestions";
+
+type ExtractDialogMode = "definition" | "symbol-target";
 
 export function useDefinitionExtractionFlow({
   documentId,
@@ -45,6 +49,9 @@ export function useDefinitionExtractionFlow({
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
   const [pendingExtractText, setPendingExtractText] = useState("");
   const [definitionName, setDefinitionName] = useState("");
+  const [extractDialogMode, setExtractDialogMode] =
+    useState<ExtractDialogMode>("definition");
+  const [symbolName, setSymbolName] = useState("");
   const [isManualDefinitionCreate, setIsManualDefinitionCreate] =
     useState(false);
   const { extractText } = useExtractionActions(documentId);
@@ -65,6 +72,8 @@ export function useDefinitionExtractionFlow({
       id: page.id,
       pageNumber: page.pageNumber,
     });
+    setExtractDialogMode("definition");
+    setSymbolName("");
     setIsManualDefinitionCreate(false);
   }
 
@@ -72,12 +81,26 @@ export function useDefinitionExtractionFlow({
     setActivePage(null);
     setPendingExtractText("");
     setDefinitionName("");
+    setExtractDialogMode("definition");
+    setSymbolName("");
+    setIsManualDefinitionCreate(true);
+    setExtractDialogOpen(true);
+  }
+
+  function handleCreateSymbolTargetDefinition(conceptUri: string) {
+    setActivePage(null);
+    setPendingExtractText(conceptUri);
+    setDefinitionName(conceptUri);
+    setSymbolName(conceptUri);
+    setExtractDialogMode("symbol-target");
     setIsManualDefinitionCreate(true);
     setExtractDialogOpen(true);
   }
 
   function handleOpenSelectionExtract() {
     if (!selection) return;
+    setExtractDialogMode("definition");
+    setSymbolName("");
     setIsManualDefinitionCreate(false);
     setPendingExtractText(selection.text);
     setExtractDialogOpen(true);
@@ -92,6 +115,8 @@ export function useDefinitionExtractionFlow({
     text: string;
   }) {
     setActivePage({ id: page.id, pageNumber: page.pageNumber });
+    setExtractDialogMode("definition");
+    setSymbolName("");
     setIsManualDefinitionCreate(false);
     setPendingExtractText(text);
     setExtractDialogOpen(true);
@@ -101,16 +126,42 @@ export function useDefinitionExtractionFlow({
     if (!document) return;
     if (!validateIdentity()) return;
 
+    const isSymbolTargetCreate =
+      isManualDefinitionCreate && extractDialogMode === "symbol-target";
+
     if (isManualDefinitionCreate) {
-      await extractText({
-        documentPageId: pages[0]?.id ?? null,
-        pageNumber: null,
-        text: editedText,
-        futureRepo: document.futureRepo,
-        filePath: document.filePath,
-        fileName: definitionName.trim(),
-        language: document.language,
-      });
+      if (extractDialogMode === "symbol-target") {
+        await createDefinitionWithDeclaredSymbol({
+          data: {
+            documentId,
+            documentPageId: pages[0]?.id ?? null,
+            pageNumber: null,
+            definitionName: definitionName.trim(),
+            definitionText: editedText,
+            symbolName: symbolName.trim(),
+            futureRepo: document.futureRepo,
+            filePath: document.filePath,
+            language: document.language,
+          },
+        });
+
+        await queryClient.invalidateQueries({
+          queryKey: ["definitions", documentId],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["symbol-search-db"],
+        });
+      } else {
+        await extractText({
+          documentPageId: pages[0]?.id ?? null,
+          pageNumber: null,
+          text: editedText,
+          futureRepo: document.futureRepo,
+          filePath: document.filePath,
+          fileName: definitionName.trim(),
+          language: document.language,
+        });
+      }
     } else {
       if (!activePage) return;
 
@@ -128,8 +179,12 @@ export function useDefinitionExtractionFlow({
     setExtractDialogOpen(false);
     setPendingExtractText("");
     setDefinitionName("");
+    setExtractDialogMode("definition");
+    setSymbolName("");
     setIsManualDefinitionCreate(false);
-    clearAll();
+    if (!isSymbolTargetCreate) {
+      clearAll();
+    }
 
     const { flattenedSuggestions, focusedSuggestionIndex, focusSuggestion } =
       getSuggestionState();
@@ -152,10 +207,15 @@ export function useDefinitionExtractionFlow({
     pendingExtractText,
     definitionName,
     setDefinitionName,
+    extractDialogMode,
+    setExtractDialogMode,
+    symbolName,
+    setSymbolName,
     isManualDefinitionCreate,
     setIsManualDefinitionCreate,
     handleLeftSelection,
     handleCreateDefinition,
+    handleCreateSymbolTargetDefinition,
     handleOpenSelectionExtract,
     openSuggestionForExtraction,
     handleExtractSubmit,

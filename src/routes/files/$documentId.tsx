@@ -300,8 +300,16 @@ function RouteComponent() {
         symbolicRef={{
           mode: semanticFlow.mode,
           conceptUri: semanticFlow.conceptUri,
+          hidden:
+            extractionFlow.extractDialogOpen &&
+            extractionFlow.extractDialogMode === "symbol-target",
           onSave: semanticFlow.handleSaveSymbolicRef,
           onClose: semanticFlow.handleCloseSymbolicRefDialog,
+          onCreateSymbol: () => {
+            extractionFlow.handleCreateSymbolTargetDefinition(
+              semanticFlow.conceptUri,
+            );
+          },
         }}
         definiendum={{
           opened: semanticFlow.defDialogOpen,
@@ -331,11 +339,16 @@ function RouteComponent() {
           opened: extractionFlow.extractDialogOpen,
           initialText: extractionFlow.pendingExtractText,
           definitionName: extractionFlow.definitionName,
+          mode: extractionFlow.extractDialogMode,
+          symbolName: extractionFlow.symbolName,
           setDefinitionName: extractionFlow.setDefinitionName,
+          setSymbolName: extractionFlow.setSymbolName,
           filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}`,
           onClose: () => {
             extractionFlow.setExtractDialogOpen(false);
             extractionFlow.setIsManualDefinitionCreate(false);
+            extractionFlow.setExtractDialogMode("definition");
+            extractionFlow.setSymbolName("");
           },
           onSubmit: extractionFlow.handleExtractSubmit,
         }}

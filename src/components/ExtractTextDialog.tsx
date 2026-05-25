@@ -9,14 +9,17 @@ import {
   TextInput,
 } from "@mantine/core";
 import { IconFileText } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
 interface ExtractTextDialogProps {
   opened: boolean;
   initialText: string;
   definitionName: string;
+  mode?: "definition" | "symbol-target";
+  symbolName?: string;
   filePath: string;
   setDefinitionName: (v: string) => void;
+  setSymbolName?: Dispatch<SetStateAction<string>>;
   onClose: () => void;
   onSubmit: (text: string) => void;
 }
@@ -25,12 +28,16 @@ export function ExtractTextDialog({
   opened,
   initialText,
   definitionName,
+  mode = "definition",
+  symbolName = "",
   setDefinitionName,
+  setSymbolName,
   filePath,
   onClose,
   onSubmit,
 }: ExtractTextDialogProps) {
   const [text, setText] = useState(initialText);
+  const isSymbolTargetMode = mode === "symbol-target";
 
   useEffect(() => {
     setText(initialText);
@@ -72,6 +79,15 @@ export function ExtractTextDialog({
           onChange={(e) => setDefinitionName(e.currentTarget.value)}
           styles={{ input: { fontWeight: 500 } }}
         />
+        {isSymbolTargetMode && (
+          <TextInput
+            label="Symbol name"
+            placeholder="e.g. derivative"
+            value={symbolName}
+            onChange={(e) => setSymbolName?.(e.currentTarget.value)}
+            styles={{ input: { fontWeight: 500 } }}
+          />
+        )}
         <Divider />
 
         <Stack gap={4}>
@@ -106,7 +122,11 @@ export function ExtractTextDialog({
               if (!cleaned) return;
               onSubmit(cleaned);
             }}
-            disabled={!text.trim() || !definitionName.trim()}
+            disabled={
+              !text.trim() ||
+              !definitionName.trim() ||
+              (isSymbolTargetMode && !symbolName.trim())
+            }
             leftSection={<IconFileText size={16} />}
           >
             Extract

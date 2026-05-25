@@ -31,8 +31,10 @@ export type SelectionDialogProps = {
 export type SymbolicRefDialogProps = {
   mode: "SymbolicRef" | null;
   conceptUri: string;
+  hidden?: boolean;
   onSave: ComponentProps<typeof SymbolicRef>["onSelect"];
   onClose: () => void;
+  onCreateSymbol?: ComponentProps<typeof SymbolicRef>["onCreateSymbol"];
 };
 
 export type DefiniendumDialogProps = {
@@ -61,7 +63,10 @@ export type ExtractionDialogProps = {
   opened: boolean;
   initialText: string;
   definitionName: string;
+  mode?: ComponentProps<typeof ExtractTextDialog>["mode"];
+  symbolName?: string;
   setDefinitionName: Dispatch<SetStateAction<string>>;
+  setSymbolName?: Dispatch<SetStateAction<string>>;
   filePath: string;
   onClose: () => void;
   onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
@@ -145,11 +150,12 @@ export function FileDialogs({
         />
       )}
 
-      {symbolicRef.mode === "SymbolicRef" && (
+      {symbolicRef.mode === "SymbolicRef" && !symbolicRef.hidden && (
         <SymbolicRef
           conceptUri={symbolicRef.conceptUri}
           onSelect={symbolicRef.onSave}
           onClose={symbolicRef.onClose}
+          onCreateSymbol={symbolicRef.onCreateSymbol}
         />
       )}
 
@@ -179,7 +185,10 @@ export function FileDialogs({
         opened={extraction.opened}
         initialText={extraction.initialText}
         definitionName={extraction.definitionName}
+        mode={extraction.mode}
+        symbolName={extraction.symbolName}
         setDefinitionName={extraction.setDefinitionName}
+        setSymbolName={extraction.setSymbolName}
         filePath={extraction.filePath}
         onClose={extraction.onClose}
         onSubmit={extraction.onSubmit}

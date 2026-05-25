@@ -23,12 +23,14 @@ interface SymbolicRefProps {
   conceptUri: string;
   onSelect: (symRef: UnifiedSymbolicReference) => void;
   onClose: () => void;
+  onCreateSymbol?: () => void;
 }
 
 export function SymbolicRef({
   conceptUri,
   onSelect,
   onClose,
+  onCreateSymbol,
 }: SymbolicRefProps) {
   const [searchQuery, setSearchQuery] = useState(() => conceptUri);
   const [selectedSymbol, setSelectedSymbol] =
@@ -110,6 +112,7 @@ export function SymbolicRef({
             onQueryChange={setSearchQuery}
             selectedSymbol={selectedSymbol}
             onSelectSymbol={setSelectedSymbol}
+            onCreateSymbol={onCreateSymbol}
           />
 
           {selectedSymbol?.source === "MATHHUB" && (

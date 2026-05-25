@@ -1,6 +1,7 @@
 import { parseUri } from "@/server/parseUri";
 import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
 import {
+  ActionIcon,
   Badge,
   Button,
   Group,
@@ -9,8 +10,9 @@ import {
   Stack,
   Text,
   TextInput,
+  Tooltip,
 } from "@mantine/core";
-import { IconArchive, IconSchool } from "@tabler/icons-react";
+import { IconArchive, IconPlus, IconSchool } from "@tabler/icons-react";
 
 const SEARCH_RESULTS_HEIGHT = 240;
 const MATHHUB_SECTION_HEIGHT = Math.floor(SEARCH_RESULTS_HEIGHT * 0.7);
@@ -21,6 +23,7 @@ interface SymbolResultProps {
   onQueryChange: (query: string) => void;
   selectedSymbol: SymbolSearchResult | null;
   onSelectSymbol: (symbol: SymbolSearchResult) => void;
+  onCreateSymbol?: () => void;
   enabled?: boolean;
 }
 
@@ -29,6 +32,7 @@ export function SymbolResult({
   onQueryChange,
   selectedSymbol,
   onSelectSymbol,
+  onCreateSymbol,
   enabled = true,
 }: SymbolResultProps) {
   const { results, isReady, hasResults } = useSymbolSearch(
@@ -44,12 +48,38 @@ export function SymbolResult({
 
   return (
     <Stack gap="sm">
-      <TextInput
-        label="Search"
-        value={initialQuery}
-        onChange={(e) => onQueryChange(e.currentTarget.value)}
-        placeholder="Search for symbols..."
-      />
+      <Stack gap={4}>
+        <Group justify="space-between" align="center">
+          <Text size="sm" fw={500}>
+            Search
+          </Text>
+          {onCreateSymbol && (
+            <Tooltip
+              label="Create new symbol"
+              withArrow
+              position="top"
+              zIndex={5000}
+            >
+              <ActionIcon
+                variant="subtle"
+                color="teal"
+                onClick={onCreateSymbol}
+                aria-label="Create new symbol"
+                size="sm"
+              >
+                <IconPlus size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </Group>
+
+        <TextInput
+          aria-label="Search"
+          value={initialQuery}
+          onChange={(e) => onQueryChange(e.currentTarget.value)}
+          placeholder="Search for symbols..."
+        />
+      </Stack>
 
       {showNoResults && (
         <Paper withBorder p="sm" radius="md" bg="gray.0">
