@@ -5,7 +5,11 @@ import {
   TextSelection,
   useExtractionActions,
 } from "@/server/text-selection";
-import { createDefinitionWithDeclaredSymbol } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
+import {
+  CreatedSymbolTarget,
+  createDefinitionWithDeclaredSymbol,
+  declareCreatedSymbolDefiniendum,
+} from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
 import { FlattenedLlmSuggestion } from "./useLlmDefinitionSuggestions";
@@ -52,6 +56,8 @@ export function useDefinitionExtractionFlow({
   const [extractDialogMode, setExtractDialogMode] =
     useState<ExtractDialogMode>("definition");
   const [symbolName, setSymbolName] = useState("");
+  const [createdSymbolTarget, setCreatedSymbolTarget] =
+    useState<CreatedSymbolTarget | null>(null);
   const [isManualDefinitionCreate, setIsManualDefinitionCreate] =
     useState(false);
   const { extractText } = useExtractionActions(documentId);
@@ -92,6 +98,7 @@ export function useDefinitionExtractionFlow({
     setPendingExtractText(conceptUri);
     setDefinitionName(conceptUri);
     setSymbolName(conceptUri);
+    setCreatedSymbolTarget(null);
     setExtractDialogMode("symbol-target");
     setIsManualDefinitionCreate(true);
     setExtractDialogOpen(true);
@@ -131,7 +138,7 @@ export function useDefinitionExtractionFlow({
 
     if (isManualDefinitionCreate) {
       if (extractDialogMode === "symbol-target") {
-        await createDefinitionWithDeclaredSymbol({
+        const created = await createDefinitionWithDeclaredSymbol({
           data: {
             documentId,
             documentPageId: pages[0]?.id ?? null,
@@ -144,6 +151,7 @@ export function useDefinitionExtractionFlow({
             language: document.language,
           },
         });
+        setCreatedSymbolTarget(created);
 
         await queryClient.invalidateQueries({
           queryKey: ["definitions", documentId],
@@ -200,6 +208,33 @@ export function useDefinitionExtractionFlow({
     }
   }
 
+  async function handleDeclareCreatedSymbolDefiniendum(selection: {
+    selectedText: string;
+    startOffset: number;
+    endOffset: number;
+  }) {
+    if (!createdSymbolTarget) return;
+
+    await declareCreatedSymbolDefiniendum({
+      data: {
+        definitionId: createdSymbolTarget.definition.id,
+        symbolId: createdSymbolTarget.symbol.id,
+        selectedText: selection.selectedText,
+        startOffset: selection.startOffset,
+        endOffset: selection.endOffset,
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitions", documentId],
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["symbol-search-db"],
+    });
+
+    setCreatedSymbolTarget(null);
+  }
+
   return {
     activePage,
     extractDialogOpen,
@@ -211,11 +246,14 @@ export function useDefinitionExtractionFlow({
     setExtractDialogMode,
     symbolName,
     setSymbolName,
+    createdSymbolTarget,
+    setCreatedSymbolTarget,
     isManualDefinitionCreate,
     setIsManualDefinitionCreate,
     handleLeftSelection,
     handleCreateDefinition,
     handleCreateSymbolTargetDefinition,
+    handleDeclareCreatedSymbolDefiniendum,
     handleOpenSelectionExtract,
     openSuggestionForExtraction,
     handleExtractSubmit,

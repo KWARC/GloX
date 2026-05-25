@@ -1,3 +1,4 @@
+import { CreateSymbolDefiniendumDialog } from "@/components/CreateSymbolDefiniendumDialog";
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { DefinitionIdentityDialog } from "@/components/DefinitionFilePathDialog";
 import { ExtractTextDialog } from "@/components/ExtractTextDialog";
@@ -8,6 +9,7 @@ import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
 import { SymbolicRef } from "@/components/SymbolicRef";
 import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import { ExtractedItem, PopupState } from "@/server/text-selection";
+import type { CreatedSymbolTarget } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
 import {
   Button,
   Group,
@@ -72,6 +74,15 @@ export type ExtractionDialogProps = {
   onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
 };
 
+export type CreatedSymbolDefiniendumDialogProps = {
+  opened: boolean;
+  target: CreatedSymbolTarget | null;
+  onClose: () => void;
+  onConfirm: ComponentProps<
+    typeof CreateSymbolDefiniendumDialog
+  >["onConfirm"];
+};
+
 export type MetadataDialogProps = {
   opened: boolean;
   onClose: () => void;
@@ -110,6 +121,7 @@ export type FileDialogsProps = {
   latex: LatexDialogProps;
   semantic: SemanticDialogProps;
   extraction: ExtractionDialogProps;
+  createdSymbolDefiniendum: CreatedSymbolDefiniendumDialogProps;
   metadata: MetadataDialogProps;
   sniffy: SniffyDialogProps;
   recompute: RecomputeDialogProps;
@@ -122,6 +134,7 @@ export function FileDialogs({
   latex,
   semantic,
   extraction,
+  createdSymbolDefiniendum,
   metadata,
   sniffy,
   recompute,
@@ -192,6 +205,13 @@ export function FileDialogs({
         filePath={extraction.filePath}
         onClose={extraction.onClose}
         onSubmit={extraction.onSubmit}
+      />
+
+      <CreateSymbolDefiniendumDialog
+        opened={createdSymbolDefiniendum.opened}
+        target={createdSymbolDefiniendum.target}
+        onClose={createdSymbolDefiniendum.onClose}
+        onConfirm={createdSymbolDefiniendum.onConfirm}
       />
 
       <DefinitionIdentityDialog

@@ -301,8 +301,9 @@ function RouteComponent() {
           mode: semanticFlow.mode,
           conceptUri: semanticFlow.conceptUri,
           hidden:
-            extractionFlow.extractDialogOpen &&
-            extractionFlow.extractDialogMode === "symbol-target",
+            (extractionFlow.extractDialogOpen &&
+              extractionFlow.extractDialogMode === "symbol-target") ||
+            !!extractionFlow.createdSymbolTarget,
           onSave: semanticFlow.handleSaveSymbolicRef,
           onClose: semanticFlow.handleCloseSymbolicRefDialog,
           onCreateSymbol: () => {
@@ -351,6 +352,12 @@ function RouteComponent() {
             extractionFlow.setSymbolName("");
           },
           onSubmit: extractionFlow.handleExtractSubmit,
+        }}
+        createdSymbolDefiniendum={{
+          opened: !!extractionFlow.createdSymbolTarget,
+          target: extractionFlow.createdSymbolTarget,
+          onClose: () => extractionFlow.setCreatedSymbolTarget(null),
+          onConfirm: extractionFlow.handleDeclareCreatedSymbolDefiniendum,
         }}
         metadata={{
           opened: semanticFlow.definitionMetaEditOpen,

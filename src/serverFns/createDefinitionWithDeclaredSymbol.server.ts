@@ -1,6 +1,18 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
-import { DefinitionNode, FtmlContent } from "@/types/ftml.types";
+import {
+  findAllTextOccurrences,
+  pathTraversesSemanticNode,
+  replaceTextWithNode,
+} from "@/server/ftml/astOperations";
+import {
+  assertFtmlStatement,
+  DefinitionNode,
+  FtmlStatement,
+  isDefinitionNode,
+  normalizeToRoot,
+  unwrapRoot,
+} from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export type CreateDefinitionWithDeclaredSymbolInput = {
@@ -15,37 +27,34 @@ export type CreateDefinitionWithDeclaredSymbolInput = {
   language: string;
 };
 
-function buildDeclaredSymbolStatement(
-  definitionText: string,
-  symbolName: string,
-): DefinitionNode {
-  const content: FtmlContent[] = [];
-  const symbolIndex = definitionText.indexOf(symbolName);
-  const definiendumNode: FtmlContent = {
-    type: "definiendum",
-    uri: symbolName,
-    content: [symbolName],
-    symdecl: true,
+export type CreatedSymbolTarget = {
+  definition: {
+    id: string;
+    pageNumber: number | null;
+    statement: FtmlStatement;
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
   };
+  symbol: {
+    id: string;
+    symbolName: string;
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
+  };
+};
 
-  if (symbolIndex >= 0) {
-    const before = definitionText.slice(0, symbolIndex);
-    const after = definitionText.slice(symbolIndex + symbolName.length);
-
-    if (before) content.push(before);
-    content.push(definiendumNode);
-    if (after) content.push(after);
-  } else {
-    content.push(definiendumNode, " ", definitionText);
-  }
-
+function buildPlainDefinitionStatement(definitionText: string): DefinitionNode {
   return {
     type: "definition",
-    for_symbols: [symbolName],
+    for_symbols: [],
     content: [
       {
         type: "paragraph",
-        content,
+        content: [definitionText],
       },
     ],
   };
@@ -94,11 +103,11 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
       throw new Error("Document has no pages");
     }
 
-    const statement = buildDeclaredSymbolStatement(definitionText, symbolName);
+    const statement = buildPlainDefinitionStatement(definitionText);
     const serializedStatement = JSON.parse(JSON.stringify(statement));
 
-    const definition = await prisma.$transaction(async (tx) => {
-      await tx.symbol.upsert({
+    const result = await prisma.$transaction(async (tx) => {
+      const symbol = await tx.symbol.upsert({
         where: {
           symbolName_futureRepo_filePath_fileName_language: {
             symbolName,
@@ -151,8 +160,136 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
         data: { status: "TEXT_EXTRACTED" },
       });
 
-      return createdDefinition;
+      return {
+        definition: {
+          id: createdDefinition.id,
+          pageNumber: createdDefinition.pageNumber,
+          statement: createdDefinition.statement as FtmlStatement,
+          futureRepo: createdDefinition.futureRepo,
+          filePath: createdDefinition.filePath,
+          fileName: createdDefinition.fileName,
+          language: createdDefinition.language,
+        },
+        symbol: {
+          id: symbol.id,
+          symbolName: symbol.symbolName,
+          futureRepo: symbol.futureRepo,
+          filePath: symbol.filePath,
+          fileName: symbol.fileName,
+          language: symbol.language,
+        },
+      } satisfies CreatedSymbolTarget;
     });
 
-    return definition;
+    return result;
+  });
+
+export type DeclareCreatedSymbolDefiniendumInput = {
+  definitionId: string;
+  symbolId: string;
+  selectedText: string;
+  startOffset: number;
+  endOffset: number;
+};
+
+export const declareCreatedSymbolDefiniendum = createServerFn({
+  method: "POST",
+})
+  .inputValidator((data: DeclareCreatedSymbolDefiniendumInput) => data)
+  .handler(async ({ data }) => {
+    const selectedText = data.selectedText?.trim();
+
+    if (
+      !data.definitionId ||
+      !data.symbolId ||
+      !selectedText ||
+      data.startOffset < 0 ||
+      data.endOffset <= data.startOffset
+    ) {
+      throw new Error("Invalid declared definiendum fields");
+    }
+
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
+
+    const userId = userRes.user.id;
+
+    await prisma.$transaction(async (tx) => {
+      const [definition, symbol] = await Promise.all([
+        tx.definition.findUnique({ where: { id: data.definitionId } }),
+        tx.symbol.findUnique({ where: { id: data.symbolId } }),
+      ]);
+
+      if (!definition?.statement) {
+        throw new Error("Definition not found");
+      }
+
+      if (!symbol) {
+        throw new Error("Symbol not found");
+      }
+
+      const root = normalizeToRoot(assertFtmlStatement(definition.statement));
+      const occurrences = findAllTextOccurrences(root, selectedText);
+      const location = occurrences.find(
+        (loc) => loc.offset === data.startOffset,
+      );
+
+      if (!location) {
+        throw new Error("Exact selection match not found in AST");
+      }
+
+      const targetPath = [location.paragraphIndex, location.contentIndex];
+      if (pathTraversesSemanticNode(root, targetPath)) {
+        throw new Error(
+          "Cannot insert definiendum inside existing semantic node",
+        );
+      }
+
+      const updatedRoot = replaceTextWithNode(
+        root,
+        location,
+        data.startOffset,
+        data.endOffset,
+        {
+          type: "definiendum",
+          uri: symbol.symbolName,
+          content: [selectedText],
+          symdecl: true,
+        },
+      );
+
+      const updatedDefinition = updatedRoot.content.find(isDefinitionNode);
+      if (!updatedDefinition) {
+        throw new Error("Definition not found after update");
+      }
+
+      const existingSymbols = updatedDefinition.for_symbols ?? [];
+      if (!existingSymbols.includes(symbol.symbolName)) {
+        updatedDefinition.for_symbols = [...existingSymbols, symbol.symbolName];
+      }
+
+      const nextVersion = definition.currentVersion + 1;
+      const statement = JSON.parse(JSON.stringify(unwrapRoot(updatedRoot)));
+
+      await tx.definitionVersion.create({
+        data: {
+          definitionId: definition.id,
+          versionNumber: nextVersion,
+          originalText: definition.originalText,
+          statement,
+          editedById: userId,
+        },
+      });
+
+      await tx.definition.update({
+        where: { id: definition.id },
+        data: {
+          statement,
+          updatedById: userId,
+          currentVersion: nextVersion,
+        },
+      });
+    });
+
+    return { ok: true };
   });
