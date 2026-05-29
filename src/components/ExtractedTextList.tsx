@@ -17,7 +17,6 @@ import {
 } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
 import { FtmlPreview } from "./FtmlPreview";
-import { SuggestedDefinienda } from "./SuggestedDefinienda";
 
 interface ExtractedTextPanelProps {
   isLocked?: boolean;
@@ -119,7 +118,7 @@ export function ExtractedTextPanel({
                           <IconPencil size={16} />
                         </ActionIcon>
                       </Tooltip>
-                      
+
                       {onRecomputeReferences && (
                         <Tooltip label="sn-ify" withArrow>
                           <ActionIcon
