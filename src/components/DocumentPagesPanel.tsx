@@ -182,12 +182,12 @@ export function DocumentPagesPanel({
   focusedSuggestionId,
   onLlmSuggestionClick,
 }: DocumentPagesPanelProps) {
-  const [collapsedPages, setCollapsedPages] = useState<Record<string, boolean>>(
-    {},
-  );
+  const [imageVisiblePages, setImageVisiblePages] = useState<
+    Record<string, boolean>
+  >({});
 
   function togglePage(pageId: string) {
-    setCollapsedPages((prev) => ({
+    setImageVisiblePages((prev) => ({
       ...prev,
       [pageId]: !prev[pageId],
     }));
@@ -198,7 +198,7 @@ export function DocumentPagesPanel({
       <ScrollArea h="100%">
         <Stack p="lg" gap="lg">
           {pages.map((page) => {
-            const isCollapsed = collapsedPages[page.id];
+            const isImageVisible = imageVisiblePages[page.id] ?? false;
             const pageSuggestions =
               llmEnabled && llmSuggestions
                 ? (llmSuggestions[page.id] ?? [])
@@ -235,7 +235,7 @@ export function DocumentPagesPanel({
                     variant="subtle"
                     onClick={() => togglePage(page.id)}
                   >
-                    {isCollapsed ? "Show Image" : "Hide Image"}
+                    {isImageVisible ? "Hide Image" : "Show Image"}
                   </Button>
                 </Group>
 
@@ -266,14 +266,17 @@ export function DocumentPagesPanel({
                   </Text>
                 )}
 
-                {!isCollapsed && (
-                  <Box mt="sm">
-                    <PageImage
-                      documentId={documentId}
-                      pageNumber={page.pageNumber}
-                    />
-                  </Box>
-                )}
+                <Box
+                  mt="sm"
+                  style={{
+                    display: isImageVisible ? "block" : "none",
+                  }}
+                >
+                  <PageImage
+                    documentId={documentId}
+                    pageNumber={page.pageNumber}
+                  />
+                </Box>
 
                 {page.id !== pages[pages.length - 1]?.id && <Divider mt="lg" />}
               </Box>

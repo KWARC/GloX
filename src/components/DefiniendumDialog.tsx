@@ -131,33 +131,6 @@ export function DefiniendumDialog({
             </Text>
           </Paper>
 
-          <Box
-            style={{
-              display: "flex",
-              gap: 8,
-              width: "100%",
-              minWidth: 0,
-            }}
-          >
-            <Button
-              size="xs"
-              variant={mode === "CREATE" ? "filled" : "light"}
-              onClick={() => setMode("CREATE")}
-              style={{ flex: 1, minWidth: 0 }}
-            >
-              Create New Symbol
-            </Button>
-
-            <Button
-              size="xs"
-              variant={mode === "PICK_EXISTING" ? "filled" : "light"}
-              onClick={() => setMode("PICK_EXISTING")}
-              style={{ flex: 1, minWidth: 0 }}
-            >
-              Link to Existing
-            </Button>
-          </Box>
-
           {mode === "CREATE" && (
             <form
               onSubmit={(e) => {
@@ -213,6 +186,14 @@ export function DefiniendumDialog({
                 >
                   Create & Insert Definiendum
                 </Button>
+
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => setMode("PICK_EXISTING")}
+                >
+                  Back to existing symbol search
+                </Button>
               </Stack>
             </form>
           )}
@@ -251,12 +232,6 @@ export function DefiniendumDialog({
                 </Paper>
               )}
 
-              <Paper withBorder p="sm" bg="blue.0">
-                <Text size="xs" c="dimmed">
-                  Linking to an existing symbol does NOT declare it.
-                </Text>
-              </Paper>
-
               <Button
                 onClick={handlePickExisting}
                 disabled={!selectedSymbol}
@@ -265,6 +240,19 @@ export function DefiniendumDialog({
               >
                 Link & Insert Definiendum
               </Button>
+
+              <Stack gap={4} align="center">
+                <Text size="xs" c="dimmed">
+                  Cannot find the symbol?
+                </Text>
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => setMode("CREATE")}
+                >
+                  Create New Symbol
+                </Button>
+              </Stack>
             </Stack>
           )}
         </Stack>
