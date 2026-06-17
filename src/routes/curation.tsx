@@ -41,10 +41,10 @@ function RouteComponent() {
       style={{
         display: "flex",
         justifyContent: "center",
-        padding: "24px 16px",
+        padding: "12px 10px",
       }}
     >
-      <Stack w="100%" maw={1200} gap="xl">
+      <Stack w="100%" maw={1400} gap="md">
         <CurationSection
           curationLevel={curationLevel}
           setCurationLevel={setCurationLevel}

@@ -7,8 +7,8 @@ import {
   Group,
   Loader,
   Select,
-  SimpleGrid,
   Stack,
+  Table,
   Text,
   Title,
 } from "@mantine/core";
@@ -31,7 +31,7 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
   });
 
   return (
-    <Stack w="100%" maw={1200} gap="xl">
+    <Stack w="100%" gap="md">
       <Box>
         <Group justify="space-between" align="flex-end" mb="xs">
           <Stack gap={4}>
@@ -75,7 +75,7 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
 
       {!isLoading && fileGroups.length === 0 && (
         <Box
-          py="xl"
+          py="lg"
           style={{
             textAlign: "center",
             borderRadius: 8,
@@ -93,14 +93,44 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
       )}
 
       {fileGroups.length > 0 && (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-          {fileGroups.map((definition) => (
-            <StexCuration
-              key={`${definition.futureRepo}-${definition.filePath}-${definition.fileName}-${definition.language}`}
-              identity={definition}
-            />
-          ))}
-        </SimpleGrid>
+        <Table.ScrollContainer minWidth={980}>
+          <Table
+            highlightOnHover
+            withTableBorder
+            verticalSpacing="xs"
+            horizontalSpacing="sm"
+            styles={{
+              th: {
+                paddingTop: 10,
+                paddingBottom: 10,
+                fontSize: "0.75rem",
+                letterSpacing: "0.03em",
+                textTransform: "uppercase",
+              },
+              td: {
+                paddingTop: 10,
+                paddingBottom: 10,
+                verticalAlign: "middle",
+              },
+            }}
+          >
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th w="68%">Definition</Table.Th>
+                <Table.Th w="18%">Declared Symbol</Table.Th>
+                <Table.Th w="14%">Status</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {fileGroups.map((definition) => (
+                <StexCuration
+                  key={`${definition.futureRepo}-${definition.filePath}-${definition.fileName}-${definition.language}`}
+                  identity={definition}
+                />
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
       )}
     </Stack>
   );

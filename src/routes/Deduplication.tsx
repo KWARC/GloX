@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Symbol } from "generated/prisma/client";
 
-export const Route = createFileRoute("/deduplication")({
+export const Route = createFileRoute("/Deduplication")({
   component: DeduplicationPage,
 });
 

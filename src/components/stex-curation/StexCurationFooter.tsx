@@ -16,14 +16,7 @@ export function StexCurationFooter({
   actions,
 }: StexCurationFooterProps) {
   return (
-    <Box
-      px="md"
-      py="xs"
-      style={{
-        borderTop: "1px solid var(--mantine-color-gray-2)",
-        backgroundColor: "var(--mantine-color-gray-0)",
-      }}
-    >
+    <Box px={2} pt={4}>
       <Group justify="space-between" align="center">
         <Group
           gap={6}
