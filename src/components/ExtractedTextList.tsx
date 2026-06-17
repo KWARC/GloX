@@ -20,6 +20,7 @@ import { FtmlPreview } from "./FtmlPreview";
 
 interface ExtractedTextPanelProps {
   isLocked?: boolean;
+  compact?: boolean;
   extracts: ExtractedItem[];
   editingId: string | null;
   selectedId: string | null;
@@ -55,11 +56,18 @@ export function ExtractedTextPanel({
   showDefinitionMetaIconOnly = false,
   onEditDefinitionMeta,
   isLocked = false,
+  compact = false,
 }: ExtractedTextPanelProps) {
   return (
-    <Paper withBorder p="md" h="100%" radius="md" bg="blue.0">
-      <ScrollArea h="100%">
-        <Stack gap="sm">
+    <Paper
+      withBorder={!compact}
+      p={compact ? 0 : "md"}
+      h={compact ? "auto" : "100%"}
+      radius={compact ? 0 : "md"}
+      bg={compact ? "transparent" : "blue.0"}
+    >
+      <ScrollArea h={compact ? "auto" : "100%"}>
+        <Stack gap={compact ? "xs" : "sm"}>
           {!extracts.length ? (
             <Text size="sm" c="dark" ta="center">
               No extracted text yet
@@ -73,8 +81,8 @@ export function ExtractedTextPanel({
                 <Paper
                   key={item.id}
                   withBorder
-                  p="sm"
-                  radius="md"
+                  p={compact ? 6 : "sm"}
+                  radius={compact ? "xs" : "md"}
                   bg={isEditing ? "yellow.0" : undefined}
                   style={{
                     borderColor: isEditing
@@ -85,7 +93,7 @@ export function ExtractedTextPanel({
                     borderWidth: isEditing || isSelected ? 2 : undefined,
                   }}
                 >
-                  <Group justify="space-between" mb={4}>
+                  <Group justify="space-between" mb={compact ? 2 : 4}>
                     {showPageNumber ? (
                       <Text size="xs">
                         {item.pageNumber === null
@@ -96,10 +104,10 @@ export function ExtractedTextPanel({
                       <div />
                     )}
 
-                    <Group gap="xs">
+                    <Group gap={compact ? "xs" : "xs"}>
                       <Tooltip label="Delete definition" withArrow>
                         <ActionIcon
-                          size="sm"
+                          size={compact ? 22 : "sm"}
                           color="red"
                           disabled={isLocked}
                           onClick={() => onDelete(item.id)}
@@ -110,7 +118,7 @@ export function ExtractedTextPanel({
 
                       <Tooltip label="Edit JSON format" withArrow>
                         <ActionIcon
-                          size="sm"
+                          size={compact ? 22 : "sm"}
                           variant="subtle"
                           disabled={isLocked}
                           onClick={() => onToggleEdit(item.id)}
@@ -122,7 +130,7 @@ export function ExtractedTextPanel({
                       {onRecomputeReferences && (
                         <Tooltip label="sn-ify" withArrow>
                           <ActionIcon
-                            size="sm"
+                            size={compact ? 22 : "sm"}
                             variant="subtle"
                             color="teal"
                             disabled={isLocked}
@@ -134,7 +142,7 @@ export function ExtractedTextPanel({
                       )}
                       <Tooltip label="Manage semantics" withArrow>
                         <ActionIcon
-                          size="sm"
+                          size={compact ? 22 : "sm"}
                           variant="subtle"
                           disabled={isLocked}
                           onClick={() => onOpenSemanticPanel(item.id)}
@@ -181,8 +189,8 @@ export function ExtractedTextPanel({
 
                   {showDefinitionMeta && (
                     <Group
-                      gap={6}
-                      mt={6}
+                      gap={compact ? 4 : 6}
+                      mt={compact ? 3 : 6}
                       title={`Archive: ${item.futureRepo} | Module Path: ${item.filePath} | Module: ${item.fileName} | Lang: ${item.language}`}
                       style={{
                         cursor: onEditDefinitionMeta ? "pointer" : "default",

@@ -1,7 +1,7 @@
+import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { FileIdentity } from "@/serverFns/latex.server";
-import { Box, Table } from "@mantine/core";
+import { Box, Group, Loader, Stack, Table } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
-import { DefinitionsSection } from "./DefinitionsSection";
 import { DiscardDefinitionModal } from "./DiscardDefinitionModal";
 import { LatexPreviewModal } from "./LatexPreviewModal";
 import { StexCurationDialogs } from "./StexCurationDialogs";
@@ -22,7 +22,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     definitionIds,
     provenance,
     sniffyCatalog,
-    actualSymbols,
+    definitionSymbolSummaries,
     status,
     statusConf,
     discardReasonFromServer,
@@ -36,38 +36,96 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     status === "FINALIZED_IN_FILE" ||
     status === "SUBMITTED_TO_MATHHUB" ||
     status === "DISCARDED";
+  const isLocked = status === "SUBMITTED_TO_MATHHUB" || status === "DISCARDED";
+  const symbolSummaryMap = new Map(
+    definitionSymbolSummaries.map((summary) => [summary.definitionId, summary]),
+  );
 
   return (
     <>
       <Table.Tr>
-        <Table.Td>
-          <Box maw={820}>
-            <DefinitionsSection
-              data={{ definitions, isLoading }}
-              state={{
-                editingId: actions.editingId,
-                isLocked:
-                  status === "SUBMITTED_TO_MATHHUB" || status === "DISCARDED",
-              }}
-              actions={{
-                onToggleEdit: actions.handleToggleEdit,
-                onUpdate: actions.handleUpdate,
-                onDownload: actions.handleDownload,
-                onDelete: actions.handleDelete,
-                onSelection: (extractId) => {
-                  semanticFlow.handleSelection("right", { extractId });
-                },
-                onOpenSemanticPanel: semanticFlow.handleOpenSemanticPanel,
-                onRecomputeReferences: sniffyFlow.handleRecomputeReferences,
-                onEditDefinitionMeta: actions.handleEditDefinitionMeta,
-                onOpenLatexPreview: actions.handleOpenLatexPreview,
-              }}
-            />
+        <Table.Td colSpan={3} p={0}>
+          <Box px="sm" py="xs">
+            {isLoading ? (
+              <Group justify="center" py="lg">
+                <Loader size="sm" />
+              </Group>
+            ) : (
+              <Stack gap="xs">
+                {definitions.map((definition, index) => {
+                  const symbolSummary = symbolSummaryMap.get(definition.id);
+
+                  return (
+                    <Group
+                      key={definition.id}
+                      align="stretch"
+                      gap="sm"
+                      wrap="nowrap"
+                    >
+                      <Box style={{ flex: 1, minWidth: 0 }}>
+                        <ExtractedTextPanel
+                          compact
+                          extracts={[definition]}
+                          editingId={actions.editingId}
+                          selectedId={null}
+                          onToggleEdit={actions.handleToggleEdit}
+                          onUpdate={actions.handleUpdate}
+                          onDownload={actions.handleDownload}
+                          onDelete={actions.handleDelete}
+                          onSelection={(extractId) => {
+                            semanticFlow.handleSelection("right", {
+                              extractId,
+                            });
+                          }}
+                          onOpenSemanticPanel={
+                            semanticFlow.handleOpenSemanticPanel
+                          }
+                          onRecomputeReferences={
+                            sniffyFlow.handleRecomputeReferences
+                          }
+                          showPageNumber={false}
+                          showDefinitionMeta
+                          showDefinitionMetaIconOnly
+                          onEditDefinitionMeta={
+                            actions.handleEditDefinitionMeta
+                          }
+                          isLocked={isLocked}
+                          onOpenLatexPreview={actions.handleOpenLatexPreview}
+                        />
+                      </Box>
+
+                      <Box w={220} py={6}>
+                        <SymbolDeclaredSection
+                          data={{ symbols: symbolSummary?.symbols ?? [] }}
+                        />
+                      </Box>
+
+                      <Box w={160} py={6}>
+                        {index === 0 ? (
+                          <StexStatusMenu
+                            status={{
+                              value: status,
+                              conf: statusConf,
+                              discardReasonFromServer,
+                            }}
+                            actions={{
+                              onStatusChange: actions.handleStatusChange,
+                              onOpenDiscard: () => actions.setDiscardOpen(true),
+                            }}
+                          />
+                        ) : null}
+                      </Box>
+                    </Group>
+                  );
+                })}
+              </Stack>
+            )}
 
             <StexCurationFooter
               identity={identity}
               actions={{
-                onOpenMetadataForIdentity: actions.handleOpenMetadataForIdentity,
+                onOpenMetadataForIdentity:
+                  actions.handleOpenMetadataForIdentity,
                 onOpenLatexPreview: actions.handleOpenLatexPreview,
                 onGoToSource: () =>
                   navigate({
@@ -147,24 +205,6 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               }}
             />
           </Box>
-        </Table.Td>
-
-        <Table.Td>
-          <SymbolDeclaredSection data={{ actualSymbols }} />
-        </Table.Td>
-
-        <Table.Td>
-          <StexStatusMenu
-            status={{
-              value: status,
-              conf: statusConf,
-              discardReasonFromServer,
-            }}
-            actions={{
-              onStatusChange: actions.handleStatusChange,
-              onOpenDiscard: () => actions.setDiscardOpen(true),
-            }}
-          />
         </Table.Td>
       </Table.Tr>
     </>

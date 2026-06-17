@@ -41,6 +41,7 @@ export function DefinitionsSection({
       {!data.isLoading && (
         <Stack gap="xs">
           <ExtractedTextPanel
+            compact
             extracts={data.definitions}
             editingId={state.editingId}
             selectedId={null}

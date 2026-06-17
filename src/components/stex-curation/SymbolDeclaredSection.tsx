@@ -1,16 +1,16 @@
-import { Badge, Group, Stack, Text } from "@mantine/core";
+import { Badge, Group, Text } from "@mantine/core";
 
 export type SymbolDeclaredSectionProps = {
   data: {
-    actualSymbols: string[];
+    symbols: string[];
   };
 };
 
 export function SymbolDeclaredSection({ data }: SymbolDeclaredSectionProps) {
-  const [firstSymbol, ...remainingSymbols] = data.actualSymbols;
+  const [firstSymbol, ...remainingSymbols] = data.symbols;
 
   return (
-    <Stack gap={6} align="flex-start">
+    <>
       {firstSymbol ? (
         <Group gap={6} wrap="nowrap">
           <Text size="sm" fw={500}>
@@ -33,6 +33,6 @@ export function SymbolDeclaredSection({ data }: SymbolDeclaredSectionProps) {
           No symbol declared
         </Text>
       )}
-    </Stack>
+    </>
   );
 }
