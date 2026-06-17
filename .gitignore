@@ -12,3 +12,4 @@ count.txt
 todos.json
 
 /generated/prisma
+/uploads/

@@ -7,6 +7,7 @@ import {
   getSuggestedReferenceCandidateKey,
   searchReferenceCandidates,
 } from "@/server/symbolic-suggestions";
+import { normalizeMathHubPreviewUrl } from "@/lib/mathhub";
 import type { FtmlStatement } from "@/types/ftml.types";
 import {
   Badge,
@@ -201,7 +202,7 @@ export function ReferenceSuggestionDialog({
         {selected && candidate.source === "MATHHUB" && candidate.uri && (
           <Box h={160} mt="xs">
             <iframe
-              src={candidate.uri.replace("http:", "https:")}
+              src={normalizeMathHubPreviewUrl(candidate.uri)}
               sandbox="allow-scripts allow-same-origin"
               title="MathHub content preview"
               style={{

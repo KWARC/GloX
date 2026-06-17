@@ -4,6 +4,7 @@ import {
   SemanticDefinition,
   SymrefNode,
 } from "@/types/Semantic.types";
+import { normalizeMathHubPreviewUrl } from "@/lib/mathhub";
 import { Box, Button, Group, Paper, Stack, Text } from "@mantine/core";
 import { DbResultItem } from "../DbResultItem";
 import { RenderDbSymbol, RenderSymbolicUri } from "../RenderUri";
@@ -208,10 +209,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                 props.mode === "definiendum" && selectedUri === r.uri
                   ? "blue.0"
                   : undefined;
-              const iframeSrc =
-                props.mode === "definiendum"
-                  ? r.uri.replace("http:", "https:")
-                  : r.uri;
+              const iframeSrc = normalizeMathHubPreviewUrl(r.uri);
 
               return (
                 <Paper
