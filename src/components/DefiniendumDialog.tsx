@@ -23,7 +23,12 @@ interface DefiniendumDialogProps {
   extractedText: string | null;
   onSubmit: (
     params:
-      | { mode: "CREATE"; symbolName: string; alias: string; symdecl: true }
+      | {
+          mode: "CREATE";
+          symbolName: string;
+          verbalization: string;
+          symdecl: true;
+        }
       | { mode: "PICK_EXISTING"; selectedSymbol: SymbolSearchResult },
   ) => void;
   onClose: () => void;
@@ -43,7 +48,7 @@ export function DefiniendumDialog({
   const form = useForm({
     defaultValues: {
       symbolName: extractedText ?? "",
-      alias: "",
+      verbalization: extractedText ?? "",
       symdecl: true,
     },
     onSubmit: ({ value }) => {
@@ -51,7 +56,7 @@ export function DefiniendumDialog({
         onSubmit({
           mode: "CREATE",
           symbolName: value.symbolName.trim(),
-          alias: value.alias.trim(),
+          verbalization: value.verbalization.trim(),
           symdecl: true,
         });
       }
@@ -67,7 +72,7 @@ export function DefiniendumDialog({
 
     form.reset({
       symbolName: extractedText ?? "",
-      alias: "",
+      verbalization: extractedText ?? "",
       symdecl: true,
     });
   }, [opened, extractedText]);
@@ -156,19 +161,34 @@ export function DefiniendumDialog({
                     <TextInput
                       label="Symbol name"
                       value={field.state.value}
-                      onChange={(e) =>
-                        field.handleChange(e.currentTarget.value)
-                      }
+                      onChange={(e) => {
+                        const nextSymbolName = e.currentTarget.value;
+                        const previousSymbolName = field.state.value;
+                        const currentVerbalization =
+                          form.getFieldValue("verbalization");
+
+                        field.handleChange(nextSymbolName);
+
+                        if (
+                          !currentVerbalization.trim() ||
+                          currentVerbalization === previousSymbolName
+                        ) {
+                          form.setFieldValue(
+                            "verbalization",
+                            nextSymbolName,
+                          );
+                        }
+                      }}
                       error={field.state.meta.errors?.[0]}
                       autoFocus
                     />
                   )}
                 </form.Field>
 
-                <form.Field name="alias">
+                <form.Field name="verbalization">
                   {(field) => (
                     <Textarea
-                      label="Alias"
+                      label="Verbalization"
                       value={field.state.value}
                       onChange={(e) =>
                         field.handleChange(e.currentTarget.value)
