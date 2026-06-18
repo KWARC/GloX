@@ -7,26 +7,24 @@ export type SymbolDeclaredSectionProps = {
 };
 
 export function SymbolDeclaredSection({ data }: SymbolDeclaredSectionProps) {
-  const [firstSymbol, ...remainingSymbols] = data.symbols;
+  const symbols = Array.from(new Set(data.symbols));
 
   return (
     <>
-      {firstSymbol ? (
-        <Group gap={6} wrap="nowrap">
-          <Text size="sm" fw={500}>
-            {firstSymbol}
-          </Text>
-          {remainingSymbols.length > 0 && (
+      {symbols.length > 0 ? (
+        <Group gap={4} wrap="wrap">
+          {symbols.map((symbol) => (
             <Badge
-              size="sm"
+              key={symbol}
+              size="xs"
               variant="light"
-              color="gray"
+              color="blue"
               radius="sm"
               style={{ textTransform: "none" }}
             >
-              +{remainingSymbols.length}
+              {symbol}
             </Badge>
-          )}
+          ))}
         </Group>
       ) : (
         <Text size="xs" c="dimmed" fs="italic">
