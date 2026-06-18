@@ -1,7 +1,11 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { ExtractedItem } from "@/server/text-selection";
-import { DefinitionNode, FtmlStatement, assertFtmlStatement } from "@/types/ftml.types";
+import {
+  DefinitionNode,
+  FtmlStatement,
+  assertFtmlStatement,
+} from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
 
@@ -210,7 +214,9 @@ export const updateDefinitionFilePath = createServerFn({ method: "POST" })
 
         for (const child of node.content ?? []) {
           if (child.type === "definiendum" && child.symdecl === true) {
-            const label = (child.content ?? []).filter((c: any) => typeof c === "string").join("");
+            const label = (child.content ?? [])
+              .filter((c: any) => typeof c === "string")
+              .join("");
             symbols.push(label);
           }
 
@@ -287,7 +293,9 @@ export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
       });
 
       if (targetDefs.length > 0) {
-        const sameTargetStatus = targetDefs.every((d) => d.status === currentStatus);
+        const sameTargetStatus = targetDefs.every(
+          (d) => d.status === currentStatus,
+        );
 
         if (!sameTargetStatus) {
           throw new Error(
@@ -371,7 +379,7 @@ export const listDefinition = createServerFn({ method: "GET" })
 
     const items: ExtractedItem[] = defs.map((def) => {
       if (!def.statement) {
-        throw new Error("Definition has no FTML statement");
+        throw new Error("Content has no FTML statement");
       }
 
       const statement = assertFtmlStatement(def.statement) as FtmlStatement;

@@ -36,17 +36,17 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
         <Group justify="space-between" align="flex-end" mb="xs">
           <Stack gap={4}>
             <Title order={3} fw={700}>
-              FTML Definitions by File
+              FTML Contents by File
             </Title>
             <Text size="sm" c="dimmed">
-              Structured symbol declarations and definitions grouped by file
+              Structured symbol declarations and contents grouped by file
             </Text>
           </Stack>
 
           <Group gap="sm" align="flex-end">
             {isLoading && <Loader size="sm" color="blue" />}
             <Select
-              label="Filter by Definition status"
+              label="Filter by Content status"
               placeholder="All statuses"
               value={curationLevel}
               onChange={(value) =>
@@ -116,7 +116,7 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
           >
             <Table.Thead>
               <Table.Tr>
-                <Table.Th w="68%">Definition</Table.Th>
+                <Table.Th w="68%">Content</Table.Th>
                 <Table.Th w="18%">Declared Symbol</Table.Th>
                 <Table.Th w="14%">Status</Table.Th>
               </Table.Tr>

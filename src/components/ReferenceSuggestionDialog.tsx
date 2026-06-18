@@ -1,3 +1,4 @@
+import { normalizeMathHubPreviewUrl } from "@/lib/mathhub";
 import type {
   CatalogEntry,
   SuggestedReference,
@@ -7,7 +8,6 @@ import {
   getSuggestedReferenceCandidateKey,
   searchReferenceCandidates,
 } from "@/server/symbolic-suggestions";
-import { normalizeMathHubPreviewUrl } from "@/lib/mathhub";
 import type { FtmlStatement } from "@/types/ftml.types";
 import {
   Badge,
@@ -246,12 +246,14 @@ export function ReferenceSuggestionDialog({
         </Stack>
       ) : complete || !current || !context ? (
         <Stack gap="md">
-          <Text size="sm">
-            No more symbolic reference suggestions.
-          </Text>
+          <Text size="sm">No more symbolic reference suggestions.</Text>
           <Group justify="space-between">
             {suggestions.length > 0 ? (
-              <Button variant="subtle" color="gray" onClick={goToLastSuggestion}>
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={goToLastSuggestion}
+              >
                 Previous
               </Button>
             ) : (
@@ -275,7 +277,7 @@ export function ReferenceSuggestionDialog({
             {definitionStatement && (
               <Paper withBorder p="sm" radius="md">
                 <Text size="xs" c="dimmed" fw={600} mb={6}>
-                  Definition
+                  Content
                 </Text>
                 <Box mah={180} style={{ overflow: "auto" }}>
                   <FtmlPreview

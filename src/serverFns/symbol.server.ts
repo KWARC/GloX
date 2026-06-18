@@ -86,7 +86,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
       });
 
       if (!definition?.statement) {
-        throw new Error("Definition not found");
+        throw new Error("Content not found");
       }
 
       let uri: string;
@@ -193,7 +193,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
       const updatedDefinition = updatedRoot.content.find(isDefinitionNode);
 
       if (!updatedDefinition) {
-        throw new Error("Definition not found after update");
+        throw new Error("Content not found after update");
       }
 
       const existingSymbols = updatedDefinition.for_symbols ?? [];

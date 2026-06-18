@@ -73,7 +73,7 @@ export function ExtractTextDialog({
     >
       <Stack gap="lg">
         <TextInput
-          label="Definition Name"
+          label="Content Name"
           placeholder="e.g. derivative-rules"
           value={definitionName}
           onChange={(e) => setDefinitionName(e.currentTarget.value)}
