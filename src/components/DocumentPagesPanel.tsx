@@ -46,7 +46,11 @@ function buildSegments(
       });
     }
 
-    segments.push({ kind: "highlight", content: s.text, suggestion: s.suggestion });
+    segments.push({
+      kind: "highlight",
+      content: s.text,
+      suggestion: s.suggestion,
+    });
     cursor = s.suggestion.endOffset;
   }
 
@@ -182,12 +186,12 @@ export function DocumentPagesPanel({
   focusedSuggestionId,
   onLlmSuggestionClick,
 }: DocumentPagesPanelProps) {
-  const [imageVisiblePages, setImageVisiblePages] = useState<
-    Record<string, boolean>
-  >({});
+  const [collapsedPages, setCollapsedPages] = useState<Record<string, boolean>>(
+    {},
+  );
 
   function togglePage(pageId: string) {
-    setImageVisiblePages((prev) => ({
+    setCollapsedPages((prev) => ({
       ...prev,
       [pageId]: !prev[pageId],
     }));
@@ -198,7 +202,7 @@ export function DocumentPagesPanel({
       <ScrollArea h="100%">
         <Stack p="lg" gap="lg">
           {pages.map((page) => {
-            const isImageVisible = imageVisiblePages[page.id] ?? false;
+            const isCollapsed = collapsedPages[page.id];
             const pageSuggestions =
               llmEnabled && llmSuggestions
                 ? (llmSuggestions[page.id] ?? [])
@@ -235,7 +239,7 @@ export function DocumentPagesPanel({
                     variant="subtle"
                     onClick={() => togglePage(page.id)}
                   >
-                    {isImageVisible ? "Hide Image" : "Show Image"}
+                    {isCollapsed ? "Show Image" : "Hide Image"}
                   </Button>
                 </Group>
 
@@ -266,17 +270,14 @@ export function DocumentPagesPanel({
                   </Text>
                 )}
 
-                <Box
-                  mt="sm"
-                  style={{
-                    display: isImageVisible ? "block" : "none",
-                  }}
-                >
-                  <PageImage
-                    documentId={documentId}
-                    pageNumber={page.pageNumber}
-                  />
-                </Box>
+                {!isCollapsed && (
+                  <Box mt="sm">
+                    <PageImage
+                      documentId={documentId}
+                      pageNumber={page.pageNumber}
+                    />
+                  </Box>
+                )}
 
                 {page.id !== pages[pages.length - 1]?.id && <Divider mt="lg" />}
               </Box>
