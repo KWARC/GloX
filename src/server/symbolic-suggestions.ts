@@ -16,6 +16,7 @@ export type CatalogEntry = {
   canonicalForm: string;
   aliases: string[];
   symbolicUri: string;
+  language?: string;
   sourceDefinitionId?: string;
   symRef: UnifiedSymbolicReference;
 };
@@ -46,9 +47,42 @@ export type SuggestedReferenceSession = {
 };
 
 const SEMANTIC_TYPES = new Set(["symref", "definiendum", "definiens"]);
+const NON_ANNOTATABLE_SINGLE_TOKEN_TERMS = new Set([
+  "a",
+  "an",
+  "the",
+  "in",
+  "of",
+  "to",
+  "and",
+  "or",
+  "on",
+  "for",
+  "by",
+  "with",
+]);
 
 function isSurfaceTerm(term: string) {
   return term && !term.includes("/") && !term.includes(":") && term.length < 80;
+}
+
+function isAnnotatableCatalogTerm(term: string) {
+  if (!isSurfaceTerm(term)) return false;
+  if (/[\\{}$]/u.test(term)) return false;
+
+  const tokens = stringToStemmedWordSequenceSimplified(term);
+  if (!tokens.length) return false;
+
+  const normalized = normalizeMatch(term);
+  if (/^\p{L}$/u.test(normalized)) return false;
+  if (
+    tokens.length === 1 &&
+    NON_ANNOTATABLE_SINGLE_TOKEN_TERMS.has(tokens[0].toLowerCase())
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function normalizeMatch(v: string) {
@@ -500,6 +534,7 @@ function buildSuggestionCatalog(
 
   for (const entry of catalog) {
     if (entry.sourceDefinitionId === definition.id) continue;
+    if (entry.language && entry.language !== definition.language) continue;
 
     for (const term of [entry.name, ...entry.aliases].filter(isSurfaceTerm)) {
       suggestionCatalog.addSymbVerb(entry, new Verbalization(term));
@@ -559,6 +594,7 @@ export function buildDefinitionCatalog(
         canonicalForm: name.toLowerCase(),
         aliases: node.uri === name ? [] : [node.uri],
         symbolicUri: node.uri,
+        language: extract.language,
         sourceDefinitionId: extract.id,
         symRef: {
           source: "DB",
@@ -588,19 +624,24 @@ export function buildFullCatalog(
 export function buildStaticCatalog(
   staticCatalog: StaticCatalogDef[],
 ): CatalogEntry[] {
-  return staticCatalog.map(
-    (d): CatalogEntry => ({
-      id: d.id,
-      name: d.name,
-      canonicalForm: d.name.toLowerCase(),
-      aliases: d.aliases,
-      symbolicUri: d.symbolicUri,
-      symRef: {
-        source: "MATHHUB",
-        uri: d.symbolicUri,
+  return staticCatalog.flatMap((d): CatalogEntry[] => {
+    if (!isAnnotatableCatalogTerm(d.name)) return [];
+
+    return [
+      {
+        id: d.id,
+        name: d.name,
+        canonicalForm: d.name.toLowerCase(),
+        aliases: d.aliases.filter(isAnnotatableCatalogTerm),
+        symbolicUri: d.symbolicUri,
+        language: d.language,
+        symRef: {
+          source: "MATHHUB",
+          uri: d.symbolicUri,
+        },
       },
-    }),
-  );
+    ];
+  });
 }
 
 export function suggestRefsForDefinition(

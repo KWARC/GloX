@@ -3,6 +3,7 @@ import path from "node:path";
 
 type RawCatalogEntry = {
   verb?: unknown;
+  lang?: unknown;
   symbol?: unknown;
 };
 
@@ -11,6 +12,7 @@ export type StaticCatalogDef = {
   name: string;
   aliases: string[];
   symbolicUri: string;
+  language?: string;
 };
 
 let cache: StaticCatalogDef[] | null = null;
@@ -38,6 +40,7 @@ function readFile(): StaticCatalogDef[] {
             name: item.verb,
             aliases: [],
             symbolicUri: item.symbol,
+            language: typeof item.lang === "string" ? item.lang : undefined,
           },
         ];
       });
