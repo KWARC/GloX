@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CreateLatexRouteImport } from './routes/create-latex'
+import { Route as DeduplicationRouteImport } from './routes/Deduplication'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as MyFilesIndexRouteImport } from './routes/my-files/index'
@@ -30,6 +31,11 @@ const LoginRoute = LoginRouteImport.update({
 const CreateLatexRoute = CreateLatexRouteImport.update({
   id: '/create-latex',
   path: '/create-latex',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeduplicationRoute = DeduplicationRouteImport.update({
+  id: '/Deduplication',
+  path: '/Deduplication',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -55,6 +61,7 @@ const MyFilesDocumentIdRoute = MyFilesDocumentIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/Deduplication': typeof DeduplicationRoute
   '/create-latex': typeof CreateLatexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/Deduplication': typeof DeduplicationRoute
   '/create-latex': typeof CreateLatexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/Deduplication': typeof DeduplicationRoute
   '/create-latex': typeof CreateLatexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/Deduplication'
     | '/create-latex'
     | '/login'
     | '/signup'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/Deduplication'
     | '/create-latex'
     | '/login'
     | '/signup'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/Deduplication'
     | '/create-latex'
     | '/login'
     | '/signup'
@@ -113,6 +125,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DeduplicationRoute: typeof DeduplicationRoute
   CreateLatexRoute: typeof CreateLatexRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/create-latex'
       fullPath: '/create-latex'
       preLoaderRoute: typeof CreateLatexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/Deduplication': {
+      id: '/Deduplication'
+      path: '/Deduplication'
+      fullPath: '/Deduplication'
+      preLoaderRoute: typeof DeduplicationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -177,6 +197,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DeduplicationRoute: DeduplicationRoute,
   CreateLatexRoute: CreateLatexRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
