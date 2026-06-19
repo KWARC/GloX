@@ -200,7 +200,7 @@ export function ExtractedTextPanel({
                       <FolderSymlink size={14} />
                       {!showDefinitionMetaIconOnly && (
                         <Text size="10px" c="dimmed" ff="monospace">
-                          {item.futureRepo} / {item.filePath} / {item.fileName}{" "}
+                       [{item.futureRepo} ] [{item.filePath}]  [{item.fileName}]
                           [{item.language}]
                         </Text>
                       )}

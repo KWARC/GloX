@@ -38,7 +38,7 @@ export function StexCurationFooter({
             </ActionIcon>
           </Tooltip>
 
-          <Text size="10px" c="dimmed" ff="monospace">
+          <Group gap={4} wrap="wrap">
             {[
               identity.futureRepo,
               identity.filePath,
@@ -46,8 +46,20 @@ export function StexCurationFooter({
               identity.language,
             ]
               .filter(Boolean)
-              .join(" / ")}
-          </Text>
+              .map((part) => (
+                <Text
+                  key={part}
+                  size="10px"
+                  c="dimmed"
+                  ff="monospace"
+                  px={6}
+                  py={2}
+                  
+                >
+                  [{part}]
+                </Text>
+              ))}
+          </Group>
         </Group>
 
         <Group gap="xs">
