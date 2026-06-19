@@ -23,7 +23,12 @@ interface DefiniendumDialogProps {
   extractedText: string | null;
   onSubmit: (
     params:
-      | { mode: "CREATE"; symbolName: string; alias: string; symdecl: true }
+      | {
+          mode: "CREATE";
+          symbolName: string;
+          verbalization: string;
+          symdecl: true;
+        }
       | { mode: "PICK_EXISTING"; selectedSymbol: SymbolSearchResult },
   ) => void;
   onClose: () => void;
@@ -43,7 +48,7 @@ export function DefiniendumDialog({
   const form = useForm({
     defaultValues: {
       symbolName: extractedText ?? "",
-      alias: "",
+      verbalization: extractedText ?? "",
       symdecl: true,
     },
     onSubmit: ({ value }) => {
@@ -51,7 +56,7 @@ export function DefiniendumDialog({
         onSubmit({
           mode: "CREATE",
           symbolName: value.symbolName.trim(),
-          alias: value.alias.trim(),
+          verbalization: value.verbalization.trim(),
           symdecl: true,
         });
       }
@@ -67,7 +72,7 @@ export function DefiniendumDialog({
 
     form.reset({
       symbolName: extractedText ?? "",
-      alias: "",
+      verbalization: extractedText ?? "",
       symdecl: true,
     });
   }, [opened, extractedText]);
@@ -131,33 +136,6 @@ export function DefiniendumDialog({
             </Text>
           </Paper>
 
-          <Box
-            style={{
-              display: "flex",
-              gap: 8,
-              width: "100%",
-              minWidth: 0,
-            }}
-          >
-            <Button
-              size="xs"
-              variant={mode === "CREATE" ? "filled" : "light"}
-              onClick={() => setMode("CREATE")}
-              style={{ flex: 1, minWidth: 0 }}
-            >
-              Create New Symbol
-            </Button>
-
-            <Button
-              size="xs"
-              variant={mode === "PICK_EXISTING" ? "filled" : "light"}
-              onClick={() => setMode("PICK_EXISTING")}
-              style={{ flex: 1, minWidth: 0 }}
-            >
-              Link to Existing
-            </Button>
-          </Box>
-
           {mode === "CREATE" && (
             <form
               onSubmit={(e) => {
@@ -183,19 +161,34 @@ export function DefiniendumDialog({
                     <TextInput
                       label="Symbol name"
                       value={field.state.value}
-                      onChange={(e) =>
-                        field.handleChange(e.currentTarget.value)
-                      }
+                      onChange={(e) => {
+                        const nextSymbolName = e.currentTarget.value;
+                        const previousSymbolName = field.state.value;
+                        const currentVerbalization =
+                          form.getFieldValue("verbalization");
+
+                        field.handleChange(nextSymbolName);
+
+                        if (
+                          !currentVerbalization.trim() ||
+                          currentVerbalization === previousSymbolName
+                        ) {
+                          form.setFieldValue(
+                            "verbalization",
+                            nextSymbolName,
+                          );
+                        }
+                      }}
                       error={field.state.meta.errors?.[0]}
                       autoFocus
                     />
                   )}
                 </form.Field>
 
-                <form.Field name="alias">
+                <form.Field name="verbalization">
                   {(field) => (
                     <Textarea
-                      label="Alias"
+                      label="Verbalization"
                       value={field.state.value}
                       onChange={(e) =>
                         field.handleChange(e.currentTarget.value)
@@ -212,6 +205,14 @@ export function DefiniendumDialog({
                   fullWidth
                 >
                   Create & Insert Definiendum
+                </Button>
+
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => setMode("PICK_EXISTING")}
+                >
+                  Back to existing symbol search
                 </Button>
               </Stack>
             </form>
@@ -251,12 +252,6 @@ export function DefiniendumDialog({
                 </Paper>
               )}
 
-              <Paper withBorder p="sm" bg="blue.0">
-                <Text size="xs" c="dimmed">
-                  Linking to an existing symbol does NOT declare it.
-                </Text>
-              </Paper>
-
               <Button
                 onClick={handlePickExisting}
                 disabled={!selectedSymbol}
@@ -265,6 +260,19 @@ export function DefiniendumDialog({
               >
                 Link & Insert Definiendum
               </Button>
+
+              <Stack gap={4} align="center">
+                <Text size="xs" c="dimmed">
+                  Cannot find the symbol?
+                </Text>
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => setMode("CREATE")}
+                >
+                  Create New Symbol
+                </Button>
+              </Stack>
             </Stack>
           )}
         </Stack>

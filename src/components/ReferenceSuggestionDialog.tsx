@@ -1,3 +1,4 @@
+import { normalizeMathHubPreviewUrl } from "@/lib/mathhub";
 import type {
   CatalogEntry,
   SuggestedReference,
@@ -201,7 +202,7 @@ export function ReferenceSuggestionDialog({
         {selected && candidate.source === "MATHHUB" && candidate.uri && (
           <Box h={160} mt="xs">
             <iframe
-              src={candidate.uri.replace("http:", "https:")}
+              src={normalizeMathHubPreviewUrl(candidate.uri)}
               sandbox="allow-scripts allow-same-origin"
               title="MathHub content preview"
               style={{
@@ -245,12 +246,14 @@ export function ReferenceSuggestionDialog({
         </Stack>
       ) : complete || !current || !context ? (
         <Stack gap="md">
-          <Text size="sm">
-            No more symbolic reference suggestions.
-          </Text>
+          <Text size="sm">No more symbolic reference suggestions.</Text>
           <Group justify="space-between">
             {suggestions.length > 0 ? (
-              <Button variant="subtle" color="gray" onClick={goToLastSuggestion}>
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={goToLastSuggestion}
+              >
                 Previous
               </Button>
             ) : (
@@ -274,7 +277,7 @@ export function ReferenceSuggestionDialog({
             {definitionStatement && (
               <Paper withBorder p="sm" radius="md">
                 <Text size="xs" c="dimmed" fw={600} mb={6}>
-                  Definition
+                  Content
                 </Text>
                 <Box mah={180} style={{ overflow: "auto" }}>
                   <FtmlPreview

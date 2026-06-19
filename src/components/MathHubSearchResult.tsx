@@ -1,3 +1,4 @@
+import { normalizeMathHubPreviewUrl } from "@/lib/mathhub";
 import { SemanticDefinition } from "@/types/Semantic.types";
 import { Box, Button, Group, Paper, Popover } from "@mantine/core";
 import { useState } from "react";
@@ -62,7 +63,7 @@ export function MathHubSearchResult({
       >
         <Box h={150}>
           <iframe
-            src={safeUri.replace("http:", "https:")}
+            src={normalizeMathHubPreviewUrl(safeUri)}
             sandbox="allow-scripts allow-same-origin"
             title="MathHub content preview"
             style={{ width: "100%", height: "100%", border: "none" }}

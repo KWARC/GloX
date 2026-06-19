@@ -17,7 +17,7 @@ export function DiscardDefinitionModal({
     <Modal
       opened={discard.opened}
       onClose={discard.onClose}
-      title="Discard Definition"
+      title="Discard Content"
     >
       <Stack>
         <Select

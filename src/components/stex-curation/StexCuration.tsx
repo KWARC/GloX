@@ -1,11 +1,12 @@
+import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { FileIdentity } from "@/serverFns/latex.server";
+import { Box, Group, Loader, Stack, Table } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
-import { DefinitionsSection } from "./DefinitionsSection";
 import { DiscardDefinitionModal } from "./DiscardDefinitionModal";
 import { LatexPreviewModal } from "./LatexPreviewModal";
-import { StexCurationCard } from "./StexCurationCard";
 import { StexCurationDialogs } from "./StexCurationDialogs";
 import { StexCurationFooter } from "./StexCurationFooter";
+import { StexStatusMenu } from "./StexStatusMenu";
 import { SymbolDeclaredSection } from "./SymbolDeclaredSection";
 import { useStexCurationActions } from "./useStexCurationActions";
 import { useStexCurationData } from "./useStexCurationData";
@@ -21,7 +22,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     definitionIds,
     provenance,
     sniffyCatalog,
-    actualSymbols,
+    definitionSymbolSummaries,
     status,
     statusConf,
     discardReasonFromServer,
@@ -35,123 +36,177 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     status === "FINALIZED_IN_FILE" ||
     status === "SUBMITTED_TO_MATHHUB" ||
     status === "DISCARDED";
+  const isLocked = status === "SUBMITTED_TO_MATHHUB" || status === "DISCARDED";
+  const symbolSummaryMap = new Map(
+    definitionSymbolSummaries.map((summary) => [summary.definitionId, summary]),
+  );
 
   return (
     <>
-      <StexCurationCard>
-        <SymbolDeclaredSection
-          data={{ actualSymbols }}
-          actions={{ onDownload: actions.handleDownload }}
-        />
+      <Table.Tr>
+        <Table.Td colSpan={3} p={0}>
+          <Box px="sm" py="xs">
+            {isLoading ? (
+              <Group justify="center" py="lg">
+                <Loader size="sm" />
+              </Group>
+            ) : (
+              <Stack gap="xs">
+                {definitions.map((definition, index) => {
+                  const symbolSummary = symbolSummaryMap.get(definition.id);
 
-        <DefinitionsSection
-          data={{ definitions, isLoading }}
-          state={{ editingId: actions.editingId }}
-          status={{
-            value: status,
-            conf: statusConf,
-            discardReasonFromServer,
-          }}
-          actions={{
-            onStatusChange: actions.handleStatusChange,
-            onOpenDiscard: () => actions.setDiscardOpen(true),
-            onToggleEdit: actions.handleToggleEdit,
-            onUpdate: actions.handleUpdate,
-            onDownload: actions.handleDownload,
-            onDelete: actions.handleDelete,
-            onSelection: (extractId) => {
-              semanticFlow.handleSelection("right", { extractId });
-            },
-            onOpenSemanticPanel: semanticFlow.handleOpenSemanticPanel,
-            onRecomputeReferences: sniffyFlow.handleRecomputeReferences,
-            onEditDefinitionMeta: actions.handleEditDefinitionMeta,
-            onOpenLatexPreview: actions.handleOpenLatexPreview,
-          }}
-        />
+                  return (
+                    <Group
+                      key={definition.id}
+                      align="stretch"
+                      gap="sm"
+                      wrap="nowrap"
+                    >
+                      <Box style={{ flex: 1, minWidth: 0 }}>
+                        <ExtractedTextPanel
+                          compact
+                          extracts={[definition]}
+                          editingId={actions.editingId}
+                          selectedId={null}
+                          onToggleEdit={actions.handleToggleEdit}
+                          onUpdate={actions.handleUpdate}
+                          onDownload={actions.handleDownload}
+                          onDelete={actions.handleDelete}
+                          onSelection={(extractId) => {
+                            semanticFlow.handleSelection("right", {
+                              extractId,
+                            });
+                          }}
+                          onOpenSemanticPanel={
+                            semanticFlow.handleOpenSemanticPanel
+                          }
+                          onRecomputeReferences={
+                            sniffyFlow.handleRecomputeReferences
+                          }
+                          showPageNumber={false}
+                          showDefinitionMeta
+                          showDefinitionMetaIconOnly
+                          onEditDefinitionMeta={
+                            actions.handleEditDefinitionMeta
+                          }
+                          isLocked={isLocked}
+                          onOpenLatexPreview={actions.handleOpenLatexPreview}
+                        />
+                      </Box>
 
-        <StexCurationFooter
-          identity={identity}
-          actions={{
-            onOpenMetadataForIdentity: actions.handleOpenMetadataForIdentity,
-            onOpenLatexPreview: actions.handleOpenLatexPreview,
-            onGoToSource: () =>
-              navigate({
-                to: "/files/$documentId",
-                params: { documentId: identity.documentId },
-              }),
-          }}
-        />
-      </StexCurationCard>
+                      <Box w={220} py={6}>
+                        <SymbolDeclaredSection
+                          data={{ symbols: symbolSummary?.symbols ?? [] }}
+                        />
+                      </Box>
 
-      <LatexPreviewModal
-        identity={identity}
-        latex={{
-          opened: actions.latexOpen,
-          code: actions.latexCode,
-          readOnly: latexReadOnly,
-          saveDisabled: latexSaveDisabled,
-          onClose: () => actions.setLatexOpen(false),
-          onChangeCode: actions.setLatexCode,
-          onDownload: actions.handleDownload,
-          onSaveDraft: actions.handleSaveLatexDraft,
-          onSaveFinal: actions.handleSaveLatexFinal,
-        }}
-      />
+                      <Box w={160} py={6}>
+                        {index === 0 ? (
+                          <StexStatusMenu
+                            status={{
+                              value: status,
+                              conf: statusConf,
+                              discardReasonFromServer,
+                            }}
+                            actions={{
+                              onStatusChange: actions.handleStatusChange,
+                              onOpenDiscard: () => actions.setDiscardOpen(true),
+                            }}
+                          />
+                        ) : null}
+                      </Box>
+                    </Group>
+                  );
+                })}
+              </Stack>
+            )}
 
-      <DiscardDefinitionModal
-        discard={{
-          opened: actions.discardOpen,
-          reason: actions.discardReason,
-          onClose: () => actions.setDiscardOpen(false),
-          onChangeReason: actions.setDiscardReason,
-          onConfirm: actions.handleConfirmDiscard,
-        }}
-      />
+            <StexCurationFooter
+              identity={identity}
+              actions={{
+                onOpenMetadataForIdentity:
+                  actions.handleOpenMetadataForIdentity,
+                onOpenLatexPreview: actions.handleOpenLatexPreview,
+                onGoToSource: () =>
+                  navigate({
+                    to: "/files/$documentId",
+                    params: { documentId: identity.documentId },
+                  }),
+              }}
+            />
 
-      <StexCurationDialogs
-        identity={identity}
-        metadata={{
-          opened: actions.definitionMetaEditOpen,
-          definition: actions.definitionMetaTarget,
-          onClose: actions.handleCloseDefinitionMeta,
-        }}
-        sniffy={{
-          opened: sniffyFlow.suggestOpen,
-          onClose: () => sniffyFlow.setSuggestOpen(false),
-          activeDefId: sniffyFlow.activeDefId,
-          activeDefStatement: sniffyFlow.activeDefStatement,
-          activeDefText: sniffyFlow.activeDefText,
-          suggestions: sniffyFlow.suggestions,
-          catalog: sniffyCatalog,
-          loading: sniffyFlow.suggestLoading,
-          onAccept: sniffyFlow.handleAcceptSuggestion,
-        }}
-        selection={{
-          popup: semanticFlow.popup,
-          onClose: semanticFlow.clearPopupOnly,
-          onDefiniendum: semanticFlow.handleOpenDefiniendumDialog,
-          onSymbolicRef: semanticFlow.handleOpenSymbolicRefDialog,
-        }}
-        semantic={{
-          opened: semanticFlow.semanticPanelOpen,
-          onClose: semanticFlow.handleCloseSemanticPanel,
-          definition: semanticFlow.selectedDefinition,
-          onReplaceNode: semanticFlow.handleReplaceNode,
-          onDeleteNode: semanticFlow.handleDeleteNode,
-        }}
-        definiendum={{
-          opened: semanticFlow.defDialogOpen,
-          extractedText: semanticFlow.defExtractText,
-          onSubmit: semanticFlow.handleDefiniendumSubmit,
-          onClose: () => semanticFlow.setDefDialogOpen(false),
-        }}
-        symbolicRef={{
-          mode: semanticFlow.mode,
-          conceptUri: semanticFlow.conceptUri,
-          onClose: () => semanticFlow.setMode(null),
-          onSelect: semanticFlow.handleSaveSymbolicRef,
-        }}
-      />
+            <LatexPreviewModal
+              identity={identity}
+              latex={{
+                opened: actions.latexOpen,
+                code: actions.latexCode,
+                readOnly: latexReadOnly,
+                saveDisabled: latexSaveDisabled,
+                onClose: () => actions.setLatexOpen(false),
+                onChangeCode: actions.setLatexCode,
+                onDownload: actions.handleDownload,
+                onSaveDraft: actions.handleSaveLatexDraft,
+                onSaveFinal: actions.handleSaveLatexFinal,
+              }}
+            />
+
+            <DiscardDefinitionModal
+              discard={{
+                opened: actions.discardOpen,
+                reason: actions.discardReason,
+                onClose: () => actions.setDiscardOpen(false),
+                onChangeReason: actions.setDiscardReason,
+                onConfirm: actions.handleConfirmDiscard,
+              }}
+            />
+
+            <StexCurationDialogs
+              identity={identity}
+              metadata={{
+                opened: actions.definitionMetaEditOpen,
+                definition: actions.definitionMetaTarget,
+                onClose: actions.handleCloseDefinitionMeta,
+              }}
+              sniffy={{
+                opened: sniffyFlow.suggestOpen,
+                onClose: () => sniffyFlow.setSuggestOpen(false),
+                activeDefId: sniffyFlow.activeDefId,
+                activeDefStatement: sniffyFlow.activeDefStatement,
+                activeDefText: sniffyFlow.activeDefText,
+                suggestions: sniffyFlow.suggestions,
+                catalog: sniffyCatalog,
+                loading: sniffyFlow.suggestLoading,
+                onAccept: sniffyFlow.handleAcceptSuggestion,
+              }}
+              selection={{
+                popup: semanticFlow.popup,
+                onClose: semanticFlow.clearPopupOnly,
+                onDefiniendum: semanticFlow.handleOpenDefiniendumDialog,
+                onSymbolicRef: semanticFlow.handleOpenSymbolicRefDialog,
+              }}
+              semantic={{
+                opened: semanticFlow.semanticPanelOpen,
+                onClose: semanticFlow.handleCloseSemanticPanel,
+                definition: semanticFlow.selectedDefinition,
+                onReplaceNode: semanticFlow.handleReplaceNode,
+                onDeleteNode: semanticFlow.handleDeleteNode,
+              }}
+              definiendum={{
+                opened: semanticFlow.defDialogOpen,
+                extractedText: semanticFlow.defExtractText,
+                onSubmit: semanticFlow.handleDefiniendumSubmit,
+                onClose: () => semanticFlow.setDefDialogOpen(false),
+              }}
+              symbolicRef={{
+                mode: semanticFlow.mode,
+                conceptUri: semanticFlow.conceptUri,
+                onClose: () => semanticFlow.setMode(null),
+                onSelect: semanticFlow.handleSaveSymbolicRef,
+              }}
+            />
+          </Box>
+        </Table.Td>
+      </Table.Tr>
     </>
   );
 }

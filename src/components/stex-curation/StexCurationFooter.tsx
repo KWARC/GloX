@@ -16,14 +16,7 @@ export function StexCurationFooter({
   actions,
 }: StexCurationFooterProps) {
   return (
-    <Box
-      px="md"
-      py="xs"
-      style={{
-        borderTop: "1px solid var(--mantine-color-gray-2)",
-        backgroundColor: "var(--mantine-color-gray-0)",
-      }}
-    >
+    <Box px={2} pt={4}>
       <Group justify="space-between" align="center">
         <Group
           gap={6}
@@ -45,7 +38,7 @@ export function StexCurationFooter({
             </ActionIcon>
           </Tooltip>
 
-          <Text size="10px" c="dimmed" ff="monospace">
+          <Group gap={4} wrap="wrap">
             {[
               identity.futureRepo,
               identity.filePath,
@@ -53,8 +46,20 @@ export function StexCurationFooter({
               identity.language,
             ]
               .filter(Boolean)
-              .join(" / ")}
-          </Text>
+              .map((part) => (
+                <Text
+                  key={part}
+                  size="10px"
+                  c="dimmed"
+                  ff="monospace"
+                  px={6}
+                  py={2}
+                  
+                >
+                  [{part}]
+                </Text>
+              ))}
+          </Group>
         </Group>
 
         <Group gap="xs">

@@ -7,6 +7,7 @@ import {
 } from "@/server/ftml/astOperations";
 import {
   assertFtmlStatement,
+  DefiniendumNode,
   DefinitionNode,
   FtmlStatement,
   isDefinitionNode,
@@ -164,7 +165,7 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
         definition: {
           id: createdDefinition.id,
           pageNumber: createdDefinition.pageNumber,
-          statement: createdDefinition.statement as FtmlStatement,
+          statement: assertFtmlStatement(createdDefinition.statement),
           futureRepo: createdDefinition.futureRepo,
           filePath: createdDefinition.filePath,
           fileName: createdDefinition.fileName,
@@ -221,7 +222,7 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
       ]);
 
       if (!definition?.statement) {
-        throw new Error("Definition not found");
+        throw new Error("Content not found");
       }
 
       if (!symbol) {
@@ -245,22 +246,24 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
         );
       }
 
+      const definiendumNode: DefiniendumNode = {
+        type: "definiendum",
+        uri: symbol.symbolName,
+        content: [selectedText],
+        symdecl: true,
+      };
+
       const updatedRoot = replaceTextWithNode(
         root,
         location,
         data.startOffset,
         data.endOffset,
-        {
-          type: "definiendum",
-          uri: symbol.symbolName,
-          content: [selectedText],
-          symdecl: true,
-        },
+        definiendumNode,
       );
 
       const updatedDefinition = updatedRoot.content.find(isDefinitionNode);
       if (!updatedDefinition) {
-        throw new Error("Definition not found after update");
+        throw new Error("Content not found after update");
       }
 
       const existingSymbols = updatedDefinition.for_symbols ?? [];

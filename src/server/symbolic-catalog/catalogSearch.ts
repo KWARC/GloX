@@ -220,7 +220,7 @@ export function stringToStemmedWordSequence(
 ): StemmedToken[] {
   const normalized = normalizeSpacesWithRefs(string);
   const tokens: StemmedToken[] = [];
-  const re = /\b\w+\b/gu;
+  const re = /[\p{L}\p{N}]+/gu;
   let match: RegExpExecArray | null;
 
   while ((match = re.exec(normalized.text)) !== null) {
@@ -240,7 +240,7 @@ export function stringToStemmedWordSequenceSimplified(
   lang = "en",
 ): string[] {
   const words: string[] = [];
-  const re = /\b\w+\b/gu;
+  const re = /[\p{L}\p{N}]+/gu;
   let match: RegExpExecArray | null;
 
   while ((match = re.exec(string)) !== null) {

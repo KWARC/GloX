@@ -173,7 +173,7 @@ export function useStexSemanticFlow(
           language: identity.language,
 
           symbolName: params.symbolName,
-          alias: params.alias || null,
+          alias: params.verbalization || null,
         },
       });
     } else {

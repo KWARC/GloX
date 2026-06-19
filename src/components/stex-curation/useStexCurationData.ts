@@ -1,5 +1,6 @@
 import { queryClient } from "@/queryClient";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
+import { ExtractedItem } from "@/server/text-selection";
 import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
 import { getDefinitionFileStatus } from "@/serverFns/definitionStatus.server";
 import {
@@ -7,7 +8,13 @@ import {
   getDefinitionsByIdentity,
 } from "@/serverFns/latex.server";
 import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
-import { FtmlContent, FtmlNode, FtmlRoot } from "@/types/ftml.types";
+import {
+  FtmlNode,
+  FtmlRoot,
+  isDefiniendumNode,
+  isNode,
+  normalizeToRoot,
+} from "@/types/ftml.types";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
@@ -16,7 +23,7 @@ export const STATUS_CONFIG = {
     color: "teal",
     label: "Submitted to MathHub",
     actionLabel: "Unsubmit from MathHub",
-    actionColor: "red" as const,
+    actionColor: "green" as const,
     nextStatus: "FINALIZED_IN_FILE" as const,
   },
   FINALIZED_IN_FILE: {
@@ -37,6 +44,10 @@ export const STATUS_CONFIG = {
 } as const;
 
 export type StexStatus = keyof typeof STATUS_CONFIG;
+export type DefinitionSymbolSummary = {
+  definitionId: string;
+  symbols: string[];
+};
 
 export function useStexCurationData(identity: FileIdentity) {
   const { data, isLoading } = useQuery({
@@ -91,6 +102,8 @@ export function useStexCurationData(identity: FileIdentity) {
     [staticCatalog],
   );
 
+  const definitionSymbolSummaries = buildDefinitionSymbolSummaries(definitions);
+
   const actualSymbols = Array.from(
     new Set(
       definitions.flatMap((def) => extractSymbolsFromStatement(def.statement)),
@@ -109,6 +122,7 @@ export function useStexCurationData(identity: FileIdentity) {
     provenance,
     definitionStatus,
     sniffyCatalog,
+    definitionSymbolSummaries,
     actualSymbols,
     status,
     statusConf,
@@ -127,40 +141,44 @@ export async function refetchDefinitionsByIdentity(identity: FileIdentity) {
   return updatedData.definitions;
 }
 
-function extractSymbolsFromStatement(statement: FtmlRoot): string[] {
-  const rawContent: FtmlContent[] = Array.isArray(statement)
-    ? statement
-    : statement.type === "root"
-      ? (statement.content ?? [])
-      : [statement];
-
-  const nodes: FtmlNode[] = rawContent.filter(
-    (c): c is FtmlNode => typeof c === "object" && c !== null,
-  );
-
+export function extractSymbolsFromStatement(statement: FtmlRoot): string[] {
+  const root = normalizeToRoot(statement);
   const symbols: string[] = [];
+  const seen = new Set<string>();
 
   function walk(node: FtmlNode) {
-    if (node.type === "definiendum" && (node as any).symdecl === true) {
+    if (isDefiniendumNode(node) && node.symdecl === true) {
       const label = (node.content ?? [])
         .filter((c): c is string => typeof c === "string")
         .join("");
 
-      if (label) symbols.push(label);
+      if (label && !seen.has(label)) {
+        seen.add(label);
+        symbols.push(label);
+      }
     }
 
     if (node.content) {
       for (const child of node.content) {
-        if (typeof child === "object" && child !== null) {
+        if (isNode(child)) {
           walk(child);
         }
       }
     }
   }
 
-  for (const node of nodes) {
+  for (const node of root.content) {
     walk(node);
   }
 
   return symbols;
+}
+
+export function buildDefinitionSymbolSummaries(
+  definitions: ExtractedItem[],
+): DefinitionSymbolSummary[] {
+  return definitions.map((definition) => ({
+    definitionId: definition.id,
+    symbols: extractSymbolsFromStatement(definition.statement),
+  }));
 }

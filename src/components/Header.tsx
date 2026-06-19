@@ -213,20 +213,6 @@ export default function Header() {
                   },
                 }}
               />
-
-              <NavLink
-                label="Profile"
-                component={Link}
-                to="/profile"
-                onClick={() => setOpened(false)}
-                leftSection={<IconUser size={18} />}
-                styles={{
-                  root: {
-                    borderRadius: "8px",
-                    padding: "12px",
-                  },
-                }}
-              />
             </>
           )}
           {loggedIn && isAdmin && (
@@ -260,6 +246,7 @@ export default function Header() {
               />
             </>
           )}
+
           {loggedIn && (
             <>
               <Divider my="md" />

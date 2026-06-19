@@ -46,7 +46,11 @@ function buildSegments(
       });
     }
 
-    segments.push({ kind: "highlight", content: s.text, suggestion: s.suggestion });
+    segments.push({
+      kind: "highlight",
+      content: s.text,
+      suggestion: s.suggestion,
+    });
     cursor = s.suggestion.endOffset;
   }
 

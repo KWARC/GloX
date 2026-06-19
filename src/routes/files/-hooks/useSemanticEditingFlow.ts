@@ -17,7 +17,12 @@ import { NavigateOptions, RegisteredRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 type DefiniendumSubmitParams =
-  | { mode: "CREATE"; symbolName: string; alias: string; symdecl: true }
+  | {
+      mode: "CREATE";
+      symbolName: string;
+      verbalization: string;
+      symdecl: true;
+    }
   | { mode: "PICK_EXISTING"; selectedSymbol: SymbolSearchResult };
 
 export function useSemanticEditingFlow({
@@ -157,7 +162,7 @@ export function useSemanticEditingFlow({
         uri: newUri,
         content: [
           params.mode === "CREATE"
-            ? params.alias || params.symbolName
+            ? params.verbalization || params.symbolName
             : params.selectedSymbol.source === "DB"
               ? params.selectedSymbol.symbolName
               : parseUri(params.selectedSymbol.uri).symbol,
@@ -189,7 +194,7 @@ export function useSemanticEditingFlow({
             fileName: fileName.trim(),
             language: language.trim(),
             symbolName: params.symbolName,
-            alias: params.alias || null,
+            alias: params.verbalization || null,
           },
         });
       } else if (params.selectedSymbol.source === "DB") {

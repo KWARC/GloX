@@ -56,7 +56,7 @@ export const symbolicRef = createServerFn({ method: "POST" })
     });
 
     if (!definition) {
-      throw new Error("Definition not found");
+      throw new Error("Content not found");
     }
 
     const currentAst: RootNode = normalizeToRoot(

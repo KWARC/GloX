@@ -78,7 +78,7 @@ export function DefinitionIdentityDialog({
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Move Definition File Path"
+      title="Move Content File Path"
       centered
     >
       <Stack>
