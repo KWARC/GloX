@@ -20,6 +20,7 @@ import {
   IconSparkles,
   IconX,
 } from "@tabler/icons-react";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { FileDialogs } from "./-components/FileDialogs";
@@ -47,6 +48,11 @@ export const Route = createFileRoute("/files/$documentId")({
 function RouteComponent() {
   const navigate = useNavigate();
   const { documentId } = Route.useParams();
+  const { data: auth } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: currentUser,
+    staleTime: 60_000,
+  });
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
   const [activeTab, setActiveTab] = useState<string | null>("document");
@@ -142,6 +148,9 @@ function RouteComponent() {
 
   const pad = isMobile ? "xs" : isTablet ? "md" : "lg";
   const gap = isMobile ? "xs" : "md";
+  const role = auth?.user?.role;
+  const canAccessPrivilegedControls =
+    role === "ADMIN" || role === "CURATOR";
   const totalSuggestions = llmFlow.flattenedSuggestions.length;
   const hasAnySuggestions = totalSuggestions > 0;
   const suggestionCounter =
@@ -285,6 +294,8 @@ function RouteComponent() {
             onEditDefinitionMeta: semanticFlow.handleEditDefinitionMeta,
             onOpenLatexConfig: semanticFlow.handleOpenLatexConfig,
             onCreateDefinition: extractionFlow.handleCreateDefinition,
+            showJsonEdit: canAccessPrivilegedControls,
+            showLatexButton: canAccessPrivilegedControls,
           }}
         />
       </Stack>

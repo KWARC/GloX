@@ -39,6 +39,7 @@ interface ExtractedTextPanelProps {
   showDefinitionMeta?: boolean;
   onEditDefinitionMeta?: (item: ExtractedItem) => void;
   showDefinitionMetaIconOnly?: boolean;
+  showJsonEdit?: boolean;
 }
 
 export function ExtractedTextPanel({
@@ -54,6 +55,7 @@ export function ExtractedTextPanel({
   showPageNumber = true,
   showDefinitionMeta = true,
   showDefinitionMetaIconOnly = false,
+  showJsonEdit = true,
   onEditDefinitionMeta,
   isLocked = false,
   compact = false,
@@ -97,7 +99,7 @@ export function ExtractedTextPanel({
                     {showPageNumber ? (
                       <Text size="xs">
                         {item.pageNumber === null
-                          ? "Manual"
+                          ? "New"
                           : `Page ${item.pageNumber}`}
                       </Text>
                     ) : (
@@ -116,16 +118,18 @@ export function ExtractedTextPanel({
                         </ActionIcon>
                       </Tooltip>
 
-                      <Tooltip label="Edit JSON format" withArrow>
-                        <ActionIcon
-                          size={compact ? 22 : "sm"}
-                          variant="subtle"
-                          disabled={isLocked}
-                          onClick={() => onToggleEdit(item.id)}
-                        >
-                          <IconPencil size={16} />
-                        </ActionIcon>
-                      </Tooltip>
+                      {showJsonEdit && (
+                        <Tooltip label="Edit JSON format" withArrow>
+                          <ActionIcon
+                            size={compact ? 22 : "sm"}
+                            variant="subtle"
+                            disabled={isLocked}
+                            onClick={() => onToggleEdit(item.id)}
+                          >
+                            <IconPencil size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      )}
 
                       {onRecomputeReferences && (
                         <Tooltip label="sn-ify" withArrow>

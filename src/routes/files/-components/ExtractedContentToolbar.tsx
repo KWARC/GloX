@@ -5,10 +5,12 @@ export function ExtractedContentToolbar({
   extractCount,
   onOpenLatexConfig,
   onCreateDefinition,
+  showLatexButton = true,
 }: {
   extractCount: number;
   onOpenLatexConfig: () => void;
   onCreateDefinition: () => void;
+  showLatexButton?: boolean;
 }) {
   return (
     <Group
@@ -31,14 +33,16 @@ export function ExtractedContentToolbar({
         </Badge>
       )}
 
-      <Button
-        size="xs"
-        variant="subtle"
-        color="blue"
-        onClick={onOpenLatexConfig}
-      >
-        LaTeX
-      </Button>
+      {showLatexButton && (
+        <Button
+          size="xs"
+          variant="subtle"
+          color="blue"
+          onClick={onOpenLatexConfig}
+        >
+          LaTeX
+        </Button>
+      )}
 
       <Tooltip label="Create new definition" withArrow>
         <ActionIcon
