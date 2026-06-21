@@ -1,3 +1,5 @@
+import { stemWord } from "./stemmers";
+
 export class Verbalization {
   constructor(readonly verb: string) {}
 }
@@ -220,13 +222,13 @@ export function stringToStemmedWordSequence(
 ): StemmedToken[] {
   const normalized = normalizeSpacesWithRefs(string);
   const tokens: StemmedToken[] = [];
-  const re = /[\p{L}\p{N}]+/gu;
+  const re = /[\p{L}\p{N}_]+/gu;
   let match: RegExpExecArray | null;
 
   while ((match = re.exec(normalized.text)) !== null) {
     const raw = match[0];
     tokens.push({
-      stem: myStem(raw, lang),
+      stem: stemWord(raw, lang),
       start: normalized.startRefs[match.index],
       end: normalized.endRefs[match.index + raw.length - 1],
     });
@@ -240,11 +242,11 @@ export function stringToStemmedWordSequenceSimplified(
   lang = "en",
 ): string[] {
   const words: string[] = [];
-  const re = /[\p{L}\p{N}]+/gu;
+  const re = /[\p{L}\p{N}_]+/gu;
   let match: RegExpExecArray | null;
 
   while ((match = re.exec(string)) !== null) {
-    words.push(myStem(match[0], lang));
+    words.push(stemWord(match[0], lang));
   }
 
   return words;
@@ -279,22 +281,4 @@ function normalizeSpacesWithRefs(string: string) {
   return { text, startRefs, endRefs };
 }
 
-function myStem(word: string, lang: string) {
-  if (/^[A-Z0-9_]+$/.test(word)) return word;
-
-  const lower = word.toLowerCase();
-  if (lang === "en" && lower === "automata") return "automaton";
-  if (lang === "en" && lower.endsWith("ies") && lower.length > 4) {
-    return `${lower.slice(0, -3)}y`;
-  }
-  if (
-    lang === "en" &&
-    lower.endsWith("s") &&
-    lower.length > 3 &&
-    !lower.endsWith("ss") &&
-    !lower.endsWith("us")
-  ) {
-    return lower.slice(0, -1);
-  }
-  return lower;
-}
+export { stemWord };

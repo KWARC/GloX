@@ -46,57 +46,71 @@ export type SuggestedReferenceSession = {
   candidateSymRefs: Record<string, UnifiedSymbolicReference>;
 };
 
+export type SuggestionIgnoreOptions = {
+  stemsToIgnore?: Set<string>;
+  wordsToIgnore?: Set<string>;
+  symbolsToIgnore?: Set<string>;
+};
+
+const DEFAULT_AUTOMATIC_IGNORED_SINGLE_TOKENS: Record<string, Set<string>> = {
+  en: new Set([
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "being",
+    "but",
+    "by",
+    "for",
+    "from",
+    "if",
+    "in",
+    "into",
+    "is",
+    "it",
+    "its",
+    "not",
+    "of",
+    "on",
+    "or",
+    "than",
+    "that",
+    "the",
+    "then",
+    "these",
+    "this",
+    "those",
+    "to",
+    "was",
+    "were",
+    "with",
+  ]),
+};
+
+export function isEligibleForAutomaticSuggestion(
+  term: string,
+  language: string,
+) {
+  const tokens = stringToStemmedWordSequenceSimplified(term, language);
+  if (tokens.length === 0) return false;
+  if (tokens.length !== 1) return true;
+
+  const surface = (term.match(/[\p{L}\p{N}_]+/gu) ?? [])[0] ?? "";
+  if (Array.from(surface).length <= 1) return false;
+
+  return !DEFAULT_AUTOMATIC_IGNORED_SINGLE_TOKENS[language]?.has(
+    surface.toLowerCase(),
+  );
+}
+
 const SEMANTIC_TYPES = new Set(["symref", "definiendum", "definiens"]);
-const NON_ANNOTATABLE_SINGLE_TOKEN_TERMS = new Set([
-  "a",
-  "an",
-  "the",
-  "in",
-  "of",
-  "to",
-  "and",
-  "or",
-  "on",
-  "for",
-  "by",
-  "with",
-]);
 
 function isSurfaceTerm(term: string) {
   return term && !term.includes("/") && !term.includes(":") && term.length < 80;
-}
-
-function isAnnotatableCatalogTerm(term: string) {
-  if (!isSurfaceTerm(term)) return false;
-  if (/[\\{}$]/u.test(term)) return false;
-
-  const tokens = stringToStemmedWordSequenceSimplified(term);
-  if (!tokens.length) return false;
-
-  const normalized = normalizeMatch(term);
-  if (/^\p{L}$/u.test(normalized)) return false;
-  if (
-    tokens.length === 1 &&
-    NON_ANNOTATABLE_SINGLE_TOKEN_TERMS.has(tokens[0].toLowerCase())
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-function normalizeMatch(v: string) {
-  return v
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-}
-
-function tokenize(v: string) {
-  return stringToStemmedWordSequenceSimplified(normalizeMatch(v)).filter(
-    (token) => token.length > 1,
-  );
 }
 
 function candidateKey(candidate: SuggestedReferenceCandidate) {
@@ -206,48 +220,6 @@ function resolveConflicts(input: SuggestedReference[]): SuggestedReference[] {
 function buildContext(text: string, start: number, end: number) {
   const w = 80;
   return text.slice(Math.max(0, start - w), Math.min(text.length, end + w));
-}
-
-function getCandidateConfidence(term: string, entry: CatalogEntry): number {
-  const normalizedTerm = normalizeMatch(term);
-  const names = [entry.name, ...entry.aliases].filter(isSurfaceTerm);
-  const exactAlias = entry.aliases.some(
-    (alias) => alias.toLowerCase() === term.toLowerCase(),
-  );
-  const exactName = entry.name.toLowerCase() === term.toLowerCase();
-
-  if (exactAlias || exactName) return exactAlias ? 1 : 0.98;
-
-  if (names.some((name) => normalizeMatch(name) === normalizedTerm)) {
-    return 0.9;
-  }
-
-  const termTokens = new Set(tokenize(term));
-  if (termTokens.size === 0) return 0;
-
-  let best = 0;
-  for (const name of names) {
-    const normalizedName = normalizeMatch(name);
-    if (!normalizedName) continue;
-
-    if (
-      normalizedName.includes(normalizedTerm) ||
-      normalizedTerm.includes(normalizedName)
-    ) {
-      best = Math.max(best, 0.72);
-    }
-
-    const nameTokens = tokenize(name);
-    const overlap = nameTokens.filter((token) => termTokens.has(token)).length;
-    if (overlap > 0) {
-      best = Math.max(
-        best,
-        0.5 + (overlap / Math.max(nameTokens.length, 1)) * 0.2,
-      );
-    }
-  }
-
-  return best;
 }
 
 function normalizeSearchValue(value: string) {
@@ -508,19 +480,19 @@ export function searchReferenceCandidates(
 }
 
 function getRankedCandidates(
-  term: string,
-  definition: ExtractedItem,
   entries: CatalogEntry[],
+  catalog: Catalog<CatalogEntry, Verbalization>,
 ) {
-  return entries
-    .filter((entry) => entry.sourceDefinitionId !== definition.id)
-    .map((entry) => ({
-      entry,
-      confidence: getCandidateConfidence(term, entry),
-    }))
-    .filter(({ confidence }) => confidence > 0)
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 3);
+  return [...entries].sort((a, b) => {
+    const usageDifference =
+      catalog.getSymbVerbs(b).length - catalog.getSymbVerbs(a).length;
+    if (usageDifference !== 0) return usageDifference;
+    return a.symbolicUri < b.symbolicUri
+      ? -1
+      : a.symbolicUri > b.symbolicUri
+        ? 1
+        : 0;
+  });
 }
 
 function buildSuggestionCatalog(
@@ -534,9 +506,12 @@ function buildSuggestionCatalog(
 
   for (const entry of catalog) {
     if (entry.sourceDefinitionId === definition.id) continue;
-    if (entry.language && entry.language !== definition.language) continue;
+    if (entry.language !== definition.language) continue;
 
-    for (const term of [entry.name, ...entry.aliases].filter(isSurfaceTerm)) {
+    for (const term of [entry.name, ...entry.aliases]) {
+      if (!isEligibleForAutomaticSuggestion(term, definition.language)) {
+        continue;
+      }
       suggestionCatalog.addSymbVerb(entry, new Verbalization(term));
     }
   }
@@ -547,6 +522,7 @@ function buildSuggestionCatalog(
 function findAllCatalogMatches(
   catalog: Catalog<CatalogEntry, Verbalization>,
   text: string,
+  ignoreOptions: SuggestionIgnoreOptions,
 ) {
   const matches: Array<{
     start: number;
@@ -557,7 +533,7 @@ function findAllCatalogMatches(
   let cursor = 0;
 
   while (cursor < text.length) {
-    const match = catalog.findFirstMatch(text.slice(cursor));
+    const match = catalog.findFirstMatch(text.slice(cursor), ignoreOptions);
     if (!match) break;
 
     const start = cursor + match.start;
@@ -624,29 +600,26 @@ export function buildFullCatalog(
 export function buildStaticCatalog(
   staticCatalog: StaticCatalogDef[],
 ): CatalogEntry[] {
-  return staticCatalog.flatMap((d): CatalogEntry[] => {
-    if (!isAnnotatableCatalogTerm(d.name)) return [];
-
-    return [
-      {
-        id: d.id,
-        name: d.name,
-        canonicalForm: d.name.toLowerCase(),
-        aliases: d.aliases.filter(isAnnotatableCatalogTerm),
-        symbolicUri: d.symbolicUri,
-        language: d.language,
-        symRef: {
-          source: "MATHHUB",
-          uri: d.symbolicUri,
-        },
+  return staticCatalog.map(
+    (d): CatalogEntry => ({
+      id: d.id,
+      name: d.name,
+      canonicalForm: d.name.toLowerCase(),
+      aliases: d.aliases,
+      symbolicUri: d.symbolicUri,
+      language: d.language,
+      symRef: {
+        source: "MATHHUB",
+        uri: d.symbolicUri,
       },
-    ];
-  });
+    }),
+  );
 }
 
 export function suggestRefsForDefinition(
   definition: ExtractedItem,
   catalog: CatalogEntry[],
+  ignoreOptions: SuggestionIgnoreOptions = {},
 ): SuggestedReferenceSession {
   const root = normalizeToRoot(definition.statement);
   const definitionText = extractPlainText(definition.statement);
@@ -655,10 +628,14 @@ export function suggestRefsForDefinition(
   const suggestionCatalog = buildSuggestionCatalog(definition, catalog);
 
   walkTextNodes(root, (textNode, plainOffset, nodePath) => {
-    for (const match of findAllCatalogMatches(suggestionCatalog, textNode)) {
-      const ranked = getRankedCandidates(match.text, definition, match.entries);
-      const candidates = ranked.map(({ entry: target, confidence }) => {
-        const candidate = toCandidate(target, confidence);
+    for (const match of findAllCatalogMatches(
+      suggestionCatalog,
+      textNode,
+      ignoreOptions,
+    )) {
+      const ranked = getRankedCandidates(match.entries, suggestionCatalog);
+      const candidates = ranked.map((target) => {
+        const candidate = toCandidate(target, 1);
         candidateSymRefs[candidateKey(candidate)] = target.symRef;
         return candidate;
       });
