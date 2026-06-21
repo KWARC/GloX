@@ -11,7 +11,7 @@ import {
 import { IconFileText } from "@tabler/icons-react";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
-function normalizeContentName(value: string) {
+export function normalizeContentName(value: string) {
   return value.toLowerCase().replaceAll(" ", "-");
 }
 

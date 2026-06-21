@@ -296,6 +296,7 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
 
       return {
         id: def.id,
+        documentId: def.documentId,
         pageNumber: def.pageNumber,
         statement,
         futureRepo: def.futureRepo,
