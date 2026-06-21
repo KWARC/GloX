@@ -36,6 +36,8 @@ export type ExtractsPanelProps = {
   onEditDefinitionMeta: (item: ExtractedItem) => void;
   onOpenLatexConfig: () => void;
   onCreateDefinition: () => void;
+  showJsonEdit?: boolean;
+  showLatexButton?: boolean;
 };
 
 export type ResponsiveProps = {
@@ -80,6 +82,8 @@ export function FileDocumentLayout({
     onEditDefinitionMeta,
     onOpenLatexConfig,
     onCreateDefinition,
+    showJsonEdit = true,
+    showLatexButton = true,
   } = extractsPanel;
   const { isMobile, isTablet, activeTab, setActiveTab } = responsive;
 
@@ -144,6 +148,7 @@ export function FileDocumentLayout({
                   extractCount={extracts.length}
                   onOpenLatexConfig={onOpenLatexConfig}
                   onCreateDefinition={onCreateDefinition}
+                  showLatexButton={showLatexButton}
                 />
               </Box>
             )}
@@ -191,6 +196,7 @@ export function FileDocumentLayout({
               onOpenSemanticPanel={onOpenSemanticPanel}
               onRecomputeReferences={onRecomputeReferences}
               onEditDefinitionMeta={onEditDefinitionMeta}
+              showJsonEdit={showJsonEdit}
             />
           </Tabs.Panel>
         </Tabs>
@@ -251,6 +257,7 @@ export function FileDocumentLayout({
           extractCount={extracts.length}
           onOpenLatexConfig={onOpenLatexConfig}
           onCreateDefinition={onCreateDefinition}
+          showLatexButton={showLatexButton}
         />
 
         <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
@@ -265,6 +272,7 @@ export function FileDocumentLayout({
             onOpenSemanticPanel={onOpenSemanticPanel}
             onRecomputeReferences={onRecomputeReferences}
             onEditDefinitionMeta={onEditDefinitionMeta}
+            showJsonEdit={showJsonEdit}
           />
         </Box>
       </Paper>

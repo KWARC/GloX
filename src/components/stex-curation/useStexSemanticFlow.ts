@@ -2,6 +2,12 @@ import { queryClient } from "@/queryClient";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { ReplacePayload } from "@/server/parseUri";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
+import { normalizeContentName } from "../ExtractTextDialog";
+import {
+  CreatedSymbolTarget,
+  createDefinitionWithDeclaredSymbol,
+  declareCreatedSymbolDefiniendum,
+} from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
 import { FileIdentity } from "@/serverFns/latex.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
@@ -35,6 +41,12 @@ export function useStexSemanticFlow(
   const [conceptUri, setConceptUri] = useState("");
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [savedSelection, setSavedSelection] = useState<typeof selection>(null);
+  const [extractDialogOpen, setExtractDialogOpen] = useState(false);
+  const [pendingExtractText, setPendingExtractText] = useState("");
+  const [definitionName, setDefinitionName] = useState("");
+  const [symbolName, setSymbolName] = useState("");
+  const [createdSymbolTarget, setCreatedSymbolTarget] =
+    useState<CreatedSymbolTarget | null>(null);
 
   function handleOpenSemanticPanel(definitionId: string) {
     setSemanticPanelDefId(definitionId);
@@ -62,6 +74,17 @@ export function useStexSemanticFlow(
     setEditingNodeId(null);
     setMode("SymbolicRef");
     clearPopupOnly();
+  }
+
+  function handleCreateSymbolTargetDefinition() {
+    if (!selection?.extractId || !selection.text) return;
+    const normalizedName = normalizeContentName(selection.text);
+
+    setPendingExtractText(selection.text);
+    setDefinitionName(normalizedName);
+    setSymbolName(selection.text);
+    setCreatedSymbolTarget(null);
+    setExtractDialogOpen(true);
   }
 
   async function handleReplaceNode(
@@ -228,6 +251,68 @@ export function useStexSemanticFlow(
     clearAll();
   }
 
+  async function handleExtractSubmit(editedText: string) {
+    if (!defExtractId) return;
+
+    const sourceDefinition = definitions.find((definition) => definition.id === defExtractId);
+    if (!sourceDefinition) return;
+
+    const created = await createDefinitionWithDeclaredSymbol({
+      data: {
+        documentId: sourceDefinition.documentId,
+        documentPageId: null,
+        pageNumber: null,
+        definitionName: definitionName.trim(),
+        definitionText: editedText,
+        symbolName: symbolName.trim(),
+        futureRepo: identity.futureRepo,
+        filePath: identity.filePath,
+        language: identity.language,
+      },
+    });
+
+    setCreatedSymbolTarget(created);
+    setExtractDialogOpen(false);
+    setPendingExtractText("");
+    setDefinitionName("");
+    setSymbolName("");
+    setMode(null);
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["symbol-search-db"],
+    });
+  }
+
+  async function handleDeclareCreatedSymbolDefiniendum(selectionRange: {
+    selectedText: string;
+    startOffset: number;
+    endOffset: number;
+  }) {
+    if (!createdSymbolTarget) return;
+
+    await declareCreatedSymbolDefiniendum({
+      data: {
+        definitionId: createdSymbolTarget.definition.id,
+        symbolId: createdSymbolTarget.symbol.id,
+        selectedText: selectionRange.selectedText,
+        startOffset: selectionRange.startOffset,
+        endOffset: selectionRange.endOffset,
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["definitionsByIdentity", identity],
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["symbol-search-db"],
+    });
+
+    setCreatedSymbolTarget(null);
+  }
+
   return {
     selection,
     popup,
@@ -239,15 +324,27 @@ export function useStexSemanticFlow(
     defExtractText,
     mode,
     conceptUri,
+    extractDialogOpen,
+    pendingExtractText,
+    definitionName,
+    setDefinitionName,
+    symbolName,
+    setSymbolName,
+    createdSymbolTarget,
     setMode,
     setDefDialogOpen,
+    setExtractDialogOpen,
+    setCreatedSymbolTarget,
     handleOpenSemanticPanel,
     handleCloseSemanticPanel,
     handleOpenDefiniendumDialog,
     handleOpenSymbolicRefDialog,
+    handleCreateSymbolTargetDefinition,
     handleReplaceNode,
     handleDeleteNode,
     handleSaveSymbolicRef,
     handleDefiniendumSubmit,
+    handleExtractSubmit,
+    handleDeclareCreatedSymbolDefiniendum,
   };
 }

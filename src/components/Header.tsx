@@ -244,6 +244,20 @@ export default function Header() {
                   },
                 }}
               />
+
+              {/* <NavLink
+                label="Symbols"
+                component={Link}
+                to="/symbols"
+                onClick={() => setOpened(false)}
+                leftSection={<IconMathSymbols size={18} />}
+                styles={{
+                  root: {
+                    borderRadius: "8px",
+                    padding: "12px",
+                  },
+                }}
+              /> */}
             </>
           )}
 

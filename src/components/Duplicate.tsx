@@ -123,6 +123,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     return [
       {
         id: rawDefinition.id,
+        documentId: "",
         pageNumber: 0,
         statement: assertFtmlStatement(rawDefinition.statement),
         futureRepo: "",

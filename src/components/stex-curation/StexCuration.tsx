@@ -200,8 +200,32 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               symbolicRef={{
                 mode: semanticFlow.mode,
                 conceptUri: semanticFlow.conceptUri,
+                hidden:
+                  semanticFlow.extractDialogOpen ||
+                  !!semanticFlow.createdSymbolTarget,
                 onClose: () => semanticFlow.setMode(null),
                 onSelect: semanticFlow.handleSaveSymbolicRef,
+                onCreateSymbol: semanticFlow.handleCreateSymbolTargetDefinition,
+              }}
+              extraction={{
+                opened: semanticFlow.extractDialogOpen,
+                initialText: semanticFlow.pendingExtractText,
+                definitionName: semanticFlow.definitionName,
+                symbolName: semanticFlow.symbolName,
+                setDefinitionName: semanticFlow.setDefinitionName,
+                setSymbolName: semanticFlow.setSymbolName,
+                filePath: `${identity.futureRepo}/ ${identity.filePath}`,
+                onClose: () => {
+                  semanticFlow.setExtractDialogOpen(false);
+                  semanticFlow.setMode(null);
+                },
+                onSubmit: semanticFlow.handleExtractSubmit,
+              }}
+              createdSymbolDefiniendum={{
+                opened: !!semanticFlow.createdSymbolTarget,
+                target: semanticFlow.createdSymbolTarget,
+                onClose: () => semanticFlow.setCreatedSymbolTarget(null),
+                onConfirm: semanticFlow.handleDeclareCreatedSymbolDefiniendum,
               }}
             />
           </Box>

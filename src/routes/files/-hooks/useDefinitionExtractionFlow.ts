@@ -1,3 +1,4 @@
+import { normalizeContentName } from "@/components/ExtractTextDialog";
 import { MyDocument } from "@/queries/document";
 import { queryClient } from "@/queryClient";
 import {
@@ -94,9 +95,10 @@ export function useDefinitionExtractionFlow({
   }
 
   function handleCreateSymbolTargetDefinition(conceptUri: string) {
+    const normalizedName = normalizeContentName(conceptUri);
     setActivePage(null);
     setPendingExtractText(conceptUri);
-    setDefinitionName(conceptUri);
+    setDefinitionName(normalizedName);
     setSymbolName(conceptUri);
     setCreatedSymbolTarget(null);
     setExtractDialogMode("symbol-target");

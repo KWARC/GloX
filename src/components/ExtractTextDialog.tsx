@@ -11,6 +11,10 @@ import {
 import { IconFileText } from "@tabler/icons-react";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
+export function normalizeContentName(value: string) {
+  return value.toLowerCase().replaceAll(" ", "-");
+}
+
 interface ExtractTextDialogProps {
   opened: boolean;
   initialText: string;
@@ -76,7 +80,9 @@ export function ExtractTextDialog({
           label="Content Name"
           placeholder="e.g. derivative-rules"
           value={definitionName}
-          onChange={(e) => setDefinitionName(e.currentTarget.value)}
+          onChange={(e) =>
+            setDefinitionName(normalizeContentName(e.currentTarget.value))
+          }
           styles={{ input: { fontWeight: 500 } }}
         />
         {isSymbolTargetMode && (

@@ -1,9 +1,12 @@
 import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
 import { ExtractedItem, PopupState } from "@/server/text-selection";
+import type { CreatedSymbolTarget } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
 import { FileIdentity } from "@/serverFns/latex.server";
-import { ComponentProps } from "react";
+import { ComponentProps, Dispatch, SetStateAction } from "react";
+import { CreateSymbolDefiniendumDialog } from "../CreateSymbolDefiniendumDialog";
 import { DefiniendumDialog } from "../DefiniendumDialog";
 import { DefinitionIdentityDialog } from "../DefinitionFilePathDialog";
+import { ExtractTextDialog } from "../ExtractTextDialog";
 import { ReferenceSuggestionDialog } from "../ReferenceSuggestionDialog";
 import { SelectionPopup } from "../SelectionPopup";
 import { SymbolicRef } from "../SymbolicRef";
@@ -52,8 +55,29 @@ export type StexCurationDialogsProps = {
   symbolicRef: {
     mode: "SymbolicRef" | null;
     conceptUri: string;
+    hidden?: boolean;
     onClose: () => void;
     onSelect: ComponentProps<typeof SymbolicRef>["onSelect"];
+    onCreateSymbol?: ComponentProps<typeof SymbolicRef>["onCreateSymbol"];
+  };
+  extraction: {
+    opened: boolean;
+    initialText: string;
+    definitionName: string;
+    symbolName: string;
+    setDefinitionName: (value: string) => void;
+    setSymbolName: Dispatch<SetStateAction<string>>;
+    filePath: string;
+    onClose: () => void;
+    onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
+  };
+  createdSymbolDefiniendum: {
+    opened: boolean;
+    target: CreatedSymbolTarget | null;
+    onClose: () => void;
+    onConfirm: ComponentProps<
+      typeof CreateSymbolDefiniendumDialog
+    >["onConfirm"];
   };
 };
 
@@ -65,6 +89,8 @@ export function StexCurationDialogs({
   semantic,
   definiendum,
   symbolicRef,
+  extraction,
+  createdSymbolDefiniendum,
 }: StexCurationDialogsProps) {
   return (
     <>
@@ -110,11 +136,30 @@ export function StexCurationDialogs({
         onSubmit={definiendum.onSubmit}
         onClose={definiendum.onClose}
       />
-      {symbolicRef.mode === "SymbolicRef" && (
+      <ExtractTextDialog
+        opened={extraction.opened}
+        initialText={extraction.initialText}
+        definitionName={extraction.definitionName}
+        mode="symbol-target"
+        symbolName={extraction.symbolName}
+        setDefinitionName={extraction.setDefinitionName}
+        setSymbolName={extraction.setSymbolName}
+        filePath={extraction.filePath}
+        onClose={extraction.onClose}
+        onSubmit={extraction.onSubmit}
+      />
+      <CreateSymbolDefiniendumDialog
+        opened={createdSymbolDefiniendum.opened}
+        target={createdSymbolDefiniendum.target}
+        onClose={createdSymbolDefiniendum.onClose}
+        onConfirm={createdSymbolDefiniendum.onConfirm}
+      />
+      {symbolicRef.mode === "SymbolicRef" && !symbolicRef.hidden && (
         <SymbolicRef
           conceptUri={symbolicRef.conceptUri}
           onClose={symbolicRef.onClose}
           onSelect={symbolicRef.onSelect}
+          onCreateSymbol={symbolicRef.onCreateSymbol}
         />
       )}
     </>

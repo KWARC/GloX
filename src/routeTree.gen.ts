@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyRouteImport } from './routes/verify'
+import { Route as SymbolsRouteImport } from './routes/symbols'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CurationRouteImport } from './routes/curation'
@@ -23,6 +24,11 @@ import { Route as FilesDocumentIdRouteImport } from './routes/files/$documentId'
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
   path: '/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SymbolsRoute = SymbolsRouteImport.update({
+  id: '/symbols',
+  path: '/symbols',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/curation': typeof CurationRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/symbols': typeof SymbolsRoute
   '/verify': typeof VerifyRoute
   '/files/$documentId': typeof FilesDocumentIdRoute
   '/files': typeof FilesIndexRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/curation': typeof CurationRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/symbols': typeof SymbolsRoute
   '/verify': typeof VerifyRoute
   '/files/$documentId': typeof FilesDocumentIdRoute
   '/files': typeof FilesIndexRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/curation': typeof CurationRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/symbols': typeof SymbolsRoute
   '/verify': typeof VerifyRoute
   '/files/$documentId': typeof FilesDocumentIdRoute
   '/files/': typeof FilesIndexRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/curation'
     | '/login'
     | '/signup'
+    | '/symbols'
     | '/verify'
     | '/files/$documentId'
     | '/files'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/curation'
     | '/login'
     | '/signup'
+    | '/symbols'
     | '/verify'
     | '/files/$documentId'
     | '/files'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/curation'
     | '/login'
     | '/signup'
+    | '/symbols'
     | '/verify'
     | '/files/$documentId'
     | '/files/'
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   CurationRoute: typeof CurationRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  SymbolsRoute: typeof SymbolsRoute
   VerifyRoute: typeof VerifyRoute
   FilesDocumentIdRoute: typeof FilesDocumentIdRoute
   FilesIndexRoute: typeof FilesIndexRoute
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/verify'
       fullPath: '/verify'
       preLoaderRoute: typeof VerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/symbols': {
+      id: '/symbols'
+      path: '/symbols'
+      fullPath: '/symbols'
+      preLoaderRoute: typeof SymbolsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -242,6 +262,7 @@ const rootRouteChildren: RootRouteChildren = {
   CurationRoute: CurationRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  SymbolsRoute: SymbolsRoute,
   VerifyRoute: VerifyRoute,
   FilesDocumentIdRoute: FilesDocumentIdRoute,
   FilesIndexRoute: FilesIndexRoute,

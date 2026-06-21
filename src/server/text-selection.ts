@@ -24,6 +24,7 @@ export type TextSelection = {
 
 export type ExtractedItem = {
   id: string;
+  documentId: string;
   pageNumber: number | null;
   statement: FtmlStatement;
   futureRepo: string;

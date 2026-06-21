@@ -1,12 +1,18 @@
+import {
+  stringToStemmedWordSequence,
+  stringToStemmedWordSequenceSimplified,
+} from "./tokenization";
+
+export { stemWord } from "./stemmers";
+export {
+  stringToStemmedWordSequence,
+  stringToStemmedWordSequenceSimplified,
+} from "./tokenization";
+export type { StemmedToken } from "./tokenization";
+
 export class Verbalization {
   constructor(readonly verb: string) {}
 }
-
-export type StemmedToken = {
-  stem: string;
-  start: number;
-  end: number;
-};
 
 export type CatalogMatch<S, V extends Verbalization> = {
   start: number;
@@ -212,89 +218,4 @@ export function catalogsFromStream<S, V extends Verbalization>(
   }
 
   return catalogs;
-}
-
-export function stringToStemmedWordSequence(
-  string: string,
-  lang = "en",
-): StemmedToken[] {
-  const normalized = normalizeSpacesWithRefs(string);
-  const tokens: StemmedToken[] = [];
-  const re = /[\p{L}\p{N}]+/gu;
-  let match: RegExpExecArray | null;
-
-  while ((match = re.exec(normalized.text)) !== null) {
-    const raw = match[0];
-    tokens.push({
-      stem: myStem(raw, lang),
-      start: normalized.startRefs[match.index],
-      end: normalized.endRefs[match.index + raw.length - 1],
-    });
-  }
-
-  return tokens;
-}
-
-export function stringToStemmedWordSequenceSimplified(
-  string: string,
-  lang = "en",
-): string[] {
-  const words: string[] = [];
-  const re = /[\p{L}\p{N}]+/gu;
-  let match: RegExpExecArray | null;
-
-  while ((match = re.exec(string)) !== null) {
-    words.push(myStem(match[0], lang));
-  }
-
-  return words;
-}
-
-function normalizeSpacesWithRefs(string: string) {
-  let text = "";
-  const startRefs: number[] = [];
-  const endRefs: number[] = [];
-  let index = 0;
-
-  while (index < string.length) {
-    const char = string[index];
-
-    if (/\s/u.test(char)) {
-      const start = index;
-      while (index < string.length && /\s/u.test(string[index])) {
-        index += 1;
-      }
-      text += " ";
-      startRefs.push(start);
-      endRefs.push(index);
-      continue;
-    }
-
-    text += char;
-    startRefs.push(index);
-    endRefs.push(index + 1);
-    index += 1;
-  }
-
-  return { text, startRefs, endRefs };
-}
-
-function myStem(word: string, lang: string) {
-  if (/^[A-Z0-9_]+$/.test(word)) return word;
-
-  const lower = word.toLowerCase();
-  if (lang === "en" && lower === "automata") return "automaton";
-  if (lang === "en" && lower.endsWith("ies") && lower.length > 4) {
-    return `${lower.slice(0, -3)}y`;
-  }
-  if (
-    lang === "en" &&
-    lower.endsWith("s") &&
-    lower.length > 3 &&
-    !lower.endsWith("ss") &&
-    !lower.endsWith("us")
-  ) {
-    return lower.slice(0, -1);
-  }
-  return lower;
 }
