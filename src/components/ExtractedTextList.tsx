@@ -40,6 +40,7 @@ interface ExtractedTextPanelProps {
   onEditDefinitionMeta?: (item: ExtractedItem) => void;
   showDefinitionMetaIconOnly?: boolean;
   showJsonEdit?: boolean;
+  showActions?: boolean;
 }
 
 export function ExtractedTextPanel({
@@ -56,6 +57,7 @@ export function ExtractedTextPanel({
   showDefinitionMeta = true,
   showDefinitionMetaIconOnly = false,
   showJsonEdit = true,
+  showActions = true,
   onEditDefinitionMeta,
   isLocked = false,
   compact = false,
@@ -106,55 +108,59 @@ export function ExtractedTextPanel({
                       <div />
                     )}
 
-                    <Group gap={compact ? "xs" : "xs"}>
-                      <Tooltip label="Delete definition" withArrow>
-                        <ActionIcon
-                          size={compact ? 22 : "sm"}
-                          color="red"
-                          disabled={isLocked}
-                          onClick={() => onDelete(item.id)}
-                        >
-                          <IconTrash size={14} />
-                        </ActionIcon>
-                      </Tooltip>
+                    {showActions ? (
+                      <Group gap={compact ? "xs" : "xs"}>
+                        <Tooltip label="Delete definition" withArrow>
+                          <ActionIcon
+                            size={compact ? 22 : "sm"}
+                            color="red"
+                            disabled={isLocked}
+                            onClick={() => onDelete(item.id)}
+                          >
+                            <IconTrash size={14} />
+                          </ActionIcon>
+                        </Tooltip>
 
-                      {showJsonEdit && (
-                        <Tooltip label="Edit JSON format" withArrow>
+                        {showJsonEdit && (
+                          <Tooltip label="Edit JSON format" withArrow>
+                            <ActionIcon
+                              size={compact ? 22 : "sm"}
+                              variant="subtle"
+                              disabled={isLocked}
+                              onClick={() => onToggleEdit(item.id)}
+                            >
+                              <IconPencil size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
+
+                        {onRecomputeReferences && (
+                          <Tooltip label="sn-ify" withArrow>
+                            <ActionIcon
+                              size={compact ? 22 : "sm"}
+                              variant="subtle"
+                              color="teal"
+                              disabled={isLocked}
+                              onClick={() => onRecomputeReferences(item.id)}
+                            >
+                              <IconDog size={15} />
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
+                        <Tooltip label="Manage semantics" withArrow>
                           <ActionIcon
                             size={compact ? 22 : "sm"}
                             variant="subtle"
                             disabled={isLocked}
-                            onClick={() => onToggleEdit(item.id)}
+                            onClick={() => onOpenSemanticPanel(item.id)}
                           >
-                            <IconPencil size={16} />
+                            <IconSettings size={16} />
                           </ActionIcon>
                         </Tooltip>
-                      )}
-
-                      {onRecomputeReferences && (
-                        <Tooltip label="sn-ify" withArrow>
-                          <ActionIcon
-                            size={compact ? 22 : "sm"}
-                            variant="subtle"
-                            color="teal"
-                            disabled={isLocked}
-                            onClick={() => onRecomputeReferences(item.id)}
-                          >
-                            <IconDog size={15} />
-                          </ActionIcon>
-                        </Tooltip>
-                      )}
-                      <Tooltip label="Manage semantics" withArrow>
-                        <ActionIcon
-                          size={compact ? 22 : "sm"}
-                          variant="subtle"
-                          disabled={isLocked}
-                          onClick={() => onOpenSemanticPanel(item.id)}
-                        >
-                          <IconSettings size={16} />
-                        </ActionIcon>
-                      </Tooltip>
-                    </Group>
+                      </Group>
+                    ) : (
+                      <div />
+                    )}
                   </Group>
 
                   {isEditing ? (

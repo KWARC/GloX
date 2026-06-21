@@ -8,6 +8,8 @@ import {
 import { findDefiniendum } from "@/server/parseUri";
 import {
   assertFtmlStatement,
+  FtmlStatement,
+  isDefiniendumNode,
   isDefinitionNode,
   isParagraphNode,
   normalizeToRoot,
@@ -15,6 +17,26 @@ import {
   unwrapRoot,
 } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
+
+type AuthorizedRole = "ADMIN" | "CURATOR";
+
+async function requireAdminOrCurator(): Promise<{
+  id: string;
+  role: AuthorizedRole;
+}> {
+  const userRes = await currentUser();
+  if (!userRes.loggedIn) throw new Error("Unauthorized");
+
+  const role = userRes.user.role;
+  if (role !== "ADMIN" && role !== "CURATOR") {
+    throw new Error("Forbidden");
+  }
+
+  return {
+    id: userRes.user.id,
+    role,
+  };
+}
 
 export type CreateSymbolDefiniendumInput = {
   definitionId: string;
@@ -36,6 +58,198 @@ export type CreateSymbolDefiniendumInput = {
   selectedSymbolUri?: string;
 };
 
+export type SymbolAssociationSummary = {
+  id: string;
+  symbolName: string;
+  alias: string | null;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
+  createdAt: Date;
+  updatedAt: Date;
+  associatedDefinitions: Array<{
+    id: string;
+    documentId: string;
+    statement: FtmlStatement;
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
+    pageNumber: number | null;
+  }>;
+  associatedDefinitionCount: number;
+  canDelete: boolean;
+};
+
+type AssociatedDefinitionSummary =
+  SymbolAssociationSummary["associatedDefinitions"][number];
+
+function definitionMatchesDeclaredSymbol(
+  definition: {
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
+    statement: unknown;
+  },
+  symbol: {
+    symbolName: string;
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
+  },
+): boolean {
+  if (
+    definition.futureRepo !== symbol.futureRepo ||
+    definition.filePath !== symbol.filePath ||
+    definition.fileName !== symbol.fileName ||
+    definition.language !== symbol.language
+  ) {
+    return false;
+  }
+
+  const root = normalizeToRoot(assertFtmlStatement(definition.statement));
+
+  for (const block of root.content) {
+    if (!isDefinitionNode(block)) continue;
+
+    if (
+      Array.isArray(block.for_symbols) &&
+      block.for_symbols.includes(symbol.symbolName)
+    ) {
+      return true;
+    }
+
+    const stack = [...(block.content ?? [])];
+    while (stack.length > 0) {
+      const node = stack.pop();
+      if (!node || typeof node === "string") continue;
+
+      if (isDefiniendumNode(node) && node.symdecl === true) {
+        if (node.uri === symbol.symbolName) {
+          return true;
+        }
+      }
+
+      if (node.content?.length) {
+        stack.push(...node.content);
+      }
+    }
+  }
+
+  return false;
+}
+
+function addAssociatedDefinition(
+  definitionMap: Map<string, AssociatedDefinitionSummary>,
+  definition: AssociatedDefinitionSummary,
+) {
+  definitionMap.set(definition.id, definition);
+}
+
+async function buildSymbolAssociations() {
+  const [symbols, definitions] = await Promise.all([
+    prisma.symbol.findMany({
+      include: {
+        symbolicReferences: {
+          include: {
+            definitions: {
+              include: {
+                definition: {
+                  select: {
+                    id: true,
+                    documentId: true,
+                    statement: true,
+                    futureRepo: true,
+                    filePath: true,
+                    fileName: true,
+                    language: true,
+                    pageNumber: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { symbolName: "asc" },
+        { futureRepo: "asc" },
+        { filePath: "asc" },
+        { fileName: "asc" },
+        { language: "asc" },
+      ],
+    }),
+    prisma.definition.findMany({
+      where: { status: { not: "DISCARDED" } },
+      select: {
+        id: true,
+        documentId: true,
+        statement: true,
+        pageNumber: true,
+        futureRepo: true,
+        filePath: true,
+        fileName: true,
+        language: true,
+      },
+    }),
+  ]);
+
+  return symbols.map((symbol) => {
+    const definitionMap = new Map<string, AssociatedDefinitionSummary>();
+
+    for (const symbolicReference of symbol.symbolicReferences) {
+      for (const relation of symbolicReference.definitions) {
+        const definition = relation.definition;
+        addAssociatedDefinition(definitionMap, {
+          id: definition.id,
+          documentId: definition.documentId,
+          statement: definition.statement as FtmlStatement,
+          futureRepo: definition.futureRepo,
+          filePath: definition.filePath,
+          fileName: definition.fileName,
+          language: definition.language,
+          pageNumber: definition.pageNumber,
+        });
+      }
+    }
+
+    for (const definition of definitions) {
+      if (!definitionMatchesDeclaredSymbol(definition, symbol)) continue;
+
+      addAssociatedDefinition(definitionMap, {
+        id: definition.id,
+        documentId: definition.documentId,
+        statement: definition.statement as FtmlStatement,
+        futureRepo: definition.futureRepo,
+        filePath: definition.filePath,
+        fileName: definition.fileName,
+        language: definition.language,
+        pageNumber: definition.pageNumber,
+      });
+    }
+
+    const associatedDefinitions = Array.from(definitionMap.values());
+
+    return {
+      id: symbol.id,
+      symbolName: symbol.symbolName,
+      alias: symbol.alias,
+      futureRepo: symbol.futureRepo,
+      filePath: symbol.filePath,
+      fileName: symbol.fileName,
+      language: symbol.language,
+      createdAt: symbol.createdAt,
+      updatedAt: symbol.updatedAt,
+      associatedDefinitions,
+      associatedDefinitionCount: associatedDefinitions.length,
+      canDelete: associatedDefinitions.length === 0,
+    } satisfies SymbolAssociationSummary;
+  });
+}
+
 export const getAllSymbols = createServerFn({ method: "GET" }).handler(
   async () => {
     return prisma.symbol.findMany({
@@ -52,6 +266,37 @@ export const getAllSymbols = createServerFn({ method: "GET" }).handler(
     });
   },
 );
+
+export const listSymbolsWithAssociations = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  await requireAdminOrCurator();
+
+  return buildSymbolAssociations();
+});
+
+export const deleteSymbolIfUnassociated = createServerFn({ method: "POST" })
+  .inputValidator((data: { symbolId: string }) => data)
+  .handler(async ({ data }) => {
+    await requireAdminOrCurator();
+
+    const associations = await buildSymbolAssociations();
+    const symbol = associations.find((item) => item.id === data.symbolId);
+
+    if (!symbol) {
+      throw new Error("Symbol not found");
+    }
+
+    if (symbol.associatedDefinitionCount > 0) {
+      throw new Error("Cannot delete symbol with associated definitions");
+    }
+
+    await prisma.symbol.delete({
+      where: { id: data.symbolId },
+    });
+
+    return { success: true };
+  });
 
 export const createSymbolDefiniendum = createServerFn({ method: "POST" })
   .inputValidator((data: CreateSymbolDefiniendumInput) => data)
