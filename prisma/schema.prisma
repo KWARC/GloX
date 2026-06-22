@@ -37,6 +37,15 @@ enum DefinitionStatus {
   SUBMITTED_TO_MATHHUB
 }
 
+enum ParagraphKind {
+  Definition
+  Assertion
+  Paragraph
+  Proof
+  SubProof
+  Example
+}
+
 model User {
   id            String   @id @default(uuid())
   firstName     String?
@@ -152,6 +161,7 @@ model Definition {
   documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
 
   pageNumber Int? //optional
+  kind       ParagraphKind @default(Definition)
 
   originalText String @db.Text
   statement    Json

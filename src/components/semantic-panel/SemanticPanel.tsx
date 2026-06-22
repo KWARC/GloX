@@ -30,6 +30,7 @@ export function SemanticPanel({
   const state = useSemanticPanelState(definition);
   const {
     selectedNode,
+    canEditDefinienda,
     pendingPropagation,
     setPendingPropagation,
     pendingMathHubToLocal,
@@ -59,7 +60,9 @@ export function SemanticPanel({
           </Center>
         ) : (
           <Flex h="70vh" style={{ overflow: "hidden" }}>
-            <SemanticNodeList state={state} />
+            <SemanticNodeList
+              state={{ ...state, definitionKind: definition.kind }}
+            />
 
             <Box
               flex={1}
@@ -69,11 +72,15 @@ export function SemanticPanel({
               <Box style={{ flex: 1, overflowY: "auto" }}>
                 {!selectedNode && (
                   <Center h="100%">
-                    <Text c="dimmed">Select Definienda/Symbolic Ref</Text>
+                    <Text c="dimmed">
+                      {canEditDefinienda
+                        ? "Select Definienda/Symbolic Ref"
+                        : `This ${definition.kind} only supports symbolic references.`}
+                    </Text>
                   </Center>
                 )}
 
-                {selectedNode?.type === "definiendum" && (
+                {canEditDefinienda && selectedNode?.type === "definiendum" && (
                   <DefiniendumEditor
                     definition={definition}
                     state={state}

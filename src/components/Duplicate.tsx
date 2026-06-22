@@ -111,6 +111,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     try {
       return {
         id: rawDefinition.id,
+        kind: rawDefinition.kind,
         statement: assertFtmlStatement(rawDefinition.statement),
       };
     } catch {
@@ -125,6 +126,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
         id: rawDefinition.id,
         documentId: "",
         pageNumber: 0,
+        kind: rawDefinition.kind,
         statement: assertFtmlStatement(rawDefinition.statement),
         futureRepo: "",
         filePath: "",

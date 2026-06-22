@@ -183,6 +183,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 onClose: semanticFlow.clearPopupOnly,
                 onDefiniendum: semanticFlow.handleOpenDefiniendumDialog,
                 onSymbolicRef: semanticFlow.handleOpenSymbolicRefDialog,
+                allowDefiniendum:
+                  semanticFlow.canOpenDefiniendumFromSelection,
               }}
               semantic={{
                 opened: semanticFlow.semanticPanelOpen,
@@ -211,8 +213,10 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 opened: semanticFlow.extractDialogOpen,
                 initialText: semanticFlow.pendingExtractText,
                 definitionName: semanticFlow.definitionName,
+                kind: semanticFlow.extractKind,
                 symbolName: semanticFlow.symbolName,
                 setDefinitionName: semanticFlow.setDefinitionName,
+                setKind: semanticFlow.setExtractKind,
                 setSymbolName: semanticFlow.setSymbolName,
                 filePath: `${identity.futureRepo}/ ${identity.filePath}`,
                 onClose: () => {

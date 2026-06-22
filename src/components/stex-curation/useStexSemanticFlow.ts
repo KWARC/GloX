@@ -15,6 +15,7 @@ import {
   updateDefinitionAst,
   UpdateDefinitionAstResult,
 } from "@/serverFns/updateDefinition.server";
+import { ParagraphKind, supportsDefinienda } from "@/types/paragraphKind";
 import { ComponentProps, useState } from "react";
 import { DefiniendumDialog } from "../DefiniendumDialog";
 
@@ -45,6 +46,7 @@ export function useStexSemanticFlow(
   const [pendingExtractText, setPendingExtractText] = useState("");
   const [definitionName, setDefinitionName] = useState("");
   const [symbolName, setSymbolName] = useState("");
+  const [extractKind, setExtractKind] = useState<ParagraphKind>("Definition");
   const [createdSymbolTarget, setCreatedSymbolTarget] =
     useState<CreatedSymbolTarget | null>(null);
 
@@ -60,6 +62,8 @@ export function useStexSemanticFlow(
 
   function handleOpenDefiniendumDialog() {
     if (!selection?.extractId || !selection.text) return;
+    const sourceDefinition = definitions.find((d) => d.id === selection.extractId);
+    if (!sourceDefinition || !supportsDefinienda(sourceDefinition.kind)) return;
 
     setDefExtractId(selection.extractId);
     setDefExtractText(selection.text);
@@ -83,6 +87,7 @@ export function useStexSemanticFlow(
     setPendingExtractText(selection.text);
     setDefinitionName(normalizedName);
     setSymbolName(selection.text);
+    setExtractKind("Definition");
     setCreatedSymbolTarget(null);
     setExtractDialogOpen(true);
   }
@@ -251,7 +256,13 @@ export function useStexSemanticFlow(
     clearAll();
   }
 
-  async function handleExtractSubmit(editedText: string) {
+  async function handleExtractSubmit({
+    text: editedText,
+    kind,
+  }: {
+    text: string;
+    kind: ParagraphKind;
+  }) {
     if (!defExtractId) return;
 
     const sourceDefinition = definitions.find((definition) => definition.id === defExtractId);
@@ -262,6 +273,7 @@ export function useStexSemanticFlow(
         documentId: sourceDefinition.documentId,
         documentPageId: null,
         pageNumber: null,
+        kind,
         definitionName: definitionName.trim(),
         definitionText: editedText,
         symbolName: symbolName.trim(),
@@ -276,6 +288,7 @@ export function useStexSemanticFlow(
     setPendingExtractText("");
     setDefinitionName("");
     setSymbolName("");
+    setExtractKind("Definition");
     setMode(null);
 
     await queryClient.invalidateQueries({
@@ -313,6 +326,15 @@ export function useStexSemanticFlow(
     setCreatedSymbolTarget(null);
   }
 
+  const canOpenDefiniendumFromSelection =
+    !!selection?.extractId &&
+    (() => {
+      const sourceDefinition = definitions.find(
+        (definition) => definition.id === selection.extractId,
+      );
+      return !!sourceDefinition && supportsDefinienda(sourceDefinition.kind);
+    })();
+
   return {
     selection,
     popup,
@@ -330,6 +352,8 @@ export function useStexSemanticFlow(
     setDefinitionName,
     symbolName,
     setSymbolName,
+    extractKind,
+    setExtractKind,
     createdSymbolTarget,
     setMode,
     setDefDialogOpen,
@@ -346,5 +370,6 @@ export function useStexSemanticFlow(
     handleDefiniendumSubmit,
     handleExtractSubmit,
     handleDeclareCreatedSymbolDefiniendum,
+    canOpenDefiniendumFromSelection,
   };
 }

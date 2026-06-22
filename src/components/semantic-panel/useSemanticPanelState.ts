@@ -1,12 +1,13 @@
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { useSymbolSearch } from "@/server/useSymbolSearch";
+import { supportsDefinienda } from "@/types/paragraphKind";
 import {
   DbSymbolResult,
   MathhubResult,
   SelectedNode,
   SemanticDefinition,
 } from "@/types/Semantic.types";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export type PendingPropagation = {
   localSymbolUri: string;
@@ -33,11 +34,21 @@ export function useSemanticPanelState(definition: SemanticDefinition | null) {
     useState<PendingPropagation | null>(null);
   const [pendingMathHubToLocal, setPendingMathHubToLocal] =
     useState<PendingMathHubToLocal | null>(null);
+  const canEditDefinienda = definition
+    ? supportsDefinienda(definition.kind)
+    : false;
 
   const { definienda, symbolicRefs } = useMemo(() => {
     if (!definition) return { definienda: [], symbolicRefs: [] };
     return extractSemanticIndex(definition.statement, definition);
   }, [definition]);
+
+  useEffect(() => {
+    if (!canEditDefinienda && selectedNode?.type === "definiendum") {
+      setSelectedNode(null);
+      setSelectedUri("");
+    }
+  }, [canEditDefinienda, selectedNode]);
 
   const { results, isLoading: searchLoading } = useSymbolSearch(searchQuery);
 
@@ -93,6 +104,7 @@ export function useSemanticPanelState(definition: SemanticDefinition | null) {
     setPendingMathHubToLocal,
     definienda,
     symbolicRefs,
+    canEditDefinienda,
     selectedDefiniendum,
     selectedSymref,
     canMakeNewSymbol,

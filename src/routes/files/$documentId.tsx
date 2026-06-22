@@ -307,6 +307,8 @@ function RouteComponent() {
           onExtractSelection: extractionFlow.handleOpenSelectionExtract,
           onDefiniendumSelection: semanticFlow.openDefiniendumFromSelection,
           onSymbolicRefSelection: semanticFlow.openSymbolicRefFromSelection,
+          allowDefiniendumSelection:
+            semanticFlow.canOpenDefiniendumFromSelection,
         }}
         symbolicRef={{
           mode: semanticFlow.mode,
@@ -351,9 +353,11 @@ function RouteComponent() {
           opened: extractionFlow.extractDialogOpen,
           initialText: extractionFlow.pendingExtractText,
           definitionName: extractionFlow.definitionName,
+          kind: extractionFlow.extractKind,
           mode: extractionFlow.extractDialogMode,
           symbolName: extractionFlow.symbolName,
           setDefinitionName: extractionFlow.setDefinitionName,
+          setKind: extractionFlow.setExtractKind,
           setSymbolName: extractionFlow.setSymbolName,
           filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}`,
           onClose: () => {

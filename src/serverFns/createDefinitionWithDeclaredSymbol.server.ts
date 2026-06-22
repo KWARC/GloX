@@ -14,12 +14,14 @@ import {
   normalizeToRoot,
   unwrapRoot,
 } from "@/types/ftml.types";
+import { ParagraphKind } from "@/types/paragraphKind";
 import { createServerFn } from "@tanstack/react-start";
 
 export type CreateDefinitionWithDeclaredSymbolInput = {
   documentId: string;
   documentPageId?: string | null;
   pageNumber?: number | null;
+  kind?: ParagraphKind;
   definitionName: string;
   definitionText: string;
   symbolName: string;
@@ -32,6 +34,7 @@ export type CreatedSymbolTarget = {
   definition: {
     id: string;
     pageNumber: number | null;
+    kind: ParagraphKind;
     statement: FtmlStatement;
     futureRepo: string;
     filePath: string;
@@ -133,6 +136,7 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
           documentId: data.documentId,
           documentPageId,
           pageNumber: null,
+          kind: data.kind ?? "Definition",
           originalText: definitionText,
           statement: serializedStatement,
           futureRepo,
@@ -165,6 +169,7 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
         definition: {
           id: createdDefinition.id,
           pageNumber: createdDefinition.pageNumber,
+          kind: createdDefinition.kind,
           statement: assertFtmlStatement(createdDefinition.statement),
           futureRepo: createdDefinition.futureRepo,
           filePath: createdDefinition.filePath,

@@ -3,12 +3,14 @@ import {
   Divider,
   Group,
   Modal,
+  Select,
   Stack,
   Text,
   Textarea,
   TextInput,
 } from "@mantine/core";
 import { IconFileText } from "@tabler/icons-react";
+import { PARAGRAPH_KINDS, ParagraphKind } from "@/types/paragraphKind";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
 export function normalizeContentName(value: string) {
@@ -19,22 +21,26 @@ interface ExtractTextDialogProps {
   opened: boolean;
   initialText: string;
   definitionName: string;
+  kind: ParagraphKind;
   mode?: "definition" | "symbol-target";
   symbolName?: string;
   filePath: string;
   setDefinitionName: (v: string) => void;
+  setKind: Dispatch<SetStateAction<ParagraphKind>>;
   setSymbolName?: Dispatch<SetStateAction<string>>;
   onClose: () => void;
-  onSubmit: (text: string) => void;
+  onSubmit: (payload: { text: string; kind: ParagraphKind }) => void;
 }
 
 export function ExtractTextDialog({
   opened,
   initialText,
   definitionName,
+  kind,
   mode = "definition",
   symbolName = "",
   setDefinitionName,
+  setKind,
   setSymbolName,
   filePath,
   onClose,
@@ -85,6 +91,18 @@ export function ExtractTextDialog({
           }
           styles={{ input: { fontWeight: 500 } }}
         />
+        <Select
+          label="Paragraph Kind"
+          data={PARAGRAPH_KINDS.map((value) => ({
+            value,
+            label: value,
+          }))}
+          value={kind}
+          onChange={(value) => {
+            if (value) setKind(value as ParagraphKind);
+          }}
+          allowDeselect={false}
+        />
         {isSymbolTargetMode && (
           <TextInput
             label="Symbol name"
@@ -126,7 +144,7 @@ export function ExtractTextDialog({
             onClick={() => {
               const cleaned = text.trim();
               if (!cleaned) return;
-              onSubmit(cleaned);
+              onSubmit({ text: cleaned, kind });
             }}
             disabled={
               !text.trim() ||

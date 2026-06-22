@@ -28,6 +28,7 @@ export type SelectionDialogProps = {
   onExtractSelection: () => void;
   onDefiniendumSelection: () => void;
   onSymbolicRefSelection: () => void;
+  allowDefiniendumSelection?: boolean;
 };
 
 export type SymbolicRefDialogProps = {
@@ -65,9 +66,11 @@ export type ExtractionDialogProps = {
   opened: boolean;
   initialText: string;
   definitionName: string;
+  kind: ComponentProps<typeof ExtractTextDialog>["kind"];
   mode?: ComponentProps<typeof ExtractTextDialog>["mode"];
   symbolName?: string;
   setDefinitionName: Dispatch<SetStateAction<string>>;
+  setKind: ComponentProps<typeof ExtractTextDialog>["setKind"];
   setSymbolName?: Dispatch<SetStateAction<string>>;
   filePath: string;
   onClose: () => void;
@@ -150,7 +153,7 @@ export function FileDialogs({
               : undefined
           }
           onDefiniendum={
-            selection.popup.source === "right"
+            selection.popup.source === "right" && selection.allowDefiniendumSelection
               ? selection.onDefiniendumSelection
               : undefined
           }
@@ -198,9 +201,11 @@ export function FileDialogs({
         opened={extraction.opened}
         initialText={extraction.initialText}
         definitionName={extraction.definitionName}
+        kind={extraction.kind}
         mode={extraction.mode}
         symbolName={extraction.symbolName}
         setDefinitionName={extraction.setDefinitionName}
+        setKind={extraction.setKind}
         setSymbolName={extraction.setSymbolName}
         filePath={extraction.filePath}
         onClose={extraction.onClose}
