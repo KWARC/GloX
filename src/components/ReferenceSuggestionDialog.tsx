@@ -10,7 +10,6 @@ import {
 } from "@/server/symbolic-suggestions";
 import type { FtmlStatement } from "@/types/ftml.types";
 import {
-  Badge,
   Box,
   Button,
   Group,
@@ -27,6 +26,7 @@ import { IconSearch } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 import { RenderSymbolicUri } from "./RenderUri";
+import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 
 type Props = {
   opened: boolean;
@@ -68,6 +68,9 @@ export function ReferenceSuggestionDialog({
   const [index, setIndex] = useState(0);
   const [selectedCandidate, setSelectedCandidate] =
     useState<SuggestedReferenceCandidate | null>(null);
+  const [expandedCandidateKeys, setExpandedCandidateKeys] = useState<
+    Set<string>
+  >(() => new Set());
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,6 +80,7 @@ export function ReferenceSuggestionDialog({
     if (opened) {
       setIndex(0);
       setSelectedCandidate(null);
+      setExpandedCandidateKeys(new Set());
       setError(null);
       setSearchQuery("");
     }
@@ -85,6 +89,7 @@ export function ReferenceSuggestionDialog({
   useEffect(() => {
     setIndex((i) => Math.min(i, Math.max(0, suggestions.length - 1)));
     setSelectedCandidate(null);
+    setExpandedCandidateKeys(new Set());
     setError(null);
     setSearchQuery("");
   }, [suggestions]);
@@ -112,31 +117,9 @@ export function ReferenceSuggestionDialog({
     );
   }, [catalog, debouncedSearchQuery, definitionId, sniffyCandidateKeys]);
 
-  useEffect(() => {
-    if (!opened || !current) return;
-
-    const activeCandidates = debouncedSearchQuery.trim()
-      ? searchResults
-      : current.candidates;
-
-    if (activeCandidates.length === 0) return;
-
-    const hasSelectedActiveCandidate =
-      selectedCandidate &&
-      activeCandidates.some(
-        (candidate) =>
-          getSuggestedReferenceCandidateKey(candidate) ===
-          getSuggestedReferenceCandidateKey(selectedCandidate),
-      );
-
-    if (hasSelectedActiveCandidate) return;
-
-    setSelectedCandidate(activeCandidates[0]);
-    setError(null);
-  }, [current, debouncedSearchQuery, opened, searchResults, selectedCandidate]);
-
   function resetPerSuggestionState() {
     setSelectedCandidate(null);
+    setExpandedCandidateKeys(new Set());
     setError(null);
     setSearchQuery("");
   }
@@ -191,51 +174,82 @@ export function ReferenceSuggestionDialog({
   function renderCandidate(candidate: SuggestedReferenceCandidate) {
     const candidateKey = getSuggestedReferenceCandidateKey(candidate);
     const selected = selectedCandidateKey === candidateKey;
+    const expanded = expandedCandidateKeys.has(candidateKey);
 
     return (
       <Paper
         key={candidateKey}
         withBorder
-        p="xs"
+        px="xs"
+        py={4}
         radius="sm"
         bg={selected ? "blue.0" : undefined}
         style={{ cursor: "pointer" }}
         onClick={() => {
           setSelectedCandidate(candidate);
+          setExpandedCandidateKeys((prev) => {
+            const next = new Set(prev);
+
+            if (next.has(candidateKey)) {
+              next.delete(candidateKey);
+            } else {
+              next.add(candidateKey);
+            }
+
+            return next;
+          });
           setError(null);
         }}
       >
-        <Group justify="space-between" wrap="nowrap">
-          <Stack gap={1}>
-            <Text size="sm" fw={selected ? 600 : 500}>
-              {candidate.label}
-            </Text>
-            {candidate.source === "MATHHUB" && candidate.uri ? (
-              <RenderSymbolicUri uri={candidate.uri} />
-            ) : candidate.path ? (
-              <Text size="xs" c="dimmed">
-                {candidate.path}
-              </Text>
-            ) : null}
-          </Stack>
-          <Badge size="xs" color={candidate.source === "DB" ? "green" : "blue"}>
-            {candidate.source}
-          </Badge>
-        </Group>
-        {candidate.source === "MATHHUB" && candidate.uri && (
-          <Box h={160} mt="xs">
-            <iframe
-              src={normalizeMathHubPreviewUrl(candidate.uri)}
-              sandbox="allow-scripts allow-same-origin"
-              title="MathHub content preview"
-              style={{
-                width: "100%",
-                height: "100%",
-                border: "none",
-              }}
-            />
-          </Box>
-        )}
+        <Stack gap={expanded ? 6 : 0}>
+          <Group justify="space-between" wrap="nowrap" gap="xs">
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              {candidate.source === "MATHHUB" && candidate.uri ? (
+                <Group justify="space-between" wrap="nowrap" gap="xs">
+                  <Box style={{ flex: 1, minWidth: 0 }}>
+                    <RenderSymbolicUri
+                      uri={candidate.uri}
+                      showRightLabel={false}
+                    />
+                  </Box>
+                  <Box style={{ flexShrink: 0, minWidth: 0 }}>
+                    <SymbolicLinkPreview
+                      uri={candidate.uri}
+                      label={candidate.label}
+                    />
+                  </Box>
+                </Group>
+              ) : (
+                <Text size="sm" fw={500} truncate>
+                  {candidate.label}
+                </Text>
+              )}
+            </Box>
+          </Group>
+
+          {expanded && (
+            <Box>
+              {candidate.uri ? (
+                <Box h={160}>
+                  <iframe
+                    src={normalizeMathHubPreviewUrl(candidate.uri)}
+                    sandbox="allow-scripts allow-same-origin"
+                    title="MathHub content preview"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                    }}
+                  />
+                </Box>
+              ) : (
+                <Text size="xs" c="dimmed">
+                  Preview unavailable
+                </Text>
+              )}
+            </Box>
+          )}
+        </Stack>
       </Paper>
     );
   }

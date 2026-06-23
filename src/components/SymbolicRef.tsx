@@ -2,22 +2,24 @@ import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import {
   ActionIcon,
+  Box,
   Button,
   Group,
   Paper,
   Portal,
   Stack,
   Text,
-  Tooltip,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
+import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 import { SymbolResult } from "./SymbolResult";
 
 const SEARCH_MODAL_WIDTH = 520;
 const SEARCH_MODAL_RIGHT_OFFSET = 60;
 const SEARCH_MODAL_TOP_OFFSET = 80;
+const SYMBOLIC_REF_DIALOG_Z_INDEX = 1300;
 
 interface SymbolicRefProps {
   conceptUri: string;
@@ -84,7 +86,7 @@ export function SymbolicRef({
           width: SEARCH_MODAL_WIDTH,
           maxHeight: "calc(100vh - 120px)",
           overflowY: "auto",
-          zIndex: 4000,
+          zIndex: SYMBOLIC_REF_DIALOG_Z_INDEX,
           border: "2px solid var(--mantine-color-blue-4)",
         }}
       >
@@ -120,18 +122,17 @@ export function SymbolicRef({
               <Text size="xs" fw={600} c="dimmed" mb={4}>
                 Selected Symbol:
               </Text>
-              <Tooltip
-                label={selectedSymbol.uri}
-                withArrow
-                multiline
-                maw={400}
-                position="top"
-                zIndex={5000}
-              >
-                <span style={{ cursor: "help", display: "inline-block" }}>
-                  <RenderSymbolicUri uri={selectedSymbol.uri} />
-                </span>
-              </Tooltip>
+              <Group justify="space-between" wrap="nowrap" gap="xs">
+                <Box style={{ flex: 1, minWidth: 0 }}>
+                  <RenderSymbolicUri
+                    uri={selectedSymbol.uri}
+                    showRightLabel={false}
+                  />
+                </Box>
+                <Box style={{ flexShrink: 0, minWidth: 0 }}>
+                  <SymbolicLinkPreview uri={selectedSymbol.uri} />
+                </Box>
+              </Group>
             </Paper>
           )}
 

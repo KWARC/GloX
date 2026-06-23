@@ -1,5 +1,6 @@
 import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
 import { queryClient } from "@/queryClient";
+import { normalizeSymRef } from "@/server/parseUri";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { parseUri, ReplacePayload } from "@/server/parseUri";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
@@ -262,6 +263,8 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     if (!defExtractId || !selection) return;
 
     if (editingNodeId) {
+      const { uri, text } = normalizeSymRef(symRef);
+
       await updateDefinitionAst({
         data: {
           definitionId: defExtractId,
@@ -270,10 +273,8 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
             target: { type: "symref", uri: editingNodeId },
             payload: {
               type: "symref",
-              uri:
-                symRef.source === "MATHHUB"
-                  ? symRef.uri
-                  : `${symRef.futureRepo}/${symRef.symbolName}`,
+              uri,
+              content: [text],
             },
           },
         },

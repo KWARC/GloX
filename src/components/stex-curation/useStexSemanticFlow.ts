@@ -1,6 +1,6 @@
 import { queryClient } from "@/queryClient";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
-import { ReplacePayload } from "@/server/parseUri";
+import { normalizeSymRef, ReplacePayload } from "@/server/parseUri";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { normalizeContentName } from "../ExtractTextDialog";
 import {
@@ -138,6 +138,8 @@ export function useStexSemanticFlow(
     if (!defExtractId) return;
 
     if (editingNodeId) {
+      const { uri, text } = normalizeSymRef(symRef);
+
       await updateDefinitionAst({
         data: {
           definitionId: defExtractId,
@@ -149,10 +151,8 @@ export function useStexSemanticFlow(
             },
             payload: {
               type: "symref",
-              uri:
-                symRef.source === "MATHHUB"
-                  ? symRef.uri
-                  : `${symRef.futureRepo}/${symRef.symbolName}`,
+              uri,
+              content: [text],
             },
           },
         },

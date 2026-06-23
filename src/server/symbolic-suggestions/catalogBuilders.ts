@@ -50,6 +50,7 @@ export function buildDefinitionCatalog(
         symbolicUri: node.uri,
         language: extract.language,
         sourceDefinitionId: extract.id,
+        statement: extract.statement,
         symRef: {
           source: "DB",
           symbolName: node.uri,
