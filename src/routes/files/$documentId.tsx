@@ -22,7 +22,7 @@ import {
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FileDialogs } from "./-components/FileDialogs";
 import { FileDocumentLayout } from "./-components/FileDocumentLayout";
 import { useDefinitionExtractionFlow } from "./-hooks/useDefinitionExtractionFlow";
@@ -68,8 +68,15 @@ function RouteComponent() {
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
 
-  const { document, pages, extracts, sniffyCatalog, docLoading, pagesLoading } =
-    useFileDocumentData(documentId);
+  const {
+    document,
+    pages,
+    extracts,
+    markReferences,
+    sniffyCatalog,
+    docLoading,
+    pagesLoading,
+  } = useFileDocumentData(documentId);
 
   const semanticFlow = useSemanticEditingFlow({
     documentId,
@@ -87,6 +94,7 @@ function RouteComponent() {
     pages,
     selection,
     handleSelection,
+    clearPopupOnly,
     clearAll,
     lockedByExtractId: semanticFlow.lockedByExtractId,
     setLockedByExtractId: semanticFlow.setLockedByExtractId,
@@ -114,6 +122,20 @@ function RouteComponent() {
     extracts,
     sniffyCatalog,
   });
+
+  const markReferencesByPage = useMemo(
+    () =>
+      markReferences.reduce<Record<string, typeof markReferences>>(
+        (acc, reference) => {
+          const current = acc[reference.documentPageId] ?? [];
+          current.push(reference);
+          acc[reference.documentPageId] = current;
+          return acc;
+        },
+        {},
+      ),
+    [markReferences],
+  );
 
   if (docLoading || pagesLoading) {
     return (
@@ -274,6 +296,7 @@ function RouteComponent() {
             documentId,
             document,
             pages,
+            markReferencesByPage,
             llmButtons,
             llmSuggestions: llmFlow.llmSuggestions,
             llmEnabled: llmFlow.llmEnabled,
@@ -305,6 +328,7 @@ function RouteComponent() {
           popup,
           onClosePopup: clearAll,
           onExtractSelection: extractionFlow.handleOpenSelectionExtract,
+          onMarkReferenceSelection: extractionFlow.handleOpenMarkReference,
           onDefiniendumSelection: semanticFlow.openDefiniendumFromSelection,
           onSymbolicRefSelection: semanticFlow.openSymbolicRefFromSelection,
           allowDefiniendumSelection:
@@ -317,6 +341,7 @@ function RouteComponent() {
             (extractionFlow.extractDialogOpen &&
               extractionFlow.extractDialogMode === "symbol-target") ||
             !!extractionFlow.createdSymbolTarget,
+          loading: semanticFlow.symbolicRefSaving,
           onSave: semanticFlow.handleSaveSymbolicRef,
           onClose: semanticFlow.handleCloseSymbolicRefDialog,
           onCreateSymbol: () => {
@@ -330,6 +355,16 @@ function RouteComponent() {
           extractedText: semanticFlow.defExtractText,
           onClose: () => semanticFlow.setDefDialogOpen(false),
           onSubmit: semanticFlow.handleDefiniendumSubmit,
+        }}
+        markReference={{
+          opened: extractionFlow.markReferenceDialogOpen,
+          extractedText: extractionFlow.markReferenceText,
+          title: "Mark Reference",
+          pickExistingSubmitLabel: "Save Mark Reference",
+          allowCreateSymbol: false,
+          loading: extractionFlow.markReferenceSaving,
+          onClose: extractionFlow.handleCloseMarkReference,
+          onSubmit: extractionFlow.handleMarkReferenceSubmit,
         }}
         latex={{
           opened: semanticFlow.latexConfigOpen,

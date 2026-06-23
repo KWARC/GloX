@@ -187,7 +187,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
 
         {file && !loading && (
           <>
-            <Divider label="File metadata" labelPosition="left" />
+            <Divider/>
 
             <Stack gap="sm">
               <TextInput

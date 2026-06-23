@@ -26,6 +26,7 @@ interface SymbolicRefProps {
   onSelect: (symRef: UnifiedSymbolicReference) => void;
   onClose: () => void;
   onCreateSymbol?: () => void;
+  loading?: boolean;
 }
 
 export function SymbolicRef({
@@ -33,6 +34,7 @@ export function SymbolicRef({
   onSelect,
   onClose,
   onCreateSymbol,
+  loading = false,
 }: SymbolicRefProps) {
   const [searchQuery, setSearchQuery] = useState(() => conceptUri);
   const [selectedSymbol, setSelectedSymbol] =
@@ -95,7 +97,12 @@ export function SymbolicRef({
             <Group gap="xs">
               <Text fw={600}>Symbolic Reference</Text>
             </Group>
-            <ActionIcon variant="subtle" color="gray" onClick={onClose}>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              disabled={loading}
+              onClick={onClose}
+            >
               <IconX size={16} />
             </ActionIcon>
           </Group>
@@ -153,7 +160,8 @@ export function SymbolicRef({
 
           <Button
             onClick={handleSymbolSelect}
-            disabled={!selectedSymbol}
+            disabled={!selectedSymbol || loading}
+            loading={loading}
             fullWidth
           >
             Select Symbol

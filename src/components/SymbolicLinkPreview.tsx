@@ -6,11 +6,13 @@ import { FtmlPreview } from "./FtmlPreview";
 type SymbolicLinkPreviewProps = {
   uri: string;
   label?: string;
+  compact?: boolean;
 };
 
 export function SymbolicLinkPreview({
   uri,
   label,
+  compact = false,
 }: SymbolicLinkPreviewProps) {
   const text = (() => {
     if (label?.trim()) return label.trim();
@@ -34,7 +36,30 @@ export function SymbolicLinkPreview({
   };
 
   return (
-    <Box style={{ minWidth: 0, overflow: "hidden" }}>
+    <Box
+      data-compact-symref={compact ? "true" : undefined}
+      style={{
+        minWidth: 0,
+        overflow: "hidden",
+        ...(compact
+          ? {
+              display: "inline-block",
+              verticalAlign: "middle",
+            }
+          : {}),
+      }}
+    >
+      {compact && (
+        <style>{`
+          [data-compact-symref="true"] p,
+          [data-compact-symref="true"] div {
+            margin-top: 0;
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+          }
+        `}</style>
+      )}
       <FtmlPreview
         docId={`symref-preview-${encodeURIComponent(uri)}`}
         ftmlAst={statement}

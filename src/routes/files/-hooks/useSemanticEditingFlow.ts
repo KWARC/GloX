@@ -61,6 +61,7 @@ export function useSemanticEditingFlow({
   const [defDialogOpen, setDefDialogOpen] = useState(false);
   const [defExtractId, setDefExtractId] = useState<string | null>(null);
   const [defExtractText, setDefExtractText] = useState("");
+  const [symbolicRefSaving, setSymbolicRefSaving] = useState(false);
   const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(
     null,
   );
@@ -248,45 +249,50 @@ export function useSemanticEditingFlow({
 
   async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
     if (!defExtractId) return;
-    if (editingNodeId) {
-      const { uri, text } = normalizeSymRef(symRef);
+    setSymbolicRefSaving(true);
+    try {
+      if (editingNodeId) {
+        const { uri, text } = normalizeSymRef(symRef);
 
-      await updateDefinitionAst({
-        data: {
-          definitionId: defExtractId,
-          operation: {
-            kind: "replaceSemantic",
-            target: { type: "symref", uri: editingNodeId },
-            payload: {
-              type: "symref",
-              uri,
-              content: [text],
+        await updateDefinitionAst({
+          data: {
+            definitionId: defExtractId,
+            operation: {
+              kind: "replaceSemantic",
+              target: { type: "symref", uri: editingNodeId },
+              payload: {
+                type: "symref",
+                uri,
+                content: [text],
+              },
             },
           },
-        },
-      });
-    } else {
-      if (!selection) return;
+        });
+      } else {
+        if (!selection) return;
 
-      await symbolicRef({
-        data: {
-          definitionId: defExtractId,
-          selection: {
-            text: selection.text,
-            startOffset: selection.startOffset,
-            endOffset: selection.endOffset,
+        await symbolicRef({
+          data: {
+            definitionId: defExtractId,
+            selection: {
+              text: selection.text,
+              startOffset: selection.startOffset,
+              endOffset: selection.endOffset,
+            },
+            symRef,
           },
-          symRef,
-        },
-      });
-    }
+        });
+      }
 
-    await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
-    });
-    setEditingNodeId(null);
-    setMode(null);
-    clearAll();
+      await queryClient.invalidateQueries({
+        queryKey: ["definitions", documentId],
+      });
+      setEditingNodeId(null);
+      setMode(null);
+      clearAll();
+    } finally {
+      setSymbolicRefSaving(false);
+    }
   }
 
   function handleOpenSymbolicRef(extractId: string) {
@@ -405,6 +411,7 @@ export function useSemanticEditingFlow({
     setDefDialogOpen,
     defExtractId,
     defExtractText,
+    symbolicRefSaving,
     mode,
     conceptUri,
     editingNodeId,

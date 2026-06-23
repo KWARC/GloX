@@ -60,6 +60,7 @@ model User {
   DefinitionsHistory DefinitionVersion[]
   createdDefinitions Definition[]        @relation("DefinitionCreatedBy")
   updatedDefinitions Definition[]        @relation("DefinitionUpdatedBy")
+  createdMarkReferences MarkReference[]  @relation("MarkReferenceCreatedBy")
   confirmedSymbols   Symbol[]
 }
 
@@ -80,6 +81,7 @@ model Document {
   status        DocumentStatus  @default(UPLOADED)
   pages         DocumentPage[]
   definitions   Definition[]
+  markReferences MarkReference[]
   latexTables   LatexTable[]
   llmSuggestion LlmSuggestion[]
 
@@ -98,6 +100,7 @@ model DocumentPage {
   text       String @db.Text
 
   definitions            Definition[]
+  markReferences         MarkReference[]
   llmSuggestedDefinition LlmSuggestedDefinition[]
 
   createdAt DateTime @default(now())
@@ -191,6 +194,31 @@ model Definition {
   @@index([documentPageId])
   @@index([documentId])
   @@index([futureRepo, filePath, fileName, language])
+}
+
+model MarkReference {
+  id String @id @default(uuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  documentPageId String
+  documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
+
+  pageNumber Int
+
+  symbolName    String
+  verbalization String?
+
+  createdById String
+  createdBy   User   @relation("MarkReferenceCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([documentId])
+  @@index([documentPageId])
+  @@map("markReference")
 }
 
 model LatexTable {

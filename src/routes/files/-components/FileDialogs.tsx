@@ -26,6 +26,7 @@ export type SelectionDialogProps = {
   popup: PopupState | null;
   onClosePopup: () => void;
   onExtractSelection: () => void;
+  onMarkReferenceSelection: () => void;
   onDefiniendumSelection: () => void;
   onSymbolicRefSelection: () => void;
   allowDefiniendumSelection?: boolean;
@@ -35,6 +36,7 @@ export type SymbolicRefDialogProps = {
   mode: "SymbolicRef" | null;
   conceptUri: string;
   hidden?: boolean;
+  loading?: boolean;
   onSave: ComponentProps<typeof SymbolicRef>["onSelect"];
   onClose: () => void;
   onCreateSymbol?: ComponentProps<typeof SymbolicRef>["onCreateSymbol"];
@@ -43,6 +45,10 @@ export type SymbolicRefDialogProps = {
 export type DefiniendumDialogProps = {
   opened: boolean;
   extractedText: string;
+  title?: string;
+  pickExistingSubmitLabel?: string;
+  allowCreateSymbol?: boolean;
+  loading?: boolean;
   onClose: () => void;
   onSubmit: ComponentProps<typeof DefiniendumDialog>["onSubmit"];
 };
@@ -121,6 +127,7 @@ export type FileDialogsProps = {
   selection: SelectionDialogProps;
   symbolicRef: SymbolicRefDialogProps;
   definiendum: DefiniendumDialogProps;
+  markReference: DefiniendumDialogProps;
   latex: LatexDialogProps;
   semantic: SemanticDialogProps;
   extraction: ExtractionDialogProps;
@@ -134,6 +141,7 @@ export function FileDialogs({
   selection,
   symbolicRef,
   definiendum,
+  markReference,
   latex,
   semantic,
   extraction,
@@ -150,6 +158,11 @@ export function FileDialogs({
           onExtract={
             selection.popup.source === "left"
               ? selection.onExtractSelection
+              : undefined
+          }
+          onMarkReference={
+            selection.popup.source === "left"
+              ? selection.onMarkReferenceSelection
               : undefined
           }
           onDefiniendum={
@@ -172,6 +185,7 @@ export function FileDialogs({
           onSelect={symbolicRef.onSave}
           onClose={symbolicRef.onClose}
           onCreateSymbol={symbolicRef.onCreateSymbol}
+          loading={symbolicRef.loading}
         />
       )}
 
@@ -180,6 +194,21 @@ export function FileDialogs({
         extractedText={definiendum.extractedText}
         onClose={definiendum.onClose}
         onSubmit={definiendum.onSubmit}
+        title={definiendum.title}
+        pickExistingSubmitLabel={definiendum.pickExistingSubmitLabel}
+        allowCreateSymbol={definiendum.allowCreateSymbol}
+        loading={definiendum.loading}
+      />
+
+      <DefiniendumDialog
+        opened={markReference.opened}
+        extractedText={markReference.extractedText}
+        onClose={markReference.onClose}
+        onSubmit={markReference.onSubmit}
+        title={markReference.title}
+        pickExistingSubmitLabel={markReference.pickExistingSubmitLabel}
+        allowCreateSymbol={markReference.allowCreateSymbol}
+        loading={markReference.loading}
       />
 
       <LatexConfigModel

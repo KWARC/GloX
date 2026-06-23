@@ -6,6 +6,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 interface SelectionPopupProps {
   popup: PopupState;
   onExtract?: () => void;
+  onMarkReference?: () => void;
   onDefiniendum?: () => void;
   onSymbolicRef?: () => void;
   onClose: () => void;
@@ -14,6 +15,7 @@ interface SelectionPopupProps {
 export function SelectionPopup({
   popup,
   onExtract,
+  onMarkReference,
   onDefiniendum,
   onSymbolicRef,
   onClose,
@@ -76,15 +78,31 @@ export function SelectionPopup({
         }}
       >
         {popup.source === "left" && onExtract && (
-          <Text
-            size="sm"
-            fw={600}
-            c="blue.7"
-            style={{ cursor: "pointer", padding: "2px 8px" }}
-            onClick={onExtract}
-          >
-            → Extract
-          </Text>
+          <>
+            <Text
+              size="sm"
+              fw={600}
+              c="blue.7"
+              style={{ cursor: "pointer", padding: "2px 8px" }}
+              onClick={onExtract}
+            >
+              → Extract
+            </Text>
+            {onMarkReference && (
+              <>
+                <Divider orientation="vertical" />
+                <Text
+                  size="sm"
+                  fw={600}
+                  c="blue.7"
+                  style={{ cursor: "pointer", padding: "2px 8px" }}
+                  onClick={onMarkReference}
+                >
+                  Mark Reference
+                </Text>
+              </>
+            )}
+          </>
         )}
 
         {popup.source === "right" && (

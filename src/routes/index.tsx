@@ -1,4 +1,3 @@
-import { FinalizedDocumentsSection } from "@/components/FinalizedDocumentsSection";
 import UploadDialog from "@/components/UploadDialog";
 import { currentUser } from "@/server/auth/currentUser";
 import { Button, Stack, Text, Title } from "@mantine/core";
@@ -35,8 +34,6 @@ function App() {
             Upload PDF
           </Button>
         </Stack>
-
-        {isLoggedIn && <FinalizedDocumentsSection />}
       </Stack>
 
       <UploadDialog opened={opened} onClose={() => setOpened(false)} />

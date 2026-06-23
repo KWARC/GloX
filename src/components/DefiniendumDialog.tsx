@@ -22,6 +22,10 @@ type DefiniendumMode = "CREATE" | "PICK_EXISTING";
 interface DefiniendumDialogProps {
   opened: boolean;
   extractedText: string | null;
+  title?: string;
+  pickExistingSubmitLabel?: string;
+  allowCreateSymbol?: boolean;
+  loading?: boolean;
   onSubmit: (
     params:
       | {
@@ -40,6 +44,10 @@ const DEFINIENDUM_DIALOG_Z_INDEX = 1200;
 export function DefiniendumDialog({
   opened,
   extractedText,
+  title = "Definiendum",
+  pickExistingSubmitLabel = "Link & Insert Definiendum",
+  allowCreateSymbol = true,
+  loading = false,
   onSubmit,
   onClose,
 }: DefiniendumDialogProps) {
@@ -118,9 +126,10 @@ export function DefiniendumDialog({
               minWidth: 0,
             }}
           >
-            <Text fw={600}>Definiendum</Text>
+            <Text fw={600}>{title}</Text>
             <ActionIcon
               variant="subtle"
+              disabled={loading}
               onClick={() => {
                 form.reset();
                 onClose();
@@ -204,6 +213,8 @@ export function DefiniendumDialog({
 
                 <Button
                   type="submit"
+                  loading={loading}
+                  disabled={loading}
                   leftSection={<IconCheck size={16} />}
                   fullWidth
                 >
@@ -213,6 +224,7 @@ export function DefiniendumDialog({
                 <Button
                   variant="subtle"
                   size="xs"
+                  disabled={loading}
                   onClick={() => setMode("PICK_EXISTING")}
                 >
                   Back to existing symbol search
@@ -229,6 +241,9 @@ export function DefiniendumDialog({
                   onQueryChange={setSearchQuery}
                   selectedSymbol={selectedSymbol}
                   onSelectSymbol={setSelectedSymbol}
+                  onCreateSymbol={
+                    allowCreateSymbol ? () => setMode("CREATE") : undefined
+                  }
                 />
               </Box>
 
@@ -263,25 +278,28 @@ export function DefiniendumDialog({
 
               <Button
                 onClick={handlePickExisting}
-                disabled={!selectedSymbol}
+                disabled={!selectedSymbol || loading}
+                loading={loading}
                 fullWidth
                 leftSection={<IconCheck size={16} />}
               >
-                Link & Insert Definiendum
+                {pickExistingSubmitLabel}
               </Button>
 
-              <Stack gap={4} align="center">
-                <Text size="xs" c="dimmed">
-                  Cannot find the symbol?
-                </Text>
-                <Button
-                  variant="subtle"
-                  size="xs"
-                  onClick={() => setMode("CREATE")}
-                >
-                  Create New Symbol
-                </Button>
-              </Stack>
+              {allowCreateSymbol && (
+                <Stack gap={4} align="center">
+                  <Text size="xs" c="dimmed">
+                    Cannot find the symbol?
+                  </Text>
+                  <Button
+                    variant="subtle"
+                    size="xs"
+                    onClick={() => setMode("CREATE")}
+                  >
+                    Create New Symbol
+                  </Button>
+                </Stack>
+              )}
             </Stack>
           )}
         </Stack>
