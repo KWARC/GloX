@@ -112,6 +112,29 @@ export function ReferenceSuggestionDialog({
     );
   }, [catalog, debouncedSearchQuery, definitionId, sniffyCandidateKeys]);
 
+  useEffect(() => {
+    if (!opened || !current) return;
+
+    const activeCandidates = debouncedSearchQuery.trim()
+      ? searchResults
+      : current.candidates;
+
+    if (activeCandidates.length === 0) return;
+
+    const hasSelectedActiveCandidate =
+      selectedCandidate &&
+      activeCandidates.some(
+        (candidate) =>
+          getSuggestedReferenceCandidateKey(candidate) ===
+          getSuggestedReferenceCandidateKey(selectedCandidate),
+      );
+
+    if (hasSelectedActiveCandidate) return;
+
+    setSelectedCandidate(activeCandidates[0]);
+    setError(null);
+  }, [current, debouncedSearchQuery, opened, searchResults, selectedCandidate]);
+
   function resetPerSuggestionState() {
     setSelectedCandidate(null);
     setError(null);
@@ -199,7 +222,7 @@ export function ReferenceSuggestionDialog({
             {candidate.source}
           </Badge>
         </Group>
-        {selected && candidate.source === "MATHHUB" && candidate.uri && (
+        {candidate.source === "MATHHUB" && candidate.uri && (
           <Box h={160} mt="xs">
             <iframe
               src={normalizeMathHubPreviewUrl(candidate.uri)}
@@ -232,13 +255,13 @@ export function ReferenceSuggestionDialog({
         <Stack gap="md" align="center" py="xl">
           <Loader />
           <Text size="sm" c="dimmed" ta="center">
-            Sniffy is checking this definition...
+            sn-ify is checking this definition...
           </Text>
         </Stack>
       ) : suggestions.length === 0 ? (
         <Stack gap="md">
           <Text size="sm">
-            Sniffy did not find any symbolic references for this definition.
+            sn-ify did not find any symbolic references for this definition.
           </Text>
           <Group justify="flex-end">
             <Button onClick={onClose}>Close</Button>
@@ -320,7 +343,7 @@ export function ReferenceSuggestionDialog({
                   <Text size="sm">{current.text}</Text>
                 </Stack>
                 <Text size="xs" c="dimmed" fw={600}>
-                  {current.candidates.length} candidates
+                  {current.candidates.length} results
                 </Text>
               </Group>
 
@@ -334,7 +357,7 @@ export function ReferenceSuggestionDialog({
               <Stack gap="sm">
                 <Stack gap={6}>
                   <Text size="xs" c="dimmed" fw={600}>
-                    Sniffy candidates
+                    sn-ify results
                   </Text>
 
                   {current.candidates.map(renderCandidate)}
