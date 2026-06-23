@@ -30,6 +30,8 @@ type PdfParserError = Error | { parserError: Error };
 
 const Y_TOLERANCE = 0.3;
 const X_JOIN_THRESHOLD = 0.15;
+const PAGE_BREAK_REGEX =
+  /\r?\n----------------Page \((\d+)\) Break----------------\r?\n/g;
 
 function safeDecode(value: string): string {
   try {
@@ -162,6 +164,152 @@ function buildPageText(texts: PdfText[]): string {
     .join("\n");
 }
 
+function normalizeLogoFragment(fragment: string): string {
+  const trimmed = fragment.trim();
+  const match = trimmed.match(/^([A-Z](?:\s+[A-Z])*)(.*)$/);
+
+  if (!match) {
+    return trimmed;
+  }
+
+  const letters = match[1].replace(/\s+/g, "");
+  const suffix = match[2] ?? "";
+
+  return `${letters}${suffix}`;
+}
+
+function mergeLogoFragments(previousLine: string, fragment: string): string {
+  const normalizedFragment = normalizeLogoFragment(fragment);
+  const compactSuffixMatch = previousLine.match(/^(.*?)([A-Z](?:\s+[A-Z])+)\s*$/);
+
+  if (compactSuffixMatch) {
+    const prefix = compactSuffixMatch[1];
+    const suffix = compactSuffixMatch[2].replace(/\s+/g, "");
+    return `${prefix}${suffix}${normalizedFragment}`;
+  }
+
+  const plainSuffixMatch = previousLine.match(/^(.*\s)?([A-Z]{1,4})$/);
+  if (plainSuffixMatch) {
+    return `${previousLine}${normalizedFragment}`;
+  }
+
+  return `${previousLine} ${normalizedFragment}`.trim();
+}
+
+function isLogoFragmentLine(line: string): boolean {
+  const trimmed = line.trim();
+
+  if (!trimmed || /[a-z]/.test(trimmed)) {
+    return false;
+  }
+
+  if (!/[A-Z]/.test(trimmed)) {
+    return false;
+  }
+
+  return trimmed.length <= 8;
+}
+
+function splitLeadingLogoFragment(line: string): {
+  fragment: string;
+  rest: string;
+} | null {
+  const trimmed = line.trim();
+  const match = trimmed.match(
+    /^([A-Z](?:\s+[A-Z])*(?:\d+(?:\.\d+)?)?)(\s+.*)?$/,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const fragment = match[1]?.trim() ?? "";
+  const rest = match[2]?.trimStart() ?? "";
+
+  if (!fragment || fragment.length > 8 || !rest || !/[a-z]/.test(rest)) {
+    return null;
+  }
+
+  return { fragment, rest };
+}
+
+function normalizeRawPageText(text: string): string {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0);
+
+  const normalizedLines: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const leadingFragment = splitLeadingLogoFragment(line);
+
+    if (leadingFragment && normalizedLines.length > 0) {
+      normalizedLines[normalizedLines.length - 1] = mergeLogoFragments(
+        normalizedLines[normalizedLines.length - 1]!,
+        leadingFragment.fragment,
+      );
+      normalizedLines.push(leadingFragment.rest);
+      continue;
+    }
+
+    if (!isLogoFragmentLine(line)) {
+      normalizedLines.push(line);
+      continue;
+    }
+
+    let combinedFragment = normalizeLogoFragment(line);
+
+    while (i + 1 < lines.length && isLogoFragmentLine(lines[i + 1]!.trim())) {
+      i += 1;
+      combinedFragment += normalizeLogoFragment(lines[i]!.trim());
+    }
+
+    if (normalizedLines.length === 0) {
+      normalizedLines.push(combinedFragment);
+      continue;
+    }
+
+    normalizedLines[normalizedLines.length - 1] = mergeLogoFragments(
+      normalizedLines[normalizedLines.length - 1]!,
+      combinedFragment,
+    );
+  }
+
+  return normalizedLines
+    .join("\n")
+    .replace(/([A-Za-z])-\n([A-Za-z])/g, "$1$2")
+    .replace(/\bL\s*A\s*T\s*E\s*X\b/g, "LATEX")
+    .replace(/\bS\s*T\s*E\s*X\s*(\d+(?:\.\d+)?)\b/g, "STEX$1")
+    .replace(/\bS\s*T\s*E\s*X\b/g, "STEX")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractRawPages(rawText: string, pageCount: number): string[] {
+  const pages: string[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = PAGE_BREAK_REGEX.exec(rawText)) !== null) {
+    pages.push(rawText.slice(lastIndex, match.index));
+    lastIndex = PAGE_BREAK_REGEX.lastIndex;
+  }
+
+  const trailing = rawText.slice(lastIndex);
+  if (trailing.trim()) {
+    pages.push(trailing);
+  }
+
+  if (pages.length === pageCount) {
+    return pages.map(normalizeRawPageText);
+  }
+
+  return [];
+}
+
 export async function extractPdfPages(
   buffer: Buffer,
 ): Promise<ExtractedPage[]> {
@@ -213,9 +361,14 @@ export async function extractPdfPages(
         return;
       }
 
+      const rawPages = extractRawPages(
+        parser.getRawTextContent(),
+        pdfData.Pages.length,
+      );
+
       const pages: ExtractedPage[] = pdfData.Pages.map((p, i) => ({
         pageNumber: i + 1,
-        text: buildPageText(p.Texts ?? []),
+        text: rawPages[i] || buildPageText(p.Texts ?? []),
       }));
 
       resolve(pages);
