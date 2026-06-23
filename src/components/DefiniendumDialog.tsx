@@ -14,6 +14,7 @@ import { IconCheck, IconX } from "@tabler/icons-react";
 import { useForm } from "@tanstack/react-form";
 import { useEffect, useState } from "react";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
+import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 import { SymbolResult } from "./SymbolResult";
 
 type DefiniendumMode = "CREATE" | "PICK_EXISTING";
@@ -33,6 +34,8 @@ interface DefiniendumDialogProps {
   ) => void;
   onClose: () => void;
 }
+
+const DEFINIENDUM_DIALOG_Z_INDEX = 1200;
 
 export function DefiniendumDialog({
   opened,
@@ -102,7 +105,7 @@ export function DefiniendumDialog({
           width: 520,
           maxHeight: "calc(100vh - 120px)",
           overflowY: "auto",
-          zIndex: 5000,
+          zIndex: DEFINIENDUM_DIALOG_Z_INDEX,
         }}
       >
         <Stack gap="sm">
@@ -246,7 +249,13 @@ export function DefiniendumDialog({
                         }}
                       />
                     ) : (
-                      <RenderSymbolicUri uri={selectedSymbol.uri} />
+                      <Stack gap={2}>
+                        <RenderSymbolicUri
+                          uri={selectedSymbol.uri}
+                          showRightLabel={false}
+                        />
+                        <SymbolicLinkPreview uri={selectedSymbol.uri} />
+                      </Stack>
                     )}
                   </Box>
                 </Paper>

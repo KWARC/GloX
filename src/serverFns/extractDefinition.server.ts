@@ -6,6 +6,7 @@ import {
   FtmlStatement,
   assertFtmlStatement,
 } from "@/types/ftml.types";
+import { ParagraphKind } from "@/types/paragraphKind";
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
 
@@ -13,6 +14,7 @@ export type CreateDefinitionInput = {
   documentId: string;
   documentPageId?: string | null;
   pageNumber?: number | null;
+  kind?: ParagraphKind;
   originalText: string;
   futureRepo: string;
   filePath: string;
@@ -73,6 +75,7 @@ export const createDefinition = createServerFn({ method: "POST" })
           documentId: data.documentId,
           documentPageId,
           pageNumber: data.pageNumber,
+          kind: data.kind ?? "Definition",
           originalText: data.originalText.trim(),
           statement: JSON.parse(JSON.stringify(statement)),
           futureRepo: data.futureRepo,
@@ -388,6 +391,7 @@ export const listDefinition = createServerFn({ method: "GET" })
         id: def.id,
         documentId: def.documentId,
         pageNumber: def.pageNumber,
+        kind: def.kind,
         statement,
         futureRepo: def.futureRepo,
         filePath: def.filePath,

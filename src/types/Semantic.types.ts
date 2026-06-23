@@ -4,6 +4,7 @@ import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
 import { UpdateDefinitionAstResult } from "@/serverFns/updateDefinition.server";
 import { FtmlStatement } from "@/types/ftml.types";
+import { ParagraphKind } from "@/types/paragraphKind";
 
 type SemanticIndex = ReturnType<typeof extractSemanticIndex>;
 
@@ -24,6 +25,7 @@ export type SelectedNode =
 
 export type SemanticDefinition = {
   id: string;
+  kind: ParagraphKind;
   statement: FtmlStatement;
   symbolicRefs?: {
     symbolicReference: { id: string; conceptUri: string };

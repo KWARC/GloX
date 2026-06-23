@@ -1,9 +1,9 @@
-import { parseUri } from "@/server/parseUri";
 import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
 import {
   ActionIcon,
   Badge,
   Button,
+  Box,
   Group,
   Paper,
   ScrollArea,
@@ -11,12 +11,14 @@ import {
   Text,
   TextInput,
   Tooltip,
+  UnstyledButton,
 } from "@mantine/core";
-import { IconArchive, IconPlus, IconSchool } from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
+import { RenderSymbolicUri } from "./RenderUri";
+import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 
 const SEARCH_RESULTS_HEIGHT = 240;
-const MATHHUB_SECTION_HEIGHT = Math.floor(SEARCH_RESULTS_HEIGHT * 0.7);
-const DB_SECTION_HEIGHT = Math.floor(SEARCH_RESULTS_HEIGHT * 0.3);
+const SYMBOL_RESULT_TOOLTIP_Z_INDEX = 7000;
 
 interface SymbolResultProps {
   initialQuery: string;
@@ -40,12 +42,6 @@ export function SymbolResult({
     enabled,
   );
 
-  const dbResults = results.filter((r) => r.source === "DB");
-  const mathHubResults = results.filter((r) => r.source === "MATHHUB");
-
-  const showNoResults =
-    initialQuery.trim().length >= 2 && isReady && !hasResults;
-
   return (
     <Stack gap="sm">
       <Stack gap={4}>
@@ -58,7 +54,7 @@ export function SymbolResult({
               label="Create new symbol"
               withArrow
               position="top"
-              zIndex={5000}
+              zIndex={SYMBOL_RESULT_TOOLTIP_Z_INDEX}
             >
               <ActionIcon
                 variant="subtle"
@@ -81,14 +77,6 @@ export function SymbolResult({
         />
       </Stack>
 
-      {showNoResults && (
-        <Paper withBorder p="sm" radius="md" bg="gray.0">
-          <Text size="xs" c="dimmed">
-            No matching symbols found.
-          </Text>
-        </Paper>
-      )}
-
       {isReady && hasResults && (
         <Paper withBorder p="sm" radius="md">
           <Group justify="space-between" mb="xs">
@@ -97,29 +85,15 @@ export function SymbolResult({
             </Text>
           </Group>
 
-          <Stack gap={4} mt="sm">
-            <Group justify="space-between">
-              <Text size="xs" fw={500} c="dimmed">
-                Local / Database
-              </Text>
-
-              {dbResults.length > 0 && (
-                <Text size="xs" c="dimmed">
-                  {dbResults.length} local
-                </Text>
-              )}
-            </Group>
-
-            <ScrollArea
-              h={DB_SECTION_HEIGHT}
-              type="always"
-              scrollbarSize={6}
-              onWheelCapture={(e) => e.stopPropagation()}
-            >
-              <Stack gap={4}>
-                {dbResults.map((result) => {
-                  if (result.source !== "DB") return null;
-
+          <ScrollArea
+            h={SEARCH_RESULTS_HEIGHT}
+            type="always"
+            scrollbarSize={6}
+            onWheelCapture={(e) => e.stopPropagation()}
+          >
+            <Stack gap={4} mt="sm">
+              {results.map((result) => {
+                if (result.source === "DB") {
                   return (
                     <Button
                       key={`db:${result.id}`}
@@ -149,76 +123,50 @@ export function SymbolResult({
                       </Group>
                     </Button>
                   );
-                })}
+                }
 
-                {dbResults.length === 0 && (
-                  <Text size="xs" c="dimmed" ta="center">
-                    No local symbols
-                  </Text>
-                )}
-              </Stack>
-            </ScrollArea>
-          </Stack>
+                const selected =
+                  selectedSymbol?.source === "MATHHUB" &&
+                  selectedSymbol.uri === result.uri;
 
-          <Stack gap={4}>
-            <Text size="xs" fw={500} c="dimmed">
-              MathHub
-            </Text>
-
-            <ScrollArea
-              h={MATHHUB_SECTION_HEIGHT}
-              type="always"
-              scrollbarSize={6}
-              onWheelCapture={(e) => e.stopPropagation()}
-            >
-              <Stack gap={4}>
-                {mathHubResults.map((result) => {
-                  if (result.source !== "MATHHUB") return null;
-
-                  const parsed = parseUri(result.uri);
-
-                  return (
-                    <Button
-                      key={`mh:${result.uri}`}
-                      variant={
-                        selectedSymbol?.source === "MATHHUB" &&
-                        selectedSymbol.uri === result.uri
-                          ? "filled"
-                          : "subtle"
-                      }
-                      size="xs"
-                      justify="space-between"
-                      onClick={() => onSelectSymbol(result)}
+                return (
+                  <UnstyledButton
+                    key={`mh:${result.uri}`}
+                    onClick={() => onSelectSymbol(result)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                    }}
+                  >
+                    <Paper
+                      withBorder
+                      px="xs"
+                      py={4}
+                      radius="sm"
+                      bg={selected ? "blue.0" : undefined}
+                      style={{
+                        borderColor: selected
+                          ? "var(--mantine-color-blue-6)"
+                          : undefined,
+                      }}
                     >
-                      <Group justify="space-between" wrap="nowrap" w="100%">
-                        <Group gap={4} wrap="nowrap">
-                          <IconArchive size={14} stroke={1.6} />
-                          <Text size="xs" c="dimmed">
-                            {parsed.archive}
-                          </Text>
-                        </Group>
-
-                        {parsed.symbol && (
-                          <Group gap={4} wrap="nowrap">
-                            <IconSchool size={14} stroke={1.8} />
-                            <Text size="xs" fw={500}>
-                              {parsed.symbol}
-                            </Text>
-                          </Group>
-                        )}
+                      <Group justify="space-between" wrap="nowrap" gap="xs">
+                        <Box style={{ flex: 1, minWidth: 0 }}>
+                          <RenderSymbolicUri
+                            uri={result.uri}
+                            showRightLabel={false}
+                          />
+                        </Box>
+                        <Box style={{ flexShrink: 0, minWidth: 0 }}>
+                          <SymbolicLinkPreview uri={result.uri} />
+                        </Box>
                       </Group>
-                    </Button>
-                  );
-                })}
-
-                {mathHubResults.length === 0 && (
-                  <Text size="xs" c="dimmed" ta="center">
-                    No MathHub results
-                  </Text>
-                )}
-              </Stack>
-            </ScrollArea>
-          </Stack>
+                    </Paper>
+                  </UnstyledButton>
+                );
+              })}
+            </Stack>
+          </ScrollArea>
         </Paper>
       )}
     </Stack>

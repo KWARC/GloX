@@ -101,8 +101,8 @@ export function ExtractedTextPanel({
                     {showPageNumber ? (
                       <Text size="xs">
                         {item.pageNumber === null
-                          ? "New"
-                          : `Page ${item.pageNumber}`}
+                          ? `New · ${item.kind}`
+                          : `Page ${item.pageNumber} · ${item.kind}`}
                       </Text>
                     ) : (
                       <div />
@@ -210,8 +210,8 @@ export function ExtractedTextPanel({
                       <FolderSymlink size={14} />
                       {!showDefinitionMetaIconOnly && (
                         <Text size="10px" c="dimmed" ff="monospace">
-                       [{item.futureRepo} ] [{item.filePath}]  [{item.fileName}]
-                          [{item.language}]
+                          [{item.futureRepo}] [{item.filePath}] [{item.fileName}
+                          ] [{item.language}]
                         </Text>
                       )}
                     </Group>

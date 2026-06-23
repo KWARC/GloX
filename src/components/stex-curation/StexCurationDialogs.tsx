@@ -38,6 +38,7 @@ export type StexCurationDialogsProps = {
     onClose: () => void;
     onDefiniendum: () => void;
     onSymbolicRef: () => void;
+    allowDefiniendum?: boolean;
   };
   semantic: {
     opened: boolean;
@@ -64,8 +65,10 @@ export type StexCurationDialogsProps = {
     opened: boolean;
     initialText: string;
     definitionName: string;
+    kind: ComponentProps<typeof ExtractTextDialog>["kind"];
     symbolName: string;
     setDefinitionName: (value: string) => void;
+    setKind: ComponentProps<typeof ExtractTextDialog>["setKind"];
     setSymbolName: Dispatch<SetStateAction<string>>;
     filePath: string;
     onClose: () => void;
@@ -116,7 +119,9 @@ export function StexCurationDialogs({
         <SelectionPopup
           popup={selection.popup}
           onClose={selection.onClose}
-          onDefiniendum={selection.onDefiniendum}
+          onDefiniendum={
+            selection.allowDefiniendum ? selection.onDefiniendum : undefined
+          }
           onSymbolicRef={selection.onSymbolicRef}
         />
       )}
@@ -140,9 +145,11 @@ export function StexCurationDialogs({
         opened={extraction.opened}
         initialText={extraction.initialText}
         definitionName={extraction.definitionName}
+        kind={extraction.kind}
         mode="symbol-target"
         symbolName={extraction.symbolName}
         setDefinitionName={extraction.setDefinitionName}
+        setKind={extraction.setKind}
         setSymbolName={extraction.setSymbolName}
         filePath={extraction.filePath}
         onClose={extraction.onClose}

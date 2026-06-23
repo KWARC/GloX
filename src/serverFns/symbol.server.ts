@@ -16,6 +16,7 @@ import {
   RootNode,
   unwrapRoot,
 } from "@/types/ftml.types";
+import { ParagraphKind } from "@/types/paragraphKind";
 import { createServerFn } from "@tanstack/react-start";
 
 type AuthorizedRole = "ADMIN" | "CURATOR";
@@ -71,6 +72,7 @@ export type SymbolAssociationSummary = {
   associatedDefinitions: Array<{
     id: string;
     documentId: string;
+    kind: ParagraphKind;
     statement: FtmlStatement;
     futureRepo: string;
     filePath: string;
@@ -161,6 +163,7 @@ async function buildSymbolAssociations() {
                   select: {
                     id: true,
                     documentId: true,
+                    kind: true,
                     statement: true,
                     futureRepo: true,
                     filePath: true,
@@ -187,6 +190,7 @@ async function buildSymbolAssociations() {
       select: {
         id: true,
         documentId: true,
+        kind: true,
         statement: true,
         pageNumber: true,
         futureRepo: true,
@@ -206,6 +210,7 @@ async function buildSymbolAssociations() {
         addAssociatedDefinition(definitionMap, {
           id: definition.id,
           documentId: definition.documentId,
+          kind: definition.kind,
           statement: definition.statement as FtmlStatement,
           futureRepo: definition.futureRepo,
           filePath: definition.filePath,
@@ -222,6 +227,7 @@ async function buildSymbolAssociations() {
       addAssociatedDefinition(definitionMap, {
         id: definition.id,
         documentId: definition.documentId,
+        kind: definition.kind,
         statement: definition.statement as FtmlStatement,
         futureRepo: definition.futureRepo,
         filePath: definition.filePath,
@@ -497,6 +503,7 @@ export const getDefinitionBySymbol = createServerFn({ method: "POST" })
     const defs = await prisma.definition.findMany({
       select: {
         id: true,
+        kind: true,
         statement: true,
       },
     });

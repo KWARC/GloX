@@ -31,7 +31,9 @@ function definition(text: string): ExtractedItem {
 
   return {
     id: "definition",
+    documentId: "document",
     pageNumber: 1,
+    kind: "Definition",
     statement,
     futureRepo: "repo",
     filePath: "module",

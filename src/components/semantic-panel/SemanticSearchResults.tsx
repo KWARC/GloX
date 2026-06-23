@@ -1,3 +1,4 @@
+import { normalizeSymRef } from "@/server/parseUri";
 import {
   DefiniendumNode,
   OnReplaceNode,
@@ -9,6 +10,7 @@ import { Box, Button, Group, Paper, Stack, Text } from "@mantine/core";
 import { DbResultItem } from "../DbResultItem";
 import { RenderDbSymbol, RenderSymbolicUri } from "../RenderUri";
 import { ResultsSection } from "../ResultsSection";
+import { SymbolicLinkPreview } from "../SymbolicLinkPreview";
 import {
   PendingMathHubToLocal,
   PendingPropagation,
@@ -137,6 +139,14 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                               primaryDefinitionId: definition.id,
                             } satisfies PendingMathHubToLocal);
                           } else {
+                            const { uri, text } = normalizeSymRef({
+                              source: "DB",
+                              symbolName: r.symbolName,
+                              futureRepo: r.futureRepo,
+                              filePath: r.filePath,
+                              fileName: r.fileName,
+                              language: r.language,
+                            });
                             onReplaceNode(
                               definition.id,
                               {
@@ -145,7 +155,8 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                               },
                               {
                                 type: "symref",
-                                uri: newUri,
+                                uri,
+                                content: [text],
                               },
                             );
                           }
@@ -225,10 +236,24 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                   <Group justify="space-between" wrap="nowrap">
                     {props.mode === "definiendum" ? (
                       <Box style={{ flex: 1, minWidth: 0 }}>
-                        <RenderSymbolicUri uri={r.uri} />
+                        <Stack gap={2}>
+                          <RenderSymbolicUri
+                            uri={r.uri}
+                            showRightLabel={false}
+                          />
+                          <SymbolicLinkPreview uri={r.uri} />
+                        </Stack>
                       </Box>
                     ) : (
-                      <RenderSymbolicUri uri={r.uri} />
+                      <Box style={{ flex: 1, minWidth: 0 }}>
+                        <Stack gap={2}>
+                          <RenderSymbolicUri
+                            uri={r.uri}
+                            showRightLabel={false}
+                          />
+                          <SymbolicLinkPreview uri={r.uri} />
+                        </Stack>
+                      </Box>
                     )}
 
                     <Button
@@ -251,7 +276,10 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                           return;
                         }
 
-                        const newUri = r.uri;
+                        const { uri, text } = normalizeSymRef({
+                          source: "MATHHUB",
+                          uri: r.uri,
+                        });
 
                         await handleReplaceNode(
                           definition.id,
@@ -259,12 +287,12 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                             type: "symref",
                             uri: props.selected.uri,
                           },
-                          { type: "symref", uri: newUri },
+                          { type: "symref", uri, content: [text] },
                         );
 
                         setSelectedNode({
                           type: "symref",
-                          uri: newUri,
+                          uri,
                         });
                       }}
                     >

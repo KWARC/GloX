@@ -1,8 +1,7 @@
-import { normalizeMathHubPreviewUrl } from "@/lib/mathhub";
 import { SemanticDefinition } from "@/types/Semantic.types";
-import { Box, Button, Group, Paper, Popover } from "@mantine/core";
-import { useState } from "react";
+import { Box, Button, Group, Paper } from "@mantine/core";
 import { RenderSymbolicUri } from "./RenderUri";
+import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 
 export type PendingPropagation = {
   localSymbolUri: string;
@@ -23,53 +22,30 @@ export function MathHubSearchResult({
   selectedDefiniendum,
   setPendingPropagation,
 }: MathHubSearchResultProps) {
-  const [opened, setOpened] = useState(false);
-
   return (
-    <Popover opened={opened} position="right" withArrow width={350}>
-      <Popover.Target>
-        <Paper
-          p="xs"
-          withBorder
-          style={{ cursor: "pointer" }}
-          onMouseEnter={() => setOpened(true)}
-          onMouseLeave={() => setOpened(false)}
-        >
-          <Group justify="space-between">
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              <RenderSymbolicUri uri={safeUri} />
-            </Box>
-            <Button
-              size="xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!selectedDefiniendum) return;
-                setPendingPropagation({
-                  localSymbolUri: selectedDefiniendum.uri,
-                  mathHubUri: safeUri,
-                  primaryDefinitionId: definition.id,
-                });
-              }}
-            >
-              Use this
-            </Button>
-          </Group>
-        </Paper>
-      </Popover.Target>
-
-      <Popover.Dropdown
-        onMouseEnter={() => setOpened(true)}
-        onMouseLeave={() => setOpened(false)}
-      >
-        <Box h={150}>
-          <iframe
-            src={normalizeMathHubPreviewUrl(safeUri)}
-            sandbox="allow-scripts allow-same-origin"
-            title="MathHub content preview"
-            style={{ width: "100%", height: "100%", border: "none" }}
-          />
+    <Paper p="xs" withBorder>
+      <Group justify="space-between">
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Box>
+            <RenderSymbolicUri uri={safeUri} showRightLabel={false} />
+            <SymbolicLinkPreview uri={safeUri} />
+          </Box>
         </Box>
-      </Popover.Dropdown>
-    </Popover>
+        <Button
+          size="xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!selectedDefiniendum) return;
+            setPendingPropagation({
+              localSymbolUri: selectedDefiniendum.uri,
+              mathHubUri: safeUri,
+              primaryDefinitionId: definition.id,
+            });
+          }}
+        >
+          Use this
+        </Button>
+      </Group>
+    </Paper>
   );
 }

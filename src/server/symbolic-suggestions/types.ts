@@ -1,4 +1,5 @@
 import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
+import type { FtmlStatement } from "@/types/ftml.types";
 
 export type CatalogEntry = {
   id: string;
@@ -8,6 +9,7 @@ export type CatalogEntry = {
   symbolicUri: string;
   language?: string;
   sourceDefinitionId?: string;
+  statement?: FtmlStatement;
   symRef: UnifiedSymbolicReference;
 };
 

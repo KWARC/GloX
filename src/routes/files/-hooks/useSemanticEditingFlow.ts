@@ -13,6 +13,7 @@ import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
 import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
+import { supportsDefinienda } from "@/types/paragraphKind";
 import { NavigateOptions, RegisteredRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -372,7 +373,7 @@ export function useSemanticEditingFlow({
   function openDefiniendumFromSelection() {
     if (!selection) return;
     const extract = extracts.find((e) => e.id === selection.extractId);
-    if (!extract) return;
+    if (!extract || !supportsDefinienda(extract.kind)) return;
     setDefExtractId(extract.id);
     setDefExtractText(selection.text);
     setDefDialogOpen(true);
@@ -384,6 +385,13 @@ export function useSemanticEditingFlow({
     if (!extract) return;
     handleOpenSymbolicRef(extract.id);
   }
+
+  const canOpenDefiniendumFromSelection =
+    !!selection?.extractId &&
+    (() => {
+      const extract = extracts.find((e) => e.id === selection.extractId);
+      return !!extract && supportsDefinienda(extract.kind);
+    })();
 
   return {
     futureRepo,
@@ -426,5 +434,6 @@ export function useSemanticEditingFlow({
     handleCloseSymbolicRefDialog,
     openDefiniendumFromSelection,
     openSymbolicRefFromSelection,
+    canOpenDefiniendumFromSelection,
   };
 }

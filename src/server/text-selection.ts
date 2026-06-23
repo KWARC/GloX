@@ -1,6 +1,7 @@
 import { queryClient } from "@/queryClient";
 import { createDefinition, updateDefinition } from "@/serverFns/extractDefinition.server";
 import { FtmlStatement } from "@/types/ftml.types";
+import { ParagraphKind } from "@/types/paragraphKind";
 import { useState } from "react";
 
 export interface PopupState {
@@ -26,6 +27,7 @@ export type ExtractedItem = {
   id: string;
   documentId: string;
   pageNumber: number | null;
+  kind: ParagraphKind;
   statement: FtmlStatement;
   futureRepo: string;
   filePath: string;
@@ -121,6 +123,7 @@ export function useExtractionActions(documentId: string) {
   async function extractText(params: {
     documentPageId?: string | null;
     pageNumber?: number | null;
+    kind: ParagraphKind;
     text: string;
     futureRepo: string;
     filePath: string;
@@ -132,6 +135,7 @@ export function useExtractionActions(documentId: string) {
         documentId,
         documentPageId: params.documentPageId,
         pageNumber: params.pageNumber,
+        kind: params.kind,
         originalText: params.text,
         futureRepo: params.futureRepo,
         filePath: params.filePath,

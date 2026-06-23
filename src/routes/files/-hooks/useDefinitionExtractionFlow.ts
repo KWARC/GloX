@@ -11,6 +11,7 @@ import {
   createDefinitionWithDeclaredSymbol,
   declareCreatedSymbolDefiniendum,
 } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
+import { ParagraphKind } from "@/types/paragraphKind";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
 import { FlattenedLlmSuggestion } from "./useLlmDefinitionSuggestions";
@@ -57,6 +58,7 @@ export function useDefinitionExtractionFlow({
   const [extractDialogMode, setExtractDialogMode] =
     useState<ExtractDialogMode>("definition");
   const [symbolName, setSymbolName] = useState("");
+  const [extractKind, setExtractKind] = useState<ParagraphKind>("Definition");
   const [createdSymbolTarget, setCreatedSymbolTarget] =
     useState<CreatedSymbolTarget | null>(null);
   const [isManualDefinitionCreate, setIsManualDefinitionCreate] =
@@ -81,6 +83,7 @@ export function useDefinitionExtractionFlow({
     });
     setExtractDialogMode("definition");
     setSymbolName("");
+    setExtractKind("Definition");
     setIsManualDefinitionCreate(false);
   }
 
@@ -90,6 +93,7 @@ export function useDefinitionExtractionFlow({
     setDefinitionName("");
     setExtractDialogMode("definition");
     setSymbolName("");
+    setExtractKind("Definition");
     setIsManualDefinitionCreate(true);
     setExtractDialogOpen(true);
   }
@@ -102,6 +106,7 @@ export function useDefinitionExtractionFlow({
     setSymbolName(conceptUri);
     setCreatedSymbolTarget(null);
     setExtractDialogMode("symbol-target");
+    setExtractKind("Definition");
     setIsManualDefinitionCreate(true);
     setExtractDialogOpen(true);
   }
@@ -110,6 +115,7 @@ export function useDefinitionExtractionFlow({
     if (!selection) return;
     setExtractDialogMode("definition");
     setSymbolName("");
+    setExtractKind("Definition");
     setIsManualDefinitionCreate(false);
     setPendingExtractText(selection.text);
     setExtractDialogOpen(true);
@@ -126,12 +132,19 @@ export function useDefinitionExtractionFlow({
     setActivePage({ id: page.id, pageNumber: page.pageNumber });
     setExtractDialogMode("definition");
     setSymbolName("");
+    setExtractKind("Definition");
     setIsManualDefinitionCreate(false);
     setPendingExtractText(text);
     setExtractDialogOpen(true);
   }
 
-  async function handleExtractSubmit(editedText: string) {
+  async function handleExtractSubmit({
+    text: editedText,
+    kind,
+  }: {
+    text: string;
+    kind: ParagraphKind;
+  }) {
     if (!document) return;
     if (!validateIdentity()) return;
 
@@ -145,6 +158,7 @@ export function useDefinitionExtractionFlow({
             documentId,
             documentPageId: pages[0]?.id ?? null,
             pageNumber: null,
+            kind,
             definitionName: definitionName.trim(),
             definitionText: editedText,
             symbolName: symbolName.trim(),
@@ -165,6 +179,7 @@ export function useDefinitionExtractionFlow({
         await extractText({
           documentPageId: pages[0]?.id ?? null,
           pageNumber: null,
+          kind,
           text: editedText,
           futureRepo: document.futureRepo,
           filePath: document.filePath,
@@ -178,6 +193,7 @@ export function useDefinitionExtractionFlow({
       await extractText({
         documentPageId: activePage.id,
         pageNumber: activePage.pageNumber,
+        kind,
         text: editedText,
         futureRepo: document.futureRepo,
         filePath: document.filePath,
@@ -191,6 +207,7 @@ export function useDefinitionExtractionFlow({
     setDefinitionName("");
     setExtractDialogMode("definition");
     setSymbolName("");
+    setExtractKind("Definition");
     setIsManualDefinitionCreate(false);
     if (!isSymbolTargetCreate) {
       clearAll();
@@ -248,6 +265,8 @@ export function useDefinitionExtractionFlow({
     setExtractDialogMode,
     symbolName,
     setSymbolName,
+    extractKind,
+    setExtractKind,
     createdSymbolTarget,
     setCreatedSymbolTarget,
     isManualDefinitionCreate,

@@ -1,11 +1,13 @@
-import { Box } from "@mantine/core";
+import { Box, Stack } from "@mantine/core";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
+import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 
 type CurrentUriDisplayProps = {
   uri: string;
+  label?: string;
 };
 
-export function CurrentUriDisplay({ uri }: CurrentUriDisplayProps) {
+export function CurrentUriDisplay({ uri, label }: CurrentUriDisplayProps) {
   return (
     <Box
       style={{
@@ -13,9 +15,12 @@ export function CurrentUriDisplay({ uri }: CurrentUriDisplayProps) {
         minWidth: 0,
         overflow: "hidden",
       }}
-    >
+      >
       {uri.startsWith("http") ? (
-        <RenderSymbolicUri uri={uri} />
+        <Stack gap={2}>
+          <RenderSymbolicUri uri={uri} showRightLabel={false} />
+          <SymbolicLinkPreview uri={uri} label={label} />
+        </Stack>
       ) : (
         <RenderDbSymbol
           symbol={{ symbolName: uri, source: "DB", futureRepo: "" }}
