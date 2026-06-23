@@ -2,6 +2,7 @@ import { documentByIdQuery } from "@/queries/documentById";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
 import { listDefinition } from "@/serverFns/extractDefinition.server";
+import { listMarkReferences } from "@/serverFns/markReference.server";
 import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -20,6 +21,11 @@ export function useFileDocumentData(documentId: string) {
     queryFn: () => listDefinition({ data: { documentId } }),
   });
 
+  const { data: markReferences = [] } = useQuery({
+    queryKey: ["mark-references", documentId],
+    queryFn: () => listMarkReferences({ data: { documentId } }),
+  });
+
   const { data: staticCatalog = [] } = useQuery({
     queryKey: ["static-symbolic-catalog"],
     queryFn: () => listStaticSymbolicCatalog(),
@@ -34,6 +40,7 @@ export function useFileDocumentData(documentId: string) {
     document,
     pages,
     extracts,
+    markReferences,
     staticCatalog,
     sniffyCatalog,
     docLoading,

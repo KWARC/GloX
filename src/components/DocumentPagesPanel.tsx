@@ -12,6 +12,7 @@ import {
 } from "@mantine/core";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
+import { MarkReferenceItem, MarkedReferenceList } from "./MarkedReferenceList";
 import { PageImage } from "./PageImage";
 
 type TextSegment =
@@ -170,6 +171,7 @@ function HighlightedPageText({
 interface DocumentPagesPanelProps {
   documentId: string;
   pages: DocumentPage[];
+  markReferencesByPage?: Record<string, MarkReferenceItem[]>;
   onSelection: (pageId: string) => void;
   llmSuggestions?: Record<string, LlmSuggestion[]>;
   llmEnabled?: boolean;
@@ -180,6 +182,7 @@ interface DocumentPagesPanelProps {
 export function DocumentPagesPanel({
   documentId,
   pages,
+  markReferencesByPage = {},
   onSelection,
   llmSuggestions,
   llmEnabled = false,
@@ -207,6 +210,7 @@ export function DocumentPagesPanel({
               llmEnabled && llmSuggestions
                 ? (llmSuggestions[page.id] ?? [])
                 : [];
+            const pageMarkReferences = markReferencesByPage[page.id] ?? [];
             const hasHighlights = pageSuggestions.length > 0;
 
             return (
@@ -242,6 +246,8 @@ export function DocumentPagesPanel({
                     {isCollapsed ? "Show Image" : "Hide Image"}
                   </Button>
                 </Group>
+
+                <MarkedReferenceList references={pageMarkReferences} />
 
                 {hasHighlights ? (
                   <HighlightedPageText

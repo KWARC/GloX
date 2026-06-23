@@ -6,11 +6,13 @@ import {
   TextSelection,
   useExtractionActions,
 } from "@/server/text-selection";
+import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import {
   CreatedSymbolTarget,
   createDefinitionWithDeclaredSymbol,
   declareCreatedSymbolDefiniendum,
 } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
+import { createMarkReference } from "@/serverFns/markReference.server";
 import { ParagraphKind } from "@/types/paragraphKind";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
@@ -24,6 +26,7 @@ export function useDefinitionExtractionFlow({
   pages,
   selection,
   handleSelection,
+  clearPopupOnly,
   clearAll,
   lockedByExtractId,
   setLockedByExtractId,
@@ -41,6 +44,7 @@ export function useDefinitionExtractionFlow({
       onLeftSelection?: (text: string) => void;
     },
   ) => void;
+  clearPopupOnly: () => void;
   clearAll: () => void;
   lockedByExtractId: string | null;
   setLockedByExtractId: (id: string | null) => void;
@@ -63,6 +67,9 @@ export function useDefinitionExtractionFlow({
     useState<CreatedSymbolTarget | null>(null);
   const [isManualDefinitionCreate, setIsManualDefinitionCreate] =
     useState(false);
+  const [markReferenceDialogOpen, setMarkReferenceDialogOpen] = useState(false);
+  const [markReferenceText, setMarkReferenceText] = useState("");
+  const [markReferenceSaving, setMarkReferenceSaving] = useState(false);
   const { extractText } = useExtractionActions(documentId);
 
   function handleLeftSelection(pageId: string) {
@@ -119,6 +126,20 @@ export function useDefinitionExtractionFlow({
     setIsManualDefinitionCreate(false);
     setPendingExtractText(selection.text);
     setExtractDialogOpen(true);
+    clearAll();
+  }
+
+  function handleOpenMarkReference() {
+    if (!selection?.text || !activePage) return;
+
+    setMarkReferenceText(selection.text);
+    setMarkReferenceDialogOpen(true);
+    clearPopupOnly();
+  }
+
+  function handleCloseMarkReference() {
+    setMarkReferenceDialogOpen(false);
+    setMarkReferenceText("");
     clearAll();
   }
 
@@ -254,6 +275,52 @@ export function useDefinitionExtractionFlow({
     setCreatedSymbolTarget(null);
   }
 
+  async function handleMarkReferenceSubmit(params: {
+    mode: "CREATE";
+    symbolName: string;
+    verbalization: string;
+    symdecl: true;
+  } | {
+    mode: "PICK_EXISTING";
+    selectedSymbol: SymbolSearchResult;
+  }) {
+    if (!selection?.text || !activePage) return;
+    if (params.mode !== "PICK_EXISTING") return;
+
+    setMarkReferenceSaving(true);
+    try {
+      await createMarkReference({
+        data: {
+          documentId,
+          documentPageId: activePage.id,
+          pageNumber: activePage.pageNumber,
+          verbalization: `${selection.text}'s part`,
+          selectedSymbol:
+            params.selectedSymbol.source === "DB"
+              ? {
+                  source: "DB",
+                  id: params.selectedSymbol.id,
+                  symbolName: params.selectedSymbol.symbolName,
+                }
+              : {
+                  source: "MATHHUB",
+                  uri: params.selectedSymbol.uri,
+                },
+        },
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["mark-references", documentId],
+      });
+
+      setMarkReferenceDialogOpen(false);
+      setMarkReferenceText("");
+      clearAll();
+    } finally {
+      setMarkReferenceSaving(false);
+    }
+  }
+
   return {
     activePage,
     extractDialogOpen,
@@ -270,13 +337,20 @@ export function useDefinitionExtractionFlow({
     createdSymbolTarget,
     setCreatedSymbolTarget,
     isManualDefinitionCreate,
+    markReferenceDialogOpen,
+    setMarkReferenceDialogOpen,
+    markReferenceText,
+    markReferenceSaving,
     setIsManualDefinitionCreate,
     handleLeftSelection,
     handleCreateDefinition,
     handleCreateSymbolTargetDefinition,
     handleDeclareCreatedSymbolDefiniendum,
     handleOpenSelectionExtract,
+    handleOpenMarkReference,
+    handleCloseMarkReference,
     openSuggestionForExtraction,
     handleExtractSubmit,
+    handleMarkReferenceSubmit,
   };
 }

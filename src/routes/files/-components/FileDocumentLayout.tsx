@@ -1,5 +1,6 @@
 import { DocumentPagesPanel } from "@/components/DocumentPagesPanel";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
+import { MarkReferenceItem } from "@/components/MarkedReferenceList";
 import { MyDocument } from "@/queries/document";
 import { ExtractedItem } from "@/server/text-selection";
 import { FtmlStatement } from "@/types/ftml.types";
@@ -15,6 +16,7 @@ export type DocumentPanelProps = {
   documentId: string;
   document: MyDocument;
   pages: DocumentPage[];
+  markReferencesByPage: Record<string, MarkReferenceItem[]>;
   llmButtons: ReactNode;
   llmSuggestions: Record<string, LlmSuggestion[]>;
   llmEnabled: boolean;
@@ -62,6 +64,7 @@ export function FileDocumentLayout({
     documentId,
     document,
     pages,
+    markReferencesByPage,
     llmButtons,
     llmSuggestions,
     llmEnabled,
@@ -167,6 +170,7 @@ export function FileDocumentLayout({
             <DocumentPagesPanel
               documentId={documentId}
               pages={pages}
+              markReferencesByPage={markReferencesByPage}
               onSelection={onDocumentSelection}
               llmSuggestions={llmSuggestions}
               llmEnabled={llmEnabled}
@@ -232,6 +236,7 @@ export function FileDocumentLayout({
           <DocumentPagesPanel
             documentId={documentId}
             pages={pages}
+            markReferencesByPage={markReferencesByPage}
             onSelection={onDocumentSelection}
             llmSuggestions={llmSuggestions}
             llmEnabled={llmEnabled}

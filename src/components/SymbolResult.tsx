@@ -5,6 +5,7 @@ import {
   Button,
   Box,
   Group,
+  Loader,
   Paper,
   ScrollArea,
   Stack,
@@ -37,7 +38,7 @@ export function SymbolResult({
   onCreateSymbol,
   enabled = true,
 }: SymbolResultProps) {
-  const { results, isReady, hasResults } = useSymbolSearch(
+  const { results, isLoading, isReady, hasResults } = useSymbolSearch(
     initialQuery,
     enabled,
   );
@@ -49,24 +50,27 @@ export function SymbolResult({
           <Text size="sm" fw={500}>
             Search
           </Text>
-          {onCreateSymbol && (
-            <Tooltip
-              label="Create new symbol"
-              withArrow
-              position="top"
-              zIndex={SYMBOL_RESULT_TOOLTIP_Z_INDEX}
-            >
-              <ActionIcon
-                variant="subtle"
-                color="teal"
-                onClick={onCreateSymbol}
-                aria-label="Create new symbol"
-                size="sm"
+          <Group gap="xs">
+            {isLoading && <Loader size="xs" />}
+            {onCreateSymbol && (
+              <Tooltip
+                label="Create new symbol"
+                withArrow
+                position="top"
+                zIndex={SYMBOL_RESULT_TOOLTIP_Z_INDEX}
               >
-                <IconPlus size={16} />
-              </ActionIcon>
-            </Tooltip>
-          )}
+                <ActionIcon
+                  variant="subtle"
+                  color="teal"
+                  onClick={onCreateSymbol}
+                  aria-label="Create new symbol"
+                  size="sm"
+                >
+                  <IconPlus size={16} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </Group>
         </Group>
 
         <TextInput
@@ -76,6 +80,14 @@ export function SymbolResult({
           placeholder="Search for symbols..."
         />
       </Stack>
+
+      {isLoading && (
+        <Paper withBorder p="sm" radius="md">
+          <Group justify="center" py="md">
+            <Loader size="sm" />
+          </Group>
+        </Paper>
+      )}
 
       {isReady && hasResults && (
         <Paper withBorder p="sm" radius="md">
@@ -167,6 +179,16 @@ export function SymbolResult({
               })}
             </Stack>
           </ScrollArea>
+        </Paper>
+      )}
+
+      {isReady && !hasResults && initialQuery.trim().length >= 2 && (
+        <Paper withBorder p="sm" radius="md">
+          <Group justify="center" py="md">
+            <Text size="sm" c="dimmed">
+              No results found
+            </Text>
+          </Group>
         </Paper>
       )}
     </Stack>

@@ -85,7 +85,12 @@ function RouteComponent() {
         )}
 
         {data.length === 0 ? (
-          <Text c="dimmed">No files uploaded yet</Text>
+          <Stack gap="xs" align="flex-start">
+            <Text c="dimmed">No files uploaded yet</Text>
+            <Button component={Link} to="/" variant="light">
+              Go to Upload Page
+            </Button>
+          </Stack>
         ) : (
           data.map((doc) => (
             <Link
