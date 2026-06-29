@@ -2,6 +2,15 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { createServerFn } from "@tanstack/react-start";
 
+type CreateLocalSymbolInput = {
+  symbolName: string;
+  alias?: string | null;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
+};
+
 type CreateMarkReferenceInput = {
   documentId: string;
   documentPageId: string;
@@ -18,6 +27,67 @@ type CreateMarkReferenceInput = {
         uri: string;
       };
 };
+
+export type CreatedLocalSymbol = {
+  id: string;
+  symbolName: string;
+  alias: string | null;
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
+};
+
+export const createLocalSymbol = createServerFn({ method: "POST" })
+  .inputValidator((data: CreateLocalSymbolInput) => data)
+  .handler(async ({ data }) => {
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
+
+    const symbolName = data.symbolName?.trim();
+    const futureRepo = data.futureRepo?.trim();
+    const filePath = data.filePath?.trim();
+    const fileName = data.fileName?.trim();
+    const language = data.language?.trim();
+
+    if (!symbolName || !futureRepo || !filePath || !fileName || !language) {
+      throw new Error("Missing symbol creation fields");
+    }
+
+    const symbol = await prisma.symbol.upsert({
+      where: {
+        symbolName_futureRepo_filePath_fileName_language: {
+          symbolName,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+        },
+      },
+      update: {
+        alias: data.alias?.trim() || null,
+      },
+      create: {
+        symbolName,
+        alias: data.alias?.trim() || null,
+        futureRepo,
+        filePath,
+        fileName,
+        language,
+      },
+      select: {
+        id: true,
+        symbolName: true,
+        alias: true,
+        futureRepo: true,
+        filePath: true,
+        fileName: true,
+        language: true,
+      },
+    });
+
+    return symbol satisfies CreatedLocalSymbol;
+  });
 
 export const createMarkReference = createServerFn({ method: "POST" })
   .inputValidator((data: CreateMarkReferenceInput) => data)

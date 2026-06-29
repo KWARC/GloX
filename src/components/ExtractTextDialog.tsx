@@ -21,9 +21,11 @@ interface ExtractTextDialogProps {
   opened: boolean;
   initialText: string;
   definitionName: string;
+  definitionNameDisabled?: boolean;
   kind: ParagraphKind;
   mode?: "definition" | "symbol-target";
   symbolName?: string;
+  symbolNameDisabled?: boolean;
   filePath: string;
   setDefinitionName: (v: string) => void;
   setKind: Dispatch<SetStateAction<ParagraphKind>>;
@@ -36,9 +38,11 @@ export function ExtractTextDialog({
   opened,
   initialText,
   definitionName,
+  definitionNameDisabled = false,
   kind,
   mode = "definition",
   symbolName = "",
+  symbolNameDisabled = false,
   setDefinitionName,
   setKind,
   setSymbolName,
@@ -86,6 +90,7 @@ export function ExtractTextDialog({
           label="Content Name"
           placeholder="e.g. derivative-rules"
           value={definitionName}
+          disabled={definitionNameDisabled}
           onChange={(e) =>
             setDefinitionName(normalizeContentName(e.currentTarget.value))
           }
@@ -108,6 +113,7 @@ export function ExtractTextDialog({
             label="Symbol name"
             placeholder="e.g. derivative"
             value={symbolName}
+            disabled={symbolNameDisabled}
             onChange={(e) => setSymbolName?.(e.currentTarget.value)}
             styles={{ input: { fontWeight: 500 } }}
           />

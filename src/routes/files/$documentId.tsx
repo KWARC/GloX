@@ -1,5 +1,10 @@
 import { currentUser } from "@/server/auth/currentUser";
 import { useTextSelection } from "@/server/text-selection";
+import { MarkReferenceLatexModal } from "@/components/MarkReferenceLatexModal";
+import {
+  buildMarkReferenceLatex,
+  getMarkReferenceLatexDownloadName,
+} from "@/lib/markReferenceLatex";
 import {
   Box,
   Button,
@@ -22,7 +27,7 @@ import {
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FileDialogs } from "./-components/FileDialogs";
 import { FileDocumentLayout } from "./-components/FileDocumentLayout";
 import { useDefinitionExtractionFlow } from "./-hooks/useDefinitionExtractionFlow";
@@ -56,6 +61,8 @@ function RouteComponent() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
   const [activeTab, setActiveTab] = useState<string | null>("document");
+  const [markReferenceLatexOpen, setMarkReferenceLatexOpen] = useState(false);
+  const [markReferenceLatex, setMarkReferenceLatex] = useState("");
   const suggestionStateRef = useRef<{
     flattenedSuggestions: FlattenedLlmSuggestion[];
     focusedSuggestionIndex: number | null;
@@ -136,6 +143,33 @@ function RouteComponent() {
       ),
     [markReferences],
   );
+
+  useEffect(() => {
+    if (!document) {
+      setMarkReferenceLatex("");
+      return;
+    }
+
+    let cancelled = false;
+
+    const fileName = document.filename.replace(/\.[^.]+$/, "");
+
+    buildMarkReferenceLatex(
+      {
+        futureRepo: document.futureRepo,
+        filePath: document.filePath,
+        fileName,
+        language: document.language,
+      },
+      markReferences,
+    ).then((latex) => {
+      if (!cancelled) setMarkReferenceLatex(latex);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [document, markReferences]);
 
   if (docLoading || pagesLoading) {
     return (
@@ -278,9 +312,29 @@ function RouteComponent() {
 
   const llmButtons = (
     <Group gap={6} wrap="nowrap">
+      {canAccessPrivilegedControls && (
+        <Button
+          size="xs"
+          variant="light"
+          color="indigo"
+          onClick={() => setMarkReferenceLatexOpen(true)}
+        >
+          index.en.tex
+        </Button>
+      )}
       {suggestionControls}
     </Group>
   );
+
+  const handleDownloadMarkReferenceLatex = () => {
+    const blob = new Blob([markReferenceLatex], { type: "application/x-tex" });
+    const url = URL.createObjectURL(blob);
+    const anchor = window.document.createElement("a");
+    anchor.href = url;
+    anchor.download = getMarkReferenceLatexDownloadName(document.filename);
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Box h="100%" p={pad} style={{ overflow: "hidden" }}>
@@ -361,7 +415,7 @@ function RouteComponent() {
           extractedText: extractionFlow.markReferenceText,
           title: "Mark Reference",
           pickExistingSubmitLabel: "Save Mark Reference",
-          allowCreateSymbol: false,
+          allowCreateSymbol: true,
           loading: extractionFlow.markReferenceSaving,
           onClose: extractionFlow.handleCloseMarkReference,
           onSubmit: extractionFlow.handleMarkReferenceSubmit,
@@ -388,9 +442,11 @@ function RouteComponent() {
           opened: extractionFlow.extractDialogOpen,
           initialText: extractionFlow.pendingExtractText,
           definitionName: extractionFlow.definitionName,
+          definitionNameDisabled: !!extractionFlow.markReferenceCreatedSymbol,
           kind: extractionFlow.extractKind,
           mode: extractionFlow.extractDialogMode,
           symbolName: extractionFlow.symbolName,
+          symbolNameDisabled: !!extractionFlow.markReferenceCreatedSymbol,
           setDefinitionName: extractionFlow.setDefinitionName,
           setKind: extractionFlow.setExtractKind,
           setSymbolName: extractionFlow.setSymbolName,
@@ -406,8 +462,21 @@ function RouteComponent() {
         createdSymbolDefiniendum={{
           opened: !!extractionFlow.createdSymbolTarget,
           target: extractionFlow.createdSymbolTarget,
-          onClose: () => extractionFlow.setCreatedSymbolTarget(null),
+          onClose: () => {
+            extractionFlow.setCreatedSymbolTarget(null);
+            extractionFlow.handleCloseMarkReferencePostCreate();
+          },
           onConfirm: extractionFlow.handleDeclareCreatedSymbolDefiniendum,
+        }}
+        markReferencePostCreate={{
+          opened:
+            !!extractionFlow.markReferenceCreatedSymbol &&
+            !extractionFlow.extractDialogOpen &&
+            !extractionFlow.createdSymbolTarget,
+          symbol: extractionFlow.markReferenceCreatedSymbol,
+          onClose: extractionFlow.handleCloseMarkReferencePostCreate,
+          onAddDefinition:
+            extractionFlow.handleAddDefinitionForCreatedMarkReferenceSymbol,
         }}
         metadata={{
           opened: semanticFlow.definitionMetaEditOpen,
@@ -438,6 +507,14 @@ function RouteComponent() {
           pagesLength: pages.length,
           onSubmit: llmFlow.handleRecomputeSubmit,
         }}
+      />
+
+      <MarkReferenceLatexModal
+        opened={markReferenceLatexOpen}
+        code={markReferenceLatex}
+        fileName={getMarkReferenceLatexDownloadName(document.filename)}
+        onClose={() => setMarkReferenceLatexOpen(false)}
+        onDownload={handleDownloadMarkReferenceLatex}
       />
     </Box>
   );

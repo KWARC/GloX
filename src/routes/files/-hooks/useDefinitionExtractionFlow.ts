@@ -12,7 +12,11 @@ import {
   createDefinitionWithDeclaredSymbol,
   declareCreatedSymbolDefiniendum,
 } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
-import { createMarkReference } from "@/serverFns/markReference.server";
+import {
+  createLocalSymbol,
+  createMarkReference,
+  CreatedLocalSymbol,
+} from "@/serverFns/markReference.server";
 import { ParagraphKind } from "@/types/paragraphKind";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
@@ -70,6 +74,8 @@ export function useDefinitionExtractionFlow({
   const [markReferenceDialogOpen, setMarkReferenceDialogOpen] = useState(false);
   const [markReferenceText, setMarkReferenceText] = useState("");
   const [markReferenceSaving, setMarkReferenceSaving] = useState(false);
+  const [markReferenceCreatedSymbol, setMarkReferenceCreatedSymbol] =
+    useState<CreatedLocalSymbol | null>(null);
   const { extractText } = useExtractionActions(documentId);
 
   function handleLeftSelection(pageId: string) {
@@ -273,6 +279,23 @@ export function useDefinitionExtractionFlow({
     });
 
     setCreatedSymbolTarget(null);
+    setMarkReferenceCreatedSymbol(null);
+  }
+
+  function handleCloseMarkReferencePostCreate() {
+    setMarkReferenceCreatedSymbol(null);
+  }
+
+  function handleAddDefinitionForCreatedMarkReferenceSymbol() {
+    if (!markReferenceCreatedSymbol) return;
+
+    setPendingExtractText(markReferenceCreatedSymbol.symbolName);
+    setDefinitionName(markReferenceCreatedSymbol.fileName);
+    setSymbolName(markReferenceCreatedSymbol.symbolName);
+    setExtractDialogMode("symbol-target");
+    setExtractKind("Definition");
+    setIsManualDefinitionCreate(true);
+    setExtractDialogOpen(true);
   }
 
   async function handleMarkReferenceSubmit(params: {
@@ -285,10 +308,50 @@ export function useDefinitionExtractionFlow({
     selectedSymbol: SymbolSearchResult;
   }) {
     if (!selection?.text || !activePage) return;
-    if (params.mode !== "PICK_EXISTING") return;
 
     setMarkReferenceSaving(true);
     try {
+      if (params.mode === "CREATE") {
+        const normalizedSymbolName = params.symbolName.trim();
+        const createdSymbol = await createLocalSymbol({
+          data: {
+            symbolName: normalizedSymbolName,
+            alias: params.verbalization.trim() || null,
+            futureRepo: document?.futureRepo ?? "",
+            filePath: document?.filePath ?? "",
+            fileName: normalizeContentName(normalizedSymbolName),
+            language: document?.language ?? "en",
+          },
+        });
+
+        await createMarkReference({
+          data: {
+            documentId,
+            documentPageId: activePage.id,
+            pageNumber: activePage.pageNumber,
+            verbalization: params.verbalization.trim(),
+            selectedSymbol: {
+              source: "DB",
+              id: createdSymbol.id,
+              symbolName: createdSymbol.symbolName,
+            },
+          },
+        });
+
+        await queryClient.invalidateQueries({
+          queryKey: ["symbol-search-db"],
+        });
+        await queryClient.invalidateQueries({
+          queryKey: ["mark-references", documentId],
+        });
+
+        setMarkReferenceDialogOpen(false);
+        setMarkReferenceText("");
+        setMarkReferenceCreatedSymbol(createdSymbol);
+        clearAll();
+        return;
+      }
+
       await createMarkReference({
         data: {
           documentId,
@@ -336,6 +399,7 @@ export function useDefinitionExtractionFlow({
     setExtractKind,
     createdSymbolTarget,
     setCreatedSymbolTarget,
+    markReferenceCreatedSymbol,
     isManualDefinitionCreate,
     markReferenceDialogOpen,
     setMarkReferenceDialogOpen,
@@ -346,6 +410,8 @@ export function useDefinitionExtractionFlow({
     handleCreateDefinition,
     handleCreateSymbolTargetDefinition,
     handleDeclareCreatedSymbolDefiniendum,
+    handleCloseMarkReferencePostCreate,
+    handleAddDefinitionForCreatedMarkReferenceSymbol,
     handleOpenSelectionExtract,
     handleOpenMarkReference,
     handleCloseMarkReference,

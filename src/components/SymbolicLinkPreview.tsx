@@ -1,4 +1,5 @@
 import { parseUri } from "@/server/parseUri";
+import { isHttp } from "@/server/ftml/generateStexFromFtml";
 import type { FtmlStatement } from "@/types/ftml.types";
 import { Box } from "@mantine/core";
 import { FtmlPreview } from "./FtmlPreview";
@@ -24,16 +25,33 @@ export function SymbolicLinkPreview({
     }
   })();
 
-  const statement: FtmlStatement = {
-    type: "paragraph",
-    content: [
-      {
-        type: "symref",
-        uri,
-        content: [text],
-      },
-    ],
-  };
+  const statement: FtmlStatement = isHttp(uri)
+    ? {
+        type: "paragraph",
+        content: [
+          {
+            type: "symref",
+            uri,
+            content: [text],
+          },
+        ],
+      }
+    : {
+        type: "definition",
+        for_symbols: [uri],
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "symref",
+                uri,
+                content: [text],
+              },
+            ],
+          },
+        ],
+      };
 
   return (
     <Box

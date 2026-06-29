@@ -17,7 +17,7 @@ function getReferenceDisplay(reference: MarkReferenceItem) {
     };
   } catch {
     return {
-      uri: null,
+      uri: reference.symbolName,
       label: reference.symbolName,
     };
   }
@@ -55,17 +55,11 @@ export function MarkedReferenceList({
                 maxWidth: "100%",
               }}
             >
-              {display.uri ? (
-                <SymbolicLinkPreview
-                  uri={display.uri}
-                  label={display.label}
-                  compact
-                />
-              ) : (
-                <Text size="sm" c="blue.7" fw={500}>
-                  {display.label}
-                </Text>
-              )}
+              <SymbolicLinkPreview
+                uri={display.uri}
+                label={display.label}
+                compact
+              />
             </Box>
           );
         })}
