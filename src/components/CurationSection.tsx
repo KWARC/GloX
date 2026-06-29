@@ -1,6 +1,8 @@
+import { CurationMarkReferenceBox } from "@/components/CurationMarkReferenceBox";
 import { StexCuration } from "@/components/stex-curation/StexCuration";
 import { DefinitionStatus } from "@/routes/curation";
 import { getFileIdentities } from "@/serverFns/latex.server";
+import { listMarkReferenceFiles } from "@/serverFns/markReference.server";
 import {
   Box,
   Divider,
@@ -28,6 +30,12 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
           status: curationLevel ?? undefined,
         },
       }),
+  });
+  const documentIds = Array.from(new Set(fileGroups.map((f) => f.documentId)));
+  const { data: markReferenceFiles = [] } = useQuery({
+    queryKey: ["curation-mark-reference-files", documentIds],
+    queryFn: () => listMarkReferenceFiles({ data: { documentIds } }),
+    enabled: documentIds.length > 0,
   });
 
   return (
@@ -91,6 +99,8 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
           </Text>
         </Box>
       )}
+
+      <CurationMarkReferenceBox files={markReferenceFiles} />
 
       {fileGroups.length > 0 && (
         <Table.ScrollContainer minWidth={980}>

@@ -148,3 +148,35 @@ export const listMarkReferences = createServerFn({ method: "POST" })
       ],
     });
   });
+
+export const listMarkReferenceFiles = createServerFn({ method: "POST" })
+  .inputValidator((data: { documentIds: string[] }) => data)
+  .handler(async ({ data }) => {
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
+    if (data.documentIds.length === 0) return [];
+
+    const documents = await prisma.document.findMany({
+      where: { id: { in: data.documentIds } },
+      select: {
+        id: true,
+        filename: true,
+        futureRepo: true,
+        filePath: true,
+        language: true,
+        markReferences: {
+          select: {
+            id: true,
+            documentPageId: true,
+            pageNumber: true,
+            symbolName: true,
+            verbalization: true,
+          },
+          orderBy: [{ pageNumber: "asc" }, { createdAt: "asc" }],
+        },
+      },
+      orderBy: { filename: "asc" },
+    });
+
+    return documents;
+  });

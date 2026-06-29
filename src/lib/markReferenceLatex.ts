@@ -71,7 +71,7 @@ function buildPageParagraph(
   references: MarkReferenceLatexItem[],
 ): ParagraphNode {
   const content: FtmlContent[] = [
-    `Page ${pageNumber} of this PDF contains the following references: `,
+    `Page ${pageNumber} of this file contains the following references: `,
   ];
 
   references.forEach((reference, index) => {
