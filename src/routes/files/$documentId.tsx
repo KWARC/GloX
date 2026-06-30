@@ -434,6 +434,7 @@ function RouteComponent() {
           extractedText: extractionFlow.markReferenceText,
           title: "Mark Reference",
           pickExistingSubmitLabel: "Save Mark Reference",
+          createSubmitLabel: "Create",
           allowCreateSymbol: true,
           hideVerbalizationField: true,
           loading: extractionFlow.markReferenceSaving,
@@ -474,13 +475,23 @@ function RouteComponent() {
           title: extractionFlow.isMarkReferenceDefinitionFlow
             ? "Add Definition"
             : undefined,
-          textLabel: extractionFlow.isMarkReferenceDefinitionFlow
-            ? "Definition"
-            : undefined,
+          textLabel:
+            extractionFlow.isManualDefinitionCreate ||
+            extractionFlow.isMarkReferenceDefinitionFlow
+              ? "Enter Definition"
+              : undefined,
+          textPlaceholder:
+            extractionFlow.isManualDefinitionCreate ||
+            extractionFlow.isMarkReferenceDefinitionFlow
+              ? "Enter definition"
+              : undefined,
           submitLabel: extractionFlow.isMarkReferenceDefinitionFlow
             ? "Add Definition"
             : undefined,
           hideSymbolNameField: extractionFlow.isMarkReferenceDefinitionFlow,
+          enableSemanticAuthoring: extractionFlow.isManualDefinitionCreate,
+          semanticEnabled: extractionFlow.semanticEnabled,
+          setSemanticEnabled: extractionFlow.setSemanticEnabled,
           onClose: extractionFlow.handleCloseExtractDialog,
           onSubmit: extractionFlow.handleExtractSubmit,
         }}

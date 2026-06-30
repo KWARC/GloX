@@ -47,6 +47,7 @@ export type DefiniendumDialogProps = {
   extractedText: string;
   title?: string;
   pickExistingSubmitLabel?: string;
+  createSubmitLabel?: string;
   allowCreateSymbol?: boolean;
   hideVerbalizationField?: boolean;
   loading?: boolean;
@@ -86,8 +87,12 @@ export type ExtractionDialogProps = {
   onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
   title?: string;
   textLabel?: string;
+  textPlaceholder?: string;
   submitLabel?: string;
   hideSymbolNameField?: boolean;
+  enableSemanticAuthoring?: boolean;
+  semanticEnabled?: boolean;
+  setSemanticEnabled?: Dispatch<SetStateAction<boolean>>;
 };
 
 export type CreatedSymbolDefiniendumDialogProps = {
@@ -215,6 +220,7 @@ export function FileDialogs({
         onSubmit={markReference.onSubmit}
         title={markReference.title}
         pickExistingSubmitLabel={markReference.pickExistingSubmitLabel}
+        createSubmitLabel={markReference.createSubmitLabel}
         allowCreateSymbol={markReference.allowCreateSymbol}
         hideVerbalizationField={markReference.hideVerbalizationField}
         loading={markReference.loading}
@@ -252,8 +258,12 @@ export function FileDialogs({
         onSubmit={extraction.onSubmit}
         title={extraction.title}
         textLabel={extraction.textLabel}
+        textPlaceholder={extraction.textPlaceholder}
         submitLabel={extraction.submitLabel}
         hideSymbolNameField={extraction.hideSymbolNameField}
+        enableSemanticAuthoring={extraction.enableSemanticAuthoring}
+        semanticEnabled={extraction.semanticEnabled}
+        setSemanticEnabled={extraction.setSemanticEnabled}
       />
 
       <CreateSymbolDefiniendumDialog

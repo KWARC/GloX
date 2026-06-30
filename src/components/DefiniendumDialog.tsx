@@ -24,6 +24,7 @@ interface DefiniendumDialogProps {
   extractedText: string | null;
   title?: string;
   pickExistingSubmitLabel?: string;
+  createSubmitLabel?: string;
   allowCreateSymbol?: boolean;
   hideVerbalizationField?: boolean;
   loading?: boolean;
@@ -47,6 +48,7 @@ export function DefiniendumDialog({
   extractedText,
   title = "Definiendum",
   pickExistingSubmitLabel = "Link & Insert Definiendum",
+  createSubmitLabel = "Create & Insert Definiendum",
   allowCreateSymbol = true,
   hideVerbalizationField = false,
   loading = false,
@@ -228,7 +230,7 @@ export function DefiniendumDialog({
                   leftSection={<IconCheck size={16} />}
                   fullWidth
                 >
-                  Create & Insert Definiendum
+                  {createSubmitLabel}
                 </Button>
 
                 <Button

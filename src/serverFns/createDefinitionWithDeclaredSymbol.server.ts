@@ -24,6 +24,7 @@ export type CreateDefinitionWithDeclaredSymbolInput = {
   kind?: ParagraphKind;
   definitionName: string;
   definitionText: string;
+  statement?: FtmlStatement;
   symbolName: string;
   futureRepo: string;
   filePath: string;
@@ -107,7 +108,8 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
       throw new Error("Document has no pages");
     }
 
-    const statement = buildPlainDefinitionStatement(definitionText);
+    const statement =
+      data.statement ?? buildPlainDefinitionStatement(definitionText);
     const serializedStatement = JSON.parse(JSON.stringify(statement));
 
     const result = await prisma.$transaction(async (tx) => {

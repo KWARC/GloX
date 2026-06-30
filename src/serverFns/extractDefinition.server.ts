@@ -16,6 +16,7 @@ export type CreateDefinitionInput = {
   pageNumber?: number | null;
   kind?: ParagraphKind;
   originalText: string;
+  statement?: FtmlStatement;
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -58,16 +59,18 @@ export const createDefinition = createServerFn({ method: "POST" })
       throw new Error("Document has no pages");
     }
 
-    const statement: DefinitionNode = {
-      type: "definition",
-      for_symbols: [],
-      content: [
-        {
-          type: "paragraph",
-          content: [data.originalText.trim()],
-        },
-      ],
-    };
+    const statement: FtmlStatement =
+      data.statement ??
+      ({
+        type: "definition",
+        for_symbols: [],
+        content: [
+          {
+            type: "paragraph",
+            content: [data.originalText.trim()],
+          },
+        ],
+      } satisfies DefinitionNode);
 
     await prisma.$transaction(async (tx) => {
       const def = await tx.definition.create({

@@ -16,6 +16,8 @@ import {
   createLocalSymbol,
   createMarkReference,
 } from "@/serverFns/markReference.server";
+import { statementHasDeclaredSymbol } from "@/components/useDraftSemanticAuthoring";
+import { FtmlStatement } from "@/types/ftml.types";
 import { ParagraphKind } from "@/types/paragraphKind";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
@@ -75,6 +77,7 @@ export function useDefinitionExtractionFlow({
   const [markReferenceSaving, setMarkReferenceSaving] = useState(false);
   const [isMarkReferenceDefinitionFlow, setIsMarkReferenceDefinitionFlow] =
     useState(false);
+  const [semanticEnabled, setSemanticEnabled] = useState(false);
   const { extractText } = useExtractionActions(documentId);
 
   function resetExtractState() {
@@ -86,6 +89,7 @@ export function useDefinitionExtractionFlow({
     setExtractKind("Definition");
     setIsManualDefinitionCreate(false);
     setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
   }
 
   function resetMarkReferenceState() {
@@ -124,6 +128,7 @@ export function useDefinitionExtractionFlow({
     setExtractKind("Definition");
     setIsManualDefinitionCreate(true);
     setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
     setExtractDialogOpen(true);
   }
 
@@ -138,6 +143,7 @@ export function useDefinitionExtractionFlow({
     setExtractKind("Definition");
     setIsManualDefinitionCreate(true);
     setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
     setExtractDialogOpen(true);
   }
 
@@ -148,6 +154,7 @@ export function useDefinitionExtractionFlow({
     setExtractKind("Definition");
     setIsManualDefinitionCreate(false);
     setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
     setPendingExtractText(selection.text);
     setExtractDialogOpen(true);
     clearAll();
@@ -179,6 +186,7 @@ export function useDefinitionExtractionFlow({
     setExtractKind("Definition");
     setIsManualDefinitionCreate(false);
     setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
     setPendingExtractText(text);
     setExtractDialogOpen(true);
   }
@@ -186,9 +194,11 @@ export function useDefinitionExtractionFlow({
   async function handleExtractSubmit({
     text: editedText,
     kind,
+    statement,
   }: {
     text: string;
     kind: ParagraphKind;
+    statement?: FtmlStatement;
   }) {
     if (!document) return;
     if (!validateIdentity()) return;
@@ -206,6 +216,7 @@ export function useDefinitionExtractionFlow({
             kind,
             definitionName: definitionName.trim(),
             definitionText: editedText,
+            statement,
             symbolName: symbolName.trim(),
             futureRepo: document.futureRepo,
             filePath: document.filePath,
@@ -222,6 +233,8 @@ export function useDefinitionExtractionFlow({
 
         if (isMarkReferenceDefinitionFlow) {
           setCreatedSymbolTarget(null);
+        } else if (statementHasDeclaredSymbol(statement, symbolName.trim())) {
+          setCreatedSymbolTarget(null);
         } else {
           setCreatedSymbolTarget(created);
         }
@@ -231,6 +244,7 @@ export function useDefinitionExtractionFlow({
           pageNumber: null,
           kind,
           text: editedText,
+          statement,
           futureRepo: document.futureRepo,
           filePath: document.filePath,
           fileName: definitionName.trim(),
@@ -245,6 +259,7 @@ export function useDefinitionExtractionFlow({
         pageNumber: activePage.pageNumber,
         kind,
         text: editedText,
+        statement,
         futureRepo: document.futureRepo,
         filePath: document.filePath,
         fileName: definitionName.trim(),
@@ -343,13 +358,14 @@ export function useDefinitionExtractionFlow({
 
         resetMarkReferenceState();
         clearAll();
-        setPendingExtractText(createdSymbol.symbolName);
+        setPendingExtractText("");
         setDefinitionName(createdSymbol.fileName);
         setSymbolName(createdSymbol.symbolName);
         setExtractDialogMode("symbol-target");
         setExtractKind("Definition");
         setIsManualDefinitionCreate(true);
         setIsMarkReferenceDefinitionFlow(true);
+        setSemanticEnabled(false);
         setExtractDialogOpen(true);
         return;
       }
@@ -409,10 +425,12 @@ export function useDefinitionExtractionFlow({
     setCreatedSymbolTarget,
     isManualDefinitionCreate,
     isMarkReferenceDefinitionFlow,
+    semanticEnabled,
     markReferenceDialogOpen,
     markReferenceText,
     markReferenceSaving,
     setIsManualDefinitionCreate,
+    setSemanticEnabled,
     handleLeftSelection,
     handleCreateDefinition,
     handleCreateSymbolTargetDefinition,
