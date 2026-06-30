@@ -22,8 +22,12 @@ type MarkReferenceFile = {
 
 export function CurationMarkReferenceBox({
   files,
+  deletingMarkReferenceId,
+  onDeleteMarkReference,
 }: {
   files: MarkReferenceFile[];
+  deletingMarkReferenceId?: string | null;
+  onDeleteMarkReference?: (referenceId: string) => Promise<void>;
 }) {
   async function handleDownload(file: MarkReferenceFile) {
     const latex = await buildMarkReferenceLatex(
@@ -58,7 +62,7 @@ export function CurationMarkReferenceBox({
     <Paper withBorder radius="md" p="md">
       <Stack gap="md">
         <Box>
-          <Title order={4}>Mark References</Title>
+          <Title order={4}>Index Files</Title>
         </Box>
 
         {files.map((file) => {
@@ -115,7 +119,11 @@ export function CurationMarkReferenceBox({
                       >
                         Page {pageNumber}
                       </Text>
-                      <MarkedReferenceList references={references} />
+                      <MarkedReferenceList
+                        references={references}
+                        deletingId={deletingMarkReferenceId}
+                        onDelete={onDeleteMarkReference}
+                      />
                     </Box>
                   ))}
                 </Stack>

@@ -1,8 +1,12 @@
 import { CurationMarkReferenceBox } from "@/components/CurationMarkReferenceBox";
+import { queryClient } from "@/queryClient";
 import { StexCuration } from "@/components/stex-curation/StexCuration";
 import { DefinitionStatus } from "@/routes/curation";
 import { getFileIdentities } from "@/serverFns/latex.server";
-import { listMarkReferenceFiles } from "@/serverFns/markReference.server";
+import {
+  deleteMarkReference,
+  listMarkReferenceFiles,
+} from "@/serverFns/markReference.server";
 import {
   Box,
   Divider,
@@ -15,6 +19,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 type Props = {
   curationLevel: DefinitionStatus | null;
@@ -22,6 +27,9 @@ type Props = {
 };
 
 export function CurationSection({ curationLevel, setCurationLevel }: Props) {
+  const [deletingMarkReferenceId, setDeletingMarkReferenceId] = useState<
+    string | null
+  >(null);
   const { data: fileGroups = [], isLoading } = useQuery({
     queryKey: ["fileIdentities", curationLevel],
     queryFn: () =>
@@ -37,6 +45,18 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
     queryFn: () => listMarkReferenceFiles({ data: { documentIds } }),
     enabled: documentIds.length > 0,
   });
+
+  async function handleDeleteMarkReference(referenceId: string) {
+    setDeletingMarkReferenceId(referenceId);
+    try {
+      await deleteMarkReference({ data: { id: referenceId } });
+      await queryClient.invalidateQueries({
+        queryKey: ["curation-mark-reference-files"],
+      });
+    } finally {
+      setDeletingMarkReferenceId(null);
+    }
+  }
 
   return (
     <Stack w="100%" gap="md">
@@ -100,7 +120,11 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
         </Box>
       )}
 
-      <CurationMarkReferenceBox files={markReferenceFiles} />
+      <CurationMarkReferenceBox
+        files={markReferenceFiles}
+        deletingMarkReferenceId={deletingMarkReferenceId}
+        onDeleteMarkReference={handleDeleteMarkReference}
+      />
 
       {fileGroups.length > 0 && (
         <Table.ScrollContainer minWidth={980}>

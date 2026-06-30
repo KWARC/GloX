@@ -25,6 +25,7 @@ interface DefiniendumDialogProps {
   title?: string;
   pickExistingSubmitLabel?: string;
   allowCreateSymbol?: boolean;
+  hideVerbalizationField?: boolean;
   loading?: boolean;
   onSubmit: (
     params:
@@ -47,6 +48,7 @@ export function DefiniendumDialog({
   title = "Definiendum",
   pickExistingSubmitLabel = "Link & Insert Definiendum",
   allowCreateSymbol = true,
+  hideVerbalizationField = false,
   loading = false,
   onSubmit,
   onClose,
@@ -176,8 +178,14 @@ export function DefiniendumDialog({
                       onChange={(e) => {
                         const nextSymbolName = e.currentTarget.value;
                         const previousSymbolName = field.state.value;
-                        const currentVerbalization =
-                          form.getFieldValue("verbalization");
+                        if (hideVerbalizationField) {
+                          field.handleChange(nextSymbolName);
+                          return;
+                        }
+
+                        const currentVerbalization = form.getFieldValue(
+                          "verbalization",
+                        );
 
                         field.handleChange(nextSymbolName);
 
@@ -197,19 +205,21 @@ export function DefiniendumDialog({
                   )}
                 </form.Field>
 
-                <form.Field name="verbalization">
-                  {(field) => (
-                    <Textarea
-                      label="Verbalization"
-                      value={field.state.value}
-                      onChange={(e) =>
-                        field.handleChange(e.currentTarget.value)
-                      }
-                      autosize
-                      minRows={2}
-                    />
-                  )}
-                </form.Field>
+                {!hideVerbalizationField && (
+                  <form.Field name="verbalization">
+                    {(field) => (
+                      <Textarea
+                        label="Verbalization"
+                        value={field.state.value}
+                        onChange={(e) =>
+                          field.handleChange(e.currentTarget.value)
+                        }
+                        autosize
+                        minRows={2}
+                      />
+                    )}
+                  </form.Field>
+                )}
 
                 <Button
                   type="submit"
@@ -242,7 +252,9 @@ export function DefiniendumDialog({
                   selectedSymbol={selectedSymbol}
                   onSelectSymbol={setSelectedSymbol}
                   onCreateSymbol={
-                    allowCreateSymbol ? () => setMode("CREATE") : undefined
+                    allowCreateSymbol
+                      ? () => setMode("CREATE")
+                      : undefined
                   }
                 />
               </Box>

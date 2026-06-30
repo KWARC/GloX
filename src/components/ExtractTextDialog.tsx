@@ -32,6 +32,10 @@ interface ExtractTextDialogProps {
   setSymbolName?: Dispatch<SetStateAction<string>>;
   onClose: () => void;
   onSubmit: (payload: { text: string; kind: ParagraphKind }) => void;
+  title?: string;
+  textLabel?: string;
+  submitLabel?: string;
+  hideSymbolNameField?: boolean;
 }
 
 export function ExtractTextDialog({
@@ -49,9 +53,14 @@ export function ExtractTextDialog({
   filePath,
   onClose,
   onSubmit,
+  title = "Extract Text",
+  textLabel = "Extracted Text",
+  submitLabel = "Extract",
+  hideSymbolNameField = false,
 }: ExtractTextDialogProps) {
   const [text, setText] = useState(initialText);
-  const isSymbolTargetMode = mode === "symbol-target";
+  const showSymbolNameField =
+    mode === "symbol-target" && !hideSymbolNameField;
 
   useEffect(() => {
     setText(initialText);
@@ -66,7 +75,7 @@ export function ExtractTextDialog({
           <Group gap="xs">
             <IconFileText size={18} color="var(--mantine-color-blue-6)" />
             <Text fw={600} size="md">
-              Extract Text
+              {title}
             </Text>
           </Group>
 
@@ -108,7 +117,7 @@ export function ExtractTextDialog({
           }}
           allowDeselect={false}
         />
-        {isSymbolTargetMode && (
+        {showSymbolNameField && (
           <TextInput
             label="Symbol name"
             placeholder="e.g. derivative"
@@ -122,10 +131,7 @@ export function ExtractTextDialog({
 
         <Stack gap={4}>
           <Text size="sm" fw={500}>
-            Extracted Text
-          </Text>
-          <Text size="xs" c="dimmed">
-            Review and edit the selected text before extracting.
+            {textLabel}
           </Text>
           <Textarea
             value={text}
@@ -155,11 +161,11 @@ export function ExtractTextDialog({
             disabled={
               !text.trim() ||
               !definitionName.trim() ||
-              (isSymbolTargetMode && !symbolName.trim())
+              (showSymbolNameField && !symbolName.trim())
             }
             leftSection={<IconFileText size={16} />}
           >
-            Extract
+            {submitLabel}
           </Button>
         </Group>
       </Stack>

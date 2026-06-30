@@ -172,6 +172,8 @@ interface DocumentPagesPanelProps {
   documentId: string;
   pages: DocumentPage[];
   markReferencesByPage?: Record<string, MarkReferenceItem[]>;
+  deletingMarkReferenceId?: string | null;
+  onDeleteMarkReference?: (referenceId: string) => Promise<void>;
   onSelection: (pageId: string) => void;
   llmSuggestions?: Record<string, LlmSuggestion[]>;
   llmEnabled?: boolean;
@@ -183,6 +185,8 @@ export function DocumentPagesPanel({
   documentId,
   pages,
   markReferencesByPage = {},
+  deletingMarkReferenceId = null,
+  onDeleteMarkReference,
   onSelection,
   llmSuggestions,
   llmEnabled = false,
@@ -247,7 +251,11 @@ export function DocumentPagesPanel({
                   </Button>
                 </Group>
 
-                <MarkedReferenceList references={pageMarkReferences} />
+                <MarkedReferenceList
+                  references={pageMarkReferences}
+                  deletingId={deletingMarkReferenceId}
+                  onDelete={onDeleteMarkReference}
+                />
 
                 {hasHighlights ? (
                   <HighlightedPageText

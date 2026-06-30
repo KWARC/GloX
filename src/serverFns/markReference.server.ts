@@ -123,6 +123,22 @@ export const createMarkReference = createServerFn({ method: "POST" })
     });
   });
 
+export const deleteMarkReference = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
+
+    const id = data.id?.trim();
+    if (!id) throw new Error("Mark reference id is required");
+
+    await prisma.markReference.delete({
+      where: { id },
+    });
+
+    return { success: true as const };
+  });
+
 export const listMarkReferences = createServerFn({ method: "POST" })
   .inputValidator((data: { documentId: string }) => data)
   .handler(async ({ data }) => {

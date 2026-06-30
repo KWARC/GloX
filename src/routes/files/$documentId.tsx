@@ -1,4 +1,6 @@
 import { currentUser } from "@/server/auth/currentUser";
+import { deleteMarkReference } from "@/serverFns/markReference.server";
+import { queryClient } from "@/queryClient";
 import { useTextSelection } from "@/server/text-selection";
 import { MarkReferenceLatexModal } from "@/components/MarkReferenceLatexModal";
 import {
@@ -63,6 +65,9 @@ function RouteComponent() {
   const [activeTab, setActiveTab] = useState<string | null>("document");
   const [markReferenceLatexOpen, setMarkReferenceLatexOpen] = useState(false);
   const [markReferenceLatex, setMarkReferenceLatex] = useState("");
+  const [deletingMarkReferenceId, setDeletingMarkReferenceId] = useState<
+    string | null
+  >(null);
   const suggestionStateRef = useRef<{
     flattenedSuggestions: FlattenedLlmSuggestion[];
     focusedSuggestionIndex: number | null;
@@ -143,6 +148,18 @@ function RouteComponent() {
       ),
     [markReferences],
   );
+
+  async function handleDeleteMarkReference(referenceId: string) {
+    setDeletingMarkReferenceId(referenceId);
+    try {
+      await deleteMarkReference({ data: { id: referenceId } });
+      await queryClient.invalidateQueries({
+        queryKey: ["mark-references", documentId],
+      });
+    } finally {
+      setDeletingMarkReferenceId(null);
+    }
+  }
 
   useEffect(() => {
     if (!document) {
@@ -351,10 +368,12 @@ function RouteComponent() {
             document,
             pages,
             markReferencesByPage,
+            deletingMarkReferenceId,
             llmButtons,
             llmSuggestions: llmFlow.llmSuggestions,
             llmEnabled: llmFlow.llmEnabled,
             focusedSuggestionId: llmFlow.focusedSuggestionId,
+            onDeleteMarkReference: handleDeleteMarkReference,
             onSelection: extractionFlow.handleLeftSelection,
             onLlmSuggestionClick: llmFlow.handleLlmSuggestionClick,
           }}
@@ -416,6 +435,7 @@ function RouteComponent() {
           title: "Mark Reference",
           pickExistingSubmitLabel: "Save Mark Reference",
           allowCreateSymbol: true,
+          hideVerbalizationField: true,
           loading: extractionFlow.markReferenceSaving,
           onClose: extractionFlow.handleCloseMarkReference,
           onSubmit: extractionFlow.handleMarkReferenceSubmit,
@@ -442,21 +462,26 @@ function RouteComponent() {
           opened: extractionFlow.extractDialogOpen,
           initialText: extractionFlow.pendingExtractText,
           definitionName: extractionFlow.definitionName,
-          definitionNameDisabled: !!extractionFlow.markReferenceCreatedSymbol,
+          definitionNameDisabled: false,
           kind: extractionFlow.extractKind,
           mode: extractionFlow.extractDialogMode,
           symbolName: extractionFlow.symbolName,
-          symbolNameDisabled: !!extractionFlow.markReferenceCreatedSymbol,
+          symbolNameDisabled: extractionFlow.isMarkReferenceDefinitionFlow,
           setDefinitionName: extractionFlow.setDefinitionName,
           setKind: extractionFlow.setExtractKind,
           setSymbolName: extractionFlow.setSymbolName,
           filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}`,
-          onClose: () => {
-            extractionFlow.setExtractDialogOpen(false);
-            extractionFlow.setIsManualDefinitionCreate(false);
-            extractionFlow.setExtractDialogMode("definition");
-            extractionFlow.setSymbolName("");
-          },
+          title: extractionFlow.isMarkReferenceDefinitionFlow
+            ? "Add Definition"
+            : undefined,
+          textLabel: extractionFlow.isMarkReferenceDefinitionFlow
+            ? "Definition"
+            : undefined,
+          submitLabel: extractionFlow.isMarkReferenceDefinitionFlow
+            ? "Add Definition"
+            : undefined,
+          hideSymbolNameField: extractionFlow.isMarkReferenceDefinitionFlow,
+          onClose: extractionFlow.handleCloseExtractDialog,
           onSubmit: extractionFlow.handleExtractSubmit,
         }}
         createdSymbolDefiniendum={{
@@ -464,19 +489,8 @@ function RouteComponent() {
           target: extractionFlow.createdSymbolTarget,
           onClose: () => {
             extractionFlow.setCreatedSymbolTarget(null);
-            extractionFlow.handleCloseMarkReferencePostCreate();
           },
           onConfirm: extractionFlow.handleDeclareCreatedSymbolDefiniendum,
-        }}
-        markReferencePostCreate={{
-          opened:
-            !!extractionFlow.markReferenceCreatedSymbol &&
-            !extractionFlow.extractDialogOpen &&
-            !extractionFlow.createdSymbolTarget,
-          symbol: extractionFlow.markReferenceCreatedSymbol,
-          onClose: extractionFlow.handleCloseMarkReferencePostCreate,
-          onAddDefinition:
-            extractionFlow.handleAddDefinitionForCreatedMarkReferenceSymbol,
         }}
         metadata={{
           opened: semanticFlow.definitionMetaEditOpen,

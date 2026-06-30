@@ -10,7 +10,6 @@ import { SymbolicRef } from "@/components/SymbolicRef";
 import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import { ExtractedItem, PopupState } from "@/server/text-selection";
 import type { CreatedSymbolTarget } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
-import type { CreatedLocalSymbol } from "@/serverFns/markReference.server";
 import {
   Button,
   Group,
@@ -49,6 +48,7 @@ export type DefiniendumDialogProps = {
   title?: string;
   pickExistingSubmitLabel?: string;
   allowCreateSymbol?: boolean;
+  hideVerbalizationField?: boolean;
   loading?: boolean;
   onClose: () => void;
   onSubmit: ComponentProps<typeof DefiniendumDialog>["onSubmit"];
@@ -84,6 +84,10 @@ export type ExtractionDialogProps = {
   filePath: string;
   onClose: () => void;
   onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
+  title?: string;
+  textLabel?: string;
+  submitLabel?: string;
+  hideSymbolNameField?: boolean;
 };
 
 export type CreatedSymbolDefiniendumDialogProps = {
@@ -93,13 +97,6 @@ export type CreatedSymbolDefiniendumDialogProps = {
   onConfirm: ComponentProps<
     typeof CreateSymbolDefiniendumDialog
   >["onConfirm"];
-};
-
-export type MarkReferencePostCreateDialogProps = {
-  opened: boolean;
-  symbol: CreatedLocalSymbol | null;
-  onClose: () => void;
-  onAddDefinition: () => void;
 };
 
 export type MetadataDialogProps = {
@@ -142,7 +139,6 @@ export type FileDialogsProps = {
   semantic: SemanticDialogProps;
   extraction: ExtractionDialogProps;
   createdSymbolDefiniendum: CreatedSymbolDefiniendumDialogProps;
-  markReferencePostCreate: MarkReferencePostCreateDialogProps;
   metadata: MetadataDialogProps;
   sniffy: SniffyDialogProps;
   recompute: RecomputeDialogProps;
@@ -157,7 +153,6 @@ export function FileDialogs({
   semantic,
   extraction,
   createdSymbolDefiniendum,
-  markReferencePostCreate,
   metadata,
   sniffy,
   recompute,
@@ -209,6 +204,7 @@ export function FileDialogs({
         title={definiendum.title}
         pickExistingSubmitLabel={definiendum.pickExistingSubmitLabel}
         allowCreateSymbol={definiendum.allowCreateSymbol}
+        hideVerbalizationField={definiendum.hideVerbalizationField}
         loading={definiendum.loading}
       />
 
@@ -220,6 +216,7 @@ export function FileDialogs({
         title={markReference.title}
         pickExistingSubmitLabel={markReference.pickExistingSubmitLabel}
         allowCreateSymbol={markReference.allowCreateSymbol}
+        hideVerbalizationField={markReference.hideVerbalizationField}
         loading={markReference.loading}
       />
 
@@ -253,6 +250,10 @@ export function FileDialogs({
         filePath={extraction.filePath}
         onClose={extraction.onClose}
         onSubmit={extraction.onSubmit}
+        title={extraction.title}
+        textLabel={extraction.textLabel}
+        submitLabel={extraction.submitLabel}
+        hideSymbolNameField={extraction.hideSymbolNameField}
       />
 
       <CreateSymbolDefiniendumDialog
@@ -261,32 +262,6 @@ export function FileDialogs({
         onClose={createdSymbolDefiniendum.onClose}
         onConfirm={createdSymbolDefiniendum.onConfirm}
       />
-
-      <Modal
-        opened={markReferencePostCreate.opened}
-        onClose={markReferencePostCreate.onClose}
-        title="Symbol created"
-        centered
-        radius="md"
-      >
-        <Stack gap="md">
-          <Text size="sm">
-            <strong>{markReferencePostCreate.symbol?.symbolName}</strong> was
-            created and saved as a mark reference.
-          </Text>
-          <Text size="sm" c="dimmed">
-            You can stop here or add a definition for this symbol now.
-          </Text>
-          <Group justify="flex-end">
-            <Button variant="default" onClick={markReferencePostCreate.onClose}>
-              Done
-            </Button>
-            <Button onClick={markReferencePostCreate.onAddDefinition}>
-              Add definition now
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
 
       <DefinitionIdentityDialog
         opened={metadata.opened}

@@ -17,10 +17,12 @@ export type DocumentPanelProps = {
   document: MyDocument;
   pages: DocumentPage[];
   markReferencesByPage: Record<string, MarkReferenceItem[]>;
+  deletingMarkReferenceId: string | null;
   llmButtons: ReactNode;
   llmSuggestions: Record<string, LlmSuggestion[]>;
   llmEnabled: boolean;
   focusedSuggestionId: string | null;
+  onDeleteMarkReference: (referenceId: string) => Promise<void>;
   onSelection: (pageId: string) => void;
   onLlmSuggestionClick: (suggestion: LlmSuggestion, pageId: string) => void;
 };
@@ -65,10 +67,12 @@ export function FileDocumentLayout({
     document,
     pages,
     markReferencesByPage,
+    deletingMarkReferenceId,
     llmButtons,
     llmSuggestions,
     llmEnabled,
     focusedSuggestionId,
+    onDeleteMarkReference,
     onSelection: onDocumentSelection,
     onLlmSuggestionClick,
   } = documentPanel;
@@ -171,6 +175,8 @@ export function FileDocumentLayout({
               documentId={documentId}
               pages={pages}
               markReferencesByPage={markReferencesByPage}
+              deletingMarkReferenceId={deletingMarkReferenceId}
+              onDeleteMarkReference={onDeleteMarkReference}
               onSelection={onDocumentSelection}
               llmSuggestions={llmSuggestions}
               llmEnabled={llmEnabled}
@@ -237,6 +243,8 @@ export function FileDocumentLayout({
             documentId={documentId}
             pages={pages}
             markReferencesByPage={markReferencesByPage}
+            deletingMarkReferenceId={deletingMarkReferenceId}
+            onDeleteMarkReference={onDeleteMarkReference}
             onSelection={onDocumentSelection}
             llmSuggestions={llmSuggestions}
             llmEnabled={llmEnabled}
