@@ -128,6 +128,19 @@ export function ExtractTextDialog({
     setSemanticError(null);
   }
 
+  function handleSemanticToggle(nextValue: boolean) {
+    if (!nextValue && draftSemantic.hasSemantics) {
+      const shouldDiscard = window.confirm(
+        "Added definiendum/symbolic ref will not be added. Continue?",
+      );
+
+      if (!shouldDiscard) return;
+    }
+
+    setSemanticEnabled?.(nextValue);
+    setSemanticError(null);
+  }
+
   async function handleDefiniendumSubmit(
     params:
       | {
@@ -283,10 +296,10 @@ export function ExtractTextDialog({
 
           {enableSemanticAuthoring && (
             <Checkbox
-              label="Add semantic"
+              label="Add semantics"
               checked={semanticEnabled}
               onChange={(event) =>
-                setSemanticEnabled?.(event.currentTarget.checked)
+                handleSemanticToggle(event.currentTarget.checked)
               }
             />
           )}

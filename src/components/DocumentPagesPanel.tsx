@@ -224,6 +224,7 @@ export function DocumentPagesPanel({
                     <Text size="xs" fw={700} c="dark" tt="uppercase">
                       Page {page.pageNumber}
                     </Text>
+
                     {hasHighlights && (
                       <Text
                         size="10px"
@@ -250,7 +251,14 @@ export function DocumentPagesPanel({
                     {isCollapsed ? "Show Image" : "Hide Image"}
                   </Button>
                 </Group>
-
+                {!isCollapsed && (
+                  <Box mt="sm">
+                    <PageImage
+                      documentId={documentId}
+                      pageNumber={page.pageNumber}
+                    />
+                  </Box>
+                )}
                 <MarkedReferenceList
                   references={pageMarkReferences}
                   deletingId={deletingMarkReferenceId}
@@ -282,15 +290,6 @@ export function DocumentPagesPanel({
                   >
                     {page.text}
                   </Text>
-                )}
-
-                {!isCollapsed && (
-                  <Box mt="sm">
-                    <PageImage
-                      documentId={documentId}
-                      pageNumber={page.pageNumber}
-                    />
-                  </Box>
                 )}
 
                 {page.id !== pages[pages.length - 1]?.id && <Divider mt="lg" />}

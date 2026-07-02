@@ -41,6 +41,10 @@ interface DefiniendumDialogProps {
   onClose: () => void;
 }
 
+function normalizePrefilledSymbolName(value: string | null | undefined) {
+  return (value ?? "").toLowerCase();
+}
+
 const DEFINIENDUM_DIALOG_Z_INDEX = 1200;
 
 export function DefiniendumDialog({
@@ -62,8 +66,8 @@ export function DefiniendumDialog({
 
   const form = useForm({
     defaultValues: {
-      symbolName: extractedText ?? "",
-      verbalization: extractedText ?? "",
+      symbolName: normalizePrefilledSymbolName(extractedText),
+      verbalization: normalizePrefilledSymbolName(extractedText),
       symdecl: true,
     },
     onSubmit: ({ value }) => {
@@ -86,8 +90,8 @@ export function DefiniendumDialog({
     setSelectedSymbol(null);
 
     form.reset({
-      symbolName: extractedText ?? "",
-      verbalization: extractedText ?? "",
+      symbolName: normalizePrefilledSymbolName(extractedText),
+      verbalization: normalizePrefilledSymbolName(extractedText),
       symdecl: true,
     });
   }, [opened, extractedText]);

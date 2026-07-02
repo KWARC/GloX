@@ -380,6 +380,7 @@ export function useSemanticEditingFlow({
     if (!selection) return;
     const extract = extracts.find((e) => e.id === selection.extractId);
     if (!extract || !supportsDefinienda(extract.kind)) return;
+    clearPopupOnly();
     setDefExtractId(extract.id);
     setDefExtractText(selection.text);
     setDefDialogOpen(true);

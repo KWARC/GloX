@@ -489,6 +489,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           onDefiniendum={() => {
             if (!selection?.extractId || !selection.text) return;
 
+            clearPopupOnly();
             setDefExtractId(selection.extractId);
             setDefExtractText(selection.text);
             setDefDialogOpen(true);

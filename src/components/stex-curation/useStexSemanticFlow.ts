@@ -65,6 +65,7 @@ export function useStexSemanticFlow(
     const sourceDefinition = definitions.find((d) => d.id === selection.extractId);
     if (!sourceDefinition || !supportsDefinienda(sourceDefinition.kind)) return;
 
+    clearPopupOnly();
     setDefExtractId(selection.extractId);
     setDefExtractText(selection.text);
     setDefDialogOpen(true);

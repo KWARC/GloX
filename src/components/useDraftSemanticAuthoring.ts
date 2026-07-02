@@ -9,6 +9,7 @@ import {
   DefiniendumNode,
   DefinitionNode,
   FtmlContent,
+  FtmlNode,
   FtmlStatement,
   RootNode,
   SymrefNode,
@@ -266,6 +267,12 @@ export function statementHasDeclaredSymbol(
   });
 }
 
+function containsSemanticNodes(node: FtmlContent | FtmlNode): boolean {
+  if (typeof node === "string") return false;
+  if (node.type === "definiendum" || node.type === "symref") return true;
+  return (node.content ?? []).some(containsSemanticNodes);
+}
+
 export function useDraftSemanticAuthoring(
   text: string,
   enabled: boolean,
@@ -317,6 +324,8 @@ export function useDraftSemanticAuthoring(
     setPopup(null);
   }
 
+  const hasSemantics = normalizeToRoot(statement).content.some(containsSemanticNodes);
+
   function applyDefiniendum(
     payload:
       | {
@@ -358,6 +367,7 @@ export function useDraftSemanticAuthoring(
     statement,
     selection,
     popup,
+    hasSemantics,
     handlePreviewMouseUp,
     clearSelection,
     clearPopup,

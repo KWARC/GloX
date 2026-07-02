@@ -489,7 +489,7 @@ function RouteComponent() {
             ? "Add Definition"
             : undefined,
           hideSymbolNameField: extractionFlow.isMarkReferenceDefinitionFlow,
-          enableSemanticAuthoring: extractionFlow.isManualDefinitionCreate,
+          enableSemanticAuthoring: true,
           semanticEnabled: extractionFlow.semanticEnabled,
           setSemanticEnabled: extractionFlow.setSemanticEnabled,
           onClose: extractionFlow.handleCloseExtractDialog,
