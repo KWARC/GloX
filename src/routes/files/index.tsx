@@ -12,6 +12,7 @@ import {
   Group,
   Loader,
   Modal,
+  Select,
   Stack,
   Text,
   Title,
@@ -34,6 +35,9 @@ export const Route = createFileRoute("/files/")({
 
 function RouteComponent() {
   const { data = [], isLoading } = useQuery<MyDocument[]>(myDocumentsQuery);
+  const [moduleDescriptionFilter, setModuleDescriptionFilter] = useState<
+    "all" | "only" | "exclude"
+  >("all");
 
   const { data: auth } = useQuery({
     queryKey: ["currentUser"],
@@ -49,6 +53,12 @@ function RouteComponent() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [targetDoc, setTargetDoc] = useState<string | null>(null);
   const [defCount, setDefCount] = useState(0);
+
+  const filteredDocuments = data.filter((doc) => {
+    if (moduleDescriptionFilter === "only") return doc.moduleDescription;
+    if (moduleDescriptionFilter === "exclude") return !doc.moduleDescription;
+    return true;
+  });
 
   const { mutateAsync: checkDefs } = useMutation({
     mutationFn: (documentId: string) =>
@@ -76,7 +86,26 @@ function RouteComponent() {
   return (
     <>
       <Stack p="md">
-        <Title order={2}>Uploaded Files</Title>
+        <Group justify="space-between" align="flex-end">
+          <Title order={2}>Uploaded Files</Title>
+          <Select
+            label="Module Descriptions"
+            value={moduleDescriptionFilter}
+            onChange={(value) =>
+              setModuleDescriptionFilter(
+                (value as "all" | "only" | "exclude") ?? "all",
+              )
+            }
+            data={[
+              { value: "all", label: "Show All" },
+              { value: "only", label: "Show Module Descriptions" },
+              { value: "exclude", label: "Hide Module Descriptions" },
+            ]}
+            allowDeselect={false}
+            w={240}
+            size="sm"
+          />
+        </Group>
 
         {isAdmin && (
           <Text size="sm" c="blue">
@@ -84,15 +113,19 @@ function RouteComponent() {
           </Text>
         )}
 
-        {data.length === 0 ? (
+        {filteredDocuments.length === 0 ? (
           <Stack gap="xs" align="flex-start">
-            <Text c="dimmed">No files uploaded yet</Text>
+            <Text c="dimmed">
+              {data.length === 0
+                ? "No files uploaded yet"
+                : "No files match the selected filter"}
+            </Text>
             <Button component={Link} to="/" variant="light">
               Go to Upload Page
             </Button>
           </Stack>
         ) : (
-          data.map((doc) => (
+          filteredDocuments.map((doc) => (
             <Link
               key={doc.id}
               to="/files/$documentId"
@@ -132,12 +165,22 @@ function RouteComponent() {
                 </Text>
 
                 <Text size="sm" c="dimmed">
-                  {doc.futureRepo} / {doc.filePath} ({doc.language})
+                  [{doc.futureRepo}] [{doc.filePath}] [{doc.language}]
                 </Text>
 
                 <Text size="sm" c="dimmed">
                   Status: {doc.status}
                 </Text>
+
+                <Text size="sm" c="dimmed">
+                  Module Description: {doc.moduleDescription ? "Yes" : "No"}
+                </Text>
+
+                {doc.indexStatus && (
+                  <Text size="sm" c="dimmed">
+                    Index Status: {doc.indexStatus}
+                  </Text>
+                )}
               </Card>
             </Link>
           ))

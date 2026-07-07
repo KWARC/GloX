@@ -11,6 +11,8 @@ export type MyDocument = {
   futureRepo: string
   filePath: string
   language: string
+  moduleDescription: boolean
+  indexStatus: "EXTRACTED" | "FINALIZED" | "SUBMITTED_TO_MATHHUB" | null
 
   userId: string
   status: string

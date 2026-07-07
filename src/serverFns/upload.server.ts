@@ -12,6 +12,7 @@ export const uploadPdf = createServerFn({ method: "POST" })
     const futureRepo = data.get("futureRepo") as string;
     const filePath = data.get("filePath") as string;
     const language = data.get("language") as string;
+    const moduleDescription = data.get("moduleDescription") === "true";
 
     if (!(file instanceof File)) {
       throw new Error("No file provided");
@@ -23,5 +24,6 @@ export const uploadPdf = createServerFn({ method: "POST" })
       futureRepo,
       filePath,
       language,
+      moduleDescription,
     });
   });

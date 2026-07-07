@@ -46,6 +46,12 @@ enum ParagraphKind {
   Example
 }
 
+enum IndexStatus {
+  EXTRACTED
+  FINALIZED
+  SUBMITTED_TO_MATHHUB
+}
+
 model User {
   id            String   @id @default(uuid())
   firstName     String?
@@ -55,13 +61,13 @@ model User {
   emailVerified Boolean  @default(false)
   role          UserRole @default(EXTRACTOR)
 
-  createdAt          DateTime            @default(now())
-  documents          Document[]
-  DefinitionsHistory DefinitionVersion[]
-  createdDefinitions Definition[]        @relation("DefinitionCreatedBy")
-  updatedDefinitions Definition[]        @relation("DefinitionUpdatedBy")
-  createdMarkReferences MarkReference[]  @relation("MarkReferenceCreatedBy")
-  confirmedSymbols   Symbol[]
+  createdAt             DateTime            @default(now())
+  documents             Document[]
+  DefinitionsHistory    DefinitionVersion[]
+  createdDefinitions    Definition[]        @relation("DefinitionCreatedBy")
+  updatedDefinitions    Definition[]        @relation("DefinitionUpdatedBy")
+  createdMarkReferences MarkReference[]     @relation("MarkReferenceCreatedBy")
+  confirmedSymbols      Symbol[]
 }
 
 model Document {
@@ -75,20 +81,25 @@ model Document {
   filePath   String @default("mod")
   language   String @default("en")
 
+  moduleDescription Boolean      @default(false)
+  indexStatus       IndexStatus?
+
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  status        DocumentStatus  @default(UPLOADED)
-  pages         DocumentPage[]
-  definitions   Definition[]
+  status         DocumentStatus  @default(UPLOADED)
+  pages          DocumentPage[]
+  definitions    Definition[]
   markReferences MarkReference[]
-  latexTables   LatexTable[]
-  llmSuggestion LlmSuggestion[]
+  latexTables    LatexTable[]
+  llmSuggestion  LlmSuggestion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([fileHash, userId])
+  @@index([moduleDescription])
+  @@index([indexStatus])
 }
 
 model DocumentPage {

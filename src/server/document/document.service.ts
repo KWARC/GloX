@@ -7,7 +7,8 @@ import { extractPdfPages } from "./textExtractor";
 export async function uploadDocument(
   input: UploadDocumentInput,
 ): Promise<UploadDocumentResult> {
-  const { file, userId, futureRepo, filePath, language } = input;
+  const { file, userId, futureRepo, filePath, language, moduleDescription } =
+    input;
 
   if (!file || typeof file.arrayBuffer !== "function") {
     throw new Error("INVALID_FILE");
@@ -42,6 +43,7 @@ export async function uploadDocument(
       futureRepo,
       filePath,
       language,
+      moduleDescription,
       userId,
       status: "UPLOADED",
     },

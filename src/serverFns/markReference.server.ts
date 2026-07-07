@@ -2,6 +2,9 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { createServerFn } from "@tanstack/react-start";
 
+type IndexStatus = "EXTRACTED" | "FINALIZED" | "SUBMITTED_TO_MATHHUB";
+type ModuleDescriptionVisibility = "all" | "only" | "exclude";
+
 type CreateLocalSymbolInput = {
   symbolName: string;
   alias?: string | null;
@@ -36,6 +39,11 @@ export type CreatedLocalSymbol = {
   filePath: string;
   fileName: string;
   language: string;
+};
+
+type ListIndexDocumentsInput = {
+  indexStatus?: IndexStatus;
+  moduleDescriptionVisibility?: ModuleDescriptionVisibility;
 };
 
 export const createLocalSymbol = createServerFn({ method: "POST" })
@@ -102,24 +110,38 @@ export const createMarkReference = createServerFn({ method: "POST" })
         ? selectedSymbol.symbolName
         : selectedSymbol.uri;
 
-    return prisma.markReference.create({
-      data: {
-        documentId: data.documentId,
-        documentPageId: data.documentPageId,
-        pageNumber: data.pageNumber,
-        symbolName,
-        verbalization: data.verbalization.trim(),
-        createdById: userRes.user.id,
-      },
-      select: {
-        id: true,
-        documentPageId: true,
-        pageNumber: true,
-        symbolName: true,
-        verbalization: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    return prisma.$transaction(async (tx) => {
+      const reference = await tx.markReference.create({
+        data: {
+          documentId: data.documentId,
+          documentPageId: data.documentPageId,
+          pageNumber: data.pageNumber,
+          symbolName,
+          verbalization: data.verbalization.trim(),
+          createdById: userRes.user.id,
+        },
+        select: {
+          id: true,
+          documentPageId: true,
+          pageNumber: true,
+          symbolName: true,
+          verbalization: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      await tx.document.updateMany({
+        where: {
+          id: data.documentId,
+          indexStatus: null,
+        },
+        data: {
+          indexStatus: "EXTRACTED",
+        },
+      });
+
+      return reference;
     });
   });
 
@@ -132,8 +154,22 @@ export const deleteMarkReference = createServerFn({ method: "POST" })
     const id = data.id?.trim();
     if (!id) throw new Error("Mark reference id is required");
 
-    await prisma.markReference.delete({
-      where: { id },
+    await prisma.$transaction(async (tx) => {
+      const reference = await tx.markReference.delete({
+        where: { id },
+        select: { documentId: true },
+      });
+
+      const remainingReferences = await tx.markReference.count({
+        where: { documentId: reference.documentId },
+      });
+
+      if (remainingReferences === 0) {
+        await tx.document.update({
+          where: { id: reference.documentId },
+          data: { indexStatus: null },
+        });
+      }
     });
 
     return { success: true as const };
@@ -166,20 +202,31 @@ export const listMarkReferences = createServerFn({ method: "POST" })
   });
 
 export const listMarkReferenceFiles = createServerFn({ method: "POST" })
-  .inputValidator((data: { documentIds: string[] }) => data)
+  .inputValidator((data: ListIndexDocumentsInput) => data)
   .handler(async ({ data }) => {
     const userRes = await currentUser();
     if (!userRes.loggedIn) throw new Error("Unauthorized");
-    if (data.documentIds.length === 0) return [];
+
+    const moduleDescriptionVisibility =
+      data.moduleDescriptionVisibility ?? "all";
 
     const documents = await prisma.document.findMany({
-      where: { id: { in: data.documentIds } },
+      where: {
+        indexStatus: data.indexStatus ?? { not: null },
+        ...(moduleDescriptionVisibility === "only"
+          ? { moduleDescription: true }
+          : moduleDescriptionVisibility === "exclude"
+            ? { moduleDescription: false }
+            : {}),
+      },
       select: {
         id: true,
         filename: true,
         futureRepo: true,
         filePath: true,
         language: true,
+        moduleDescription: true,
+        indexStatus: true,
         markReferences: {
           select: {
             id: true,
@@ -191,7 +238,7 @@ export const listMarkReferenceFiles = createServerFn({ method: "POST" })
           orderBy: [{ pageNumber: "asc" }, { createdAt: "asc" }],
         },
       },
-      orderBy: { filename: "asc" },
+      orderBy: [{ filename: "asc" }],
     });
 
     return documents;

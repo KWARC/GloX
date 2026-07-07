@@ -1,12 +1,12 @@
 import { CurationMarkReferenceBox } from "@/components/CurationMarkReferenceBox";
-import { queryClient } from "@/queryClient";
 import { StexCuration } from "@/components/stex-curation/StexCuration";
-import { DefinitionStatus } from "@/routes/curation";
-import { getFileIdentities } from "@/serverFns/latex.server";
 import {
-  deleteMarkReference,
-  listMarkReferenceFiles,
-} from "@/serverFns/markReference.server";
+  DefinitionStatus,
+  IndexStatus,
+  ModuleDescriptionVisibility,
+} from "@/routes/curation";
+import { getFileIdentities } from "@/serverFns/latex.server";
+import { listMarkReferenceFiles } from "@/serverFns/markReference.server";
 import {
   Box,
   Divider,
@@ -19,17 +19,24 @@ import {
   Title,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
 type Props = {
   curationLevel: DefinitionStatus | null;
   setCurationLevel: (value: DefinitionStatus | null) => void;
+  indexStatus: IndexStatus | null;
+  setIndexStatus: (value: IndexStatus | null) => void;
+  moduleDescriptionVisibility: ModuleDescriptionVisibility;
+  setModuleDescriptionVisibility: (value: ModuleDescriptionVisibility) => void;
 };
 
-export function CurationSection({ curationLevel, setCurationLevel }: Props) {
-  const [deletingMarkReferenceId, setDeletingMarkReferenceId] = useState<
-    string | null
-  >(null);
+export function CurationSection({
+  curationLevel,
+  setCurationLevel,
+  indexStatus,
+  setIndexStatus,
+  moduleDescriptionVisibility,
+  setModuleDescriptionVisibility,
+}: Props) {
   const { data: fileGroups = [], isLoading } = useQuery({
     queryKey: ["fileIdentities", curationLevel],
     queryFn: () =>
@@ -39,24 +46,20 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
         },
       }),
   });
-  const documentIds = Array.from(new Set(fileGroups.map((f) => f.documentId)));
   const { data: markReferenceFiles = [] } = useQuery({
-    queryKey: ["curation-mark-reference-files", documentIds],
-    queryFn: () => listMarkReferenceFiles({ data: { documentIds } }),
-    enabled: documentIds.length > 0,
+    queryKey: [
+      "curation-mark-reference-files",
+      indexStatus,
+      moduleDescriptionVisibility,
+    ],
+    queryFn: () =>
+      listMarkReferenceFiles({
+        data: {
+          indexStatus: indexStatus ?? undefined,
+          moduleDescriptionVisibility,
+        },
+      }),
   });
-
-  async function handleDeleteMarkReference(referenceId: string) {
-    setDeletingMarkReferenceId(referenceId);
-    try {
-      await deleteMarkReference({ data: { id: referenceId } });
-      await queryClient.invalidateQueries({
-        queryKey: ["curation-mark-reference-files"],
-      });
-    } finally {
-      setDeletingMarkReferenceId(null);
-    }
-  }
 
   return (
     <Stack w="100%" gap="md">
@@ -96,6 +99,46 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
                 label: { fontWeight: 500, marginBottom: 4 },
               }}
             />
+            <Select
+              label="Filter Index status"
+              placeholder="All statuses"
+              value={indexStatus}
+              onChange={(value) => setIndexStatus(value as IndexStatus | null)}
+              clearable
+              data={[
+                { value: "EXTRACTED", label: "Extracted" },
+                { value: "FINALIZED", label: "Finalized" },
+                {
+                  value: "SUBMITTED_TO_MATHHUB",
+                  label: "Submitted to MathHub",
+                },
+              ]}
+              w={220}
+              size="sm"
+              styles={{
+                label: { fontWeight: 500, marginBottom: 4 },
+              }}
+            />
+            <Select
+              label="Module Descriptions"
+              value={moduleDescriptionVisibility}
+              onChange={(value) =>
+                setModuleDescriptionVisibility(
+                  (value as ModuleDescriptionVisibility) ?? "all",
+                )
+              }
+              data={[
+                { value: "all", label: "Show All" },
+                { value: "only", label: "Show Module Descriptions" },
+                { value: "exclude", label: "Hide Module Descriptions" },
+              ]}
+              allowDeselect={false}
+              w={240}
+              size="sm"
+              styles={{
+                label: { fontWeight: 500, marginBottom: 4 },
+              }}
+            />
           </Group>
         </Group>
         <Divider />
@@ -120,11 +163,7 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
         </Box>
       )}
 
-      <CurationMarkReferenceBox
-        files={markReferenceFiles}
-        deletingMarkReferenceId={deletingMarkReferenceId}
-        onDeleteMarkReference={handleDeleteMarkReference}
-      />
+      <CurationMarkReferenceBox files={markReferenceFiles} />
 
       {fileGroups.length > 0 && (
         <Table.ScrollContainer minWidth={980}>

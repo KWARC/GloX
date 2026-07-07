@@ -3,7 +3,17 @@ import {
   getMarkReferenceLatexDownloadName,
 } from "@/lib/markReferenceLatex";
 import { MarkedReferenceList } from "@/components/MarkedReferenceList";
-import { Box, Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import {
+  Accordion,
+  Badge,
+  Box,
+  Button,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 
 type MarkReferenceFile = {
   id: string;
@@ -11,6 +21,8 @@ type MarkReferenceFile = {
   futureRepo: string;
   filePath: string;
   language: string;
+  moduleDescription: boolean;
+  indexStatus: "EXTRACTED" | "FINALIZED" | "SUBMITTED_TO_MATHHUB" | null;
   markReferences: {
     id: string;
     documentPageId: string;
@@ -56,8 +68,6 @@ export function CurationMarkReferenceBox({
     setTimeout(() => URL.revokeObjectURL(url), 100);
   }
 
-  if (files.length === 0) return null;
-
   return (
     <Paper withBorder radius="md" p="md">
       <Stack gap="md">
@@ -65,7 +75,13 @@ export function CurationMarkReferenceBox({
           <Title order={4}>Index Files</Title>
         </Box>
 
-        {files.map((file) => {
+        {files.length === 0 ? (
+          <Text size="sm" c="dimmed">
+            No index files match the selected filters.
+          </Text>
+        ) : (
+          <Accordion variant="separated" radius="sm">
+            {files.map((file) => {
           const pages = Array.from(
             file.markReferences.reduce<
               Map<
@@ -89,25 +105,45 @@ export function CurationMarkReferenceBox({
           ).sort((a, b) => a[0] - b[0]);
 
           return (
-            <Paper key={file.id} withBorder radius="sm" p="sm">
-              <Group justify="space-between" align="center" mb="xs">
-                <Text fw={600}>{file.filename}</Text>
-                <Button
-                  size="xs"
-                  variant="light"
-                  color="indigo"
-                  onClick={() => void handleDownload(file)}
-                >
-                  index.en.tex
-                </Button>
-              </Group>
-
-              {pages.length === 0 ? (
-                <Text size="sm" c="dimmed">
-                  No mark references in this file.
-                </Text>
-              ) : (
+            <Accordion.Item key={file.id} value={file.id}>
+              <Accordion.Control>
+                <Group justify="space-between" wrap="wrap" gap="sm">
+                  <Stack gap={2}>
+                    <Text fw={600}>{file.filename}</Text>
+                    <Text size="xs" c="dimmed">
+                      {file.futureRepo} / {file.filePath} ({file.language})
+                    </Text>
+                  </Stack>
+                  <Group gap="xs">
+                    {file.moduleDescription && (
+                      <Badge variant="light" color="blue">
+                        Module Description
+                      </Badge>
+                    )}
+                    {file.indexStatus && (
+                      <Badge variant="light" color="teal">
+                        {file.indexStatus}
+                      </Badge>
+                    )}
+                    <Badge variant="light" color="gray">
+                      {file.markReferences.length} references
+                    </Badge>
+                  </Group>
+                </Group>
+              </Accordion.Control>
+              <Accordion.Panel>
                 <Stack gap="sm">
+                  <Group justify="flex-end">
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color="indigo"
+                      onClick={() => void handleDownload(file)}
+                    >
+                      index.en.tex
+                    </Button>
+                  </Group>
+
                   {pages.map(([pageNumber, references]) => (
                     <Box key={pageNumber}>
                       <Text
@@ -127,10 +163,12 @@ export function CurationMarkReferenceBox({
                     </Box>
                   ))}
                 </Stack>
-              )}
-            </Paper>
+              </Accordion.Panel>
+            </Accordion.Item>
           );
-        })}
+            })}
+          </Accordion>
+        )}
       </Stack>
     </Paper>
   );
