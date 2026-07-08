@@ -1,30 +1,29 @@
+import { RoleChangeConfirmationModal } from "@/components/RoleChangeConfirmationModal";
 import { currentUser } from "@/server/auth/currentUser";
+import {
+  listAdminProfileUsers,
+  updateAdminUserRole,
+  type AdminProfileUser,
+  type UserRoleValue,
+} from "@/serverFns/adminUsers.server";
 import { updateProfile } from "@/serverFns/updateProfile.server";
 import {
-  Alert,
-  Avatar,
-  Badge,
-  Button,
   Container,
-  Divider,
   Group,
   Paper,
   Stack,
+  Tabs,
   Text,
-  TextInput,
   Title,
 } from "@mantine/core";
-import {
-  IconAlertCircle,
-  IconCheck,
-  IconEdit,
-  IconMail,
-  IconUser,
-  IconX,
-} from "@tabler/icons-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { IconSettings, IconUsers } from "@tabler/icons-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { AccountInformationCard } from "../../components/AccountInformationCard";
+import { PersonalInfoCard } from "../../components/PersonalInfoCard";
+import { UserManagementCard } from "../../components/UserManagementCard";
+import { getDisplayName } from "../../hooks/profileUtils";
 
 export const Route = createFileRoute("/profile/")({
   component: RouteComponent,
@@ -45,6 +44,13 @@ function RouteComponent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingRoleByUserId, setPendingRoleByUserId] = useState<
+    Record<string, UserRoleValue>
+  >({});
+  const [roleConfirmTarget, setRoleConfirmTarget] = useState<{
+    user: AdminProfileUser;
+    nextRole: UserRoleValue;
+  } | null>(null);
 
   if (!isLoading && !userData?.loggedIn) {
     navigate({ to: "/login", search: { target: "/profile" } });
@@ -52,6 +58,27 @@ function RouteComponent() {
   }
 
   const user = userData?.user;
+  if (!user) {
+    return null;
+  }
+
+  const isAdmin = user?.role === "ADMIN";
+
+  const {
+    data: adminUsers = [],
+    isLoading: isLoadingAdminUsers,
+    error: adminUsersError,
+  } = useQuery<AdminProfileUser[]>({
+    queryKey: ["admin-profile-users"],
+    queryFn: listAdminProfileUsers,
+    enabled: isAdmin,
+  });
+
+  const { mutateAsync: changeUserRole, isPending: isUpdatingUserRole } =
+    useMutation({
+      mutationFn: ({ userId, role }: { userId: string; role: UserRoleValue }) =>
+        updateAdminUserRole({ data: { userId, role } }),
+    });
 
   const handleEditClick = () => {
     setFirstName(user?.firstName || "");
@@ -105,8 +132,75 @@ function RouteComponent() {
     }
   };
 
-  const getInitials = (email: string) => {
-    return email.substring(0, 2).toUpperCase();
+  const roleOptions = [
+    { value: "ADMIN", label: "ADMIN" },
+    { value: "CURATOR", label: "CURATOR" },
+    { value: "EXTRACTOR", label: "EXTRACTOR" },
+  ] satisfies Array<{ value: UserRoleValue; label: string }>;
+
+  const handleRoleSelection = (
+    targetUser: AdminProfileUser,
+    value: string | null,
+  ) => {
+    if (!value) return;
+
+    const nextRole = value as UserRoleValue;
+
+    setPendingRoleByUserId((current) => ({
+      ...current,
+      [targetUser.id]: nextRole,
+    }));
+
+    if (nextRole === targetUser.role) return;
+
+    setRoleConfirmTarget({
+      user: targetUser,
+      nextRole,
+    });
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleRoleConfirmCancel = () => {
+    if (roleConfirmTarget) {
+      setPendingRoleByUserId((current) => ({
+        ...current,
+        [roleConfirmTarget.user.id]: roleConfirmTarget.user.role,
+      }));
+    }
+
+    setRoleConfirmTarget(null);
+  };
+
+  const handleRoleConfirm = async () => {
+    if (!roleConfirmTarget) return;
+
+    setError(null);
+    setSuccess(null);
+
+    const result = await changeUserRole({
+      userId: roleConfirmTarget.user.id,
+      role: roleConfirmTarget.nextRole,
+    });
+
+    if (result.success) {
+      await queryClient.invalidateQueries({
+        queryKey: ["admin-profile-users"],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      setSuccess(
+        `Updated ${getDisplayName(roleConfirmTarget.user)} to ${roleConfirmTarget.nextRole}.`,
+      );
+      setRoleConfirmTarget(null);
+      return;
+    }
+
+    setPendingRoleByUserId((current) => ({
+      ...current,
+      [roleConfirmTarget.user.id]: roleConfirmTarget.user.role,
+    }));
+    setError(result.error || "Failed to update user role");
+    setRoleConfirmTarget(null);
   };
 
   if (isLoading) {
@@ -122,194 +216,101 @@ function RouteComponent() {
   }
 
   return (
-    <Container size="sm" mt="xl">
-      <Paper shadow="sm" p="xl" withBorder>
-        <Stack gap="lg">
-          <Group justify="space-between">
-            <Title order={2}>Profile</Title>
-            {!isEditing && (
-              <Button
-                leftSection={<IconEdit size={16} />}
-                onClick={handleEditClick}
-                variant="light"
-              >
-                Edit Profile
-              </Button>
-            )}
-          </Group>
-
-          <Divider />
-
-          <Group>
-            <Avatar size="xl" radius="xl" color="blue">
-              {user?.email ? getInitials(user.email) : "U"}
-            </Avatar>
-            <Stack gap="xs">
-              <Text size="xl" fw={600}>
-                {user?.firstName && user?.lastName
-                  ? `${user.firstName} ${user.lastName}`
-                  : "User"}
-              </Text>
-              <Group gap="xs">
-                <IconMail size={16} />
-                <Text size="sm" c="dimmed">
-                  {user?.email}
-                </Text>
+    <Container size={isAdmin ? "lg" : "sm"} mt="xl">
+      {isAdmin ? (
+        <Paper shadow="sm" p="xl" withBorder>
+          <Tabs defaultValue="personal" keepMounted={false}>
+            <Stack gap="lg">
+              <Group justify="space-between">
+                <Title order={2}>Profile</Title>
               </Group>
-            </Stack>
-          </Group>
 
-          <Divider />
-
-          {success && (
-            <Alert
-              icon={<IconCheck size={16} />}
-              title="Success"
-              color="green"
-              onClose={() => setSuccess(null)}
-              withCloseButton
-            >
-              {success}
-            </Alert>
-          )}
-
-          {error && (
-            <Alert
-              icon={<IconAlertCircle size={16} />}
-              title="Error"
-              color="red"
-              onClose={() => setError(null)}
-              withCloseButton
-            >
-              {error}
-            </Alert>
-          )}
-
-          {isEditing ? (
-            <Stack gap="md">
-              <TextInput
-                label="First Name"
-                placeholder="John"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                leftSection={<IconUser size={16} />}
-              />
-
-              <TextInput
-                label="Last Name"
-                placeholder="Doe"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                leftSection={<IconUser size={16} />}
-              />
-
-              <Group justify="flex-end" mt="md">
-                <Button
-                  variant="subtle"
-                  onClick={handleCancelEdit}
-                  leftSection={<IconX size={16} />}
-                  disabled={isSaving}
+              <Tabs.List>
+                <Tabs.Tab
+                  value="personal"
+                  leftSection={<IconSettings size={16} />}
                 >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  loading={isSaving}
-                  leftSection={<IconCheck size={16} />}
-                >
-                  Save Changes
-                </Button>
-              </Group>
+                  Personal Info
+                </Tabs.Tab>
+                <Tabs.Tab value="users" leftSection={<IconUsers size={16} />}>
+                  Manage Users
+                </Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="personal">
+                <Stack gap="md">
+                  <PersonalInfoCard
+                    user={user}
+                    title="Personal Info"
+                    titleOrder={3}
+                    isEditing={isEditing}
+                    firstName={firstName}
+                    lastName={lastName}
+                    isSaving={isSaving}
+                    error={error}
+                    success={success}
+                    onClearError={() => setError(null)}
+                    onClearSuccess={() => setSuccess(null)}
+                    onEdit={handleEditClick}
+                    onCancel={handleCancelEdit}
+                    onSave={handleSave}
+                    onFirstNameChange={setFirstName}
+                    onLastNameChange={setLastName}
+                  />
+
+                  <AccountInformationCard user={user} />
+                </Stack>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="users">
+                <UserManagementCard
+                  users={adminUsers}
+                  isLoading={isLoadingAdminUsers}
+                  hasLoadError={!!adminUsersError}
+                  isUpdatingRole={isUpdatingUserRole}
+                  pendingRoleByUserId={pendingRoleByUserId}
+                  roleOptions={roleOptions}
+                  error={error}
+                  success={success}
+                  onClearError={() => setError(null)}
+                  onClearSuccess={() => setSuccess(null)}
+                  onRoleSelection={handleRoleSelection}
+                />
+              </Tabs.Panel>
             </Stack>
-          ) : (
-            <Stack gap="md">
-              <Paper p="md" withBorder>
-                <Group justify="space-between">
-                  <Group gap="xs">
-                    <IconUser size={18} />
-                    <Text size="sm" c="dimmed">
-                      First Name
-                    </Text>
-                  </Group>
-                  <Text fw={500}>
-                    {user?.firstName || (
-                      <Text component="span" c="dimmed" fs="italic">
-                        Not set
-                      </Text>
-                    )}
-                  </Text>
-                </Group>
-              </Paper>
+          </Tabs>
+        </Paper>
+      ) : (
+        <>
+          <PersonalInfoCard
+            user={user}
+            title="Profile"
+            titleOrder={2}
+            isEditing={isEditing}
+            firstName={firstName}
+            lastName={lastName}
+            isSaving={isSaving}
+            error={error}
+            success={success}
+            onClearError={() => setError(null)}
+            onClearSuccess={() => setSuccess(null)}
+            onEdit={handleEditClick}
+            onCancel={handleCancelEdit}
+            onSave={handleSave}
+            onFirstNameChange={setFirstName}
+            onLastNameChange={setLastName}
+          />
 
-              <Paper p="md" withBorder>
-                <Group justify="space-between">
-                  <Group gap="xs">
-                    <IconUser size={18} />
-                    <Text size="sm" c="dimmed">
-                      Last Name
-                    </Text>
-                  </Group>
-                  <Text fw={500}>
-                    {user?.lastName || (
-                      <Text component="span" c="dimmed" fs="italic">
-                        Not set
-                      </Text>
-                    )}
-                  </Text>
-                </Group>
-              </Paper>
+          <AccountInformationCard user={user} />
+        </>
+      )}
 
-              <Paper p="md" withBorder>
-                <Group justify="space-between">
-                  <Group gap="xs">
-                    <IconMail size={18} />
-                    <Text size="sm" c="dimmed">
-                      Email Address
-                    </Text>
-                  </Group>
-                  <Text fw={500}>{user?.email}</Text>
-                </Group>
-              </Paper>
-
-              <Paper p="md" withBorder>
-                <Group justify="space-between">
-                  <Text size="sm" c="dimmed">
-                    Account Status
-                  </Text>
-                  <Badge color="green" variant="light">
-                    Active
-                  </Badge>
-                </Group>
-              </Paper>
-            </Stack>
-          )}
-        </Stack>
-      </Paper>
-
-      <Paper shadow="sm" p="xl" withBorder mt="md">
-        <Stack gap="md">
-          <Title order={3}>Account Information</Title>
-          <Divider />
-
-          <Group justify="space-between">
-            <Text size="sm" c="dimmed">
-              User ID
-            </Text>
-            <Text size="sm" fw={500} style={{ fontFamily: "monospace" }}>
-              {user?.id || "N/A"}
-            </Text>
-          </Group>
-
-          <Group justify="space-between">
-            <Text size="sm" c="dimmed">
-              Authentication Method
-            </Text>
-            <Badge variant="light">Email & Password</Badge>
-          </Group>
-        </Stack>
-      </Paper>
+      <RoleChangeConfirmationModal
+        target={roleConfirmTarget}
+        loading={isUpdatingUserRole}
+        onCancel={handleRoleConfirmCancel}
+        onConfirm={handleRoleConfirm}
+      />
     </Container>
   );
 }
