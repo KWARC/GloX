@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { createServerFn } from "@tanstack/react-start";
 
-type IndexStatus = "EXTRACTED" | "FINALIZED" | "SUBMITTED_TO_MATHHUB";
 type ModuleDescriptionVisibility = "all" | "only" | "exclude";
 
 type CreateLocalSymbolInput = {
@@ -42,7 +41,6 @@ export type CreatedLocalSymbol = {
 };
 
 type ListIndexDocumentsInput = {
-  indexStatus?: IndexStatus;
   moduleDescriptionVisibility?: ModuleDescriptionVisibility;
 };
 
@@ -212,7 +210,7 @@ export const listMarkReferenceFiles = createServerFn({ method: "POST" })
 
     const documents = await prisma.document.findMany({
       where: {
-        indexStatus: data.indexStatus ?? { not: null },
+        indexStatus: { not: null },
         ...(moduleDescriptionVisibility === "only"
           ? { moduleDescription: true }
           : moduleDescriptionVisibility === "exclude"

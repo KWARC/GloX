@@ -2,7 +2,6 @@ import { CurationMarkReferenceBox } from "@/components/CurationMarkReferenceBox"
 import { StexCuration } from "@/components/stex-curation/StexCuration";
 import {
   DefinitionStatus,
-  IndexStatus,
   ModuleDescriptionVisibility,
 } from "@/routes/curation";
 import { getFileIdentities } from "@/serverFns/latex.server";
@@ -23,8 +22,6 @@ import { useQuery } from "@tanstack/react-query";
 type Props = {
   curationLevel: DefinitionStatus | null;
   setCurationLevel: (value: DefinitionStatus | null) => void;
-  indexStatus: IndexStatus | null;
-  setIndexStatus: (value: IndexStatus | null) => void;
   moduleDescriptionVisibility: ModuleDescriptionVisibility;
   setModuleDescriptionVisibility: (value: ModuleDescriptionVisibility) => void;
 };
@@ -32,8 +29,6 @@ type Props = {
 export function CurationSection({
   curationLevel,
   setCurationLevel,
-  indexStatus,
-  setIndexStatus,
   moduleDescriptionVisibility,
   setModuleDescriptionVisibility,
 }: Props) {
@@ -47,15 +42,10 @@ export function CurationSection({
       }),
   });
   const { data: markReferenceFiles = [] } = useQuery({
-    queryKey: [
-      "curation-mark-reference-files",
-      indexStatus,
-      moduleDescriptionVisibility,
-    ],
+    queryKey: ["curation-mark-reference-files", moduleDescriptionVisibility],
     queryFn: () =>
       listMarkReferenceFiles({
         data: {
-          indexStatus: indexStatus ?? undefined,
           moduleDescriptionVisibility,
         },
       }),

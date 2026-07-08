@@ -11,7 +11,6 @@ export type DefinitionStatus =
   | "SUBMITTED_TO_MATHHUB"
   | "DISCARDED";
 
-export type IndexStatus = "EXTRACTED" | "FINALIZED" | "SUBMITTED_TO_MATHHUB";
 export type ModuleDescriptionVisibility = "all" | "only" | "exclude";
 
 export const Route = createFileRoute("/curation")({
@@ -37,7 +36,6 @@ function RouteComponent() {
   const [curationLevel, setCurationLevel] = useState<DefinitionStatus | null>(
     null,
   );
-  const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
   const [moduleDescriptionVisibility, setModuleDescriptionVisibility] =
     useState<ModuleDescriptionVisibility>("all");
 
@@ -54,8 +52,6 @@ function RouteComponent() {
         <CurationSection
           curationLevel={curationLevel}
           setCurationLevel={setCurationLevel}
-          indexStatus={indexStatus}
-          setIndexStatus={setIndexStatus}
           moduleDescriptionVisibility={moduleDescriptionVisibility}
           setModuleDescriptionVisibility={setModuleDescriptionVisibility}
         />
