@@ -321,9 +321,10 @@ export function useDefinitionExtractionFlow({
           selectedSymbol: SymbolSearchResult;
         },
   ) {
-    if (params.mode !== "PICK_EXISTING") {
-      return;
-    }
+    if (!validateIdentity() || !document) return;
+    const shouldOpenDefinitionDialog = params.mode === "CREATE";
+    const createdSymbolName =
+      params.mode === "CREATE" ? params.symbolName.trim() : "";
 
     const selectedText = markReferenceText || selection?.text;
     if (!selectedText || !activePage) return;
@@ -337,7 +338,12 @@ export function useDefinitionExtractionFlow({
           pageNumber: activePage.pageNumber,
           verbalization: selectedText,
           selectedSymbol:
-            params.selectedSymbol.source === "DB"
+            params.mode === "CREATE"
+              ? {
+                  source: "NEW",
+                  symbolName: createdSymbolName,
+                }
+              : params.selectedSymbol.source === "DB"
               ? {
                   source: "DB",
                   id: params.selectedSymbol.id,
@@ -355,7 +361,22 @@ export function useDefinitionExtractionFlow({
       });
 
       resetMarkReferenceState();
-      clearAll();
+
+      if (shouldOpenDefinitionDialog) {
+        clearAll();
+        setPendingExtractText(selectedText);
+        setDefinitionName(normalizeContentName(createdSymbolName));
+        setSymbolName(createdSymbolName);
+        setCreatedSymbolTarget(null);
+        setExtractDialogMode("symbol-target");
+        setExtractKind("Definition");
+        setIsManualDefinitionCreate(true);
+        setIsMarkReferenceDefinitionFlow(true);
+        setSemanticEnabled(false);
+        setExtractDialogOpen(true);
+      } else {
+        clearAll();
+      }
     } finally {
       setMarkReferenceSaving(false);
     }

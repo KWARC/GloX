@@ -47,7 +47,7 @@ export function SymrefEditor({
       />
 
       <Group gap={6} wrap="nowrap">
-        <Text size="sm">Current Symbol:</Text>
+        <Text size="sm">Current URI:</Text>
         <CurrentUriDisplay
           uri={selectedSymref.uri}
           label={selectedSymref.text}

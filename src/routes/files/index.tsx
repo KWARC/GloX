@@ -51,8 +51,12 @@ function RouteComponent() {
   const queryClient = useQueryClient();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [targetDoc, setTargetDoc] = useState<string | null>(null);
+  const [targetDoc, setTargetDoc] = useState<{
+    id: string;
+    filename: string;
+  } | null>(null);
   const [defCount, setDefCount] = useState(0);
+  const [markReferenceCount, setMarkReferenceCount] = useState(0);
 
   const filteredDocuments = data.filter((doc) => {
     if (moduleDescriptionFilter === "only") return doc.moduleDescription;
@@ -146,14 +150,13 @@ function RouteComponent() {
 
                       const res: any = await checkDefs(doc.id);
 
-                      if (res.definitionCount > 0) {
-                        setTargetDoc(doc.id);
-                        setDefCount(res.definitionCount);
-                        setConfirmOpen(true);
-                        return;
-                      }
-
-                      removeDoc(doc.id);
+                      setTargetDoc({
+                        id: doc.id,
+                        filename: doc.filename,
+                      });
+                      setDefCount(res.definitionCount);
+                      setMarkReferenceCount(res.markReferenceCount);
+                      setConfirmOpen(true);
                     }}
                   >
                     <IconTrash size={16} />
@@ -175,12 +178,6 @@ function RouteComponent() {
                 <Text size="sm" c="dimmed">
                   Module Description: {doc.moduleDescription ? "Yes" : "No"}
                 </Text>
-
-                {doc.indexStatus && (
-                  <Text size="sm" c="dimmed">
-                    Index Status: {doc.indexStatus}
-                  </Text>
-                )}
               </Card>
             </Link>
           ))
@@ -189,27 +186,70 @@ function RouteComponent() {
 
       <Modal
         opened={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
+        onClose={() => {
+          setConfirmOpen(false);
+          setTargetDoc(null);
+          setDefCount(0);
+          setMarkReferenceCount(0);
+        }}
         title="Confirm Deletion"
         centered
       >
         <Text size="sm" mb="md">
-          {defCount} definitions are associated with this document. Deleting
-          this file will permanently remove all of them.
+          Delete{" "}
+          <Text span fw={700}>
+            {targetDoc?.filename}
+          </Text>
+          ?
         </Text>
 
-        <Button
-          color="red"
-          fullWidth
-          loading={isPending}
-          onClick={() => {
-            if (!targetDoc) return;
-            removeDoc(targetDoc);
-            setConfirmOpen(false);
-          }}
-        >
-          Delete Anyway
-        </Button>
+        <Text size="sm" c="dimmed" mb="md">
+          {defCount > 0 || markReferenceCount > 0
+            ? [
+                defCount > 0
+                  ? `${defCount} definition${defCount === 1 ? "" : "s"}`
+                  : null,
+                markReferenceCount > 0
+                  ? `${markReferenceCount} mark reference${markReferenceCount === 1 ? "" : "s"}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" and ") +
+              " are associated with this document. Deleting this file will permanently remove them."
+            : "This action cannot be undone."}
+        </Text>
+
+        <Group grow>
+          <Button
+            variant="default"
+            onClick={() => {
+              setConfirmOpen(false);
+              setTargetDoc(null);
+              setDefCount(0);
+              setMarkReferenceCount(0);
+            }}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            color="red"
+            loading={isPending}
+            onClick={() => {
+              if (!targetDoc) return;
+              removeDoc(targetDoc.id);
+              setConfirmOpen(false);
+              setTargetDoc(null);
+              setDefCount(0);
+              setMarkReferenceCount(0);
+            }}
+          >
+            {defCount > 0 || markReferenceCount > 0
+              ? "Delete Anyway"
+              : "Delete"}
+          </Button>
+        </Group>
       </Modal>
     </>
   );

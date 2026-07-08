@@ -61,8 +61,8 @@ export function DefiniendumEditor({
           fw={600}
         >
           {selectedDefiniendum.symdecl
-            ? "NEW URI currently in use :"
-            : "URI currently in use :"}
+            ? "NEW Symbol currently in use :"
+            : "Symbol currently in use :"}
         </Text>
 
         <CurrentUriDisplay uri={selectedDefiniendum.uri} />

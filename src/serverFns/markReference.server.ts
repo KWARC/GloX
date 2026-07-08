@@ -25,6 +25,10 @@ type CreateMarkReferenceInput = {
         symbolName: string;
       }
     | {
+        source: "NEW";
+        symbolName: string;
+      }
+    | {
         source: "MATHHUB";
         uri: string;
       };
@@ -104,7 +108,7 @@ export const createMarkReference = createServerFn({ method: "POST" })
     const { selectedSymbol } = data;
 
     const symbolName =
-      selectedSymbol.source === "DB"
+      selectedSymbol.source === "DB" || selectedSymbol.source === "NEW"
         ? selectedSymbol.symbolName
         : selectedSymbol.uri;
 
