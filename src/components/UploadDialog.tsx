@@ -38,6 +38,9 @@ export default function UploadDialog({ opened, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existingDocumentId, setExistingDocumentId] = useState<string | null>(
+    null,
+  );
 
   const [futureRepo, setFutureRepo] = useState("");
   const [filePath, setFilePath] = useState("");
@@ -57,6 +60,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
 
     setLoading(true);
     setError(null);
+    setExistingDocumentId(null);
 
     try {
       const formData = new FormData();
@@ -68,10 +72,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
 
       const result = await uploadPdf({ data: formData });
 
-      if (
-        result?.documentId &&
-        (result.status === "OK" || result.status === "DUPLICATE")
-      ) {
+      if (result?.documentId && result.status === "OK") {
         queryClient.invalidateQueries({ queryKey: ["documents"] });
 
         onClose();
@@ -85,6 +86,8 @@ export default function UploadDialog({ opened, onClose }: Props) {
           to: "/files/$documentId",
           params: { documentId: result.documentId },
         });
+      } else if (result?.documentId && result.status === "DUPLICATE") {
+        setExistingDocumentId(result.documentId);
       } else {
         setError("Upload failed. Please try again.");
       }
@@ -100,6 +103,7 @@ export default function UploadDialog({ opened, onClose }: Props) {
     if (!loading) {
       setFile(null);
       setError(null);
+      setExistingDocumentId(null);
       setFutureRepo("");
       setFilePath("");
       setLanguage("en");
@@ -118,6 +122,16 @@ export default function UploadDialog({ opened, onClose }: Props) {
 
   const canUpload =
     !loading && !!file && !!futureRepo && !!filePath && !!language;
+
+  const handleOpenExisting = () => {
+    if (!existingDocumentId) return;
+
+    handleClose();
+    navigate({
+      to: "/files/$documentId",
+      params: { documentId: existingDocumentId },
+    });
+  };
 
   return (
     <Modal
@@ -161,13 +175,39 @@ export default function UploadDialog({ opened, onClose }: Props) {
           </Alert>
         )}
 
+        {existingDocumentId && (
+          <Alert
+            icon={<IconAlertCircle size={16} />}
+            title="This PDF already exists"
+            color="yellow"
+            variant="light"
+            radius="md"
+          >
+            <Stack gap="sm">
+              <Text size="sm">
+                This PDF has already been uploaded. You can open the existing
+                document instead of uploading it again.
+              </Text>
+              <Group>
+                <Button variant="light" onClick={handleOpenExisting}>
+                  Open Existing PDF
+                </Button>
+              </Group>
+            </Stack>
+          </Alert>
+        )}
+
         <FileInput
           label="PDF File"
           description="Only PDF files are accepted."
           placeholder="Click to browse…"
           accept="application/pdf"
           value={file}
-          onChange={setFile}
+          onChange={(nextFile) => {
+            setFile(nextFile);
+            setError(null);
+            setExistingDocumentId(null);
+          }}
           leftSection={<IconFile size={16} />}
           radius="md"
           disabled={loading}
