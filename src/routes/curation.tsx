@@ -11,6 +11,8 @@ export type DefinitionStatus =
   | "SUBMITTED_TO_MATHHUB"
   | "DISCARDED";
 
+export type ModuleDescriptionVisibility = "all" | "only" | "exclude";
+
 export const Route = createFileRoute("/curation")({
   loader: async () => {
     const user = await adminUser();
@@ -34,6 +36,8 @@ function RouteComponent() {
   const [curationLevel, setCurationLevel] = useState<DefinitionStatus | null>(
     null,
   );
+  const [moduleDescriptionVisibility, setModuleDescriptionVisibility] =
+    useState<ModuleDescriptionVisibility>("all");
 
   return (
     <Box
@@ -48,6 +52,8 @@ function RouteComponent() {
         <CurationSection
           curationLevel={curationLevel}
           setCurationLevel={setCurationLevel}
+          moduleDescriptionVisibility={moduleDescriptionVisibility}
+          setModuleDescriptionVisibility={setModuleDescriptionVisibility}
         />
       </Stack>
     </Box>

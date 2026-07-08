@@ -47,7 +47,9 @@ export type DefiniendumDialogProps = {
   extractedText: string;
   title?: string;
   pickExistingSubmitLabel?: string;
+  createSubmitLabel?: string;
   allowCreateSymbol?: boolean;
+  hideVerbalizationField?: boolean;
   loading?: boolean;
   onClose: () => void;
   onSubmit: ComponentProps<typeof DefiniendumDialog>["onSubmit"];
@@ -72,15 +74,25 @@ export type ExtractionDialogProps = {
   opened: boolean;
   initialText: string;
   definitionName: string;
+  definitionNameDisabled?: boolean;
   kind: ComponentProps<typeof ExtractTextDialog>["kind"];
   mode?: ComponentProps<typeof ExtractTextDialog>["mode"];
   symbolName?: string;
+  symbolNameDisabled?: boolean;
   setDefinitionName: Dispatch<SetStateAction<string>>;
   setKind: ComponentProps<typeof ExtractTextDialog>["setKind"];
   setSymbolName?: Dispatch<SetStateAction<string>>;
   filePath: string;
   onClose: () => void;
   onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
+  title?: string;
+  textLabel?: string;
+  textPlaceholder?: string;
+  submitLabel?: string;
+  hideSymbolNameField?: boolean;
+  enableSemanticAuthoring?: boolean;
+  semanticEnabled?: boolean;
+  setSemanticEnabled?: Dispatch<SetStateAction<boolean>>;
 };
 
 export type CreatedSymbolDefiniendumDialogProps = {
@@ -197,6 +209,7 @@ export function FileDialogs({
         title={definiendum.title}
         pickExistingSubmitLabel={definiendum.pickExistingSubmitLabel}
         allowCreateSymbol={definiendum.allowCreateSymbol}
+        hideVerbalizationField={definiendum.hideVerbalizationField}
         loading={definiendum.loading}
       />
 
@@ -207,7 +220,9 @@ export function FileDialogs({
         onSubmit={markReference.onSubmit}
         title={markReference.title}
         pickExistingSubmitLabel={markReference.pickExistingSubmitLabel}
+        createSubmitLabel={markReference.createSubmitLabel}
         allowCreateSymbol={markReference.allowCreateSymbol}
+        hideVerbalizationField={markReference.hideVerbalizationField}
         loading={markReference.loading}
       />
 
@@ -230,15 +245,25 @@ export function FileDialogs({
         opened={extraction.opened}
         initialText={extraction.initialText}
         definitionName={extraction.definitionName}
+        definitionNameDisabled={extraction.definitionNameDisabled}
         kind={extraction.kind}
         mode={extraction.mode}
         symbolName={extraction.symbolName}
+        symbolNameDisabled={extraction.symbolNameDisabled}
         setDefinitionName={extraction.setDefinitionName}
         setKind={extraction.setKind}
         setSymbolName={extraction.setSymbolName}
         filePath={extraction.filePath}
         onClose={extraction.onClose}
         onSubmit={extraction.onSubmit}
+        title={extraction.title}
+        textLabel={extraction.textLabel}
+        textPlaceholder={extraction.textPlaceholder}
+        submitLabel={extraction.submitLabel}
+        hideSymbolNameField={extraction.hideSymbolNameField}
+        enableSemanticAuthoring={extraction.enableSemanticAuthoring}
+        semanticEnabled={extraction.semanticEnabled}
+        setSemanticEnabled={extraction.setSemanticEnabled}
       />
 
       <CreateSymbolDefiniendumDialog

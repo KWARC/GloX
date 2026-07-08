@@ -4,6 +4,7 @@ export type UploadDocumentInput = {
   futureRepo: string;
   filePath: string;
   language: string;
+  moduleDescription: boolean;
 };
 
 export type UploadDocumentResult =

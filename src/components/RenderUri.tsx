@@ -37,8 +37,10 @@ export function RenderSymbolicUri({
 
     const archiveName = params.get(PARAM_ARCHIVE);
     const filePath = params.get("p");
+    const moduleName = params.get("m");
     const symbolName = params.get(PARAM_SYMBOL);
     const definiensName = params.get(PARAM_DEFINIENS);
+    const fileName = moduleName ?? definiensName;
 
     if (!archiveName) {
       return wrapWithTooltip(
@@ -50,16 +52,22 @@ export function RenderSymbolicUri({
 
     const RightIcon = symbolName ? IconSchool : IconBook;
     const rightLabel = symbolName ?? definiensName;
-    const leftLabel = [archiveName, filePath].filter(Boolean).join("/");
+    const archiveLabel = `[${archiveName}]`;
+    const pathLabel = [filePath, fileName].filter(Boolean).join("/");
 
     return wrapWithTooltip(
       <Box style={{ width: "100%", overflow: "hidden" }}>
         <Group justify="space-between" wrap="nowrap" w="100%">
-          <Group gap={4} wrap="nowrap">
+          <Group gap={6} wrap="nowrap">
             <IconArchive size={ICON_SIZE} stroke={ARCHIVE_ICON_STROKE} />
             <Text size="xs" c="dimmed" truncate>
-              {leftLabel || archiveName}
+              {archiveLabel}
             </Text>
+            {pathLabel && (
+              <Text size="xs" c="dimmed" truncate>
+                [{pathLabel}]
+              </Text>
+            )}
           </Group>
 
           {showRightLabel && rightLabel && (

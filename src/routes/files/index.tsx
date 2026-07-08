@@ -12,6 +12,7 @@ import {
   Group,
   Loader,
   Modal,
+  Select,
   Stack,
   Text,
   Title,
@@ -34,6 +35,9 @@ export const Route = createFileRoute("/files/")({
 
 function RouteComponent() {
   const { data = [], isLoading } = useQuery<MyDocument[]>(myDocumentsQuery);
+  const [moduleDescriptionFilter, setModuleDescriptionFilter] = useState<
+    "all" | "only" | "exclude"
+  >("all");
 
   const { data: auth } = useQuery({
     queryKey: ["currentUser"],
@@ -47,8 +51,18 @@ function RouteComponent() {
   const queryClient = useQueryClient();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [targetDoc, setTargetDoc] = useState<string | null>(null);
+  const [targetDoc, setTargetDoc] = useState<{
+    id: string;
+    filename: string;
+  } | null>(null);
   const [defCount, setDefCount] = useState(0);
+  const [markReferenceCount, setMarkReferenceCount] = useState(0);
+
+  const filteredDocuments = data.filter((doc) => {
+    if (moduleDescriptionFilter === "only") return doc.moduleDescription;
+    if (moduleDescriptionFilter === "exclude") return !doc.moduleDescription;
+    return true;
+  });
 
   const { mutateAsync: checkDefs } = useMutation({
     mutationFn: (documentId: string) =>
@@ -76,7 +90,26 @@ function RouteComponent() {
   return (
     <>
       <Stack p="md">
-        <Title order={2}>Uploaded Files</Title>
+        <Group justify="space-between" align="flex-end">
+          <Title order={2}>Uploaded Files</Title>
+          <Select
+            label="Module Descriptions"
+            value={moduleDescriptionFilter}
+            onChange={(value) =>
+              setModuleDescriptionFilter(
+                (value as "all" | "only" | "exclude") ?? "all",
+              )
+            }
+            data={[
+              { value: "all", label: "Show All" },
+              { value: "only", label: "Show Module Descriptions" },
+              { value: "exclude", label: "Hide Module Descriptions" },
+            ]}
+            allowDeselect={false}
+            w={240}
+            size="sm"
+          />
+        </Group>
 
         {isAdmin && (
           <Text size="sm" c="blue">
@@ -84,15 +117,19 @@ function RouteComponent() {
           </Text>
         )}
 
-        {data.length === 0 ? (
+        {filteredDocuments.length === 0 ? (
           <Stack gap="xs" align="flex-start">
-            <Text c="dimmed">No files uploaded yet</Text>
+            <Text c="dimmed">
+              {data.length === 0
+                ? "No files uploaded yet"
+                : "No files match the selected filter"}
+            </Text>
             <Button component={Link} to="/" variant="light">
               Go to Upload Page
             </Button>
           </Stack>
         ) : (
-          data.map((doc) => (
+          filteredDocuments.map((doc) => (
             <Link
               key={doc.id}
               to="/files/$documentId"
@@ -113,14 +150,13 @@ function RouteComponent() {
 
                       const res: any = await checkDefs(doc.id);
 
-                      if (res.definitionCount > 0) {
-                        setTargetDoc(doc.id);
-                        setDefCount(res.definitionCount);
-                        setConfirmOpen(true);
-                        return;
-                      }
-
-                      removeDoc(doc.id);
+                      setTargetDoc({
+                        id: doc.id,
+                        filename: doc.filename,
+                      });
+                      setDefCount(res.definitionCount);
+                      setMarkReferenceCount(res.markReferenceCount);
+                      setConfirmOpen(true);
                     }}
                   >
                     <IconTrash size={16} />
@@ -132,11 +168,15 @@ function RouteComponent() {
                 </Text>
 
                 <Text size="sm" c="dimmed">
-                  {doc.futureRepo} / {doc.filePath} ({doc.language})
+                  [{doc.futureRepo}] [{doc.filePath}] [{doc.language}]
                 </Text>
 
                 <Text size="sm" c="dimmed">
                   Status: {doc.status}
+                </Text>
+
+                <Text size="sm" c="dimmed">
+                  Module Description: {doc.moduleDescription ? "Yes" : "No"}
                 </Text>
               </Card>
             </Link>
@@ -146,27 +186,70 @@ function RouteComponent() {
 
       <Modal
         opened={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
+        onClose={() => {
+          setConfirmOpen(false);
+          setTargetDoc(null);
+          setDefCount(0);
+          setMarkReferenceCount(0);
+        }}
         title="Confirm Deletion"
         centered
       >
         <Text size="sm" mb="md">
-          {defCount} definitions are associated with this document. Deleting
-          this file will permanently remove all of them.
+          Delete{" "}
+          <Text span fw={700}>
+            {targetDoc?.filename}
+          </Text>
+          ?
         </Text>
 
-        <Button
-          color="red"
-          fullWidth
-          loading={isPending}
-          onClick={() => {
-            if (!targetDoc) return;
-            removeDoc(targetDoc);
-            setConfirmOpen(false);
-          }}
-        >
-          Delete Anyway
-        </Button>
+        <Text size="sm" c="dimmed" mb="md">
+          {defCount > 0 || markReferenceCount > 0
+            ? [
+                defCount > 0
+                  ? `${defCount} definition${defCount === 1 ? "" : "s"}`
+                  : null,
+                markReferenceCount > 0
+                  ? `${markReferenceCount} mark reference${markReferenceCount === 1 ? "" : "s"}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" and ") +
+              " are associated with this document. Deleting this file will permanently remove them."
+            : "This action cannot be undone."}
+        </Text>
+
+        <Group grow>
+          <Button
+            variant="default"
+            onClick={() => {
+              setConfirmOpen(false);
+              setTargetDoc(null);
+              setDefCount(0);
+              setMarkReferenceCount(0);
+            }}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            color="red"
+            loading={isPending}
+            onClick={() => {
+              if (!targetDoc) return;
+              removeDoc(targetDoc.id);
+              setConfirmOpen(false);
+              setTargetDoc(null);
+              setDefCount(0);
+              setMarkReferenceCount(0);
+            }}
+          >
+            {defCount > 0 || markReferenceCount > 0
+              ? "Delete Anyway"
+              : "Delete"}
+          </Button>
+        </Group>
       </Modal>
     </>
   );

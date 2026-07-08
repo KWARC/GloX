@@ -67,7 +67,7 @@ export function ExtractedTextPanel({
       withBorder={!compact}
       p={compact ? 0 : "md"}
       h={compact ? "auto" : "100%"}
-      radius={compact ? 0 : "md"}
+      radius="md"
       bg={compact ? "transparent" : "blue.0"}
     >
       <ScrollArea h={compact ? "auto" : "100%"}>
@@ -86,7 +86,7 @@ export function ExtractedTextPanel({
                   key={item.id}
                   withBorder
                   p={compact ? 6 : "sm"}
-                  radius={compact ? "xs" : "md"}
+                  radius="md"
                   bg={isEditing ? "yellow.0" : undefined}
                   style={{
                     borderColor: isEditing
@@ -198,23 +198,25 @@ export function ExtractedTextPanel({
                   )}
 
                   {showDefinitionMeta && (
-                    <Group
-                      gap={compact ? 4 : 6}
-                      mt={compact ? 3 : 6}
-                      title={`Archive: ${item.futureRepo} | Module Path: ${item.filePath} | Module: ${item.fileName} | Lang: ${item.language}`}
-                      style={{
-                        cursor: onEditDefinitionMeta ? "pointer" : "default",
-                      }}
-                      onClick={() => onEditDefinitionMeta?.(item)}
-                    >
-                      <FolderSymlink size={14} />
-                      {!showDefinitionMetaIconOnly && (
-                        <Text size="10px" c="dimmed" ff="monospace">
-                          [{item.futureRepo}] [{item.filePath}] [{item.fileName}
-                          ] [{item.language}]
-                        </Text>
-                      )}
-                    </Group>
+                    <Tooltip label="Move file path" withArrow>
+                      <Group
+                        gap={compact ? 4 : 6}
+                        mt={compact ? 3 : 6}
+                        title={`Archive: ${item.futureRepo} | Module Path: ${item.filePath} | Module: ${item.fileName} | Lang: ${item.language}`}
+                        style={{
+                          cursor: onEditDefinitionMeta ? "pointer" : "default",
+                        }}
+                        onClick={() => onEditDefinitionMeta?.(item)}
+                      >
+                        <FolderSymlink size={14} />
+                        {!showDefinitionMetaIconOnly && (
+                          <Text size="10px" c="dimmed" ff="monospace">
+                            [{item.futureRepo}] [{item.filePath}] [{item.fileName}
+                            ] [{item.language}]
+                          </Text>
+                        )}
+                      </Group>
+                    </Tooltip>
                   )}
                 </Paper>
               );

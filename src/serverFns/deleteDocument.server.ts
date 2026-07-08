@@ -36,6 +36,9 @@ export const checkDocumentDefinitions = createServerFn({ method: "POST" })
         definitions: {
           select: { id: true },
         },
+        markReferences: {
+          select: { id: true },
+        },
       },
     });
 
@@ -45,5 +48,6 @@ export const checkDocumentDefinitions = createServerFn({ method: "POST" })
     if (!isOwner && !isAdmin) throw new Error("Forbidden");
     return {
       definitionCount: doc.definitions.length,
+      markReferenceCount: doc.markReferences.length,
     };
   });

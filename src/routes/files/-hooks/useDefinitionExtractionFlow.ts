@@ -1,4 +1,5 @@
 import { normalizeContentName } from "@/components/ExtractTextDialog";
+import { statementHasDeclaredSymbol } from "@/components/useDraftSemanticAuthoring";
 import { MyDocument } from "@/queries/document";
 import { queryClient } from "@/queryClient";
 import {
@@ -13,6 +14,7 @@ import {
   declareCreatedSymbolDefiniendum,
 } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
 import { createMarkReference } from "@/serverFns/markReference.server";
+import { FtmlStatement } from "@/types/ftml.types";
 import { ParagraphKind } from "@/types/paragraphKind";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
@@ -70,7 +72,27 @@ export function useDefinitionExtractionFlow({
   const [markReferenceDialogOpen, setMarkReferenceDialogOpen] = useState(false);
   const [markReferenceText, setMarkReferenceText] = useState("");
   const [markReferenceSaving, setMarkReferenceSaving] = useState(false);
+  const [isMarkReferenceDefinitionFlow, setIsMarkReferenceDefinitionFlow] =
+    useState(false);
+  const [semanticEnabled, setSemanticEnabled] = useState(false);
   const { extractText } = useExtractionActions(documentId);
+
+  function resetExtractState() {
+    setExtractDialogOpen(false);
+    setPendingExtractText("");
+    setDefinitionName("");
+    setExtractDialogMode("definition");
+    setSymbolName("");
+    setExtractKind("Definition");
+    setIsManualDefinitionCreate(false);
+    setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
+  }
+
+  function resetMarkReferenceState() {
+    setMarkReferenceDialogOpen(false);
+    setMarkReferenceText("");
+  }
 
   function handleLeftSelection(pageId: string) {
     setLockedByExtractId(null);
@@ -102,6 +124,8 @@ export function useDefinitionExtractionFlow({
     setSymbolName("");
     setExtractKind("Definition");
     setIsManualDefinitionCreate(true);
+    setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
     setExtractDialogOpen(true);
   }
 
@@ -115,6 +139,8 @@ export function useDefinitionExtractionFlow({
     setExtractDialogMode("symbol-target");
     setExtractKind("Definition");
     setIsManualDefinitionCreate(true);
+    setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
     setExtractDialogOpen(true);
   }
 
@@ -124,6 +150,8 @@ export function useDefinitionExtractionFlow({
     setSymbolName("");
     setExtractKind("Definition");
     setIsManualDefinitionCreate(false);
+    setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
     setPendingExtractText(selection.text);
     setExtractDialogOpen(true);
     clearAll();
@@ -138,8 +166,7 @@ export function useDefinitionExtractionFlow({
   }
 
   function handleCloseMarkReference() {
-    setMarkReferenceDialogOpen(false);
-    setMarkReferenceText("");
+    resetMarkReferenceState();
     clearAll();
   }
 
@@ -155,6 +182,8 @@ export function useDefinitionExtractionFlow({
     setSymbolName("");
     setExtractKind("Definition");
     setIsManualDefinitionCreate(false);
+    setIsMarkReferenceDefinitionFlow(false);
+    setSemanticEnabled(false);
     setPendingExtractText(text);
     setExtractDialogOpen(true);
   }
@@ -162,9 +191,11 @@ export function useDefinitionExtractionFlow({
   async function handleExtractSubmit({
     text: editedText,
     kind,
+    statement,
   }: {
     text: string;
     kind: ParagraphKind;
+    statement?: FtmlStatement;
   }) {
     if (!document) return;
     if (!validateIdentity()) return;
@@ -182,13 +213,13 @@ export function useDefinitionExtractionFlow({
             kind,
             definitionName: definitionName.trim(),
             definitionText: editedText,
+            statement,
             symbolName: symbolName.trim(),
             futureRepo: document.futureRepo,
             filePath: document.filePath,
             language: document.language,
           },
         });
-        setCreatedSymbolTarget(created);
 
         await queryClient.invalidateQueries({
           queryKey: ["definitions", documentId],
@@ -196,12 +227,21 @@ export function useDefinitionExtractionFlow({
         await queryClient.invalidateQueries({
           queryKey: ["symbol-search-db"],
         });
+
+        if (isMarkReferenceDefinitionFlow) {
+          setCreatedSymbolTarget(null);
+        } else if (statementHasDeclaredSymbol(statement, symbolName.trim())) {
+          setCreatedSymbolTarget(null);
+        } else {
+          setCreatedSymbolTarget(created);
+        }
       } else {
         await extractText({
           documentPageId: pages[0]?.id ?? null,
           pageNumber: null,
           kind,
           text: editedText,
+          statement,
           futureRepo: document.futureRepo,
           filePath: document.filePath,
           fileName: definitionName.trim(),
@@ -216,6 +256,7 @@ export function useDefinitionExtractionFlow({
         pageNumber: activePage.pageNumber,
         kind,
         text: editedText,
+        statement,
         futureRepo: document.futureRepo,
         filePath: document.filePath,
         fileName: definitionName.trim(),
@@ -223,25 +264,17 @@ export function useDefinitionExtractionFlow({
       });
     }
 
-    setExtractDialogOpen(false);
-    setPendingExtractText("");
-    setDefinitionName("");
-    setExtractDialogMode("definition");
-    setSymbolName("");
-    setExtractKind("Definition");
-    setIsManualDefinitionCreate(false);
+    const shouldAdvanceSuggestion =
+      !isManualDefinitionCreate &&
+      focusedSuggestionIndex !== null &&
+      flattenedSuggestions.length > 0;
+
+    resetExtractState();
     if (!isSymbolTargetCreate) {
       clearAll();
     }
 
-    const { flattenedSuggestions, focusedSuggestionIndex, focusSuggestion } =
-      getSuggestionState();
-
-    if (
-      !isManualDefinitionCreate &&
-      focusedSuggestionIndex !== null &&
-      flattenedSuggestions.length > 0
-    ) {
+    if (shouldAdvanceSuggestion) {
       focusSuggestion(
         Math.min(focusedSuggestionIndex + 1, flattenedSuggestions.length - 1),
       );
@@ -275,17 +308,26 @@ export function useDefinitionExtractionFlow({
     setCreatedSymbolTarget(null);
   }
 
-  async function handleMarkReferenceSubmit(params: {
-    mode: "CREATE";
-    symbolName: string;
-    verbalization: string;
-    symdecl: true;
-  } | {
-    mode: "PICK_EXISTING";
-    selectedSymbol: SymbolSearchResult;
-  }) {
-    if (!selection?.text || !activePage) return;
-    if (params.mode !== "PICK_EXISTING") return;
+  async function handleMarkReferenceSubmit(
+    params:
+      | {
+          mode: "CREATE";
+          symbolName: string;
+          verbalization: string;
+          symdecl: true;
+        }
+      | {
+          mode: "PICK_EXISTING";
+          selectedSymbol: SymbolSearchResult;
+        },
+  ) {
+    if (!validateIdentity() || !document) return;
+    const shouldOpenDefinitionDialog = params.mode === "CREATE";
+    const createdSymbolName =
+      params.mode === "CREATE" ? params.symbolName.trim() : "";
+
+    const selectedText = markReferenceText || selection?.text;
+    if (!selectedText || !activePage) return;
 
     setMarkReferenceSaving(true);
     try {
@@ -294,9 +336,14 @@ export function useDefinitionExtractionFlow({
           documentId,
           documentPageId: activePage.id,
           pageNumber: activePage.pageNumber,
-          verbalization: `${selection.text}'s part`,
+          verbalization: selectedText,
           selectedSymbol:
-            params.selectedSymbol.source === "DB"
+            params.mode === "CREATE"
+              ? {
+                  source: "NEW",
+                  symbolName: createdSymbolName,
+                }
+              : params.selectedSymbol.source === "DB"
               ? {
                   source: "DB",
                   id: params.selectedSymbol.id,
@@ -313,13 +360,34 @@ export function useDefinitionExtractionFlow({
         queryKey: ["mark-references", documentId],
       });
 
-      setMarkReferenceDialogOpen(false);
-      setMarkReferenceText("");
-      clearAll();
+      resetMarkReferenceState();
+
+      if (shouldOpenDefinitionDialog) {
+        clearAll();
+        setPendingExtractText(selectedText);
+        setDefinitionName(normalizeContentName(createdSymbolName));
+        setSymbolName(createdSymbolName);
+        setCreatedSymbolTarget(null);
+        setExtractDialogMode("symbol-target");
+        setExtractKind("Definition");
+        setIsManualDefinitionCreate(true);
+        setIsMarkReferenceDefinitionFlow(true);
+        setSemanticEnabled(false);
+        setExtractDialogOpen(true);
+      } else {
+        clearAll();
+      }
     } finally {
       setMarkReferenceSaving(false);
     }
   }
+
+  function handleCloseExtractDialog() {
+    resetExtractState();
+  }
+
+  const { flattenedSuggestions, focusedSuggestionIndex, focusSuggestion } =
+    getSuggestionState();
 
   return {
     activePage,
@@ -337,11 +405,13 @@ export function useDefinitionExtractionFlow({
     createdSymbolTarget,
     setCreatedSymbolTarget,
     isManualDefinitionCreate,
+    isMarkReferenceDefinitionFlow,
+    semanticEnabled,
     markReferenceDialogOpen,
-    setMarkReferenceDialogOpen,
     markReferenceText,
     markReferenceSaving,
     setIsManualDefinitionCreate,
+    setSemanticEnabled,
     handleLeftSelection,
     handleCreateDefinition,
     handleCreateSymbolTargetDefinition,
@@ -349,6 +419,7 @@ export function useDefinitionExtractionFlow({
     handleOpenSelectionExtract,
     handleOpenMarkReference,
     handleCloseMarkReference,
+    handleCloseExtractDialog,
     openSuggestionForExtraction,
     handleExtractSubmit,
     handleMarkReferenceSubmit,

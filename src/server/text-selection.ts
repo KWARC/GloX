@@ -125,6 +125,7 @@ export function useExtractionActions(documentId: string) {
     pageNumber?: number | null;
     kind: ParagraphKind;
     text: string;
+    statement?: FtmlStatement;
     futureRepo: string;
     filePath: string;
     fileName: string;
@@ -137,6 +138,7 @@ export function useExtractionActions(documentId: string) {
         pageNumber: params.pageNumber,
         kind: params.kind,
         originalText: params.text,
+        statement: params.statement,
         futureRepo: params.futureRepo,
         filePath: params.filePath,
         fileName: params.fileName,

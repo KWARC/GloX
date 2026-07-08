@@ -24,7 +24,9 @@ interface DefiniendumDialogProps {
   extractedText: string | null;
   title?: string;
   pickExistingSubmitLabel?: string;
+  createSubmitLabel?: string;
   allowCreateSymbol?: boolean;
+  hideVerbalizationField?: boolean;
   loading?: boolean;
   onSubmit: (
     params:
@@ -39,6 +41,10 @@ interface DefiniendumDialogProps {
   onClose: () => void;
 }
 
+function normalizePrefilledSymbolName(value: string | null | undefined) {
+  return (value ?? "").toLowerCase();
+}
+
 const DEFINIENDUM_DIALOG_Z_INDEX = 1200;
 
 export function DefiniendumDialog({
@@ -46,7 +52,9 @@ export function DefiniendumDialog({
   extractedText,
   title = "Definiendum",
   pickExistingSubmitLabel = "Link & Insert Definiendum",
+  createSubmitLabel = "Create & Insert Definiendum",
   allowCreateSymbol = true,
+  hideVerbalizationField = false,
   loading = false,
   onSubmit,
   onClose,
@@ -58,8 +66,8 @@ export function DefiniendumDialog({
 
   const form = useForm({
     defaultValues: {
-      symbolName: extractedText ?? "",
-      verbalization: extractedText ?? "",
+      symbolName: normalizePrefilledSymbolName(extractedText),
+      verbalization: normalizePrefilledSymbolName(extractedText),
       symdecl: true,
     },
     onSubmit: ({ value }) => {
@@ -82,8 +90,8 @@ export function DefiniendumDialog({
     setSelectedSymbol(null);
 
     form.reset({
-      symbolName: extractedText ?? "",
-      verbalization: extractedText ?? "",
+      symbolName: normalizePrefilledSymbolName(extractedText),
+      verbalization: normalizePrefilledSymbolName(extractedText),
       symdecl: true,
     });
   }, [opened, extractedText]);
@@ -176,8 +184,14 @@ export function DefiniendumDialog({
                       onChange={(e) => {
                         const nextSymbolName = e.currentTarget.value;
                         const previousSymbolName = field.state.value;
-                        const currentVerbalization =
-                          form.getFieldValue("verbalization");
+                        if (hideVerbalizationField) {
+                          field.handleChange(nextSymbolName);
+                          return;
+                        }
+
+                        const currentVerbalization = form.getFieldValue(
+                          "verbalization",
+                        );
 
                         field.handleChange(nextSymbolName);
 
@@ -197,19 +211,21 @@ export function DefiniendumDialog({
                   )}
                 </form.Field>
 
-                <form.Field name="verbalization">
-                  {(field) => (
-                    <Textarea
-                      label="Verbalization"
-                      value={field.state.value}
-                      onChange={(e) =>
-                        field.handleChange(e.currentTarget.value)
-                      }
-                      autosize
-                      minRows={2}
-                    />
-                  )}
-                </form.Field>
+                {!hideVerbalizationField && (
+                  <form.Field name="verbalization">
+                    {(field) => (
+                      <Textarea
+                        label="Verbalization"
+                        value={field.state.value}
+                        onChange={(e) =>
+                          field.handleChange(e.currentTarget.value)
+                        }
+                        autosize
+                        minRows={2}
+                      />
+                    )}
+                  </form.Field>
+                )}
 
                 <Button
                   type="submit"
@@ -218,7 +234,7 @@ export function DefiniendumDialog({
                   leftSection={<IconCheck size={16} />}
                   fullWidth
                 >
-                  Create & Insert Definiendum
+                  {createSubmitLabel}
                 </Button>
 
                 <Button
@@ -242,7 +258,9 @@ export function DefiniendumDialog({
                   selectedSymbol={selectedSymbol}
                   onSelectSymbol={setSelectedSymbol}
                   onCreateSymbol={
-                    allowCreateSymbol ? () => setMode("CREATE") : undefined
+                    allowCreateSymbol
+                      ? () => setMode("CREATE")
+                      : undefined
                   }
                 />
               </Box>

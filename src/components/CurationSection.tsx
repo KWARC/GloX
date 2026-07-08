@@ -1,6 +1,11 @@
+import { CurationMarkReferenceBox } from "@/components/CurationMarkReferenceBox";
 import { StexCuration } from "@/components/stex-curation/StexCuration";
-import { DefinitionStatus } from "@/routes/curation";
+import {
+  DefinitionStatus,
+  ModuleDescriptionVisibility,
+} from "@/routes/curation";
 import { getFileIdentities } from "@/serverFns/latex.server";
+import { listMarkReferenceFiles } from "@/serverFns/markReference.server";
 import {
   Box,
   Divider,
@@ -17,15 +22,31 @@ import { useQuery } from "@tanstack/react-query";
 type Props = {
   curationLevel: DefinitionStatus | null;
   setCurationLevel: (value: DefinitionStatus | null) => void;
+  moduleDescriptionVisibility: ModuleDescriptionVisibility;
+  setModuleDescriptionVisibility: (value: ModuleDescriptionVisibility) => void;
 };
 
-export function CurationSection({ curationLevel, setCurationLevel }: Props) {
+export function CurationSection({
+  curationLevel,
+  setCurationLevel,
+  moduleDescriptionVisibility,
+  setModuleDescriptionVisibility,
+}: Props) {
   const { data: fileGroups = [], isLoading } = useQuery({
     queryKey: ["fileIdentities", curationLevel],
     queryFn: () =>
       getFileIdentities({
         data: {
           status: curationLevel ?? undefined,
+        },
+      }),
+  });
+  const { data: markReferenceFiles = [] } = useQuery({
+    queryKey: ["curation-mark-reference-files", moduleDescriptionVisibility],
+    queryFn: () =>
+      listMarkReferenceFiles({
+        data: {
+          moduleDescriptionVisibility,
         },
       }),
   });
@@ -68,6 +89,27 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
                 label: { fontWeight: 500, marginBottom: 4 },
               }}
             />
+
+            <Select
+              label="Module Descriptions"
+              value={moduleDescriptionVisibility}
+              onChange={(value) =>
+                setModuleDescriptionVisibility(
+                  (value as ModuleDescriptionVisibility) ?? "all",
+                )
+              }
+              data={[
+                { value: "all", label: "Show All" },
+                { value: "only", label: "Show Module Descriptions" },
+                { value: "exclude", label: "Hide Module Descriptions" },
+              ]}
+              allowDeselect={false}
+              w={240}
+              size="sm"
+              styles={{
+                label: { fontWeight: 500, marginBottom: 4 },
+              }}
+            />
           </Group>
         </Group>
         <Divider />
@@ -91,6 +133,8 @@ export function CurationSection({ curationLevel, setCurationLevel }: Props) {
           </Text>
         </Box>
       )}
+
+      <CurationMarkReferenceBox files={markReferenceFiles} />
 
       {fileGroups.length > 0 && (
         <Table.ScrollContainer minWidth={980}>

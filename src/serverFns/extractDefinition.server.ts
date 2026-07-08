@@ -2,13 +2,58 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { ExtractedItem } from "@/server/text-selection";
 import {
+  DefiniendumNode,
   DefinitionNode,
   FtmlStatement,
   assertFtmlStatement,
+  isDefiniendumNode,
+  normalizeToRoot,
 } from "@/types/ftml.types";
 import { ParagraphKind } from "@/types/paragraphKind";
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
+
+function extractDeclaredSymbols(statement: FtmlStatement) {
+  const symbols = new Map<string, string | null>();
+  const root = normalizeToRoot(statement);
+  const stack = [...root.content];
+
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (!node || typeof node === "string") continue;
+
+    if (isDefiniendumNode(node) && node.symdecl === true) {
+      const symbolName = node.uri.trim();
+      if (symbolName) {
+        const alias = extractDefiniendumAlias(node, symbolName);
+        const existing = symbols.get(symbolName);
+        symbols.set(symbolName, existing ?? alias);
+      }
+    }
+
+    if (node.content?.length) {
+      stack.push(...node.content);
+    }
+  }
+
+  return Array.from(symbols.entries()).map(([symbolName, alias]) => ({
+    symbolName,
+    alias,
+  }));
+}
+
+function extractDefiniendumAlias(
+  node: DefiniendumNode,
+  symbolName: string,
+): string | null {
+  const alias = (node.content ?? [])
+    .filter((item): item is string => typeof item === "string")
+    .join("")
+    .trim();
+
+  if (!alias || alias === symbolName) return null;
+  return alias;
+}
 
 export type CreateDefinitionInput = {
   documentId: string;
@@ -16,6 +61,7 @@ export type CreateDefinitionInput = {
   pageNumber?: number | null;
   kind?: ParagraphKind;
   originalText: string;
+  statement?: FtmlStatement;
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -58,18 +104,22 @@ export const createDefinition = createServerFn({ method: "POST" })
       throw new Error("Document has no pages");
     }
 
-    const statement: DefinitionNode = {
-      type: "definition",
-      for_symbols: [],
-      content: [
-        {
-          type: "paragraph",
-          content: [data.originalText.trim()],
-        },
-      ],
-    };
+    const statement: FtmlStatement =
+      data.statement ??
+      ({
+        type: "definition",
+        for_symbols: [],
+        content: [
+          {
+            type: "paragraph",
+            content: [data.originalText.trim()],
+          },
+        ],
+      } satisfies DefinitionNode);
 
     await prisma.$transaction(async (tx) => {
+      const declaredSymbols = extractDeclaredSymbols(statement);
+
       const def = await tx.definition.create({
         data: {
           documentId: data.documentId,
@@ -88,6 +138,31 @@ export const createDefinition = createServerFn({ method: "POST" })
           status: "EXTRACTED",
         },
       });
+
+      for (const declaredSymbol of declaredSymbols) {
+        await tx.symbol.upsert({
+          where: {
+            symbolName_futureRepo_filePath_fileName_language: {
+              symbolName: declaredSymbol.symbolName,
+              futureRepo: data.futureRepo,
+              filePath: data.filePath,
+              fileName: data.fileName,
+              language: data.language,
+            },
+          },
+          update: declaredSymbol.alias
+            ? { alias: declaredSymbol.alias }
+            : {},
+          create: {
+            symbolName: declaredSymbol.symbolName,
+            alias: declaredSymbol.alias,
+            futureRepo: data.futureRepo,
+            filePath: data.filePath,
+            fileName: data.fileName,
+            language: data.language,
+          },
+        });
+      }
 
       await tx.definitionVersion.create({
         data: {

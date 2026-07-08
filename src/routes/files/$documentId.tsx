@@ -1,5 +1,12 @@
 import { currentUser } from "@/server/auth/currentUser";
+import { deleteMarkReference } from "@/serverFns/markReference.server";
+import { queryClient } from "@/queryClient";
 import { useTextSelection } from "@/server/text-selection";
+import { MarkReferenceLatexModal } from "@/components/MarkReferenceLatexModal";
+import {
+  buildMarkReferenceLatex,
+  getMarkReferenceLatexDownloadName,
+} from "@/lib/markReferenceLatex";
 import {
   Box,
   Button,
@@ -22,7 +29,7 @@ import {
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FileDialogs } from "./-components/FileDialogs";
 import { FileDocumentLayout } from "./-components/FileDocumentLayout";
 import { useDefinitionExtractionFlow } from "./-hooks/useDefinitionExtractionFlow";
@@ -56,6 +63,11 @@ function RouteComponent() {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
   const [activeTab, setActiveTab] = useState<string | null>("document");
+  const [markReferenceLatexOpen, setMarkReferenceLatexOpen] = useState(false);
+  const [markReferenceLatex, setMarkReferenceLatex] = useState("");
+  const [deletingMarkReferenceId, setDeletingMarkReferenceId] = useState<
+    string | null
+  >(null);
   const suggestionStateRef = useRef<{
     flattenedSuggestions: FlattenedLlmSuggestion[];
     focusedSuggestionIndex: number | null;
@@ -136,6 +148,45 @@ function RouteComponent() {
       ),
     [markReferences],
   );
+
+  async function handleDeleteMarkReference(referenceId: string) {
+    setDeletingMarkReferenceId(referenceId);
+    try {
+      await deleteMarkReference({ data: { id: referenceId } });
+      await queryClient.invalidateQueries({
+        queryKey: ["mark-references", documentId],
+      });
+    } finally {
+      setDeletingMarkReferenceId(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!document) {
+      setMarkReferenceLatex("");
+      return;
+    }
+
+    let cancelled = false;
+
+    const fileName = document.filename.replace(/\.[^.]+$/, "");
+
+    buildMarkReferenceLatex(
+      {
+        futureRepo: document.futureRepo,
+        filePath: document.filePath,
+        fileName,
+        language: document.language,
+      },
+      markReferences,
+    ).then((latex) => {
+      if (!cancelled) setMarkReferenceLatex(latex);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [document, markReferences]);
 
   if (docLoading || pagesLoading) {
     return (
@@ -278,9 +329,42 @@ function RouteComponent() {
 
   const llmButtons = (
     <Group gap={6} wrap="nowrap">
+      {canAccessPrivilegedControls && (
+        <Tooltip
+          label={
+            markReferences.length === 0
+              ? "No marked references yet"
+              : "Preview index.en.tex"
+          }
+          withArrow
+          position="bottom"
+        >
+          <span>
+            <Button
+              size="xs"
+              variant="light"
+              color="indigo"
+              disabled={markReferences.length === 0}
+              onClick={() => setMarkReferenceLatexOpen(true)}
+            >
+              index.en.tex
+            </Button>
+          </span>
+        </Tooltip>
+      )}
       {suggestionControls}
     </Group>
   );
+
+  const handleDownloadMarkReferenceLatex = () => {
+    const blob = new Blob([markReferenceLatex], { type: "application/x-tex" });
+    const url = URL.createObjectURL(blob);
+    const anchor = window.document.createElement("a");
+    anchor.href = url;
+    anchor.download = getMarkReferenceLatexDownloadName(document.filename);
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Box h="100%" p={pad} style={{ overflow: "hidden" }}>
@@ -297,10 +381,12 @@ function RouteComponent() {
             document,
             pages,
             markReferencesByPage,
+            deletingMarkReferenceId,
             llmButtons,
             llmSuggestions: llmFlow.llmSuggestions,
             llmEnabled: llmFlow.llmEnabled,
             focusedSuggestionId: llmFlow.focusedSuggestionId,
+            onDeleteMarkReference: handleDeleteMarkReference,
             onSelection: extractionFlow.handleLeftSelection,
             onLlmSuggestionClick: llmFlow.handleLlmSuggestionClick,
           }}
@@ -361,7 +447,9 @@ function RouteComponent() {
           extractedText: extractionFlow.markReferenceText,
           title: "Mark Reference",
           pickExistingSubmitLabel: "Save Mark Reference",
-          allowCreateSymbol: false,
+          createSubmitLabel: "Add Mark Reference",
+          allowCreateSymbol: true,
+          hideVerbalizationField: true,
           loading: extractionFlow.markReferenceSaving,
           onClose: extractionFlow.handleCloseMarkReference,
           onSubmit: extractionFlow.handleMarkReferenceSubmit,
@@ -388,25 +476,44 @@ function RouteComponent() {
           opened: extractionFlow.extractDialogOpen,
           initialText: extractionFlow.pendingExtractText,
           definitionName: extractionFlow.definitionName,
+          definitionNameDisabled: false,
           kind: extractionFlow.extractKind,
           mode: extractionFlow.extractDialogMode,
           symbolName: extractionFlow.symbolName,
+          symbolNameDisabled: extractionFlow.isMarkReferenceDefinitionFlow,
           setDefinitionName: extractionFlow.setDefinitionName,
           setKind: extractionFlow.setExtractKind,
           setSymbolName: extractionFlow.setSymbolName,
           filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}`,
-          onClose: () => {
-            extractionFlow.setExtractDialogOpen(false);
-            extractionFlow.setIsManualDefinitionCreate(false);
-            extractionFlow.setExtractDialogMode("definition");
-            extractionFlow.setSymbolName("");
-          },
+          title: extractionFlow.isMarkReferenceDefinitionFlow
+            ? "Add Definition"
+            : undefined,
+          textLabel:
+            extractionFlow.isManualDefinitionCreate ||
+            extractionFlow.isMarkReferenceDefinitionFlow
+              ? "Enter Definition"
+              : undefined,
+          textPlaceholder:
+            extractionFlow.isManualDefinitionCreate ||
+            extractionFlow.isMarkReferenceDefinitionFlow
+              ? "Enter definition"
+              : undefined,
+          submitLabel: extractionFlow.isMarkReferenceDefinitionFlow
+            ? "Add Definition"
+            : undefined,
+          hideSymbolNameField: extractionFlow.isMarkReferenceDefinitionFlow,
+          enableSemanticAuthoring: true,
+          semanticEnabled: extractionFlow.semanticEnabled,
+          setSemanticEnabled: extractionFlow.setSemanticEnabled,
+          onClose: extractionFlow.handleCloseExtractDialog,
           onSubmit: extractionFlow.handleExtractSubmit,
         }}
         createdSymbolDefiniendum={{
           opened: !!extractionFlow.createdSymbolTarget,
           target: extractionFlow.createdSymbolTarget,
-          onClose: () => extractionFlow.setCreatedSymbolTarget(null),
+          onClose: () => {
+            extractionFlow.setCreatedSymbolTarget(null);
+          },
           onConfirm: extractionFlow.handleDeclareCreatedSymbolDefiniendum,
         }}
         metadata={{
@@ -438,6 +545,14 @@ function RouteComponent() {
           pagesLength: pages.length,
           onSubmit: llmFlow.handleRecomputeSubmit,
         }}
+      />
+
+      <MarkReferenceLatexModal
+        opened={markReferenceLatexOpen}
+        code={markReferenceLatex}
+        fileName={getMarkReferenceLatexDownloadName(document.filename)}
+        onClose={() => setMarkReferenceLatexOpen(false)}
+        onDownload={handleDownloadMarkReferenceLatex}
       />
     </Box>
   );
