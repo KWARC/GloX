@@ -308,10 +308,23 @@ export function useDefinitionExtractionFlow({
     setCreatedSymbolTarget(null);
   }
 
-  async function handleMarkReferenceSubmit(params: {
-    mode: "PICK_EXISTING";
-    selectedSymbol: SymbolSearchResult;
-  }) {
+  async function handleMarkReferenceSubmit(
+    params:
+      | {
+          mode: "CREATE";
+          symbolName: string;
+          verbalization: string;
+          symdecl: true;
+        }
+      | {
+          mode: "PICK_EXISTING";
+          selectedSymbol: SymbolSearchResult;
+        },
+  ) {
+    if (params.mode !== "PICK_EXISTING") {
+      return;
+    }
+
     const selectedText = markReferenceText || selection?.text;
     if (!selectedText || !activePage) return;
 
