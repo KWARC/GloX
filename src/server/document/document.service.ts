@@ -18,8 +18,6 @@ export async function uploadDocument(
 
   const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
 
-  savePdfToDisk(buffer, file.name);
-
   const existing = await prisma.document.findFirst({
     where: {
       fileHash,
@@ -33,6 +31,8 @@ export async function uploadDocument(
       documentId: existing.id,
     };
   }
+
+  savePdfToDisk(buffer, file.name);
 
   const document = await prisma.document.create({
     data: {
