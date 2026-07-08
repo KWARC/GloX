@@ -99,26 +99,7 @@ export function CurationSection({
                 label: { fontWeight: 500, marginBottom: 4 },
               }}
             />
-            <Select
-              label="Filter Index status"
-              placeholder="All statuses"
-              value={indexStatus}
-              onChange={(value) => setIndexStatus(value as IndexStatus | null)}
-              clearable
-              data={[
-                { value: "EXTRACTED", label: "Extracted" },
-                { value: "FINALIZED", label: "Finalized" },
-                {
-                  value: "SUBMITTED_TO_MATHHUB",
-                  label: "Submitted to MathHub",
-                },
-              ]}
-              w={220}
-              size="sm"
-              styles={{
-                label: { fontWeight: 500, marginBottom: 4 },
-              }}
-            />
+
             <Select
               label="Module Descriptions"
               value={moduleDescriptionVisibility}

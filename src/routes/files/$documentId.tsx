@@ -330,14 +330,27 @@ function RouteComponent() {
   const llmButtons = (
     <Group gap={6} wrap="nowrap">
       {canAccessPrivilegedControls && (
-        <Button
-          size="xs"
-          variant="light"
-          color="indigo"
-          onClick={() => setMarkReferenceLatexOpen(true)}
+        <Tooltip
+          label={
+            markReferences.length === 0
+              ? "No marked references yet"
+              : "Preview index.en.tex"
+          }
+          withArrow
+          position="bottom"
         >
-          index.en.tex
-        </Button>
+          <span>
+            <Button
+              size="xs"
+              variant="light"
+              color="indigo"
+              disabled={markReferences.length === 0}
+              onClick={() => setMarkReferenceLatexOpen(true)}
+            >
+              index.en.tex
+            </Button>
+          </span>
+        </Tooltip>
       )}
       {suggestionControls}
     </Group>
@@ -434,8 +447,7 @@ function RouteComponent() {
           extractedText: extractionFlow.markReferenceText,
           title: "Mark Reference",
           pickExistingSubmitLabel: "Save Mark Reference",
-          createSubmitLabel: "Create",
-          allowCreateSymbol: true,
+          allowCreateSymbol: false,
           hideVerbalizationField: true,
           loading: extractionFlow.markReferenceSaving,
           onClose: extractionFlow.handleCloseMarkReference,

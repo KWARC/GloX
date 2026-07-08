@@ -139,7 +139,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                               primaryDefinitionId: definition.id,
                             } satisfies PendingMathHubToLocal);
                           } else {
-                            const { uri, text } = normalizeSymRef({
+                            const { uri } = normalizeSymRef({
                               source: "DB",
                               symbolName: r.symbolName,
                               futureRepo: r.futureRepo,
@@ -156,7 +156,6 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                               {
                                 type: "symref",
                                 uri,
-                                content: [text],
                               },
                             );
                           }
@@ -276,7 +275,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                           return;
                         }
 
-                        const { uri, text } = normalizeSymRef({
+                        const { uri } = normalizeSymRef({
                           source: "MATHHUB",
                           uri: r.uri,
                         });
@@ -287,7 +286,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                             type: "symref",
                             uri: props.selected.uri,
                           },
-                          { type: "symref", uri, content: [text] },
+                          { type: "symref", uri },
                         );
 
                         setSelectedNode({

@@ -1,4 +1,5 @@
 import { normalizeContentName } from "@/components/ExtractTextDialog";
+import { statementHasDeclaredSymbol } from "@/components/useDraftSemanticAuthoring";
 import { MyDocument } from "@/queries/document";
 import { queryClient } from "@/queryClient";
 import {
@@ -12,11 +13,7 @@ import {
   createDefinitionWithDeclaredSymbol,
   declareCreatedSymbolDefiniendum,
 } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
-import {
-  createLocalSymbol,
-  createMarkReference,
-} from "@/serverFns/markReference.server";
-import { statementHasDeclaredSymbol } from "@/components/useDraftSemanticAuthoring";
+import { createMarkReference } from "@/serverFns/markReference.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import { ParagraphKind } from "@/types/paragraphKind";
 import { DocumentPage } from "generated/prisma/browser";
@@ -312,64 +309,14 @@ export function useDefinitionExtractionFlow({
   }
 
   async function handleMarkReferenceSubmit(params: {
-    mode: "CREATE";
-    symbolName: string;
-    verbalization: string;
-    symdecl: true;
-  } | { mode: "PICK_EXISTING"; selectedSymbol: SymbolSearchResult }) {
+    mode: "PICK_EXISTING";
+    selectedSymbol: SymbolSearchResult;
+  }) {
     const selectedText = markReferenceText || selection?.text;
     if (!selectedText || !activePage) return;
 
     setMarkReferenceSaving(true);
     try {
-      if (params.mode === "CREATE") {
-        const normalizedSymbolName = params.symbolName.trim();
-        const createdSymbol = await createLocalSymbol({
-          data: {
-            symbolName: normalizedSymbolName,
-            alias: null,
-            futureRepo: document?.futureRepo ?? "",
-            filePath: document?.filePath ?? "",
-            fileName: normalizeContentName(normalizedSymbolName),
-            language: document?.language ?? "en",
-          },
-        });
-
-        await createMarkReference({
-          data: {
-            documentId,
-            documentPageId: activePage.id,
-            pageNumber: activePage.pageNumber,
-            verbalization: selectedText,
-            selectedSymbol: {
-              source: "DB",
-              id: createdSymbol.id,
-              symbolName: createdSymbol.symbolName,
-            },
-          },
-        });
-
-        await queryClient.invalidateQueries({
-          queryKey: ["symbol-search-db"],
-        });
-        await queryClient.invalidateQueries({
-          queryKey: ["mark-references", documentId],
-        });
-
-        resetMarkReferenceState();
-        clearAll();
-        setPendingExtractText("");
-        setDefinitionName(createdSymbol.fileName);
-        setSymbolName(createdSymbol.symbolName);
-        setExtractDialogMode("symbol-target");
-        setExtractKind("Definition");
-        setIsManualDefinitionCreate(true);
-        setIsMarkReferenceDefinitionFlow(true);
-        setSemanticEnabled(false);
-        setExtractDialogOpen(true);
-        return;
-      }
-
       await createMarkReference({
         data: {
           documentId,

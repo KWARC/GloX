@@ -252,7 +252,7 @@ export function useSemanticEditingFlow({
     setSymbolicRefSaving(true);
     try {
       if (editingNodeId) {
-        const { uri, text } = normalizeSymRef(symRef);
+        const { uri } = normalizeSymRef(symRef);
 
         await updateDefinitionAst({
           data: {
@@ -263,7 +263,6 @@ export function useSemanticEditingFlow({
               payload: {
                 type: "symref",
                 uri,
-                content: [text],
               },
             },
           },

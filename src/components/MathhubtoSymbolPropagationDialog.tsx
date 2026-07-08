@@ -94,7 +94,7 @@ export function MathhubtoSymbolPropagationDialog({
         { type: targetType, uri: mathHubUri },
         targetType === "definiendum"
           ? { type: "definiendum", uri: localSymbolUri, symdecl: false }
-          : { type: "symref", uri: localSymbolUri, content: [localSymbolUri] },
+          : { type: "symref", uri: localSymbolUri },
       );
 
       const selectedDefinitionIds = candidates

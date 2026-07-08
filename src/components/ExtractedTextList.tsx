@@ -67,7 +67,7 @@ export function ExtractedTextPanel({
       withBorder={!compact}
       p={compact ? 0 : "md"}
       h={compact ? "auto" : "100%"}
-      radius={compact ? 0 : "md"}
+      radius="md"
       bg={compact ? "transparent" : "blue.0"}
     >
       <ScrollArea h={compact ? "auto" : "100%"}>
@@ -86,7 +86,7 @@ export function ExtractedTextPanel({
                   key={item.id}
                   withBorder
                   p={compact ? 6 : "sm"}
-                  radius={compact ? "xs" : "md"}
+                  radius="md"
                   bg={isEditing ? "yellow.0" : undefined}
                   style={{
                     borderColor: isEditing

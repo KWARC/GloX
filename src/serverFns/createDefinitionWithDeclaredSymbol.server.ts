@@ -26,6 +26,7 @@ export type CreateDefinitionWithDeclaredSymbolInput = {
   definitionText: string;
   statement?: FtmlStatement;
   symbolName: string;
+  existingSymbolId?: string;
   futureRepo: string;
   filePath: string;
   language: string;
@@ -73,6 +74,7 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
     const definitionName = data.definitionName?.trim();
     const definitionText = data.definitionText?.trim();
     const symbolName = data.symbolName?.trim();
+    const existingSymbolId = data.existingSymbolId?.trim();
     const futureRepo = data.futureRepo?.trim();
     const filePath = data.filePath?.trim();
     const language = data.language?.trim();
@@ -113,25 +115,33 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
     const serializedStatement = JSON.parse(JSON.stringify(statement));
 
     const result = await prisma.$transaction(async (tx) => {
-      const symbol = await tx.symbol.upsert({
-        where: {
-          symbolName_futureRepo_filePath_fileName_language: {
-            symbolName,
-            futureRepo,
-            filePath,
-            fileName: definitionName,
-            language,
-          },
-        },
-        update: {},
-        create: {
-          symbolName,
-          futureRepo,
-          filePath,
-          fileName: definitionName,
-          language,
-        },
-      });
+      const symbol = existingSymbolId
+        ? await tx.symbol.findUnique({
+            where: { id: existingSymbolId },
+          })
+        : await tx.symbol.upsert({
+            where: {
+              symbolName_futureRepo_filePath_fileName_language: {
+                symbolName,
+                futureRepo,
+                filePath,
+                fileName: definitionName,
+                language,
+              },
+            },
+            update: {},
+            create: {
+              symbolName,
+              futureRepo,
+              filePath,
+              fileName: definitionName,
+              language,
+            },
+          });
+
+      if (!symbol) {
+        throw new Error("Symbol not found");
+      }
 
       const createdDefinition = await tx.definition.create({
         data: {
