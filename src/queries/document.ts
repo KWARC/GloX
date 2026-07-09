@@ -16,6 +16,9 @@ export type MyDocument = {
 
   userId: string
   status: string
+  definitionCount: number
+  markReferenceCount: number
+  pageCount: number
 
   createdAt: Date
   updatedAt: Date
