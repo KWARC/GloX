@@ -17,8 +17,8 @@ import {
   IconUser,
   IconX,
 } from "@tabler/icons-react";
-import { getInitials } from "../hooks/profileUtils";
-import { ProfileAlerts } from "./ProfileAlerts";
+import { getInitials } from "@/hooks/profileUtils";
+import { ProfileAlerts } from "@/components/profile/ProfileAlerts";
 
 type PersonalInfoCardProps = {
   user: {

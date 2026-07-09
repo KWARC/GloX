@@ -8,10 +8,10 @@ import { StexCurationDialogs } from "./StexCurationDialogs";
 import { StexCurationFooter } from "./StexCurationFooter";
 import { StexStatusMenu } from "./StexStatusMenu";
 import { SymbolDeclaredSection } from "./SymbolDeclaredSection";
-import { useStexCurationActions } from "./useStexCurationActions";
-import { useStexCurationData } from "./useStexCurationData";
-import { useStexSemanticFlow } from "./useStexSemanticFlow";
-import { useStexSniffyFlow } from "./useStexSniffyFlow";
+import { useStexCurationActions } from "@/hooks/stex-curation/useStexCurationActions";
+import { useStexCurationData } from "@/hooks/stex-curation/useStexCurationData";
+import { useStexSemanticFlow } from "@/hooks/stex-curation/useStexSemanticFlow";
+import { useStexSniffyFlow } from "@/hooks/stex-curation/useStexSniffyFlow";
 
 export function StexCuration({ identity }: { identity: FileIdentity }) {
   const navigate = useNavigate();

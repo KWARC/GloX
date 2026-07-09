@@ -7,7 +7,7 @@ type SniffyCatalog = Parameters<
   typeof useSharedSniffyReferenceSuggestions
 >[0]["catalog"];
 
-export function useSniffyReferenceSuggestions({
+export function useFileSniffyReferenceSuggestions({
   documentId,
   extracts,
   sniffyCatalog,

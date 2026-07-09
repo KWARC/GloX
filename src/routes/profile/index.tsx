@@ -1,4 +1,4 @@
-import { RoleChangeConfirmationModal } from "@/components/RoleChangeConfirmationModal";
+import { RoleChangeConfirmationModal } from "@/components/profile/RoleChangeConfirmationModal";
 import { currentUser } from "@/server/auth/currentUser";
 import {
   listAdminProfileUsers,
@@ -20,9 +20,9 @@ import { IconSettings, IconUsers } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { AccountInformationCard } from "../../components/AccountInformationCard";
-import { PersonalInfoCard } from "../../components/PersonalInfoCard";
-import { UserManagementCard } from "../../components/UserManagementCard";
+import { AccountInformationCard } from "@/components/profile/AccountInformationCard";
+import { PersonalInfoCard } from "@/components/profile/PersonalInfoCard";
+import { UserManagementCard } from "@/components/profile/UserManagementCard";
 import { getDisplayName } from "../../hooks/profileUtils";
 
 export const Route = createFileRoute("/profile/")({

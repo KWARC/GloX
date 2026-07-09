@@ -1,12 +1,22 @@
-import { currentUser } from "@/server/auth/currentUser";
-import { deleteMarkReference } from "@/serverFns/markReference.server";
-import { queryClient } from "@/queryClient";
-import { useTextSelection } from "@/server/text-selection";
+import { FileDialogs } from "@/components/files/FileDialogs";
+import { FileDocumentLayout } from "@/components/files/FileDocumentLayout";
 import { MarkReferenceLatexModal } from "@/components/MarkReferenceLatexModal";
+import { useDefinitionExtractionFlow } from "@/hooks/files/useDefinitionExtractionFlow";
+import { useFileDocumentData } from "@/hooks/files/useFileDocumentData";
+import { useFileSniffyReferenceSuggestions } from "@/hooks/files/useFileSniffyReferenceSuggestions";
+import {
+  FlattenedLlmSuggestion,
+  useLlmDefinitionSuggestions,
+} from "@/hooks/files/useLlmDefinitionSuggestions";
+import { useSemanticEditingFlow } from "@/hooks/files/useSemanticEditingFlow";
 import {
   buildMarkReferenceLatex,
   getMarkReferenceLatexDownloadName,
 } from "@/lib/markReferenceLatex";
+import { queryClient } from "@/queryClient";
+import { currentUser } from "@/server/auth/currentUser";
+import { useTextSelection } from "@/server/text-selection";
+import { deleteMarkReference } from "@/serverFns/markReference.server";
 import {
   Box,
   Button,
@@ -30,16 +40,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileDialogs } from "./-components/FileDialogs";
-import { FileDocumentLayout } from "./-components/FileDocumentLayout";
-import { useDefinitionExtractionFlow } from "./-hooks/useDefinitionExtractionFlow";
-import { useFileDocumentData } from "./-hooks/useFileDocumentData";
-import {
-  FlattenedLlmSuggestion,
-  useLlmDefinitionSuggestions,
-} from "./-hooks/useLlmDefinitionSuggestions";
-import { useSemanticEditingFlow } from "./-hooks/useSemanticEditingFlow";
-import { useSniffyReferenceSuggestions } from "./-hooks/useSniffyReferenceSuggestions";
 
 export const Route = createFileRoute("/files/$documentId")({
   loader: async () => {
@@ -129,7 +129,7 @@ function RouteComponent() {
     focusSuggestion: llmFlow.focusSuggestion,
   };
 
-  const sniffyFlow = useSniffyReferenceSuggestions({
+  const sniffyFlow = useFileSniffyReferenceSuggestions({
     documentId,
     extracts,
     sniffyCatalog,
@@ -222,8 +222,7 @@ function RouteComponent() {
   const pad = isMobile ? "xs" : isTablet ? "md" : "lg";
   const gap = isMobile ? "xs" : "md";
   const role = auth?.user?.role;
-  const canAccessPrivilegedControls =
-    role === "ADMIN" || role === "CURATOR";
+  const canAccessPrivilegedControls = role === "ADMIN" || role === "CURATOR";
   const totalSuggestions = llmFlow.flattenedSuggestions.length;
   const hasAnySuggestions = totalSuggestions > 0;
   const suggestionCounter =

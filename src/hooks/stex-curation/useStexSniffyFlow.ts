@@ -2,8 +2,8 @@ import { useSniffyReferenceSuggestions } from "@/hooks/useSniffyReferenceSuggest
 import { queryClient } from "@/queryClient";
 import { FileIdentity } from "@/serverFns/latex.server";
 import { ComponentProps } from "react";
-import { ReferenceSuggestionDialog } from "../ReferenceSuggestionDialog";
-import { refetchDefinitionsByIdentity } from "./useStexCurationData";
+import { ReferenceSuggestionDialog } from "@/components/ReferenceSuggestionDialog";
+import { refetchDefinitionsByIdentity } from "@/hooks/stex-curation/useStexCurationData";
 
 type SniffyCatalog = ComponentProps<
   typeof ReferenceSuggestionDialog

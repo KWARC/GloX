@@ -2,7 +2,7 @@ import { queryClient } from "@/queryClient";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, ReplacePayload } from "@/server/parseUri";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
-import { normalizeContentName } from "../ExtractTextDialog";
+import { normalizeContentName } from "@/components/ExtractTextDialog";
 import {
   CreatedSymbolTarget,
   createDefinitionWithDeclaredSymbol,
@@ -17,7 +17,7 @@ import {
 } from "@/serverFns/updateDefinition.server";
 import { ParagraphKind, supportsDefinienda } from "@/types/paragraphKind";
 import { ComponentProps, useState } from "react";
-import { DefiniendumDialog } from "../DefiniendumDialog";
+import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 
 type DefiniendumSubmitParams = Parameters<
   ComponentProps<typeof DefiniendumDialog>["onSubmit"]

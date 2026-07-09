@@ -1,7 +1,7 @@
 import { SelectedNode } from "@/types/Semantic.types";
 import { ParagraphKind } from "@/types/paragraphKind";
 import { Box, Group, Paper, Stack, Text } from "@mantine/core";
-import { SemanticPanelState } from "./useSemanticPanelState";
+import { SemanticPanelState } from "@/hooks/semantic-panel/useSemanticPanelState";
 
 export type SemanticNodeListProps = {
   state: Pick<

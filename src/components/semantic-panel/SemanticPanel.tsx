@@ -10,7 +10,7 @@ import { DefiniendumEditor } from "./DefiniendumEditor";
 import { SemanticNodeList } from "./SemanticNodeList";
 import { SemanticPanelFooter } from "./SemanticPanelFooter";
 import { SymrefEditor } from "./SymrefEditor";
-import { useSemanticPanelState } from "./useSemanticPanelState";
+import { useSemanticPanelState } from "@/hooks/semantic-panel/useSemanticPanelState";
 
 type Props = {
   opened: boolean;

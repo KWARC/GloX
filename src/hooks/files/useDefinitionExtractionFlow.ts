@@ -1,5 +1,5 @@
 import { normalizeContentName } from "@/components/ExtractTextDialog";
-import { statementHasDeclaredSymbol } from "@/components/useDraftSemanticAuthoring";
+import { statementHasDeclaredSymbol } from "@/hooks/useDraftSemanticAuthoring";
 import { MyDocument } from "@/queries/document";
 import { queryClient } from "@/queryClient";
 import {
@@ -18,7 +18,7 @@ import { FtmlStatement } from "@/types/ftml.types";
 import { ParagraphKind } from "@/types/paragraphKind";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
-import { FlattenedLlmSuggestion } from "./useLlmDefinitionSuggestions";
+import { FlattenedLlmSuggestion } from "@/hooks/files/useLlmDefinitionSuggestions";
 
 type ExtractDialogMode = "definition" | "symbol-target";
 

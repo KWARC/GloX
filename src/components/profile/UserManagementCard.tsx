@@ -16,8 +16,8 @@ import {
   Title,
 } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
-import { getDisplayName } from "../hooks/profileUtils";
-import { ProfileAlerts } from "./ProfileAlerts";
+import { getDisplayName } from "@/hooks/profileUtils";
+import { ProfileAlerts } from "@/components/profile/ProfileAlerts";
 
 type UserManagementCardProps = {
   users: AdminProfileUser[];
