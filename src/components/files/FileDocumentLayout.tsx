@@ -15,6 +15,8 @@ export type DocumentPanelProps = {
   documentId: string;
   document: MyDocument;
   pages: DocumentPage[];
+  extractsByPageNumber: Record<number, ExtractedItem[]>;
+  persistentHighlightsEnabled: boolean;
   markReferencesByPage: Record<string, MarkReferenceItem[]>;
   deletingMarkReferenceId: string | null;
   llmButtons: ReactNode;
@@ -62,6 +64,8 @@ export function FileDocumentLayout({
     documentId,
     document,
     pages,
+    extractsByPageNumber,
+    persistentHighlightsEnabled,
     markReferencesByPage,
     deletingMarkReferenceId,
     llmButtons,
@@ -118,6 +122,8 @@ export function FileDocumentLayout({
           <DocumentPagesPanel
             documentId={documentId}
             pages={pages}
+            extractsByPageNumber={extractsByPageNumber}
+            persistentHighlightsEnabled={persistentHighlightsEnabled}
             markReferencesByPage={markReferencesByPage}
             deletingMarkReferenceId={deletingMarkReferenceId}
             onDeleteMarkReference={onDeleteMarkReference}

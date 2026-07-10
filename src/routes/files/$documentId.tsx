@@ -18,6 +18,7 @@ import { currentUser } from "@/server/auth/currentUser";
 import { useTextSelection } from "@/server/text-selection";
 import { deleteMarkReference } from "@/serverFns/markReference.server";
 import {
+  ActionIcon,
   Box,
   Button,
   Center,
@@ -34,6 +35,8 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconFileAlert,
+  IconEye,
+  IconEyeOff,
   IconSparkles,
   IconX,
 } from "@tabler/icons-react";
@@ -63,6 +66,8 @@ function RouteComponent() {
   const isTablet = useMediaQuery("(max-width: 1024px)");
   const [markReferenceLatexOpen, setMarkReferenceLatexOpen] = useState(false);
   const [markReferenceLatex, setMarkReferenceLatex] = useState("");
+  const [persistentHighlightsEnabled, setPersistentHighlightsEnabled] =
+    useState(true);
   const [deletingMarkReferenceId, setDeletingMarkReferenceId] = useState<
     string | null
   >(null);
@@ -143,6 +148,19 @@ function RouteComponent() {
         {},
       ),
     [markReferences],
+  );
+
+  const extractsByPageNumber = useMemo(
+    () =>
+      extracts.reduce<Record<number, typeof extracts>>((acc, extract) => {
+        if (extract.pageNumber === null) return acc;
+
+        const current = acc[extract.pageNumber] ?? [];
+        current.push(extract);
+        acc[extract.pageNumber] = current;
+        return acc;
+      }, {}),
+    [extracts],
   );
 
   async function handleDeleteMarkReference(referenceId: string) {
@@ -324,6 +342,35 @@ function RouteComponent() {
 
   const llmButtons = (
     <Group gap={6} wrap="nowrap">
+      <Tooltip
+        label={
+          persistentHighlightsEnabled
+            ? "Hide extracted text highlights"
+            : "Show extracted text highlights"
+        }
+        withArrow
+        position="bottom"
+      >
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          color="blue"
+          aria-label={
+            persistentHighlightsEnabled
+              ? "Hide extracted text highlights"
+              : "Show extracted text highlights"
+          }
+          onClick={() =>
+            setPersistentHighlightsEnabled(!persistentHighlightsEnabled)
+          }
+        >
+          {persistentHighlightsEnabled ? (
+            <IconEye size={15} />
+          ) : (
+            <IconEyeOff size={15} />
+          )}
+        </ActionIcon>
+      </Tooltip>
       {canAccessPrivilegedControls && (
         <Tooltip
           label={
@@ -372,6 +419,8 @@ function RouteComponent() {
             documentId,
             document,
             pages,
+            extractsByPageNumber,
+            persistentHighlightsEnabled,
             markReferencesByPage,
             deletingMarkReferenceId,
             llmButtons,

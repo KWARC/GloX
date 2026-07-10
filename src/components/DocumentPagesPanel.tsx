@@ -1,3 +1,6 @@
+import { PageTextHighlights } from "@/components/PageTextHighlights";
+import { PageTextHighlightMatch } from "@/hooks/files/pageTextHighlights";
+import { ExtractedItem } from "@/server/text-selection";
 import { LlmSuggestion } from "@/types/llm.types";
 import {
   Box,
@@ -16,163 +19,11 @@ import { useState } from "react";
 import { MarkReferenceItem, MarkedReferenceList } from "./MarkedReferenceList";
 import { PageImage } from "./PageImage";
 
-type TextSegment =
-  | { kind: "plain"; content: string }
-  | { kind: "highlight"; content: string; suggestion: LlmSuggestion };
-
-function buildSegments(
-  pageText: string,
-  suggestions: LlmSuggestion[],
-): TextSegment[] {
-  const valid = suggestions
-    .map((s) => ({
-      suggestion: s,
-      text: pageText.slice(s.startOffset, s.endOffset),
-    }))
-    .sort((a, b) =>
-      a.suggestion.startOffset !== b.suggestion.startOffset
-        ? a.suggestion.startOffset - b.suggestion.startOffset
-        : b.suggestion.endOffset - a.suggestion.endOffset,
-    );
-
-  const segments: TextSegment[] = [];
-  let cursor = 0;
-
-  for (const s of valid) {
-    if (s.suggestion.startOffset < cursor) continue;
-
-    if (s.suggestion.startOffset > cursor) {
-      segments.push({
-        kind: "plain",
-        content: pageText.slice(cursor, s.suggestion.startOffset),
-      });
-    }
-
-    segments.push({
-      kind: "highlight",
-      content: s.text,
-      suggestion: s.suggestion,
-    });
-    cursor = s.suggestion.endOffset;
-  }
-
-  if (cursor < pageText.length) {
-    segments.push({ kind: "plain", content: pageText.slice(cursor) });
-  }
-
-  return segments;
-}
-
-interface HighlightedPageTextProps {
-  pageId: string;
-  pageText: string;
-  suggestions: LlmSuggestion[];
-  focusedSuggestionId?: string | null;
-  onSelection: () => void;
-  onSuggestionClick: (suggestion: LlmSuggestion) => void;
-}
-
-function getLlmSuggestionId(pageId: string, suggestion: LlmSuggestion): string {
-  return `llm-suggestion-${pageId}-${suggestion.startOffset}-${suggestion.endOffset}`;
-}
-
-function HighlightedPageText({
-  pageId,
-  pageText,
-  suggestions,
-  focusedSuggestionId,
-  onSelection,
-  onSuggestionClick,
-}: HighlightedPageTextProps) {
-  const isMobile = useMediaQuery("(max-width: 768px)");
-  const segments = buildSegments(pageText, suggestions);
-
-  return (
-    <Text
-      size={isMobile ? "md" : "sm"}
-      lh={1.8}
-      mt="sm"
-      component="span"
-      style={{
-        whiteSpace: "pre-wrap",
-        userSelect: "text",
-        cursor: "text",
-        display: "block",
-      }}
-      onMouseUp={onSelection}
-    >
-      {segments.map((seg, i) => {
-        if (seg.kind === "plain") {
-          return <span key={i}>{seg.content}</span>;
-        }
-
-        const suggestionId = getLlmSuggestionId(pageId, seg.suggestion);
-        const isFocused = suggestionId === focusedSuggestionId;
-        const defaultBg = isFocused
-          ? "rgba(234, 179, 8, 0.62)"
-          : "rgba(234, 179, 8, 0.25)";
-        const hoverBg = isFocused
-          ? "rgba(234, 179, 8, 0.72)"
-          : "rgba(234, 179, 8, 0.5)";
-
-        return (
-          <Tooltip
-            key={i}
-            label={
-              <Box>
-                <Text size="xs" fw={600}>
-                  LLM suggestion
-                </Text>
-                <Text size={isMobile ? "sm" : "xs"}>{seg.suggestion.label}</Text>
-                <Text size={isMobile ? "sm" : "xs"} c="dimmed" mt={2}>
-                  Click to open Extract dialog
-                </Text>
-              </Box>
-            }
-            withArrow
-            multiline
-            maw={260}
-            position="top"
-            zIndex={5000}
-          >
-            <Box
-              id={suggestionId}
-              data-suggestion-id={suggestionId}
-              component="mark"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSuggestionClick(seg.suggestion);
-              }}
-              style={{
-                backgroundColor: defaultBg,
-                borderRadius: "2px",
-                boxShadow: isFocused
-                  ? "0 0 0 2px rgba(202, 138, 4, 0.75)"
-                  : undefined,
-                cursor: "pointer",
-                padding: "1px 0",
-                transition:
-                  "background-color 100ms ease, box-shadow 100ms ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = hoverBg;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = defaultBg;
-              }}
-            >
-              {seg.content}
-            </Box>
-          </Tooltip>
-        );
-      })}
-    </Text>
-  );
-}
-
 interface DocumentPagesPanelProps {
   documentId: string;
   pages: DocumentPage[];
+  extractsByPageNumber?: Record<number, ExtractedItem[]>;
+  persistentHighlightsEnabled?: boolean;
   markReferencesByPage?: Record<string, MarkReferenceItem[]>;
   deletingMarkReferenceId?: string | null;
   onDeleteMarkReference?: (referenceId: string) => Promise<void>;
@@ -186,6 +37,8 @@ interface DocumentPagesPanelProps {
 export function DocumentPagesPanel({
   documentId,
   pages,
+  extractsByPageNumber = {},
+  persistentHighlightsEnabled = true,
   markReferencesByPage = {},
   deletingMarkReferenceId = null,
   onDeleteMarkReference,
@@ -218,7 +71,23 @@ export function DocumentPagesPanel({
                 ? (llmSuggestions[page.id] ?? [])
                 : [];
             const pageMarkReferences = markReferencesByPage[page.id] ?? [];
+            const pageExtracts = extractsByPageNumber[page.pageNumber] ?? [];
             const hasHighlights = pageSuggestions.length > 0;
+            const persistentHighlights: PageTextHighlightMatch[] =
+              persistentHighlightsEnabled
+                ? [
+              ...pageExtracts.map((extract) => ({
+                text: extract.originalText,
+                source: "definition" as const,
+                label: extract.kind,
+              })),
+              ...pageMarkReferences.map((reference) => ({
+                text: reference.verbalization,
+                source: "reference" as const,
+                label: "Mark reference",
+              })),
+                  ]
+                : [];
 
             return (
               <Box key={page.id}>
@@ -227,6 +96,40 @@ export function DocumentPagesPanel({
                     <Text size={isMobile ? "sm" : "xs"} fw={700} c="dark" tt="uppercase">
                       Page {page.pageNumber}
                     </Text>
+
+                    {pageExtracts.length > 0 && (
+                      <Text
+                        size={isMobile ? "xs" : "10px"}
+                        c="blue.7"
+                        fw={600}
+                        style={{
+                          backgroundColor: "var(--mantine-color-blue-1)",
+                          border: "1px solid var(--mantine-color-blue-3)",
+                          borderRadius: 3,
+                          padding: "1px 5px",
+                        }}
+                      >
+                        {pageExtracts.length} definition
+                        {pageExtracts.length !== 1 ? "s" : ""} extracted
+                      </Text>
+                    )}
+
+                    {pageMarkReferences.length > 0 && (
+                      <Text
+                        size={isMobile ? "xs" : "10px"}
+                        c="green.7"
+                        fw={600}
+                        style={{
+                          backgroundColor: "var(--mantine-color-green-1)",
+                          border: "1px solid var(--mantine-color-green-3)",
+                          borderRadius: 3,
+                          padding: "1px 5px",
+                        }}
+                      >
+                        {pageMarkReferences.length} marked reference
+                        {pageMarkReferences.length !== 1 ? "s" : ""}
+                      </Text>
+                    )}
 
                     {hasHighlights && (
                       <Text
@@ -268,32 +171,17 @@ export function DocumentPagesPanel({
                   onDelete={onDeleteMarkReference}
                 />
 
-                {hasHighlights ? (
-                  <HighlightedPageText
-                    pageId={page.id}
-                    pageText={page.text}
-                    suggestions={pageSuggestions}
-                    focusedSuggestionId={focusedSuggestionId}
-                    onSelection={() => onSelection(page.id)}
-                    onSuggestionClick={(s) =>
-                      onLlmSuggestionClick?.(s, page.id)
-                    }
-                  />
-                ) : (
-                  <Text
-                    size="sm"
-                    lh={1.8}
-                    mt="sm"
-                    style={{
-                      whiteSpace: "pre-wrap",
-                      userSelect: "text",
-                      cursor: "text",
-                    }}
-                    onMouseUp={() => onSelection(page.id)}
-                  >
-                    {page.text}
-                  </Text>
-                )}
+                <PageTextHighlights
+                  pageId={page.id}
+                  pageText={page.text}
+                  highlights={persistentHighlights}
+                  suggestions={pageSuggestions}
+                  focusedSuggestionId={focusedSuggestionId}
+                  onSelection={() => onSelection(page.id)}
+                  onSuggestionClick={(suggestion) =>
+                    onLlmSuggestionClick?.(suggestion, page.id)
+                  }
+                />
 
                 {page.id !== pages[pages.length - 1]?.id && <Divider mt="lg" />}
               </Box>
