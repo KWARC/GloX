@@ -10,6 +10,7 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
 import { MarkReferenceItem, MarkedReferenceList } from "./MarkedReferenceList";
@@ -83,11 +84,12 @@ function HighlightedPageText({
   onSelection,
   onSuggestionClick,
 }: HighlightedPageTextProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const segments = buildSegments(pageText, suggestions);
 
   return (
     <Text
-      size="sm"
+      size={isMobile ? "md" : "sm"}
       lh={1.8}
       mt="sm"
       component="span"
@@ -121,8 +123,8 @@ function HighlightedPageText({
                 <Text size="xs" fw={600}>
                   LLM suggestion
                 </Text>
-                <Text size="xs">{seg.suggestion.label}</Text>
-                <Text size="xs" c="dimmed" mt={2}>
+                <Text size={isMobile ? "sm" : "xs"}>{seg.suggestion.label}</Text>
+                <Text size={isMobile ? "sm" : "xs"} c="dimmed" mt={2}>
                   Click to open Extract dialog
                 </Text>
               </Box>
@@ -193,6 +195,7 @@ export function DocumentPagesPanel({
   focusedSuggestionId,
   onLlmSuggestionClick,
 }: DocumentPagesPanelProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [collapsedPages, setCollapsedPages] = useState<Record<string, boolean>>(
     {},
   );
@@ -207,7 +210,7 @@ export function DocumentPagesPanel({
   return (
     <Paper withBorder h="100%" radius="md">
       <ScrollArea h="100%">
-        <Stack p="lg" gap="lg">
+        <Stack p={isMobile ? "xl" : "lg"} gap={isMobile ? "xl" : "lg"}>
           {pages.map((page) => {
             const isCollapsed = collapsedPages[page.id];
             const pageSuggestions =
@@ -221,13 +224,13 @@ export function DocumentPagesPanel({
               <Box key={page.id}>
                 <Group justify="space-between" align="center" mb="xs">
                   <Group gap="xs">
-                    <Text size="xs" fw={700} c="dark" tt="uppercase">
+                    <Text size={isMobile ? "sm" : "xs"} fw={700} c="dark" tt="uppercase">
                       Page {page.pageNumber}
                     </Text>
 
                     {hasHighlights && (
                       <Text
-                        size="10px"
+                        size={isMobile ? "xs" : "10px"}
                         c="yellow.7"
                         fw={600}
                         style={{
@@ -244,7 +247,7 @@ export function DocumentPagesPanel({
                   </Group>
 
                   <Button
-                    size="xs"
+                    size={isMobile ? "sm" : "xs"}
                     variant="subtle"
                     onClick={() => togglePage(page.id)}
                   >

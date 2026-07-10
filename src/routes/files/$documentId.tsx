@@ -60,9 +60,7 @@ function RouteComponent() {
     queryFn: currentUser,
     staleTime: 60_000,
   });
-  const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
-  const [activeTab, setActiveTab] = useState<string | null>("document");
   const [markReferenceLatexOpen, setMarkReferenceLatexOpen] = useState(false);
   const [markReferenceLatex, setMarkReferenceLatex] = useState("");
   const [deletingMarkReferenceId, setDeletingMarkReferenceId] = useState<
@@ -118,8 +116,6 @@ function RouteComponent() {
     documentId,
     pages,
     extracts,
-    isMobile,
-    setActiveTab,
     openSuggestionForExtraction: extractionFlow.openSuggestionForExtraction,
   });
 
@@ -219,8 +215,8 @@ function RouteComponent() {
     );
   }
 
-  const pad = isMobile ? "xs" : isTablet ? "md" : "lg";
-  const gap = isMobile ? "xs" : "md";
+  const pad = isTablet ? "md" : "lg";
+  const gap = "md";
   const role = auth?.user?.role;
   const canAccessPrivilegedControls = role === "ADMIN" || role === "CURATOR";
   const totalSuggestions = llmFlow.flattenedSuggestions.length;
@@ -370,10 +366,7 @@ function RouteComponent() {
       <Stack gap={gap} h="100%" style={{ overflow: "hidden" }}>
         <FileDocumentLayout
           responsive={{
-            isMobile,
             isTablet,
-            activeTab,
-            setActiveTab,
           }}
           documentPanel={{
             documentId,

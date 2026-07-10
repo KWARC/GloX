@@ -9,6 +9,7 @@ import {
   Textarea,
   Tooltip,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   IconDog,
   IconPencil,
@@ -62,6 +63,8 @@ export function ExtractedTextPanel({
   isLocked = false,
   compact = false,
 }: ExtractedTextPanelProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   return (
     <Paper
       withBorder={!compact}
@@ -73,7 +76,7 @@ export function ExtractedTextPanel({
       <ScrollArea h={compact ? "auto" : "100%"}>
         <Stack gap={compact ? "xs" : "sm"}>
           {!extracts.length ? (
-            <Text size="sm" c="dark" ta="center">
+            <Text size={isMobile ? "md" : "sm"} c="dark" ta="center">
               No extracted text yet
             </Text>
           ) : (
@@ -99,7 +102,7 @@ export function ExtractedTextPanel({
                 >
                   <Group justify="space-between" mb={compact ? 2 : 4}>
                     {showPageNumber ? (
-                      <Text size="xs">
+                      <Text size={isMobile ? "sm" : "xs"}>
                         {item.pageNumber === null
                           ? `New · ${item.kind}`
                           : `Page ${item.pageNumber} · ${item.kind}`}
@@ -112,7 +115,7 @@ export function ExtractedTextPanel({
                       <Group gap={compact ? "xs" : "xs"}>
                         <Tooltip label="Delete definition" withArrow>
                           <ActionIcon
-                            size={compact ? 22 : "sm"}
+                            size={compact ? 22 : isMobile ? "md" : "sm"}
                             color="red"
                             disabled={isLocked}
                             onClick={() => onDelete(item.id)}
@@ -124,7 +127,7 @@ export function ExtractedTextPanel({
                         {showJsonEdit && (
                           <Tooltip label="Edit JSON format" withArrow>
                             <ActionIcon
-                              size={compact ? 22 : "sm"}
+                              size={compact ? 22 : isMobile ? "md" : "sm"}
                               variant="subtle"
                               disabled={isLocked}
                               onClick={() => onToggleEdit(item.id)}
@@ -137,7 +140,7 @@ export function ExtractedTextPanel({
                         {onRecomputeReferences && (
                           <Tooltip label="sn-ify" withArrow>
                             <ActionIcon
-                              size={compact ? 22 : "sm"}
+                              size={compact ? 22 : isMobile ? "md" : "sm"}
                               variant="subtle"
                               color="teal"
                               disabled={isLocked}
@@ -149,7 +152,7 @@ export function ExtractedTextPanel({
                         )}
                         <Tooltip label="Manage semantics" withArrow>
                           <ActionIcon
-                            size={compact ? 22 : "sm"}
+                            size={compact ? 22 : isMobile ? "md" : "sm"}
                             variant="subtle"
                             disabled={isLocked}
                             onClick={() => onOpenSemanticPanel(item.id)}
@@ -210,7 +213,7 @@ export function ExtractedTextPanel({
                       >
                         <FolderSymlink size={14} />
                         {!showDefinitionMetaIconOnly && (
-                          <Text size="10px" c="dimmed" ff="monospace">
+                          <Text size={isMobile ? "xs" : "10px"} c="dimmed" ff="monospace">
                             [{item.futureRepo}] [{item.filePath}] [{item.fileName}
                             ] [{item.language}]
                           </Text>
