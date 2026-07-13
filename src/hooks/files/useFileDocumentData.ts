@@ -21,6 +21,9 @@ type FileDocumentData = {
   markReferences: MarkReferences;
   staticCatalog: StaticCatalog;
   sniffyCatalog: SniffyCatalog;
+  staticCatalogLoading: boolean;
+  staticCatalogError: Error | null;
+  retryStaticCatalog: () => Promise<void>;
   docLoading: boolean;
   pagesLoading: boolean;
 };
@@ -44,10 +47,25 @@ export function useFileDocumentData(documentId: string): FileDocumentData {
     queryFn: () => listMarkReferences({ data: { documentId } }),
   });
 
-  const { data: staticCatalog = [] } = useQuery({
+  const {
+    data: staticCatalogData,
+    isLoading: staticCatalogLoading,
+    error: staticCatalogQueryError,
+    refetch: refetchStaticCatalog,
+  } = useQuery({
     queryKey: ["static-symbolic-catalog"],
     queryFn: () => listStaticSymbolicCatalog(),
   });
+
+  const retryStaticCatalog = async () => {
+    await refetchStaticCatalog();
+  };
+
+  const staticCatalog = staticCatalogData ?? [];
+  const staticCatalogError =
+    staticCatalogData === undefined && !staticCatalogLoading
+      ? staticCatalogQueryError
+      : null;
 
   const sniffyCatalog = useMemo(
     () => buildStaticCatalog(staticCatalog),
@@ -61,6 +79,9 @@ export function useFileDocumentData(documentId: string): FileDocumentData {
     markReferences,
     staticCatalog,
     sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
     docLoading,
     pagesLoading,
   };

@@ -89,6 +89,9 @@ function RouteComponent() {
     extracts,
     markReferences,
     sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
     docLoading,
     pagesLoading,
   } = useFileDocumentData(documentId);
@@ -134,6 +137,9 @@ function RouteComponent() {
     documentId,
     extracts,
     sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
   });
 
   const markReferencesByPage = useMemo(
@@ -575,6 +581,8 @@ function RouteComponent() {
           suggestions: sniffyFlow.suggestions,
           catalog: sniffyCatalog,
           loading: sniffyFlow.suggestLoading,
+          catalogError: sniffyFlow.catalogError,
+          onRetryCatalog: sniffyFlow.handleRetryCatalog,
           onAccept: sniffyFlow.handleAcceptSuggestion,
         }}
         recompute={{

@@ -11,14 +11,23 @@ export function useFileSniffyReferenceSuggestions({
   documentId,
   extracts,
   sniffyCatalog,
+  staticCatalogLoading,
+  staticCatalogError,
+  retryStaticCatalog,
 }: {
   documentId: string;
   extracts: ExtractedItem[];
   sniffyCatalog: SniffyCatalog;
+  staticCatalogLoading: boolean;
+  staticCatalogError: Error | null;
+  retryStaticCatalog: () => Promise<void>;
 }) {
   return useSharedSniffyReferenceSuggestions({
     definitions: extracts,
     catalog: sniffyCatalog,
+    catalogLoading: staticCatalogLoading,
+    catalogError: staticCatalogError,
+    retryCatalog: retryStaticCatalog,
     invalidate: () =>
       queryClient.invalidateQueries({
         queryKey: ["definitions", documentId],

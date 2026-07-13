@@ -37,6 +37,8 @@ type Props = {
   suggestions: SuggestedReference[];
   catalog: CatalogEntry[];
   loading?: boolean;
+  catalogError?: string | null;
+  onRetryCatalog?: () => Promise<void>;
   onAccept: (
     s: SuggestedReference,
     candidate: SuggestedReferenceCandidate,
@@ -63,6 +65,8 @@ export function ReferenceSuggestionDialog({
   suggestions,
   catalog,
   loading = false,
+  catalogError = null,
+  onRetryCatalog,
   onAccept,
 }: Props) {
   const [index, setIndex] = useState(0);
@@ -163,7 +167,9 @@ export function ReferenceSuggestionDialog({
   const selectedCandidateKey = selectedCandidate
     ? getSuggestedReferenceCandidateKey(selectedCandidate)
     : null;
-  const title = loading
+  const title = catalogError
+    ? "Unable to load symbolic references"
+    : loading
     ? "Finding symbolic references"
     : suggestions.length === 0
       ? "No suggestions found"
@@ -265,7 +271,24 @@ export function ReferenceSuggestionDialog({
       radius="md"
       styles={{ body: { overflow: "hidden" } }}
     >
-      {loading ? (
+      {catalogError ? (
+        <Stack gap="md">
+          <Text size="sm">
+            sn-ify could not load the symbolic-reference catalog. Please retry.
+          </Text>
+          <Text size="xs" c="dimmed">
+            {catalogError}
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={onClose}>
+              Close
+            </Button>
+            {onRetryCatalog && (
+              <Button onClick={() => void onRetryCatalog()}>Retry</Button>
+            )}
+          </Group>
+        </Stack>
+      ) : loading ? (
         <Stack gap="md" align="center" py="xl">
           <Loader />
           <Text size="sm" c="dimmed" ta="center">
