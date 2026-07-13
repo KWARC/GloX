@@ -15,7 +15,7 @@ import {
   PendingMathHubToLocal,
   PendingPropagation,
   SemanticPanelState,
-} from "./useSemanticPanelState";
+} from "@/hooks/semantic-panel/useSemanticPanelState";
 
 type BaseProps = {
   definition: SemanticDefinition;

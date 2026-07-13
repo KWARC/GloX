@@ -18,7 +18,7 @@ import { FtmlPreview } from "./FtmlPreview";
 import { DefiniendumDialog } from "./DefiniendumDialog";
 import { SymbolicRef } from "./SymbolicRef";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
-import { useDraftSemanticAuthoring } from "./useDraftSemanticAuthoring";
+import { useDraftSemanticAuthoring } from "@/hooks/useDraftSemanticAuthoring";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import { FtmlStatement } from "@/types/ftml.types";
 import { SelectionPopup } from "./SelectionPopup";

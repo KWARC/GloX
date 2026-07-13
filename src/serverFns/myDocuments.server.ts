@@ -19,14 +19,42 @@ export const getMyDocuments = createServerFn({ method: "GET" }).handler(
     const docs = await prisma.document.findMany({
       where:
         role === "ADMIN"
-          ? {} 
+          ? {}
           : { userId: res.user.id },
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        filename: true,
+        fileHash: true,
+        mimeType: true,
+        fileSize: true,
+        futureRepo: true,
+        filePath: true,
+        language: true,
+        moduleDescription: true,
+        indexStatus: true,
+        userId: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            definitions: true,
+            markReferences: true,
+            pages: true,
+          },
+        },
+      },
     });
 
     return {
       success: true,
-      documents: docs,
+      documents: docs.map((doc) => ({
+        ...doc,
+        definitionCount: doc._count.definitions,
+        markReferenceCount: doc._count.markReferences,
+        pageCount: doc._count.pages,
+      })),
     };
   },
 );

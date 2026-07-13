@@ -28,15 +28,11 @@ export function useLlmDefinitionSuggestions({
   documentId,
   pages,
   extracts,
-  isMobile,
-  setActiveTab,
   openSuggestionForExtraction,
 }: {
   documentId: string;
   pages: DocumentPage[];
   extracts: ExtractedItem[];
-  isMobile: boolean;
-  setActiveTab: (tab: string | null) => void;
   openSuggestionForExtraction: (params: {
     page: DocumentPage;
     text: string;
@@ -171,7 +167,6 @@ export function useLlmDefinitionSuggestions({
       setLlmEnabled(hasSuggestions);
       if (hasSuggestions) {
         setFocusedSuggestionIndex(0);
-        if (isMobile) setActiveTab("document");
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "LLM request failed";
@@ -189,7 +184,6 @@ export function useLlmDefinitionSuggestions({
     if (flattenedSuggestions.length > 0) {
       setLlmSuggestionsDismissed(false);
       setLlmEnabled(true);
-      if (isMobile) setActiveTab("document");
       focusSuggestion(focusedSuggestionIndex ?? 0);
       return;
     }
@@ -229,7 +223,6 @@ export function useLlmDefinitionSuggestions({
 
     setFocusedSuggestionIndex(index);
     setLlmEnabled(true);
-    if (isMobile) setActiveTab("document");
     scrollSuggestionIntoView(suggestion.id);
   }
 

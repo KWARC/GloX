@@ -8,7 +8,7 @@ import { IconPencil } from "@tabler/icons-react";
 import { CurrentUriDisplay } from "../CurrentUriDisplay";
 import { SearchBar } from "../SearchBar";
 import { SemanticSearchResults } from "./SemanticSearchResults";
-import { SemanticPanelState } from "./useSemanticPanelState";
+import { SemanticPanelState } from "@/hooks/semantic-panel/useSemanticPanelState";
 
 export type SymrefEditorProps = {
   definition: SemanticDefinition;

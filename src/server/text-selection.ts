@@ -26,8 +26,10 @@ export type TextSelection = {
 export type ExtractedItem = {
   id: string;
   documentId: string;
+  documentPageId: string;
   pageNumber: number | null;
   kind: ParagraphKind;
+  originalText: string;
   statement: FtmlStatement;
   futureRepo: string;
   filePath: string;

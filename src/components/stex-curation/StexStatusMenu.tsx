@@ -1,6 +1,6 @@
 import { Button, Menu, Stack, Text, Tooltip } from "@mantine/core";
 import { ChevronDown } from "lucide-react";
-import { StexStatus } from "./useStexCurationData";
+import { StexStatus } from "@/hooks/stex-curation/useStexCurationData";
 
 type StatusConf = {
   color: string;

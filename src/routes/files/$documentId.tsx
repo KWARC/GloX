@@ -1,13 +1,24 @@
-import { currentUser } from "@/server/auth/currentUser";
-import { deleteMarkReference } from "@/serverFns/markReference.server";
-import { queryClient } from "@/queryClient";
-import { useTextSelection } from "@/server/text-selection";
+import { FileDialogs } from "@/components/files/FileDialogs";
+import { FileDocumentLayout } from "@/components/files/FileDocumentLayout";
 import { MarkReferenceLatexModal } from "@/components/MarkReferenceLatexModal";
+import { useDefinitionExtractionFlow } from "@/hooks/files/useDefinitionExtractionFlow";
+import { useFileDocumentData } from "@/hooks/files/useFileDocumentData";
+import { useFileSniffyReferenceSuggestions } from "@/hooks/files/useFileSniffyReferenceSuggestions";
+import {
+  FlattenedLlmSuggestion,
+  useLlmDefinitionSuggestions,
+} from "@/hooks/files/useLlmDefinitionSuggestions";
+import { useSemanticEditingFlow } from "@/hooks/files/useSemanticEditingFlow";
 import {
   buildMarkReferenceLatex,
   getMarkReferenceLatexDownloadName,
 } from "@/lib/markReferenceLatex";
+import { queryClient } from "@/queryClient";
+import { currentUser } from "@/server/auth/currentUser";
+import { useTextSelection } from "@/server/text-selection";
+import { deleteMarkReference } from "@/serverFns/markReference.server";
 import {
+  ActionIcon,
   Box,
   Button,
   Center,
@@ -24,22 +35,14 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconFileAlert,
+  IconEye,
+  IconEyeOff,
   IconSparkles,
   IconX,
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileDialogs } from "./-components/FileDialogs";
-import { FileDocumentLayout } from "./-components/FileDocumentLayout";
-import { useDefinitionExtractionFlow } from "./-hooks/useDefinitionExtractionFlow";
-import { useFileDocumentData } from "./-hooks/useFileDocumentData";
-import {
-  FlattenedLlmSuggestion,
-  useLlmDefinitionSuggestions,
-} from "./-hooks/useLlmDefinitionSuggestions";
-import { useSemanticEditingFlow } from "./-hooks/useSemanticEditingFlow";
-import { useSniffyReferenceSuggestions } from "./-hooks/useSniffyReferenceSuggestions";
 
 export const Route = createFileRoute("/files/$documentId")({
   loader: async () => {
@@ -60,11 +63,11 @@ function RouteComponent() {
     queryFn: currentUser,
     staleTime: 60_000,
   });
-  const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
-  const [activeTab, setActiveTab] = useState<string | null>("document");
   const [markReferenceLatexOpen, setMarkReferenceLatexOpen] = useState(false);
   const [markReferenceLatex, setMarkReferenceLatex] = useState("");
+  const [persistentHighlightsEnabled, setPersistentHighlightsEnabled] =
+    useState(true);
   const [deletingMarkReferenceId, setDeletingMarkReferenceId] = useState<
     string | null
   >(null);
@@ -86,6 +89,9 @@ function RouteComponent() {
     extracts,
     markReferences,
     sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
     docLoading,
     pagesLoading,
   } = useFileDocumentData(documentId);
@@ -118,8 +124,6 @@ function RouteComponent() {
     documentId,
     pages,
     extracts,
-    isMobile,
-    setActiveTab,
     openSuggestionForExtraction: extractionFlow.openSuggestionForExtraction,
   });
 
@@ -129,10 +133,13 @@ function RouteComponent() {
     focusSuggestion: llmFlow.focusSuggestion,
   };
 
-  const sniffyFlow = useSniffyReferenceSuggestions({
+  const sniffyFlow = useFileSniffyReferenceSuggestions({
     documentId,
     extracts,
     sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
   });
 
   const markReferencesByPage = useMemo(
@@ -147,6 +154,19 @@ function RouteComponent() {
         {},
       ),
     [markReferences],
+  );
+
+  const extractsByPageNumber = useMemo(
+    () =>
+      extracts.reduce<Record<number, typeof extracts>>((acc, extract) => {
+        if (extract.pageNumber === null) return acc;
+
+        const current = acc[extract.pageNumber] ?? [];
+        current.push(extract);
+        acc[extract.pageNumber] = current;
+        return acc;
+      }, {}),
+    [extracts],
   );
 
   async function handleDeleteMarkReference(referenceId: string) {
@@ -219,11 +239,10 @@ function RouteComponent() {
     );
   }
 
-  const pad = isMobile ? "xs" : isTablet ? "md" : "lg";
-  const gap = isMobile ? "xs" : "md";
+  const pad = isTablet ? "md" : "lg";
+  const gap = "md";
   const role = auth?.user?.role;
-  const canAccessPrivilegedControls =
-    role === "ADMIN" || role === "CURATOR";
+  const canAccessPrivilegedControls = role === "ADMIN" || role === "CURATOR";
   const totalSuggestions = llmFlow.flattenedSuggestions.length;
   const hasAnySuggestions = totalSuggestions > 0;
   const suggestionCounter =
@@ -329,6 +348,35 @@ function RouteComponent() {
 
   const llmButtons = (
     <Group gap={6} wrap="nowrap">
+      <Tooltip
+        label={
+          persistentHighlightsEnabled
+            ? "Hide extracted text highlights"
+            : "Show extracted text highlights"
+        }
+        withArrow
+        position="bottom"
+      >
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          color="blue"
+          aria-label={
+            persistentHighlightsEnabled
+              ? "Hide extracted text highlights"
+              : "Show extracted text highlights"
+          }
+          onClick={() =>
+            setPersistentHighlightsEnabled(!persistentHighlightsEnabled)
+          }
+        >
+          {persistentHighlightsEnabled ? (
+            <IconEye size={15} />
+          ) : (
+            <IconEyeOff size={15} />
+          )}
+        </ActionIcon>
+      </Tooltip>
       {canAccessPrivilegedControls && (
         <Tooltip
           label={
@@ -371,15 +419,14 @@ function RouteComponent() {
       <Stack gap={gap} h="100%" style={{ overflow: "hidden" }}>
         <FileDocumentLayout
           responsive={{
-            isMobile,
             isTablet,
-            activeTab,
-            setActiveTab,
           }}
           documentPanel={{
             documentId,
             document,
             pages,
+            extractsByPageNumber,
+            persistentHighlightsEnabled,
             markReferencesByPage,
             deletingMarkReferenceId,
             llmButtons,
@@ -534,6 +581,8 @@ function RouteComponent() {
           suggestions: sniffyFlow.suggestions,
           catalog: sniffyCatalog,
           loading: sniffyFlow.suggestLoading,
+          catalogError: sniffyFlow.catalogError,
+          onRetryCatalog: sniffyFlow.handleRetryCatalog,
           onAccept: sniffyFlow.handleAcceptSuggestion,
         }}
         recompute={{

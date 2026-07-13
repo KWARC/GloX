@@ -17,6 +17,9 @@ type SniffyCatalog = Parameters<typeof suggestRefsForDefinition>[1];
 type UseSniffyReferenceSuggestionsParams = {
   definitions: ExtractedItem[];
   catalog: SniffyCatalog;
+  catalogLoading?: boolean;
+  catalogError?: Error | null;
+  retryCatalog?: () => Promise<void>;
   invalidate: () => Promise<unknown>;
   refetchDefinitions: () => Promise<ExtractedItem[]>;
 };
@@ -24,6 +27,9 @@ type UseSniffyReferenceSuggestionsParams = {
 export function useSniffyReferenceSuggestions({
   definitions,
   catalog,
+  catalogLoading = false,
+  catalogError = null,
+  retryCatalog,
   invalidate,
   refetchDefinitions,
 }: UseSniffyReferenceSuggestionsParams) {
@@ -37,6 +43,9 @@ export function useSniffyReferenceSuggestions({
   const [activeDefText, setActiveDefText] = useState("");
   const [activeDefStatement, setActiveDefStatement] =
     useState<FtmlStatement | null>(null);
+  const [pendingDefinitionId, setPendingDefinitionId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!activeDefId) return;
@@ -69,6 +78,27 @@ export function useSniffyReferenceSuggestions({
     });
   }
 
+  useEffect(() => {
+    if (!pendingDefinitionId || catalogLoading || catalogError) return;
+
+    const definition = definitions.find(
+      (item) => item.id === pendingDefinitionId,
+    );
+    if (!definition) {
+      setPendingDefinitionId(null);
+      setSuggestLoading(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      loadSession(pendingDefinitionId, definition);
+      setPendingDefinitionId(null);
+      setSuggestLoading(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [catalog, catalogError, catalogLoading, definitions, pendingDefinitionId]);
+
   async function handleRecomputeReferences(definitionId: string) {
     const definition = definitions.find((e) => e.id === definitionId);
     if (!definition) return;
@@ -79,12 +109,13 @@ export function useSniffyReferenceSuggestions({
     setSuggestOpen(true);
     setSuggestLoading(true);
 
-    try {
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-      loadSession(definitionId, definition);
-    } finally {
-      setSuggestLoading(false);
-    }
+    setPendingDefinitionId(definitionId);
+  }
+
+  async function handleRetryCatalog() {
+    if (!pendingDefinitionId || !retryCatalog) return;
+    setSuggestLoading(true);
+    await retryCatalog();
   }
 
   async function reloadSniffySession(definitionId: string) {
@@ -135,12 +166,14 @@ export function useSniffyReferenceSuggestions({
     suggestOpen,
     setSuggestOpen,
     suggestLoading,
+    catalogError: catalogError?.message ?? null,
     suggestions,
     suggestCandidateSymRefs,
     activeDefId,
     activeDefText,
     activeDefStatement,
     handleRecomputeReferences,
+    handleRetryCatalog,
     handleAcceptSuggestion,
     reloadSniffySession,
   };
