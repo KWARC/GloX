@@ -3,21 +3,25 @@ import { ActionIcon, Text, Tooltip } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
 
 type UploadAttributionInfoProps = {
-  user: NamedUser;
+  attributions: Array<{ label: string; user: NamedUser }>;
 };
 
-export function UploadAttributionInfo({ user }: UploadAttributionInfoProps) {
+export function UploadAttributionInfo({ attributions }: UploadAttributionInfoProps) {
   return (
     <Tooltip
       label={
-        <Text size="xs">
-          Uploaded by {getDisplayName(user)} ({user.email})
-        </Text>
+        <>
+          {attributions.map(({ label, user }) => (
+            <Text key={label} size="xs">
+              {label} {getDisplayName(user)} ({user.email})
+            </Text>
+          ))}
+        </>
       }
       withArrow
     >
       <ActionIcon
-        aria-label="Show upload attribution"
+        aria-label="Show attribution"
         variant="subtle"
         color="gray"
         size="sm"

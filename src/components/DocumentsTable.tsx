@@ -286,7 +286,11 @@ export function DocumentsTable({
 
                     <Table.Td ta="center">
                       <Group gap="xs" justify="center">
-                        <UploadAttributionInfo user={doc.user} />
+                        <UploadAttributionInfo
+                          attributions={[
+                            { label: "Uploaded by", user: doc.user },
+                          ]}
+                        />
 
                         <ActionIcon
                           color="red"

@@ -7,7 +7,6 @@ import {
   Portal,
   Stack,
   Text,
-  Textarea,
   TextInput,
 } from "@mantine/core";
 import { IconCheck, IconX } from "@tabler/icons-react";
@@ -26,14 +25,12 @@ interface DefiniendumDialogProps {
   pickExistingSubmitLabel?: string;
   createSubmitLabel?: string;
   allowCreateSymbol?: boolean;
-  hideVerbalizationField?: boolean;
   loading?: boolean;
   onSubmit: (
     params:
       | {
           mode: "CREATE";
           symbolName: string;
-          verbalization: string;
           symdecl: true;
         }
       | { mode: "PICK_EXISTING"; selectedSymbol: SymbolSearchResult },
@@ -54,7 +51,6 @@ export function DefiniendumDialog({
   pickExistingSubmitLabel = "Link & Insert Definiendum",
   createSubmitLabel = "Create & Insert Definiendum",
   allowCreateSymbol = true,
-  hideVerbalizationField = false,
   loading = false,
   onSubmit,
   onClose,
@@ -67,7 +63,6 @@ export function DefiniendumDialog({
   const form = useForm({
     defaultValues: {
       symbolName: normalizePrefilledSymbolName(extractedText),
-      verbalization: normalizePrefilledSymbolName(extractedText),
       symdecl: true,
     },
     onSubmit: ({ value }) => {
@@ -75,7 +70,6 @@ export function DefiniendumDialog({
         onSubmit({
           mode: "CREATE",
           symbolName: value.symbolName.trim(),
-          verbalization: value.verbalization.trim(),
           symdecl: true,
         });
       }
@@ -91,7 +85,6 @@ export function DefiniendumDialog({
 
     form.reset({
       symbolName: normalizePrefilledSymbolName(extractedText),
-      verbalization: normalizePrefilledSymbolName(extractedText),
       symdecl: true,
     });
   }, [opened, extractedText]);
@@ -181,51 +174,12 @@ export function DefiniendumDialog({
                     <TextInput
                       label="Symbol name"
                       value={field.state.value}
-                      onChange={(e) => {
-                        const nextSymbolName = e.currentTarget.value;
-                        const previousSymbolName = field.state.value;
-                        if (hideVerbalizationField) {
-                          field.handleChange(nextSymbolName);
-                          return;
-                        }
-
-                        const currentVerbalization = form.getFieldValue(
-                          "verbalization",
-                        );
-
-                        field.handleChange(nextSymbolName);
-
-                        if (
-                          !currentVerbalization.trim() ||
-                          currentVerbalization === previousSymbolName
-                        ) {
-                          form.setFieldValue(
-                            "verbalization",
-                            nextSymbolName,
-                          );
-                        }
-                      }}
+                      onChange={(e) => field.handleChange(e.currentTarget.value)}
                       error={field.state.meta.errors?.[0]}
                       autoFocus
                     />
                   )}
                 </form.Field>
-
-                {!hideVerbalizationField && (
-                  <form.Field name="verbalization">
-                    {(field) => (
-                      <Textarea
-                        label="Verbalization"
-                        value={field.state.value}
-                        onChange={(e) =>
-                          field.handleChange(e.currentTarget.value)
-                        }
-                        autosize
-                        minRows={2}
-                      />
-                    )}
-                  </form.Field>
-                )}
 
                 <Button
                   type="submit"

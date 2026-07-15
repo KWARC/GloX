@@ -110,7 +110,12 @@ export function MarkedReferenceList({
                   <IconDotsVertical size={14} />
                 </ActionIcon>
               </Menu.Target>
-              <Menu.Dropdown>
+              <Menu.Dropdown
+                style={{
+                  maxHeight: 256,
+                  overflowY: "auto",
+                }}
+              >
                 {references.map((reference) => {
                   const display = getReferenceDisplay(reference);
 

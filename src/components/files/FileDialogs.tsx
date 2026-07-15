@@ -49,7 +49,6 @@ export type DefiniendumDialogProps = {
   pickExistingSubmitLabel?: string;
   createSubmitLabel?: string;
   allowCreateSymbol?: boolean;
-  hideVerbalizationField?: boolean;
   loading?: boolean;
   onClose: () => void;
   onSubmit: ComponentProps<typeof DefiniendumDialog>["onSubmit"];
@@ -211,7 +210,6 @@ export function FileDialogs({
         title={definiendum.title}
         pickExistingSubmitLabel={definiendum.pickExistingSubmitLabel}
         allowCreateSymbol={definiendum.allowCreateSymbol}
-        hideVerbalizationField={definiendum.hideVerbalizationField}
         loading={definiendum.loading}
       />
 
@@ -224,7 +222,6 @@ export function FileDialogs({
         pickExistingSubmitLabel={markReference.pickExistingSubmitLabel}
         createSubmitLabel={markReference.createSubmitLabel}
         allowCreateSymbol={markReference.allowCreateSymbol}
-        hideVerbalizationField={markReference.hideVerbalizationField}
         loading={markReference.loading}
       />
 

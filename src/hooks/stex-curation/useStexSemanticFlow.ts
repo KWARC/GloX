@@ -202,7 +202,6 @@ export function useStexSemanticFlow(
           language: identity.language,
 
           symbolName: params.symbolName,
-          alias: params.verbalization || null,
         },
       });
     } else {

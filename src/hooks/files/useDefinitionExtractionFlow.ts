@@ -313,7 +313,6 @@ export function useDefinitionExtractionFlow({
       | {
           mode: "CREATE";
           symbolName: string;
-          verbalization: string;
           symdecl: true;
         }
       | {

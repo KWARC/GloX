@@ -32,8 +32,12 @@ type MarkReferenceFile = {
 
 export function CurationMarkReferenceBox({
   files,
+  deletingId,
+  onDelete,
 }: {
   files: MarkReferenceFile[];
+  deletingId?: string | null;
+  onDelete?: (referenceId: string) => Promise<void>;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewCode, setPreviewCode] = useState("");
@@ -164,7 +168,11 @@ export function CurationMarkReferenceBox({
                               >
                                 Page {pageNumber}
                               </Text>
-                              <MarkedReferenceList references={references} />
+                              <MarkedReferenceList
+                                references={references}
+                                deletingId={deletingId}
+                                onDelete={onDelete}
+                              />
                             </Box>
                           ))
                         )}

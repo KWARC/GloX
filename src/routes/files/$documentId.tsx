@@ -503,7 +503,6 @@ function RouteComponent() {
           pickExistingSubmitLabel: "Save Mark Reference",
           createSubmitLabel: "Add Mark Reference",
           allowCreateSymbol: true,
-          hideVerbalizationField: true,
           loading: extractionFlow.markReferenceSaving,
           onClose: extractionFlow.handleCloseMarkReference,
           onSubmit: extractionFlow.handleMarkReferenceSubmit,

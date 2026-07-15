@@ -1,8 +1,7 @@
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
-import { getDisplayName } from "@/hooks/profileUtils";
+import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
 import { FileIdentity } from "@/serverFns/latex.server";
-import { ActionIcon, Box, Group, Loader, Stack, Table, Text, Tooltip } from "@mantine/core";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { Box, Group, Loader, Stack, Table } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { DiscardDefinitionModal } from "./DiscardDefinitionModal";
 import { LatexPreviewModal } from "./LatexPreviewModal";
@@ -103,30 +102,20 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       </Box>
 
                       <Box w={56} py={6}>
-                        <Tooltip
-                          multiline
-                          w={220}
-                          label={
-                            <Stack gap={2}>
-                              <Text size="xs">
-                                Extracted by {getDisplayName(definition.createdBy ?? definition.updatedBy!)} ({(definition.createdBy ?? definition.updatedBy!).email})
-                              </Text>
-                              <Text size="xs">
-                                Last updated by {getDisplayName(definition.updatedBy ?? definition.createdBy!)} ({(definition.updatedBy ?? definition.createdBy!).email})
-                              </Text>
-                            </Stack>
-                          }
-                          withArrow
-                        >
-                          <ActionIcon
-                            aria-label="Show definition attribution"
-                            variant="subtle"
-                            color="gray"
-                            size="sm"
-                          >
-                            <IconInfoCircle size={17} />
-                          </ActionIcon>
-                        </Tooltip>
+                        <UploadAttributionInfo
+                          attributions={[
+                            {
+                              label: "Extracted by",
+                              user:
+                                definition.createdBy ?? definition.updatedBy!,
+                            },
+                            {
+                              label: "Last updated by",
+                              user:
+                                definition.updatedBy ?? definition.createdBy!,
+                            },
+                          ]}
+                        />
                       </Box>
 
                       <Box w={160} py={6}>

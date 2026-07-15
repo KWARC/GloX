@@ -21,7 +21,6 @@ type DefiniendumSubmitParams =
   | {
       mode: "CREATE";
       symbolName: string;
-      verbalization: string;
       symdecl: true;
     }
   | { mode: "PICK_EXISTING"; selectedSymbol: SymbolSearchResult };
@@ -162,9 +161,9 @@ export function useSemanticEditingFlow({
       const payload: DefiniendumNode = {
         type: "definiendum",
         uri: newUri,
-        content: [
-          params.mode === "CREATE"
-            ? params.verbalization || params.symbolName
+          content: [
+            params.mode === "CREATE"
+            ? params.symbolName
             : params.selectedSymbol.source === "DB"
               ? params.selectedSymbol.symbolName
               : parseUri(params.selectedSymbol.uri).symbol,
@@ -196,7 +195,6 @@ export function useSemanticEditingFlow({
             fileName: fileName.trim(),
             language: language.trim(),
             symbolName: params.symbolName,
-            alias: params.verbalization || null,
           },
         });
       } else if (params.selectedSymbol.source === "DB") {

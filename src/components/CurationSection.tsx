@@ -5,7 +5,10 @@ import {
   ModuleDescriptionVisibility,
 } from "@/routes/curation";
 import { getFileIdentities } from "@/serverFns/latex.server";
-import { listMarkReferenceFiles } from "@/serverFns/markReference.server";
+import {
+  deleteMarkReference,
+  listMarkReferenceFiles,
+} from "@/serverFns/markReference.server";
 import {
   Box,
   Divider,
@@ -17,7 +20,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 type Props = {
   curationLevel: DefinitionStatus | null;
@@ -32,6 +35,7 @@ export function CurationSection({
   moduleDescriptionVisibility,
   setModuleDescriptionVisibility,
 }: Props) {
+  const queryClient = useQueryClient();
   const { data: fileGroups = [], isLoading } = useQuery({
     queryKey: ["fileIdentities", curationLevel],
     queryFn: () =>
@@ -50,6 +54,16 @@ export function CurationSection({
         },
       }),
   });
+  const { mutateAsync: removeMarkReference, variables: deletingMarkReferenceId } =
+    useMutation({
+      mutationFn: (referenceId: string) =>
+        deleteMarkReference({ data: { id: referenceId } }),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: ["curation-mark-reference-files"],
+        });
+      },
+    });
 
   return (
     <Stack w="100%" gap="md">
@@ -134,7 +148,11 @@ export function CurationSection({
         </Box>
       )}
 
-      <CurationMarkReferenceBox files={markReferenceFiles} />
+      <CurationMarkReferenceBox
+        files={markReferenceFiles}
+        deletingId={deletingMarkReferenceId ?? null}
+        onDelete={removeMarkReference}
+      />
 
       {fileGroups.length > 0 && (
         <Table.ScrollContainer minWidth={1040}>
