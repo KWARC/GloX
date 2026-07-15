@@ -31,6 +31,8 @@ export type StexCurationDialogsProps = {
     >["suggestions"];
     catalog: ComponentProps<typeof ReferenceSuggestionDialog>["catalog"];
     loading: boolean;
+    catalogError: string | null;
+    onRetryCatalog: () => Promise<void>;
     onAccept: ComponentProps<typeof ReferenceSuggestionDialog>["onAccept"];
   };
   selection: {
@@ -113,6 +115,8 @@ export function StexCurationDialogs({
         suggestions={sniffy.suggestions}
         catalog={sniffy.catalog}
         loading={sniffy.loading}
+        catalogError={sniffy.catalogError}
+        onRetryCatalog={sniffy.onRetryCatalog}
         onAccept={sniffy.onAccept}
       />
       {selection.popup && (

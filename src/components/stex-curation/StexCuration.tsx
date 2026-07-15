@@ -23,12 +23,22 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     definitionIds,
     provenance,
     sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
     definitionSymbolSummaries,
     status,
     statusConf,
     discardReasonFromServer,
   } = curationData;
-  const sniffyFlow = useStexSniffyFlow(identity, definitions, sniffyCatalog);
+  const sniffyFlow = useStexSniffyFlow(
+    identity,
+    definitions,
+    sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
+  );
   const semanticFlow = useStexSemanticFlow(identity, definitions);
   const actions = useStexCurationActions(identity, definitionIds, provenance);
   const latexReadOnly =
@@ -194,6 +204,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 suggestions: sniffyFlow.suggestions,
                 catalog: sniffyCatalog,
                 loading: sniffyFlow.suggestLoading,
+                catalogError: sniffyFlow.catalogError,
+                onRetryCatalog: sniffyFlow.handleRetryCatalog,
                 onAccept: sniffyFlow.handleAcceptSuggestion,
               }}
               selection={{
