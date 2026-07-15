@@ -10,9 +10,11 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
+import { useState } from "react";
 import {
   IconDog,
   IconArrowLeft,
+  IconDeviceFloppy,
   IconPencil,
   IconSettings,
   IconTrash,
@@ -67,6 +69,35 @@ export function ExtractedTextPanel({
   compact = false,
 }: ExtractedTextPanelProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const [jsonDrafts, setJsonDrafts] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  function openJsonEditor(item: ExtractedItem) {
+    setJsonDrafts((current) => ({
+      ...current,
+      [item.id]: JSON.stringify(item.statement, null, 2),
+    }));
+    onToggleEdit(item.id);
+  }
+
+  async function saveJsonEditor(item: ExtractedItem) {
+    try {
+      const statement = JSON.parse(
+        jsonDrafts[item.id] ?? JSON.stringify(item.statement),
+      ) as ExtractedItem["statement"];
+
+      setSavingId(item.id);
+      await onUpdate(item.id, statement);
+      setJsonDrafts((current) => {
+        const { [item.id]: _, ...remaining } = current;
+        return remaining;
+      });
+    } catch {
+      alert("Invalid FTML JSON");
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   return (
     <Paper
@@ -140,14 +171,31 @@ export function ExtractedTextPanel({
                         </Tooltip>
 
                         {showJsonEdit && (
-                          <Tooltip label="Edit JSON format" withArrow>
+                          <Tooltip
+                            label={
+                              isEditing
+                                ? "Save JSON changes"
+                                : "Edit JSON format"
+                            }
+                            withArrow
+                          >
                             <ActionIcon
                               size={compact ? 22 : isMobile ? "md" : "sm"}
                               variant="subtle"
-                              disabled={isLocked}
-                              onClick={() => onToggleEdit(item.id)}
+                              color={isEditing ? "blue" : undefined}
+                              disabled={isLocked || savingId === item.id}
+                              loading={savingId === item.id}
+                              onClick={() =>
+                                isEditing
+                                  ? void saveJsonEditor(item)
+                                  : openJsonEditor(item)
+                              }
                             >
-                              <IconPencil size={16} />
+                              {isEditing ? (
+                                <IconDeviceFloppy size={16} />
+                              ) : (
+                                <IconPencil size={16} />
+                              )}
                             </ActionIcon>
                           </Tooltip>
                         )}
@@ -183,21 +231,21 @@ export function ExtractedTextPanel({
 
                   {isEditing ? (
                     <Textarea
-                      defaultValue={JSON.stringify(item.statement, null, 2)}
+                      value={
+                        jsonDrafts[item.id] ??
+                        JSON.stringify(item.statement, null, 2)
+                      }
                       autosize
                       minRows={4}
                       styles={{
                         input: { fontFamily: "monospace", fontSize: 11 },
                       }}
-                      onBlur={async (e) => {
-                        try {
-                          const parsed = JSON.parse(
-                            e.currentTarget.value,
-                          ) as ExtractedTextPanelProps["extracts"][number]["statement"];
-                          await onUpdate(item.id, parsed);
-                        } catch {
-                          alert("Invalid FTML JSON");
-                        }
+                      onChange={(event) => {
+                        const value = event.currentTarget.value;
+                        setJsonDrafts((current) => ({
+                          ...current,
+                          [item.id]: value,
+                        }));
                       }}
                     />
                   ) : (

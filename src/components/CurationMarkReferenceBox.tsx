@@ -6,13 +6,17 @@ import {
 } from "@/lib/markReferenceLatex";
 import {
   Accordion,
+  ActionIcon,
   Badge,
   Box,
   Button,
   Group,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
+import { IconExternalLink } from "@tabler/icons-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 type MarkReferenceFile = {
@@ -39,6 +43,7 @@ export function CurationMarkReferenceBox({
   deletingId?: string | null;
   onDelete?: (referenceId: string) => Promise<void>;
 }) {
+  const navigate = useNavigate();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewCode, setPreviewCode] = useState("");
   const [previewFileName, setPreviewFileName] = useState("");
@@ -132,6 +137,24 @@ export function CurationMarkReferenceBox({
                           </Text>
                         </Stack>
                         <Group gap="xs" wrap="nowrap">
+                          <Tooltip label="Go to source document" withArrow>
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="blue"
+                              aria-label={`Go to ${file.filename}`}
+                              onMouseDown={(event) => event.stopPropagation()}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                navigate({
+                                  to: "/files/$documentId",
+                                  params: { documentId: file.id },
+                                });
+                              }}
+                            >
+                              <IconExternalLink size={15} />
+                            </ActionIcon>
+                          </Tooltip>
                           <Button
                             size="xs"
                             variant="light"
