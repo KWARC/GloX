@@ -35,6 +35,16 @@ export type ExtractedItem = {
   filePath: string;
   fileName: string;
   language: string;
+  createdBy?: {
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  };
+  updatedBy?: {
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  } | null;
   definitionSymbols?: {
     symbol: {
       id: string;

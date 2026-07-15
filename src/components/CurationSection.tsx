@@ -137,7 +137,7 @@ export function CurationSection({
       <CurationMarkReferenceBox files={markReferenceFiles} />
 
       {fileGroups.length > 0 && (
-        <Table.ScrollContainer minWidth={980}>
+        <Table.ScrollContainer minWidth={1040}>
           <Table
             highlightOnHover
             withTableBorder
@@ -160,8 +160,9 @@ export function CurationSection({
           >
             <Table.Thead>
               <Table.Tr>
-                <Table.Th w="68%">Content</Table.Th>
+                <Table.Th w="62%">Content</Table.Th>
                 <Table.Th w="18%">Declared Symbol</Table.Th>
+                <Table.Th w="6%">Info</Table.Th>
                 <Table.Th w="14%">Status</Table.Th>
               </Table.Tr>
             </Table.Thead>

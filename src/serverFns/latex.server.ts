@@ -287,6 +287,20 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
           },
         },
         llmSuggestedDefiniendas: true,
+        createdBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        updatedBy: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -304,6 +318,8 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
         filePath: def.filePath,
         fileName: def.fileName,
         language: def.language,
+        createdBy: def.createdBy,
+        updatedBy: def.updatedBy,
         symbolicRefs: def.symbolicRefs,
         definienda:
           def.llmSuggestedDefiniendas?.map((d) => ({

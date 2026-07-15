@@ -62,30 +62,41 @@ export function MarkedReferenceList({
         style={{ borderColor: "var(--mantine-color-blue-2)" }}
       >
         <Group justify="space-between" align="flex-start" gap="xs">
-          <Group gap="md" wrap="wrap" align="center" style={{ flex: 1 }}>
-            {references.map((reference) => {
-              const display = getReferenceDisplay(reference);
+          <Box
+            aria-label="Marked references"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              maxHeight: 128,
+              overflowX: "hidden",
+              overflowY: "auto",
+            }}
+          >
+            <Group gap="md" wrap="wrap" align="center">
+              {references.map((reference) => {
+                const display = getReferenceDisplay(reference);
 
-              return (
-                <Box
-                  key={reference.id}
-                  px={6}
-                  py={2}
-                  style={{
-                    borderRadius: 6,
-                    background: "var(--mantine-color-white)",
-                    maxWidth: "100%",
-                  }}
-                >
-                  <SymbolicLinkPreview
-                    uri={display.uri}
-                    label={display.label}
-                    compact
-                  />
-                </Box>
-              );
-            })}
-          </Group>
+                return (
+                  <Box
+                    key={reference.id}
+                    px={6}
+                    py={2}
+                    style={{
+                      borderRadius: 6,
+                      background: "var(--mantine-color-white)",
+                      maxWidth: "100%",
+                    }}
+                  >
+                    <SymbolicLinkPreview
+                      uri={display.uri}
+                      label={display.label}
+                      compact
+                    />
+                  </Box>
+                );
+              })}
+            </Group>
+          </Box>
           {onDelete && (
             <Menu withinPortal trigger="click-hover" position="bottom-end">
               <Menu.Target>

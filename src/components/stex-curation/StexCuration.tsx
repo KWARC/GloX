@@ -1,6 +1,8 @@
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
+import { getDisplayName } from "@/hooks/profileUtils";
 import { FileIdentity } from "@/serverFns/latex.server";
-import { Box, Group, Loader, Stack, Table } from "@mantine/core";
+import { ActionIcon, Box, Group, Loader, Stack, Table, Text, Tooltip } from "@mantine/core";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import { DiscardDefinitionModal } from "./DiscardDefinitionModal";
 import { LatexPreviewModal } from "./LatexPreviewModal";
@@ -44,7 +46,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   return (
     <>
       <Table.Tr>
-        <Table.Td colSpan={3} p={0}>
+        <Table.Td colSpan={4} p={0}>
           <Box px="sm" py="xs">
             {isLoading ? (
               <Group justify="center" py="lg">
@@ -98,6 +100,33 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                         <SymbolDeclaredSection
                           data={{ symbols: symbolSummary?.symbols ?? [] }}
                         />
+                      </Box>
+
+                      <Box w={56} py={6}>
+                        <Tooltip
+                          multiline
+                          w={220}
+                          label={
+                            <Stack gap={2}>
+                              <Text size="xs">
+                                Extracted by {getDisplayName(definition.createdBy ?? definition.updatedBy!)} ({(definition.createdBy ?? definition.updatedBy!).email})
+                              </Text>
+                              <Text size="xs">
+                                Last updated by {getDisplayName(definition.updatedBy ?? definition.createdBy!)} ({(definition.updatedBy ?? definition.createdBy!).email})
+                              </Text>
+                            </Stack>
+                          }
+                          withArrow
+                        >
+                          <ActionIcon
+                            aria-label="Show definition attribution"
+                            variant="subtle"
+                            color="gray"
+                            size="sm"
+                          >
+                            <IconInfoCircle size={17} />
+                          </ActionIcon>
+                        </Tooltip>
                       </Box>
 
                       <Box w={160} py={6}>

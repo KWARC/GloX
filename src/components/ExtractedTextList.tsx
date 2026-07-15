@@ -12,6 +12,7 @@ import {
 import { useMediaQuery } from "@mantine/hooks";
 import {
   IconDog,
+  IconArrowLeft,
   IconPencil,
   IconSettings,
   IconTrash,
@@ -42,6 +43,7 @@ interface ExtractedTextPanelProps {
   showDefinitionMetaIconOnly?: boolean;
   showJsonEdit?: boolean;
   showActions?: boolean;
+  onGoToSourcePage?: (pageNumber: number) => void;
 }
 
 export function ExtractedTextPanel({
@@ -59,6 +61,7 @@ export function ExtractedTextPanel({
   showDefinitionMetaIconOnly = false,
   showJsonEdit = true,
   showActions = true,
+  onGoToSourcePage,
   onEditDefinitionMeta,
   isLocked = false,
   compact = false,
@@ -113,6 +116,18 @@ export function ExtractedTextPanel({
 
                     {showActions ? (
                       <Group gap={compact ? "xs" : "xs"}>
+                        {item.pageNumber !== null && onGoToSourcePage && (
+                          <Tooltip label="Go to source page" withArrow>
+                            <ActionIcon
+                              size={compact ? 22 : isMobile ? "md" : "sm"}
+                              variant="subtle"
+                              color="blue"
+                              onClick={() => onGoToSourcePage(item.pageNumber!)}
+                            >
+                              <IconArrowLeft size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
                         <Tooltip label="Delete definition" withArrow>
                           <ActionIcon
                             size={compact ? 22 : isMobile ? "md" : "sm"}

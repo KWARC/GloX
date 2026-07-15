@@ -34,6 +34,13 @@ export const getMyDocuments = createServerFn({ method: "GET" }).handler(
         moduleDescription: true,
         indexStatus: true,
         userId: true,
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
         status: true,
         createdAt: true,
         updatedAt: true,
