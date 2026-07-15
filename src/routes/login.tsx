@@ -109,6 +109,10 @@ function RouteComponent() {
               required
             />
 
+            <Anchor href="/forgot-password" size="sm" ta="right">
+              Forgot password?
+            </Anchor>
+
             {formError && (
               <Text c="red" size="sm">
                 {formError}

@@ -28,7 +28,7 @@ export const updateProfile = createServerFn({ method: "POST" })
         return { success: false, error: "Invalid input" };
       }
 
-      const userId = requireUserId();
+      const userId = await requireUserId();
 
       await prisma.user.update({
         where: { id: userId },

@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as SymbolsRouteImport } from './routes/symbols'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as CurationRouteImport } from './routes/curation'
 import { Route as CreateLatexRouteImport } from './routes/create-latex'
 import { Route as DeduplicationRouteImport } from './routes/Deduplication'
@@ -36,9 +38,19 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CurationRoute = CurationRouteImport.update({
@@ -82,7 +94,9 @@ export interface FileRoutesByFullPath {
   '/Deduplication': typeof DeduplicationRoute
   '/create-latex': typeof CreateLatexRoute
   '/curation': typeof CurationRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/symbols': typeof SymbolsRoute
   '/verify': typeof VerifyRoute
@@ -95,7 +109,9 @@ export interface FileRoutesByTo {
   '/Deduplication': typeof DeduplicationRoute
   '/create-latex': typeof CreateLatexRoute
   '/curation': typeof CurationRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/symbols': typeof SymbolsRoute
   '/verify': typeof VerifyRoute
@@ -109,7 +125,9 @@ export interface FileRoutesById {
   '/Deduplication': typeof DeduplicationRoute
   '/create-latex': typeof CreateLatexRoute
   '/curation': typeof CurationRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/symbols': typeof SymbolsRoute
   '/verify': typeof VerifyRoute
@@ -124,7 +142,9 @@ export interface FileRouteTypes {
     | '/Deduplication'
     | '/create-latex'
     | '/curation'
+    | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/signup'
     | '/symbols'
     | '/verify'
@@ -137,7 +157,9 @@ export interface FileRouteTypes {
     | '/Deduplication'
     | '/create-latex'
     | '/curation'
+    | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/signup'
     | '/symbols'
     | '/verify'
@@ -150,7 +172,9 @@ export interface FileRouteTypes {
     | '/Deduplication'
     | '/create-latex'
     | '/curation'
+    | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/signup'
     | '/symbols'
     | '/verify'
@@ -164,7 +188,9 @@ export interface RootRouteChildren {
   DeduplicationRoute: typeof DeduplicationRoute
   CreateLatexRoute: typeof CreateLatexRoute
   CurationRoute: typeof CurationRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   SymbolsRoute: typeof SymbolsRoute
   VerifyRoute: typeof VerifyRoute
@@ -196,11 +222,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/curation': {
@@ -260,7 +300,9 @@ const rootRouteChildren: RootRouteChildren = {
   DeduplicationRoute: DeduplicationRoute,
   CreateLatexRoute: CreateLatexRoute,
   CurationRoute: CurationRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   SymbolsRoute: SymbolsRoute,
   VerifyRoute: VerifyRoute,

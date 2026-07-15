@@ -3,6 +3,10 @@ import { createServerFn } from "@tanstack/react-start";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import {
+  PASSWORD_REQUIREMENTS_MESSAGE,
+  validatePassword,
+} from "@/server/auth/password";
 
 const SALT_ROUNDS = 10;
 
@@ -31,8 +35,8 @@ export const signup = createServerFn({ method: "POST" })
       throw new Error("Invalid input");
     }
 
-    if (data.password.length < 8) {
-      throw new Error("Password must be at least 8 characters");
+    if (validatePassword(data.password)) {
+      throw new Error(PASSWORD_REQUIREMENTS_MESSAGE);
     }
 
     return {

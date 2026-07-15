@@ -11,7 +11,7 @@ function toBase64(buffer: Buffer) {
 export const getPageImage = createServerFn({ method: "GET" })
   .inputValidator((data: { documentId: string; pageNumber: number }) => data)
   .handler(async ({ data }) => {
-    requireUserId();
+    await requireUserId();
 
     const doc = await prisma.document.findUnique({
       where: { id: data.documentId },

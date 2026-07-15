@@ -9,6 +9,7 @@ export type AdminProfileUser = {
   firstName: string | null;
   lastName: string | null;
   email: string;
+  emailVerified: boolean;
   role: UserRoleValue;
 };
 
@@ -23,7 +24,7 @@ type UpdateAdminUserRoleResult = {
 };
 
 async function requireAdminAccess() {
-  const currentUserId = requireUserId();
+  const currentUserId = await requireUserId();
 
   const currentUser = await prisma.user.findUnique({
     where: { id: currentUserId },
@@ -62,6 +63,7 @@ export const listAdminProfileUsers = createServerFn({ method: "GET" }).handler(
         firstName: true,
         lastName: true,
         email: true,
+        emailVerified: true,
         role: true,
       },
     });

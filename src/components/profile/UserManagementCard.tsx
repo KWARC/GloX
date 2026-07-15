@@ -14,8 +14,9 @@ import {
   Table,
   Text,
   Title,
+  Tooltip,
 } from "@mantine/core";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { IconAlertCircle, IconCircleCheck, IconCircleX } from "@tabler/icons-react";
 import { getDisplayName } from "@/hooks/profileUtils";
 import { ProfileAlerts } from "@/components/profile/ProfileAlerts";
 
@@ -80,12 +81,13 @@ export function UserManagementCard({
             No other users found.
           </Text>
         ) : (
-          <Table.ScrollContainer minWidth={720}>
+          <Table.ScrollContainer minWidth={800}>
             <Table withTableBorder striped highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Name</Table.Th>
                   <Table.Th>Email</Table.Th>
+                  <Table.Th>Email Verified</Table.Th>
                   <Table.Th>Current Role</Table.Th>
                   <Table.Th>New Role</Table.Th>
                 </Table.Tr>
@@ -95,6 +97,23 @@ export function UserManagementCard({
                   <Table.Tr key={user.id}>
                     <Table.Td>{getDisplayName(user)}</Table.Td>
                     <Table.Td>{user.email}</Table.Td>
+                    <Table.Td>
+                      <Tooltip
+                        label={
+                          user.emailVerified
+                            ? "Email verified"
+                            : "Email not verified"
+                        }
+                      >
+                        <span>
+                          {user.emailVerified ? (
+                            <IconCircleCheck color="green" size={20} />
+                          ) : (
+                            <IconCircleX color="gray" size={20} />
+                          )}
+                        </span>
+                      </Tooltip>
+                    </Table.Td>
                     <Table.Td>
                       <Badge variant="light">{user.role}</Badge>
                     </Table.Td>
