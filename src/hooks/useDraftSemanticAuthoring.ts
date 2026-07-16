@@ -138,7 +138,6 @@ function insertDefiniendumNode(
     | {
         mode: "CREATE";
         symbolName: string;
-        verbalization: string;
       }
     | {
         mode: "PICK_EXISTING";
@@ -174,7 +173,7 @@ function insertDefiniendumNode(
       ? {
           type: "definiendum",
           uri: payload.symbolName.trim(),
-          content: [payload.verbalization.trim() || payload.symbolName.trim()],
+          content: [payload.symbolName.trim()],
           symdecl: true,
         }
       : payload.symbol.source === "DB"
@@ -331,7 +330,6 @@ export function useDraftSemanticAuthoring(
       | {
           mode: "CREATE";
           symbolName: string;
-          verbalization: string;
         }
       | {
           mode: "PICK_EXISTING";

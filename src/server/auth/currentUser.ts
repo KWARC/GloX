@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { parseCookies } from "@/server/auth/cookies";
+import { passwordFingerprintMatches } from "@/server/auth/password";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import jwt from "jsonwebtoken";
@@ -21,6 +22,7 @@ export const currentUser = createServerFn({ method: "GET" }).handler(
       const decoded = jwt.verify(token, JWT_SECRET) as {
         userId: string;
         email: string;
+        passwordFingerprint?: string;
       };
 
       const user = await prisma.user.findUnique({
@@ -31,10 +33,20 @@ export const currentUser = createServerFn({ method: "GET" }).handler(
           firstName: true,
           lastName: true,
           role:true,
+          passwordHash: true,
         },
       });
 
-      if (!user) {
+      if (
+        !user ||
+        !user.passwordHash ||
+        !decoded.passwordFingerprint ||
+        !passwordFingerprintMatches(
+          decoded.passwordFingerprint,
+          user.passwordHash,
+          JWT_SECRET,
+        )
+      ) {
         return { loggedIn: false };
       }
 

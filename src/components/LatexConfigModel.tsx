@@ -1,5 +1,5 @@
 import { ExtractedItem } from "@/server/text-selection";
-import { Button, Group, Modal, Select, Stack, Text, Badge, Box } from "@mantine/core";
+import { Box, Button, Group, Modal, Select, Stack, Text } from "@mantine/core";
 import { useState } from "react";
 
 interface LatexConfigModelProps {
@@ -23,6 +23,10 @@ interface ConfigOption {
   language: string;
 }
 
+function formatConfigLabel(config: Omit<ConfigOption, "value" | "label">) {
+  return `[${config.futureRepo}] [${config.filePath}] [${config.fileName}] [${config.language}]`;
+}
+
 export function LatexConfigModel({
   opened,
   onClose,
@@ -38,7 +42,7 @@ export function LatexConfigModel({
       seen.add(key);
       configOptions.push({
         value: key,
-        label: key,
+        label: formatConfigLabel(extract),
         futureRepo: extract.futureRepo,
         filePath: extract.filePath,
         fileName: extract.fileName,
@@ -115,9 +119,6 @@ export function LatexConfigModel({
       title={
         <Group gap="xs">
           <Text fw={600} size="lg">Configure LaTeX Generation</Text>
-          <Badge size="sm" color="blue" variant="light">
-            {configOptions.length} {configOptions.length === 1 ? 'option' : 'options'}
-          </Badge>
         </Group>
       }
       size="md"
@@ -147,38 +148,9 @@ export function LatexConfigModel({
         />
 
         {selectedConfigData && (
-          <Box
-            p="md"
-            style={{
-              backgroundColor: "var(--mantine-color-gray-0)",
-              borderRadius: "8px",
-              border: "1px solid var(--mantine-color-gray-2)",
-            }}
-          >
-            <Text size="xs" fw={600} c="gray.7" mb="sm" tt="uppercase">
-              Selected Configuration
-            </Text>
-            <Stack gap="xs">
-              <Group gap="xs">
-                <Text size="xs" c="dimmed" w={80}>Repository:</Text>
-                <Text size="xs" fw={500} ff="monospace">{selectedConfigData.futureRepo}</Text>
-              </Group>
-              <Group gap="xs">
-                <Text size="xs" c="dimmed" w={80}>File Path:</Text>
-                <Text size="xs" fw={500} ff="monospace">{selectedConfigData.filePath}</Text>
-              </Group>
-              <Group gap="xs">
-                <Text size="xs" c="dimmed" w={80}>File Name:</Text>
-                <Text size="xs" fw={500} ff="monospace">{selectedConfigData.fileName}</Text>
-              </Group>
-              <Group gap="xs">
-                <Text size="xs" c="dimmed" w={80}>Language:</Text>
-                <Badge size="xs" variant="light" color="teal">
-                  {selectedConfigData.language}
-                </Badge>
-              </Group>
-            </Stack>
-          </Box>
+          <Text size="xs" c="dimmed" ff="monospace">
+            {formatConfigLabel(selectedConfigData)}
+          </Text>
         )}
 
         <Group justify="flex-end" mt="md">

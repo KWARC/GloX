@@ -92,10 +92,25 @@ export function useStexCurationData(identity: FileIdentity) {
       }),
   });
 
-  const { data: staticCatalog = [] } = useQuery({
+  const {
+    data: staticCatalogData,
+    isLoading: staticCatalogLoading,
+    error: staticCatalogQueryError,
+    refetch: refetchStaticCatalog,
+  } = useQuery({
     queryKey: ["static-symbolic-catalog"],
     queryFn: () => listStaticSymbolicCatalog(),
   });
+
+  const retryStaticCatalog = async () => {
+    await refetchStaticCatalog();
+  };
+
+  const staticCatalog = staticCatalogData ?? [];
+  const staticCatalogError =
+    staticCatalogData === undefined && !staticCatalogLoading
+      ? staticCatalogQueryError
+      : null;
 
   const sniffyCatalog = useMemo(
     () => buildStaticCatalog(staticCatalog),
@@ -122,6 +137,9 @@ export function useStexCurationData(identity: FileIdentity) {
     provenance,
     definitionStatus,
     sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
     definitionSymbolSummaries,
     actualSymbols,
     status,

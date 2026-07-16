@@ -23,6 +23,7 @@ export type DocumentPanelProps = {
   llmSuggestions: Record<string, LlmSuggestion[]>;
   llmEnabled: boolean;
   focusedSuggestionId: string | null;
+  sourcePageTarget: { pageNumber: number; requestedAt: number } | null;
   onDeleteMarkReference: (referenceId: string) => Promise<void>;
   onSelection: (pageId: string) => void;
   onLlmSuggestionClick: (suggestion: LlmSuggestion, pageId: string) => void;
@@ -41,6 +42,7 @@ export type ExtractsPanelProps = {
   onEditDefinitionMeta: (item: ExtractedItem) => void;
   onOpenLatexConfig: () => void;
   onCreateDefinition: () => void;
+  onGoToSourcePage: (pageNumber: number) => void;
   showJsonEdit?: boolean;
   showLatexButton?: boolean;
 };
@@ -72,6 +74,7 @@ export function FileDocumentLayout({
     llmSuggestions,
     llmEnabled,
     focusedSuggestionId,
+    sourcePageTarget,
     onDeleteMarkReference,
     onSelection: onDocumentSelection,
     onLlmSuggestionClick,
@@ -89,6 +92,7 @@ export function FileDocumentLayout({
     onEditDefinitionMeta,
     onOpenLatexConfig,
     onCreateDefinition,
+    onGoToSourcePage,
     showJsonEdit = true,
     showLatexButton = true,
   } = extractsPanel;
@@ -131,6 +135,7 @@ export function FileDocumentLayout({
             llmSuggestions={llmSuggestions}
             llmEnabled={llmEnabled}
             focusedSuggestionId={focusedSuggestionId}
+            sourcePageTarget={sourcePageTarget}
             onLlmSuggestionClick={onLlmSuggestionClick}
           />
         </Box>
@@ -167,6 +172,7 @@ export function FileDocumentLayout({
             onOpenSemanticPanel={onOpenSemanticPanel}
             onRecomputeReferences={onRecomputeReferences}
             onEditDefinitionMeta={onEditDefinitionMeta}
+            onGoToSourcePage={onGoToSourcePage}
             showJsonEdit={showJsonEdit}
           />
         </Box>

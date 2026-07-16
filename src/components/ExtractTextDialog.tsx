@@ -146,7 +146,6 @@ export function ExtractTextDialog({
       | {
           mode: "CREATE";
           symbolName: string;
-          verbalization: string;
           symdecl: true;
         }
       | {
@@ -159,7 +158,6 @@ export function ExtractTextDialog({
         draftSemantic.applyDefiniendum({
           mode: "CREATE",
           symbolName: params.symbolName,
-          verbalization: params.verbalization,
         });
       } else if (params.selectedSymbol.source === "DB") {
         draftSemantic.applyDefiniendum({

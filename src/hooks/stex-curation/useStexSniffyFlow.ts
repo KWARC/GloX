@@ -17,10 +17,16 @@ export function useStexSniffyFlow(
   identity: FileIdentity,
   definitions: SniffyDefinition[],
   sniffyCatalog: SniffyCatalog,
+  staticCatalogLoading: boolean,
+  staticCatalogError: Error | null,
+  retryStaticCatalog: () => Promise<void>,
 ) {
   return useSniffyReferenceSuggestions({
     definitions,
     catalog: sniffyCatalog,
+    catalogLoading: staticCatalogLoading,
+    catalogError: staticCatalogError,
+    retryCatalog: retryStaticCatalog,
     invalidate: () =>
       queryClient.invalidateQueries({
         queryKey: ["definitionsByIdentity", identity],

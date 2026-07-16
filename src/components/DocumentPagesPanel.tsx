@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { DocumentPage } from "generated/prisma/browser";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MarkReferenceItem, MarkedReferenceList } from "./MarkedReferenceList";
 import { PageImage } from "./PageImage";
 
@@ -31,6 +31,7 @@ interface DocumentPagesPanelProps {
   llmSuggestions?: Record<string, LlmSuggestion[]>;
   llmEnabled?: boolean;
   focusedSuggestionId?: string | null;
+  sourcePageTarget?: { pageNumber: number; requestedAt: number } | null;
   onLlmSuggestionClick?: (suggestion: LlmSuggestion, pageId: string) => void;
 }
 
@@ -46,12 +47,31 @@ export function DocumentPagesPanel({
   llmSuggestions,
   llmEnabled = false,
   focusedSuggestionId,
+  sourcePageTarget,
   onLlmSuggestionClick,
 }: DocumentPagesPanelProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [collapsedPages, setCollapsedPages] = useState<Record<string, boolean>>(
     {},
   );
+  const pageRefs = useRef(new Map<number, HTMLDivElement>());
+
+  useEffect(() => {
+    const sourcePageNumber = sourcePageTarget?.pageNumber;
+    if (sourcePageNumber === undefined) return;
+
+    const page = pages.find((item) => item.pageNumber === sourcePageNumber);
+    if (!page) return;
+
+    setCollapsedPages((previous) => ({ ...previous, [page.id]: false }));
+    const frame = requestAnimationFrame(() => {
+      pageRefs.current
+        .get(sourcePageNumber)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [pages, sourcePageTarget]);
 
   function togglePage(pageId: string) {
     setCollapsedPages((prev) => ({
@@ -90,7 +110,13 @@ export function DocumentPagesPanel({
                 : [];
 
             return (
-              <Box key={page.id}>
+              <Box
+                key={page.id}
+                ref={(element) => {
+                  if (element) pageRefs.current.set(page.pageNumber, element);
+                  else pageRefs.current.delete(page.pageNumber);
+                }}
+              >
                 <Group justify="space-between" align="center" mb="xs">
                   <Group gap="xs">
                     <Text size={isMobile ? "sm" : "xs"} fw={700} c="dark" tt="uppercase">

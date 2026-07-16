@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getResponse } from "@tanstack/react-start/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { createPasswordFingerprint } from "@/server/auth/password";
 
 const JWT_EXPIRES_IN = "7d";
 
@@ -83,9 +84,18 @@ export const login = createServerFn({ method: "POST" })
       };
     }
 
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        passwordFingerprint: createPasswordFingerprint(
+          user.passwordHash,
+          JWT_SECRET,
+        ),
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN },
+    );
 
     const res = getResponse();
 

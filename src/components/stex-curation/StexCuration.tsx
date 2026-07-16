@@ -1,4 +1,5 @@
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
+import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
 import { FileIdentity } from "@/serverFns/latex.server";
 import { Box, Group, Loader, Stack, Table } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
@@ -22,12 +23,22 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     definitionIds,
     provenance,
     sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
     definitionSymbolSummaries,
     status,
     statusConf,
     discardReasonFromServer,
   } = curationData;
-  const sniffyFlow = useStexSniffyFlow(identity, definitions, sniffyCatalog);
+  const sniffyFlow = useStexSniffyFlow(
+    identity,
+    definitions,
+    sniffyCatalog,
+    staticCatalogLoading,
+    staticCatalogError,
+    retryStaticCatalog,
+  );
   const semanticFlow = useStexSemanticFlow(identity, definitions);
   const actions = useStexCurationActions(identity, definitionIds, provenance);
   const latexReadOnly =
@@ -44,7 +55,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   return (
     <>
       <Table.Tr>
-        <Table.Td colSpan={3} p={0}>
+        <Table.Td colSpan={4} p={0}>
           <Box px="sm" py="xs">
             {isLoading ? (
               <Group justify="center" py="lg">
@@ -97,6 +108,23 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       <Box w={220} py={6}>
                         <SymbolDeclaredSection
                           data={{ symbols: symbolSummary?.symbols ?? [] }}
+                        />
+                      </Box>
+
+                      <Box w={56} py={6}>
+                        <UploadAttributionInfo
+                          attributions={[
+                            {
+                              label: "Extracted by",
+                              user:
+                                definition.createdBy ?? definition.updatedBy!,
+                            },
+                            {
+                              label: "Last updated by",
+                              user:
+                                definition.updatedBy ?? definition.createdBy!,
+                            },
+                          ]}
                         />
                       </Box>
 
@@ -176,6 +204,8 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 suggestions: sniffyFlow.suggestions,
                 catalog: sniffyCatalog,
                 loading: sniffyFlow.suggestLoading,
+                catalogError: sniffyFlow.catalogError,
+                onRetryCatalog: sniffyFlow.handleRetryCatalog,
                 onAccept: sniffyFlow.handleAcceptSuggestion,
               }}
               selection={{

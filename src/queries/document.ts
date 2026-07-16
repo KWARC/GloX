@@ -15,6 +15,11 @@ export type MyDocument = {
   indexStatus: "EXTRACTED" | "FINALIZED" | "SUBMITTED_TO_MATHHUB" | null
 
   userId: string
+  user: {
+    firstName: string | null
+    lastName: string | null
+    email: string
+  }
   status: string
   definitionCount: number
   markReferenceCount: number

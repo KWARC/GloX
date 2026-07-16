@@ -68,6 +68,10 @@ function RouteComponent() {
   const [markReferenceLatex, setMarkReferenceLatex] = useState("");
   const [persistentHighlightsEnabled, setPersistentHighlightsEnabled] =
     useState(true);
+  const [sourcePageTarget, setSourcePageTarget] = useState<{
+    pageNumber: number;
+    requestedAt: number;
+  } | null>(null);
   const [deletingMarkReferenceId, setDeletingMarkReferenceId] = useState<
     string | null
   >(null);
@@ -433,6 +437,7 @@ function RouteComponent() {
             llmSuggestions: llmFlow.llmSuggestions,
             llmEnabled: llmFlow.llmEnabled,
             focusedSuggestionId: llmFlow.focusedSuggestionId,
+            sourcePageTarget,
             onDeleteMarkReference: handleDeleteMarkReference,
             onSelection: extractionFlow.handleLeftSelection,
             onLlmSuggestionClick: llmFlow.handleLlmSuggestionClick,
@@ -450,6 +455,8 @@ function RouteComponent() {
             onEditDefinitionMeta: semanticFlow.handleEditDefinitionMeta,
             onOpenLatexConfig: semanticFlow.handleOpenLatexConfig,
             onCreateDefinition: extractionFlow.handleCreateDefinition,
+            onGoToSourcePage: (pageNumber) =>
+              setSourcePageTarget({ pageNumber, requestedAt: Date.now() }),
             showJsonEdit: canAccessPrivilegedControls,
             showLatexButton: canAccessPrivilegedControls,
           }}
@@ -496,7 +503,6 @@ function RouteComponent() {
           pickExistingSubmitLabel: "Save Mark Reference",
           createSubmitLabel: "Add Mark Reference",
           allowCreateSymbol: true,
-          hideVerbalizationField: true,
           loading: extractionFlow.markReferenceSaving,
           onClose: extractionFlow.handleCloseMarkReference,
           onSubmit: extractionFlow.handleMarkReferenceSubmit,

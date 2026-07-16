@@ -6,7 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 export const uploadPdf = createServerFn({ method: "POST" })
   .inputValidator((data: FormData) => data)
   .handler(async ({ data }): Promise<UploadDocumentResult> => {
-    const userId = requireUserId();
+    const userId = await requireUserId();
 
     const file = data.get("file");
     const futureRepo = data.get("futureRepo") as string;

@@ -1,4 +1,5 @@
 import { MyDocument, myDocumentsQuery } from "@/queries/document";
+import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
 import { currentUser } from "@/server/auth/currentUser";
 import {
   checkDocumentDefinitions,
@@ -284,23 +285,31 @@ export function DocumentsTable({
                     </Table.Td>
 
                     <Table.Td ta="center">
-                      <ActionIcon
-                        color="red"
-                        variant="subtle"
-                        loading={isPending}
-                        onClick={async (event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
+                      <Group gap="xs" justify="center">
+                        <UploadAttributionInfo
+                          attributions={[
+                            { label: "Uploaded by", user: doc.user },
+                          ]}
+                        />
 
-                          const res = await checkDefs(doc.id);
-                          setTargetDoc({ id: doc.id, filename: doc.filename });
-                          setDefCount(res.definitionCount);
-                          setMarkReferenceCount(res.markReferenceCount);
-                          setConfirmOpen(true);
-                        }}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          loading={isPending}
+                          onClick={async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+
+                            const res = await checkDefs(doc.id);
+                            setTargetDoc({ id: doc.id, filename: doc.filename });
+                            setDefCount(res.definitionCount);
+                            setMarkReferenceCount(res.markReferenceCount);
+                            setConfirmOpen(true);
+                          }}
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Group>
                     </Table.Td>
                   </Table.Tr>
                 ))}

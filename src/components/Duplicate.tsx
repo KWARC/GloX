@@ -226,7 +226,6 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           fileName: "",
           language: "en",
           symbolName: params.symbolName,
-          alias: params.verbalization || null,
         },
       });
     } else {
