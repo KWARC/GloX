@@ -4,6 +4,7 @@ import { ExtractedItem } from "@/server/text-selection";
 import {
   DefiniendumNode,
   DefinitionNode,
+  FtmlContent,
   FtmlStatement,
   assertFtmlStatement,
   isDefiniendumNode,
@@ -16,7 +17,7 @@ import { FileIdentity } from "./latex.server";
 function extractDeclaredSymbols(statement: FtmlStatement) {
   const symbols = new Map<string, string | null>();
   const root = normalizeToRoot(statement);
-  const stack = [...root.content];
+  const stack: FtmlContent[] = [...root.content];
 
   while (stack.length > 0) {
     const node = stack.pop();
@@ -67,6 +68,71 @@ export type CreateDefinitionInput = {
   fileName: string;
   language: string;
 };
+
+export type DefinitionIdentityInput = Pick<
+  CreateDefinitionInput,
+  "futureRepo" | "filePath" | "fileName" | "language"
+>;
+
+export const findDefinitionsByIdentity = createServerFn({ method: "POST" })
+  .inputValidator((data: DefinitionIdentityInput) => data)
+  .handler(async ({ data }) =>
+    prisma.definition.findMany({
+      where: {
+        futureRepo: data.futureRepo.trim(),
+        filePath: data.filePath.trim(),
+        fileName: data.fileName.trim(),
+        language: data.language.trim(),
+      },
+      select: {
+        id: true,
+        originalText: true,
+        statement: true,
+        pageNumber: true,
+        kind: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  );
+
+export const getDefinitionDeletionImpact = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    const target = await prisma.definition.findUniqueOrThrow({ where: { id: data.id } });
+    const declared = new Set<string>();
+    const targetRoot = normalizeToRoot(assertFtmlStatement(target.statement));
+    const targetStack: FtmlContent[] = [...targetRoot.content];
+    while (targetStack.length) {
+      const node = targetStack.pop();
+      if (!node || typeof node === "string") continue;
+      if (isDefiniendumNode(node) && node.symdecl && node.uri) declared.add(node.uri);
+      if (node.content?.length) targetStack.push(...node.content);
+    }
+    if (!declared.size) return [];
+
+    const candidates = await prisma.definition.findMany({
+      where: { id: { not: data.id } },
+      select: { id: true, statement: true, pageNumber: true, kind: true, originalText: true },
+    });
+    return candidates.filter((definition) => {
+      const stack: FtmlContent[] = [
+        ...normalizeToRoot(assertFtmlStatement(definition.statement)).content,
+      ];
+      while (stack.length) {
+        const node = stack.pop();
+        if (!node || typeof node === "string") continue;
+        if (
+          (isDefiniendumNode(node) || node.type === "symref") &&
+          node.uri &&
+          declared.has(node.uri)
+        ) {
+          return true;
+        }
+        if (node.content?.length) stack.push(...node.content);
+      }
+      return false;
+    });
+  });
 
 export const createDefinition = createServerFn({ method: "POST" })
   .inputValidator((data: CreateDefinitionInput) => data)

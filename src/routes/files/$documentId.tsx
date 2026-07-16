@@ -259,7 +259,7 @@ function RouteComponent() {
     <Tooltip
       label={
         llmFlow.canRunLlm
-          ? "Check whether any definitions were missed"
+          ? "Check whether any content was missed"
           : "Document is loading…"
       }
       withArrow
@@ -464,6 +464,12 @@ function RouteComponent() {
       </Stack>
 
       <FileDialogs
+        deletion={{
+          definition: semanticFlow.deleteTarget,
+          loading: semanticFlow.deleteLoading,
+          onCancel: () => semanticFlow.setDeleteTarget(null),
+          onConfirm: semanticFlow.confirmDeleteDefinition,
+        }}
         selection={{
           popup,
           onClosePopup: clearAll,
@@ -539,25 +545,28 @@ function RouteComponent() {
           setSymbolName: extractionFlow.setSymbolName,
           filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}`,
           title: extractionFlow.isMarkReferenceDefinitionFlow
-            ? "Add Definition"
+            ? "Add Content"
             : undefined,
           textLabel:
             extractionFlow.isManualDefinitionCreate ||
             extractionFlow.isMarkReferenceDefinitionFlow
-              ? "Enter Definition"
+              ? "Enter Content"
               : undefined,
           textPlaceholder:
             extractionFlow.isManualDefinitionCreate ||
             extractionFlow.isMarkReferenceDefinitionFlow
-              ? "Enter definition"
+              ? "Enter content"
               : undefined,
           submitLabel: extractionFlow.isMarkReferenceDefinitionFlow
-            ? "Add Definition"
+            ? "Add Content"
             : undefined,
           hideSymbolNameField: extractionFlow.isMarkReferenceDefinitionFlow,
           enableSemanticAuthoring: true,
           semanticEnabled: extractionFlow.semanticEnabled,
           setSemanticEnabled: extractionFlow.setSemanticEnabled,
+          duplicateDefinitions: extractionFlow.duplicateDefinitions,
+          onCancelDuplicate: () => extractionFlow.setDuplicateDefinitions([]),
+          onConfirmDuplicate: extractionFlow.confirmDuplicateCreation,
           onClose: extractionFlow.handleCloseExtractDialog,
           onSubmit: extractionFlow.handleExtractSubmit,
         }}

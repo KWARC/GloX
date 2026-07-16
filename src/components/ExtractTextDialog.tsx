@@ -279,8 +279,9 @@ export function ExtractTextDialog({
               onChange={(e) => handleTextChange(e.currentTarget.value)}
               placeholder={textPlaceholder}
               disabled={enableSemanticAuthoring && semanticEnabled}
+              autosize
               minRows={2}
-              maxRows={2}
+              maxRows={12}
               styles={{
                 input: {
                   fontFamily: "monospace",

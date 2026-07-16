@@ -13,8 +13,13 @@ import { useStexCurationActions } from "@/hooks/stex-curation/useStexCurationAct
 import { useStexCurationData } from "@/hooks/stex-curation/useStexCurationData";
 import { useStexSemanticFlow } from "@/hooks/stex-curation/useStexSemanticFlow";
 import { useStexSniffyFlow } from "@/hooks/stex-curation/useStexSniffyFlow";
+import { DefinitionDeleteModal, DuplicateDefinitionModal } from "@/components/DefinitionReviewModals";
+import { ExtractedItem } from "@/server/text-selection";
+import { queryClient } from "@/queryClient";
+import { useState } from "react";
 
 export function StexCuration({ identity }: { identity: FileIdentity }) {
+  const [deleteTarget, setDeleteTarget] = useState<ExtractedItem | null>(null);
   const navigate = useNavigate();
   const curationData = useStexCurationData(identity);
   const {
@@ -82,7 +87,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                           onToggleEdit={actions.handleToggleEdit}
                           onUpdate={actions.handleUpdate}
                           onDownload={actions.handleDownload}
-                          onDelete={actions.handleDelete}
+                          onDelete={(id) => setDeleteTarget(definitions.find((definition) => definition.id === id) ?? null)}
                           onSelection={(extractId) => {
                             semanticFlow.handleSelection("right", {
                               extractId,
@@ -186,6 +191,24 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 onChangeReason: actions.setDiscardReason,
                 onConfirm: actions.handleConfirmDiscard,
               }}
+            />
+
+            <DefinitionDeleteModal
+              opened={!!deleteTarget}
+              definition={deleteTarget}
+              onCancel={() => setDeleteTarget(null)}
+              onConfirm={async () => {
+                if (!deleteTarget) return;
+                await actions.handleDelete(deleteTarget.id);
+                await queryClient.invalidateQueries({ queryKey: ["definitions"] });
+                setDeleteTarget(null);
+              }}
+            />
+            <DuplicateDefinitionModal
+              opened={semanticFlow.duplicateDefinitions.length > 0}
+              definitions={semanticFlow.duplicateDefinitions}
+              onCancel={() => semanticFlow.setDuplicateDefinitions([])}
+              onConfirm={semanticFlow.confirmDuplicateCreation}
             />
 
             <StexCurationDialogs

@@ -341,19 +341,27 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
       }
 
       let uri: string;
+      let linkedExistingSymbol = false;
       if (symdecl) {
         if (!symbolName.trim()) {
           throw new Error("Symbol name required");
         }
 
-        await tx.symbol.create({
+        const existingSymbol = await tx.symbol.findUnique({
+          where: {
+            symbolName_futureRepo_filePath_fileName_language: {
+              symbolName: symbolName.trim(), futureRepo: futureRepo.trim(),
+              filePath: filePath.trim(), fileName: fileName.trim(), language: language.trim(),
+            },
+          },
+        });
+
+        if (existingSymbol) linkedExistingSymbol = true;
+        else await tx.symbol.create({
           data: {
-            symbolName: symbolName.trim(),
-            alias: alias?.trim() || null,
-            futureRepo: futureRepo.trim(),
-            filePath: filePath.trim(),
-            fileName: fileName.trim(),
-            language: language.trim(),
+            symbolName: symbolName.trim(), alias: alias?.trim() || null,
+            futureRepo: futureRepo.trim(), filePath: filePath.trim(),
+            fileName: fileName.trim(), language: language.trim(),
           },
         });
 
@@ -430,7 +438,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         type: "definiendum",
         uri,
         content: [alias || selectedText],
-        symdecl,
+        symdecl: linkedExistingSymbol ? false : symdecl,
       };
 
       const updatedRoot = replaceTextWithNode(
@@ -478,7 +486,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
           currentVersion: nextVersion,
         },
       });
-      return { ok: true };
+      return { ok: true, linkedExistingSymbol };
     });
   });
 

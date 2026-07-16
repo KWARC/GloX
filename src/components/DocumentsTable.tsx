@@ -190,7 +190,7 @@ export function DocumentsTable({
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>File</Table.Th>
-                  <Table.Th ta="center">Definitions</Table.Th>
+                  <Table.Th ta="center">Content extracted</Table.Th>
                   <Table.Th ta="center">Marked References</Table.Th>
                   <Table.Th ta="center">Pages</Table.Th>
                   <Table.Th ta="right">Size</Table.Th>
@@ -337,7 +337,7 @@ export function DocumentsTable({
           {defCount > 0 || markReferenceCount > 0
             ? [
                 defCount > 0
-                  ? `${defCount} definition${defCount === 1 ? "" : "s"}`
+                  ? `${defCount} content item${defCount === 1 ? "" : "s"}`
                   : null,
                 markReferenceCount > 0
                   ? `${markReferenceCount} mark reference${markReferenceCount === 1 ? "" : "s"}`

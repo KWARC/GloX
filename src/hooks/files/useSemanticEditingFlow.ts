@@ -73,6 +73,8 @@ export function useSemanticEditingFlow({
   const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
   const [definitionMetaTarget, setDefinitionMetaTarget] =
     useState<ExtractedItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ExtractedItem | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const { updateExtract } = useExtractionActions(documentId);
 
   function validateIdentity() {
@@ -80,16 +82,28 @@ export function useSemanticEditingFlow({
   }
 
   async function handleDeleteDefinition(id: string) {
-    if (!confirm("Delete this extracted definition?")) return;
+    const definition = extracts.find((item) => item.id === id);
+    if (definition) setDeleteTarget(definition);
+  }
 
-    await deleteDefinition({ data: { id } });
-    await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
-    });
-
-    if (lockedByExtractId === id) {
-      setLockedByExtractId(null);
-      setEditingId(null);
+  async function confirmDeleteDefinition() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      await deleteDefinition({ data: { id: deleteTarget.id } });
+      queryClient.setQueryData<ExtractedItem[]>(["definitions", documentId], (current = []) =>
+        current.filter((definition) => definition.id !== deleteTarget.id),
+      );
+      await queryClient.invalidateQueries({ queryKey: ["definitions", documentId] });
+      await queryClient.invalidateQueries({ queryKey: ["definitionsByIdentity"] });
+      await queryClient.invalidateQueries({ queryKey: ["fileIdentities"] });
+      if (lockedByExtractId === deleteTarget.id) {
+        setLockedByExtractId(null);
+        setEditingId(null);
+      }
+      setDeleteTarget(null);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -183,7 +197,7 @@ export function useSemanticEditingFlow({
       });
     } else {
       if (params.mode === "CREATE") {
-        await createSymbolDefiniendum({
+        const result = await createSymbolDefiniendum({
           data: {
             definitionId: defExtractId,
             selectedText: defExtractText,
@@ -197,6 +211,9 @@ export function useSemanticEditingFlow({
             symbolName: params.symbolName,
           },
         });
+        if (result.linkedExistingSymbol) {
+          alert("The existing local symbol was linked instead of creating a duplicate declaration.");
+        }
       } else if (params.selectedSymbol.source === "DB") {
         await createSymbolDefiniendum({
           data: {
@@ -421,6 +438,10 @@ export function useSemanticEditingFlow({
     setDefinitionMetaEditOpen,
     definitionMetaTarget,
     setDefinitionMetaTarget,
+    deleteTarget,
+    deleteLoading,
+    setDeleteTarget,
+    confirmDeleteDefinition,
     latexConfigOpen,
     setLatexConfigOpen,
     validateIdentity,

@@ -5,6 +5,7 @@ import {
   Button,
   Box,
   Group,
+  HoverCard,
   Loader,
   Paper,
   ScrollArea,
@@ -17,9 +18,28 @@ import {
 import { IconPlus } from "@tabler/icons-react";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
+import { useDefinitionBySymbol } from "@/serverFns/definitionbysymbol.server";
+import { assertFtmlStatement } from "@/types/ftml.types";
+import { FtmlPreview } from "./FtmlPreview";
 
 const SEARCH_RESULTS_HEIGHT = 240;
 const SYMBOL_RESULT_TOOLTIP_Z_INDEX = 7000;
+
+function DbSymbolHoverPreview({ symbolName }: { symbolName: string }) {
+  const { data: definition, isLoading } = useDefinitionBySymbol(symbolName);
+
+  if (isLoading) return <Loader size="xs" />;
+  if (!definition) return <Text size="xs" c="dimmed">No content has been created</Text>;
+
+  return (
+    <Box style={{ maxWidth: 520 }}>
+      <FtmlPreview
+        docId={`db-symbol-preview-${definition.id}`}
+        ftmlAst={assertFtmlStatement(definition.statement)}
+      />
+    </Box>
+  );
+}
 
 interface SymbolResultProps {
   initialQuery: string;
@@ -107,22 +127,37 @@ export function SymbolResult({
               {results.map((result) => {
                 if (result.source === "DB") {
                   return (
-                    <Button
+                    <Paper
                       key={`db:${result.id}`}
-                      variant={
-                        selectedSymbol?.source === "DB" &&
-                        selectedSymbol.id === result.id
-                          ? "filled"
-                          : "subtle"
-                      }
-                      size="xs"
-                      justify="space-between"
-                      onClick={() => onSelectSymbol(result)}
+                      withBorder
+                      p={4}
+                      bg={selectedSymbol?.source === "DB" && selectedSymbol.id === result.id ? "blue.0" : undefined}
                     >
                       <Group justify="space-between" w="100%">
-                        <Text size="xs" fw={500}>
-                          {result.symbolName}
-                        </Text>
+                        <HoverCard
+                          width="auto"
+                          shadow="md"
+                          openDelay={250}
+                          withinPortal
+                          zIndex={SYMBOL_RESULT_TOOLTIP_Z_INDEX}
+                        >
+                          <HoverCard.Target>
+                            <Button variant="subtle" size="xs" px={4} onClick={() => onSelectSymbol(result)}>
+                              {result.symbolName}
+                            </Button>
+                          </HoverCard.Target>
+                          <HoverCard.Dropdown
+                            style={{
+                              width: "fit-content",
+                              maxWidth: 800,
+                              maxHeight: 240,
+                              overflowY: "auto",
+                            }}
+                          >
+                            <Text size="xs" fw={600} c="dimmed" mb={4}>Content preview</Text>
+                            <DbSymbolHoverPreview symbolName={result.symbolName} />
+                          </HoverCard.Dropdown>
+                        </HoverCard>
 
                         <Group gap={4}>
                           <Badge size="xs" color="green">
@@ -133,7 +168,7 @@ export function SymbolResult({
                           </Text>
                         </Group>
                       </Group>
-                    </Button>
+                    </Paper>
                   );
                 }
 

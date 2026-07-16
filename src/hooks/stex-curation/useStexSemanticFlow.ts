@@ -18,6 +18,7 @@ import {
 import { ParagraphKind, supportsDefinienda } from "@/types/paragraphKind";
 import { ComponentProps, useState } from "react";
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
+import { findDefinitionsByIdentity } from "@/serverFns/extractDefinition.server";
 
 type DefiniendumSubmitParams = Parameters<
   ComponentProps<typeof DefiniendumDialog>["onSubmit"]
@@ -49,6 +50,8 @@ export function useStexSemanticFlow(
   const [extractKind, setExtractKind] = useState<ParagraphKind>("Definition");
   const [createdSymbolTarget, setCreatedSymbolTarget] =
     useState<CreatedSymbolTarget | null>(null);
+  const [duplicateDefinitions, setDuplicateDefinitions] = useState<Awaited<ReturnType<typeof findDefinitionsByIdentity>>>([]);
+  const [pendingDuplicateSubmit, setPendingDuplicateSubmit] = useState<{ text: string; kind: ParagraphKind } | null>(null);
 
   function handleOpenSemanticPanel(definitionId: string) {
     setSemanticPanelDefId(definitionId);
@@ -188,7 +191,7 @@ export function useStexSemanticFlow(
     if (!defExtractId || !defExtractText) return;
 
     if (params.mode === "CREATE") {
-      await createSymbolDefiniendum({
+      const result = await createSymbolDefiniendum({
         data: {
           definitionId: defExtractId,
           selectedText: defExtractText,
@@ -204,6 +207,9 @@ export function useStexSemanticFlow(
           symbolName: params.symbolName,
         },
       });
+      if (result.linkedExistingSymbol) {
+        alert("The existing local symbol was linked instead of creating a duplicate declaration.");
+      }
     } else {
       if (params.selectedSymbol.source === "DB") {
         await createSymbolDefiniendum({
@@ -256,7 +262,7 @@ export function useStexSemanticFlow(
     clearAll();
   }
 
-  async function handleExtractSubmit({
+  async function performExtractSubmit({
     text: editedText,
     kind,
   }: {
@@ -297,6 +303,24 @@ export function useStexSemanticFlow(
     await queryClient.invalidateQueries({
       queryKey: ["symbol-search-db"],
     });
+  }
+
+  async function handleExtractSubmit(input: { text: string; kind: ParagraphKind }) {
+    const matches = await findDefinitionsByIdentity({ data: identity });
+    if (matches.length) {
+      setDuplicateDefinitions(matches);
+      setPendingDuplicateSubmit(input);
+      return;
+    }
+    await performExtractSubmit(input);
+  }
+
+  async function confirmDuplicateCreation() {
+    if (!pendingDuplicateSubmit) return;
+    const input = pendingDuplicateSubmit;
+    setDuplicateDefinitions([]);
+    setPendingDuplicateSubmit(null);
+    await performExtractSubmit(input);
   }
 
   async function handleDeclareCreatedSymbolDefiniendum(selectionRange: {
@@ -355,10 +379,12 @@ export function useStexSemanticFlow(
     extractKind,
     setExtractKind,
     createdSymbolTarget,
+    duplicateDefinitions,
     setMode,
     setDefDialogOpen,
     setExtractDialogOpen,
     setCreatedSymbolTarget,
+    setDuplicateDefinitions,
     handleOpenSemanticPanel,
     handleCloseSemanticPanel,
     handleOpenDefiniendumDialog,
@@ -369,6 +395,7 @@ export function useStexSemanticFlow(
     handleSaveSymbolicRef,
     handleDefiniendumSubmit,
     handleExtractSubmit,
+    confirmDuplicateCreation,
     handleDeclareCreatedSymbolDefiniendum,
     canOpenDefiniendumFromSelection,
   };
