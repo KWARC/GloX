@@ -34,6 +34,7 @@ export function useDefinitionExtractionFlow({
   lockedByExtractId,
   setLockedByExtractId,
   validateIdentity,
+  identity,
   getSuggestionState,
 }: {
   documentId: string;
@@ -52,6 +53,7 @@ export function useDefinitionExtractionFlow({
   lockedByExtractId: string | null;
   setLockedByExtractId: (id: string | null) => void;
   validateIdentity: () => boolean;
+  identity: { futureRepo: string; filePath: string; language: string };
   getSuggestionState: () => {
     flattenedSuggestions: FlattenedLlmSuggestion[];
     focusedSuggestionIndex: number | null;
@@ -220,9 +222,9 @@ export function useDefinitionExtractionFlow({
             definitionText: editedText,
             statement,
             symbolName: symbolName.trim(),
-            futureRepo: document.futureRepo,
-            filePath: document.filePath,
-            language: document.language,
+            futureRepo: identity.futureRepo,
+            filePath: identity.filePath,
+            language: identity.language,
           },
         });
 
@@ -247,10 +249,10 @@ export function useDefinitionExtractionFlow({
           kind,
           text: editedText,
           statement,
-          futureRepo: document.futureRepo,
-          filePath: document.filePath,
+          futureRepo: identity.futureRepo,
+          filePath: identity.filePath,
           fileName: definitionName.trim(),
-          language: document.language,
+          language: identity.language,
         });
       }
     } else {
@@ -262,10 +264,10 @@ export function useDefinitionExtractionFlow({
         kind,
         text: editedText,
         statement,
-        futureRepo: document.futureRepo,
-        filePath: document.filePath,
+        futureRepo: identity.futureRepo,
+        filePath: identity.filePath,
         fileName: definitionName.trim(),
-        language: document.language,
+        language: identity.language,
       });
     }
 
@@ -294,10 +296,10 @@ export function useDefinitionExtractionFlow({
     if (!document || !validateIdentity()) return;
     const matches = await findDefinitionsByIdentity({
       data: {
-        futureRepo: document.futureRepo,
-        filePath: document.filePath,
+        futureRepo: identity.futureRepo,
+        filePath: identity.filePath,
         fileName: definitionName.trim(),
-        language: document.language,
+        language: identity.language,
       },
     });
     if (matches.length) {

@@ -83,6 +83,7 @@ export type ExtractionDialogProps = {
   setKind: ComponentProps<typeof ExtractTextDialog>["setKind"];
   setSymbolName?: Dispatch<SetStateAction<string>>;
   filePath: string;
+  location?: ComponentProps<typeof ExtractTextDialog>["location"];
   onClose: () => void;
   onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
   title?: string;
@@ -266,6 +267,7 @@ export function FileDialogs({
         setKind={extraction.setKind}
         setSymbolName={extraction.setSymbolName}
         filePath={extraction.filePath}
+        location={extraction.location}
         onClose={extraction.onClose}
         onSubmit={extraction.onSubmit}
         title={extraction.title}

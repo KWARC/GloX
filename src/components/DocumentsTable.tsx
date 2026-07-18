@@ -1,5 +1,6 @@
 import { MyDocument, myDocumentsQuery } from "@/queries/document";
 import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
+import { DocumentLocationDialog } from "@/components/DocumentLocationDialog";
 import { currentUser } from "@/server/auth/currentUser";
 import {
   checkDocumentDefinitions,
@@ -23,6 +24,7 @@ import {
 } from "@mantine/core";
 import {
   IconFileDescription,
+  IconFolderSymlink,
   IconSearch,
   IconSortAscending,
   IconSortDescending,
@@ -82,6 +84,7 @@ export function DocumentsTable({
   } | null>(null);
   const [defCount, setDefCount] = useState(0);
   const [markReferenceCount, setMarkReferenceCount] = useState(0);
+  const [moveDocument, setMoveDocument] = useState<MyDocument | null>(null);
 
   const isAdmin = auth?.user?.role === "ADMIN";
 
@@ -292,6 +295,20 @@ export function DocumentsTable({
                           ]}
                         />
 
+                        <Tooltip label="Move PDF location" withArrow>
+                          <ActionIcon
+                            variant="subtle"
+                            color="blue"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              setMoveDocument(doc);
+                            }}
+                          >
+                            <IconFolderSymlink size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+
                         <ActionIcon
                           color="red"
                           variant="subtle"
@@ -373,6 +390,12 @@ export function DocumentsTable({
           </Button>
         </Group>
       </Modal>
+
+      <DocumentLocationDialog
+        document={moveDocument}
+        opened={!!moveDocument}
+        onClose={() => setMoveDocument(null)}
+      />
     </>
   );
 }
