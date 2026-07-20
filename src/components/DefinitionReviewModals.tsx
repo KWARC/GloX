@@ -26,13 +26,15 @@ export function DuplicateDefinitionModal({
       {definitions.map((definition) => (
         <Stack key={definition.id} gap={2}>
           <Text size="xs" c="dimmed">{definition.pageNumber === null ? "New" : `Page ${definition.pageNumber}`} · {definition.kind}</Text>
-          <FtmlPreview docId={`duplicate-review-${definition.id}`} ftmlAst={definition.statement} />
+          <Paper withBorder bg="blue.0" py={4} px={6}>
+            <FtmlPreview docId={`duplicate-review-${definition.id}`} ftmlAst={definition.statement} />
+          </Paper>
         </Stack>
       ))}
-      <Button.Group>
+      <Group gap="sm" justify="flex-end">
         <Button variant="default" onClick={onCancel}>Cancel</Button>
         <Button color="orange" onClick={onConfirm}>Create anyway</Button>
-      </Button.Group>
+      </Group>
     </Stack>
   </Modal>;
 }
