@@ -1,6 +1,7 @@
 import { FileDialogs } from "@/components/files/FileDialogs";
 import { FileDocumentLayout } from "@/components/files/FileDocumentLayout";
 import { MarkReferenceLatexModal } from "@/components/MarkReferenceLatexModal";
+import { DocumentLocationDialog } from "@/components/DocumentLocationDialog";
 import { useDefinitionExtractionFlow } from "@/hooks/files/useDefinitionExtractionFlow";
 import { useFileDocumentData } from "@/hooks/files/useFileDocumentData";
 import { useFileSniffyReferenceSuggestions } from "@/hooks/files/useFileSniffyReferenceSuggestions";
@@ -66,6 +67,7 @@ function RouteComponent() {
   const isTablet = useMediaQuery("(max-width: 1024px)");
   const [markReferenceLatexOpen, setMarkReferenceLatexOpen] = useState(false);
   const [markReferenceLatex, setMarkReferenceLatex] = useState("");
+  const [moveLocationOpen, setMoveLocationOpen] = useState(false);
   const [persistentHighlightsEnabled, setPersistentHighlightsEnabled] =
     useState(true);
   const [sourcePageTarget, setSourcePageTarget] = useState<{
@@ -110,6 +112,13 @@ function RouteComponent() {
     navigate,
   });
 
+  useEffect(() => {
+    if (!document) return;
+    semanticFlow.setFutureRepo(document.futureRepo);
+    semanticFlow.setFilePath(document.filePath);
+    semanticFlow.setLanguage(document.language);
+  }, [document?.id]);
+
   const extractionFlow = useDefinitionExtractionFlow({
     documentId,
     document,
@@ -121,6 +130,11 @@ function RouteComponent() {
     lockedByExtractId: semanticFlow.lockedByExtractId,
     setLockedByExtractId: semanticFlow.setLockedByExtractId,
     validateIdentity: semanticFlow.validateIdentity,
+    identity: {
+      futureRepo: semanticFlow.futureRepo,
+      filePath: semanticFlow.filePath,
+      language: semanticFlow.language,
+    },
     getSuggestionState: () => suggestionStateRef.current,
   });
 
@@ -259,7 +273,7 @@ function RouteComponent() {
     <Tooltip
       label={
         llmFlow.canRunLlm
-          ? "Check whether any definitions were missed"
+          ? "Check whether any content was missed"
           : "Document is loading…"
       }
       withArrow
@@ -441,6 +455,7 @@ function RouteComponent() {
             onDeleteMarkReference: handleDeleteMarkReference,
             onSelection: extractionFlow.handleLeftSelection,
             onLlmSuggestionClick: llmFlow.handleLlmSuggestionClick,
+            onMoveLocation: () => setMoveLocationOpen(true),
           }}
           extractsPanel={{
             extracts,
@@ -464,6 +479,12 @@ function RouteComponent() {
       </Stack>
 
       <FileDialogs
+        deletion={{
+          definition: semanticFlow.deleteTarget,
+          loading: semanticFlow.deleteLoading,
+          onCancel: () => semanticFlow.setDeleteTarget(null),
+          onConfirm: semanticFlow.confirmDeleteDefinition,
+        }}
         selection={{
           popup,
           onClosePopup: clearAll,
@@ -537,27 +558,38 @@ function RouteComponent() {
           setDefinitionName: extractionFlow.setDefinitionName,
           setKind: extractionFlow.setExtractKind,
           setSymbolName: extractionFlow.setSymbolName,
-          filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}`,
+          filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}/ ${semanticFlow.language}`,
+          location: {
+            futureRepo: semanticFlow.futureRepo,
+            filePath: semanticFlow.filePath,
+            language: semanticFlow.language,
+            setFutureRepo: semanticFlow.setFutureRepo,
+            setFilePath: semanticFlow.setFilePath,
+            setLanguage: semanticFlow.setLanguage,
+          },
           title: extractionFlow.isMarkReferenceDefinitionFlow
-            ? "Add Definition"
+            ? "Add Content"
             : undefined,
           textLabel:
             extractionFlow.isManualDefinitionCreate ||
             extractionFlow.isMarkReferenceDefinitionFlow
-              ? "Enter Definition"
+              ? "Enter Content"
               : undefined,
           textPlaceholder:
             extractionFlow.isManualDefinitionCreate ||
             extractionFlow.isMarkReferenceDefinitionFlow
-              ? "Enter definition"
+              ? "Enter content"
               : undefined,
           submitLabel: extractionFlow.isMarkReferenceDefinitionFlow
-            ? "Add Definition"
+            ? "Add Content"
             : undefined,
           hideSymbolNameField: extractionFlow.isMarkReferenceDefinitionFlow,
           enableSemanticAuthoring: true,
           semanticEnabled: extractionFlow.semanticEnabled,
           setSemanticEnabled: extractionFlow.setSemanticEnabled,
+          duplicateDefinitions: extractionFlow.duplicateDefinitions,
+          onCancelDuplicate: () => extractionFlow.setDuplicateDefinitions([]),
+          onConfirmDuplicate: extractionFlow.confirmDuplicateCreation,
           onClose: extractionFlow.handleCloseExtractDialog,
           onSubmit: extractionFlow.handleExtractSubmit,
         }}
@@ -600,6 +632,11 @@ function RouteComponent() {
           pagesLength: pages.length,
           onSubmit: llmFlow.handleRecomputeSubmit,
         }}
+      />
+      <DocumentLocationDialog
+        document={document ?? null}
+        opened={moveLocationOpen}
+        onClose={() => setMoveLocationOpen(false)}
       />
 
       <MarkReferenceLatexModal

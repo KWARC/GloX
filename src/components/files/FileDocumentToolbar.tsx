@@ -1,7 +1,7 @@
 import { MyDocument } from "@/queries/document";
-import { Badge, Box, Group, Text } from "@mantine/core";
+import { ActionIcon, Badge, Box, Group, Text, Tooltip } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconFileText } from "@tabler/icons-react";
+import { IconFileText, IconFolderSymlink } from "@tabler/icons-react";
 import { DocumentPage } from "generated/prisma/browser";
 import { ReactNode } from "react";
 
@@ -9,10 +9,12 @@ export function FileDocumentToolbar({
   document,
   pages,
   llmButtons,
+  onMoveLocation,
 }: {
   document: MyDocument;
   pages: DocumentPage[];
   llmButtons: ReactNode;
+  onMoveLocation: () => void;
 }) {
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -42,6 +44,12 @@ export function FileDocumentToolbar({
         {pages.length} {pages.length === 1 ? "page" : "pages"}
       </Badge>
       <Box style={{ flex: 1 }} />
+
+      <Tooltip label="Move PDF location" withArrow>
+        <ActionIcon variant="subtle" color="blue" onClick={onMoveLocation}>
+          <IconFolderSymlink size={16} />
+        </ActionIcon>
+      </Tooltip>
 
       {llmButtons}
     </Group>

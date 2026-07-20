@@ -47,7 +47,7 @@ export function ExtractedContentToolbar({
         </Button>
       )}
 
-      <Tooltip label="Create new definition" withArrow>
+      <Tooltip label="Create new content" withArrow>
         <ActionIcon
           size={isMobile ? "md" : "sm"}
           variant="subtle"

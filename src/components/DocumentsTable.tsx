@@ -1,5 +1,6 @@
 import { MyDocument, myDocumentsQuery } from "@/queries/document";
 import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
+import { DocumentLocationDialog } from "@/components/DocumentLocationDialog";
 import { currentUser } from "@/server/auth/currentUser";
 import {
   checkDocumentDefinitions,
@@ -23,6 +24,7 @@ import {
 } from "@mantine/core";
 import {
   IconFileDescription,
+  IconFolderSymlink,
   IconSearch,
   IconSortAscending,
   IconSortDescending,
@@ -82,6 +84,7 @@ export function DocumentsTable({
   } | null>(null);
   const [defCount, setDefCount] = useState(0);
   const [markReferenceCount, setMarkReferenceCount] = useState(0);
+  const [moveDocument, setMoveDocument] = useState<MyDocument | null>(null);
 
   const isAdmin = auth?.user?.role === "ADMIN";
 
@@ -190,7 +193,7 @@ export function DocumentsTable({
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>File</Table.Th>
-                  <Table.Th ta="center">Definitions</Table.Th>
+                  <Table.Th ta="center">Content extracted</Table.Th>
                   <Table.Th ta="center">Marked References</Table.Th>
                   <Table.Th ta="center">Pages</Table.Th>
                   <Table.Th ta="right">Size</Table.Th>
@@ -292,6 +295,20 @@ export function DocumentsTable({
                           ]}
                         />
 
+                        <Tooltip label="Move PDF location" withArrow>
+                          <ActionIcon
+                            variant="subtle"
+                            color="blue"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              setMoveDocument(doc);
+                            }}
+                          >
+                            <IconFolderSymlink size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+
                         <ActionIcon
                           color="red"
                           variant="subtle"
@@ -337,7 +354,7 @@ export function DocumentsTable({
           {defCount > 0 || markReferenceCount > 0
             ? [
                 defCount > 0
-                  ? `${defCount} definition${defCount === 1 ? "" : "s"}`
+                  ? `${defCount} content item${defCount === 1 ? "" : "s"}`
                   : null,
                 markReferenceCount > 0
                   ? `${markReferenceCount} mark reference${markReferenceCount === 1 ? "" : "s"}`
@@ -373,6 +390,12 @@ export function DocumentsTable({
           </Button>
         </Group>
       </Modal>
+
+      <DocumentLocationDialog
+        document={moveDocument}
+        opened={!!moveDocument}
+        onClose={() => setMoveDocument(null)}
+      />
     </>
   );
 }

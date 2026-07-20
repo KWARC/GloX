@@ -1,5 +1,6 @@
 import {
   Button,
+  ActionIcon,
   Checkbox,
   Divider,
   Group,
@@ -11,7 +12,7 @@ import {
   Textarea,
   TextInput,
 } from "@mantine/core";
-import { IconFileText } from "@tabler/icons-react";
+import { IconFileText, IconPencil } from "@tabler/icons-react";
 import { PARAGRAPH_KINDS, ParagraphKind } from "@/types/paragraphKind";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
@@ -53,6 +54,14 @@ interface ExtractTextDialogProps {
   symbolName?: string;
   symbolNameDisabled?: boolean;
   filePath: string;
+  location?: {
+    futureRepo: string;
+    filePath: string;
+    language: string;
+    setFutureRepo: (value: string) => void;
+    setFilePath: (value: string) => void;
+    setLanguage: (value: string) => void;
+  };
   setDefinitionName: (v: string) => void;
   setKind: Dispatch<SetStateAction<ParagraphKind>>;
   setSymbolName?: Dispatch<SetStateAction<string>>;
@@ -85,6 +94,7 @@ export function ExtractTextDialog({
   setKind,
   setSymbolName,
   filePath,
+  location,
   onClose,
   onSubmit,
   title = "Extract Text",
@@ -100,6 +110,7 @@ export function ExtractTextDialog({
   const [semanticError, setSemanticError] = useState<string | null>(null);
   const [definiendumDialogOpen, setDefiniendumDialogOpen] = useState(false);
   const [symbolicRefDialogOpen, setSymbolicRefDialogOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const showSymbolNameField =
     mode === "symbol-target" && !hideSymbolNameField;
@@ -216,16 +227,13 @@ export function ExtractTextDialog({
 
             <Group gap={6} wrap="wrap">
               {filePathSegments.map((segment) => (
-                <Text
-                  key={segment}
-                  size="xs"
-                  c="dimmed"
-                  ff="monospace"
-                  style={{ userSelect: "text", lineHeight: 1.2 }}
-                >
+                <Text key={segment} size="xs" c="dimmed" ff="monospace" style={{ userSelect: "text", lineHeight: 1.2 }}>
                   [{segment}]
                 </Text>
               ))}
+              {location && <ActionIcon size="xs" variant="subtle" onClick={() => setEditingLocation((value) => !value)} aria-label="Edit content location">
+                <IconPencil size={13} />
+              </ActionIcon>}
             </Group>
           </Stack>
         }
@@ -235,6 +243,16 @@ export function ExtractTextDialog({
         padding="xl"
       >
         <Stack gap="lg">
+          {location && editingLocation && (
+            <Paper withBorder p="sm" bg="gray.0">
+              <Stack gap="xs">
+                <Text size="xs" fw={600}>Content location</Text>
+                <TextInput size="xs" label="Future Repo" value={location.futureRepo} onChange={(event) => location.setFutureRepo(event.currentTarget.value)} />
+                <TextInput size="xs" label="File Path" value={location.filePath} onChange={(event) => location.setFilePath(event.currentTarget.value)} />
+                <TextInput size="xs" label="Language" value={location.language} onChange={(event) => location.setLanguage(event.currentTarget.value)} />
+              </Stack>
+            </Paper>
+          )}
           <TextInput
             label="Content Name"
             placeholder="e.g. derivative-rules"
@@ -279,8 +297,9 @@ export function ExtractTextDialog({
               onChange={(e) => handleTextChange(e.currentTarget.value)}
               placeholder={textPlaceholder}
               disabled={enableSemanticAuthoring && semanticEnabled}
+              autosize
               minRows={2}
-              maxRows={2}
+              maxRows={12}
               styles={{
                 input: {
                   fontFamily: "monospace",

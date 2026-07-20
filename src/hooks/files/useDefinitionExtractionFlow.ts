@@ -14,6 +14,7 @@ import {
   declareCreatedSymbolDefiniendum,
 } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
 import { createMarkReference } from "@/serverFns/markReference.server";
+import { findDefinitionsByIdentity } from "@/serverFns/extractDefinition.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import { ParagraphKind } from "@/types/paragraphKind";
 import { DocumentPage } from "generated/prisma/browser";
@@ -33,6 +34,7 @@ export function useDefinitionExtractionFlow({
   lockedByExtractId,
   setLockedByExtractId,
   validateIdentity,
+  identity,
   getSuggestionState,
 }: {
   documentId: string;
@@ -51,6 +53,7 @@ export function useDefinitionExtractionFlow({
   lockedByExtractId: string | null;
   setLockedByExtractId: (id: string | null) => void;
   validateIdentity: () => boolean;
+  identity: { futureRepo: string; filePath: string; language: string };
   getSuggestionState: () => {
     flattenedSuggestions: FlattenedLlmSuggestion[];
     focusedSuggestionIndex: number | null;
@@ -75,6 +78,10 @@ export function useDefinitionExtractionFlow({
   const [isMarkReferenceDefinitionFlow, setIsMarkReferenceDefinitionFlow] =
     useState(false);
   const [semanticEnabled, setSemanticEnabled] = useState(false);
+  const [duplicateDefinitions, setDuplicateDefinitions] = useState<Awaited<ReturnType<typeof findDefinitionsByIdentity>>>([]);
+  const [pendingDuplicateSubmit, setPendingDuplicateSubmit] = useState<{
+    text: string; kind: ParagraphKind; statement?: FtmlStatement;
+  } | null>(null);
   const { extractText } = useExtractionActions(documentId);
 
   function resetExtractState() {
@@ -188,7 +195,7 @@ export function useDefinitionExtractionFlow({
     setExtractDialogOpen(true);
   }
 
-  async function handleExtractSubmit({
+  async function performExtractSubmit({
     text: editedText,
     kind,
     statement,
@@ -215,9 +222,9 @@ export function useDefinitionExtractionFlow({
             definitionText: editedText,
             statement,
             symbolName: symbolName.trim(),
-            futureRepo: document.futureRepo,
-            filePath: document.filePath,
-            language: document.language,
+            futureRepo: identity.futureRepo,
+            filePath: identity.filePath,
+            language: identity.language,
           },
         });
 
@@ -242,10 +249,10 @@ export function useDefinitionExtractionFlow({
           kind,
           text: editedText,
           statement,
-          futureRepo: document.futureRepo,
-          filePath: document.filePath,
+          futureRepo: identity.futureRepo,
+          filePath: identity.filePath,
           fileName: definitionName.trim(),
-          language: document.language,
+          language: identity.language,
         });
       }
     } else {
@@ -257,10 +264,10 @@ export function useDefinitionExtractionFlow({
         kind,
         text: editedText,
         statement,
-        futureRepo: document.futureRepo,
-        filePath: document.filePath,
+        futureRepo: identity.futureRepo,
+        filePath: identity.filePath,
         fileName: definitionName.trim(),
-        language: document.language,
+        language: identity.language,
       });
     }
 
@@ -279,6 +286,36 @@ export function useDefinitionExtractionFlow({
         Math.min(focusedSuggestionIndex + 1, flattenedSuggestions.length - 1),
       );
     }
+  }
+
+  async function handleExtractSubmit(input: {
+    text: string;
+    kind: ParagraphKind;
+    statement?: FtmlStatement;
+  }) {
+    if (!document || !validateIdentity()) return;
+    const matches = await findDefinitionsByIdentity({
+      data: {
+        futureRepo: identity.futureRepo,
+        filePath: identity.filePath,
+        fileName: definitionName.trim(),
+        language: identity.language,
+      },
+    });
+    if (matches.length) {
+      setDuplicateDefinitions(matches);
+      setPendingDuplicateSubmit(input);
+      return;
+    }
+    await performExtractSubmit(input);
+  }
+
+  async function confirmDuplicateCreation() {
+    if (!pendingDuplicateSubmit) return;
+    const input = pendingDuplicateSubmit;
+    setDuplicateDefinitions([]);
+    setPendingDuplicateSubmit(null);
+    await performExtractSubmit(input);
   }
 
   async function handleDeclareCreatedSymbolDefiniendum(selection: {
@@ -406,11 +443,14 @@ export function useDefinitionExtractionFlow({
     isManualDefinitionCreate,
     isMarkReferenceDefinitionFlow,
     semanticEnabled,
+    duplicateDefinitions,
+    pendingDuplicateSubmit,
     markReferenceDialogOpen,
     markReferenceText,
     markReferenceSaving,
     setIsManualDefinitionCreate,
     setSemanticEnabled,
+    setDuplicateDefinitions,
     handleLeftSelection,
     handleCreateDefinition,
     handleCreateSymbolTargetDefinition,
@@ -421,6 +461,7 @@ export function useDefinitionExtractionFlow({
     handleCloseExtractDialog,
     openSuggestionForExtraction,
     handleExtractSubmit,
+    confirmDuplicateCreation,
     handleMarkReferenceSubmit,
   };
 }

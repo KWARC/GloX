@@ -140,7 +140,7 @@ export function CurationSection({
           }}
         >
           <Text size="sm" c="dimmed" fw={500}>
-            No FTML definitions found
+            No extracted content found
           </Text>
           <Text size="xs" c="dimmed" mt={4}>
             Extract text from a document to get started

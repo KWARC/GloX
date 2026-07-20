@@ -159,7 +159,7 @@ export function ExtractedTextPanel({
                             </ActionIcon>
                           </Tooltip>
                         )}
-                        <Tooltip label="Delete definition" withArrow>
+                        <Tooltip label="Delete content" withArrow>
                           <ActionIcon
                             size={compact ? 22 : isMobile ? "md" : "sm"}
                             color="red"

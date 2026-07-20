@@ -101,9 +101,22 @@ export function useStexCurationActions(
 
   async function handleDelete(id: string) {
     await deleteDefinition({ data: { id } });
+    queryClient.setQueryData<{ definitions: ExtractedItem[] }>(
+      ["definitionsByIdentity", identity],
+      (current) =>
+        current
+          ? {
+              ...current,
+              definitions: current.definitions.filter(
+                (definition) => definition.id !== id,
+              ),
+            }
+          : current,
+    );
     await queryClient.invalidateQueries({
       queryKey: ["definitionsByIdentity", identity],
     });
+    await queryClient.invalidateQueries({ queryKey: ["fileIdentities"] });
   }
 
   async function handleUpdate(id: string, statement: FtmlStatement) {

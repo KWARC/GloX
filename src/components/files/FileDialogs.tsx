@@ -7,6 +7,7 @@ import { ReferenceSuggestionDialog } from "@/components/ReferenceSuggestionDialo
 import { SelectionPopup } from "@/components/SelectionPopup";
 import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
 import { SymbolicRef } from "@/components/SymbolicRef";
+import { DefinitionDeleteModal, DuplicateDefinitionModal } from "@/components/DefinitionReviewModals";
 import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import { ExtractedItem, PopupState } from "@/server/text-selection";
 import type { CreatedSymbolTarget } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
@@ -82,6 +83,7 @@ export type ExtractionDialogProps = {
   setKind: ComponentProps<typeof ExtractTextDialog>["setKind"];
   setSymbolName?: Dispatch<SetStateAction<string>>;
   filePath: string;
+  location?: ComponentProps<typeof ExtractTextDialog>["location"];
   onClose: () => void;
   onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
   title?: string;
@@ -92,6 +94,9 @@ export type ExtractionDialogProps = {
   enableSemanticAuthoring?: boolean;
   semanticEnabled?: boolean;
   setSemanticEnabled?: Dispatch<SetStateAction<boolean>>;
+  duplicateDefinitions: Array<{ id: string; originalText: string; statement: ExtractedItem["statement"]; pageNumber: number | null; kind: ExtractedItem["kind"] }>;
+  onCancelDuplicate: () => void;
+  onConfirmDuplicate: () => void;
 };
 
 export type CreatedSymbolDefiniendumDialogProps = {
@@ -137,6 +142,7 @@ export type RecomputeDialogProps = {
 };
 
 export type FileDialogsProps = {
+  deletion: { definition: ExtractedItem | null; loading: boolean; onCancel: () => void; onConfirm: () => void };
   selection: SelectionDialogProps;
   symbolicRef: SymbolicRefDialogProps;
   definiendum: DefiniendumDialogProps;
@@ -151,6 +157,7 @@ export type FileDialogsProps = {
 };
 
 export function FileDialogs({
+  deletion,
   selection,
   symbolicRef,
   definiendum,
@@ -165,6 +172,13 @@ export function FileDialogs({
 }: FileDialogsProps) {
   return (
     <>
+      <DefinitionDeleteModal
+        opened={!!deletion.definition}
+        definition={deletion.definition}
+        loading={deletion.loading}
+        onCancel={deletion.onCancel}
+        onConfirm={deletion.onConfirm}
+      />
       {selection.popup && (
         <SelectionPopup
           popup={selection.popup}
@@ -253,6 +267,7 @@ export function FileDialogs({
         setKind={extraction.setKind}
         setSymbolName={extraction.setSymbolName}
         filePath={extraction.filePath}
+        location={extraction.location}
         onClose={extraction.onClose}
         onSubmit={extraction.onSubmit}
         title={extraction.title}
@@ -263,6 +278,13 @@ export function FileDialogs({
         enableSemanticAuthoring={extraction.enableSemanticAuthoring}
         semanticEnabled={extraction.semanticEnabled}
         setSemanticEnabled={extraction.setSemanticEnabled}
+      />
+
+      <DuplicateDefinitionModal
+        opened={extraction.duplicateDefinitions.length > 0}
+        definitions={extraction.duplicateDefinitions}
+        onCancel={extraction.onCancelDuplicate}
+        onConfirm={extraction.onConfirmDuplicate}
       />
 
       <CreateSymbolDefiniendumDialog

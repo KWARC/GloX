@@ -27,6 +27,7 @@ export type DocumentPanelProps = {
   onDeleteMarkReference: (referenceId: string) => Promise<void>;
   onSelection: (pageId: string) => void;
   onLlmSuggestionClick: (suggestion: LlmSuggestion, pageId: string) => void;
+  onMoveLocation: () => void;
 };
 
 export type ExtractsPanelProps = {
@@ -78,6 +79,7 @@ export function FileDocumentLayout({
     onDeleteMarkReference,
     onSelection: onDocumentSelection,
     onLlmSuggestionClick,
+    onMoveLocation,
   } = documentPanel;
   const {
     extracts,
@@ -120,6 +122,7 @@ export function FileDocumentLayout({
           document={document}
           pages={pages}
           llmButtons={llmButtons}
+          onMoveLocation={onMoveLocation}
         />
 
         <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
