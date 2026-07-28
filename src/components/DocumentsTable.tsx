@@ -287,15 +287,15 @@ export function DocumentsTable({
                       <Text size="sm">{formatDate(doc.createdAt)}</Text>
                     </Table.Td>
 
-                    <Table.Td ta="center">
-                      <Group gap="xs" justify="center">
+                    <Table.Td ta="center" style={{ whiteSpace: "nowrap" }}>
+                      <Group gap="xs" justify="center" wrap="nowrap">
                         <UploadAttributionInfo
                           attributions={[
                             { label: "Uploaded by", user: doc.user },
                           ]}
                         />
 
-                        <Tooltip label="Move PDF location" withArrow>
+                        <Tooltip label="Move File location" withArrow>
                           <ActionIcon
                             variant="subtle"
                             color="blue"

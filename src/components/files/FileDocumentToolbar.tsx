@@ -53,7 +53,7 @@ export function FileDocumentToolbar({
         {pages.length} {pages.length === 1 ? "page" : "pages"}
       </Badge>
 
-      <Tooltip label="Move PDF location" withArrow>
+      <Tooltip label="Move File location" withArrow>
         <ActionIcon
           variant="subtle"
           color="blue"
