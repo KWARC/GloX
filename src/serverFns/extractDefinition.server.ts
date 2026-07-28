@@ -1,5 +1,10 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
+import {
+  countSymbolReferences,
+  getDeclaredSymbolUris,
+  removeSymbolReferences,
+} from "@/server/definitionDeletion";
 import { ExtractedItem } from "@/server/text-selection";
 import {
   DefiniendumNode,
@@ -98,40 +103,31 @@ export const findDefinitionsByIdentity = createServerFn({ method: "POST" })
 export const getDefinitionDeletionImpact = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
-    const target = await prisma.definition.findUniqueOrThrow({ where: { id: data.id } });
-    const declared = new Set<string>();
-    const targetRoot = normalizeToRoot(assertFtmlStatement(target.statement));
-    const targetStack: FtmlContent[] = [...targetRoot.content];
-    while (targetStack.length) {
-      const node = targetStack.pop();
-      if (!node || typeof node === "string") continue;
-      if (isDefiniendumNode(node) && node.symdecl && node.uri) declared.add(node.uri);
-      if (node.content?.length) targetStack.push(...node.content);
-    }
+    const target = await prisma.definition.findUniqueOrThrow({
+      where: { id: data.id },
+    });
+    const declared = getDeclaredSymbolUris(
+      assertFtmlStatement(target.statement),
+    );
     if (!declared.size) return [];
 
     const candidates = await prisma.definition.findMany({
       where: { id: { not: data.id } },
-      select: { id: true, statement: true, pageNumber: true, kind: true, originalText: true },
+      select: {
+        id: true,
+        statement: true,
+        pageNumber: true,
+        kind: true,
+        originalText: true,
+      },
     });
-    return candidates.filter((definition) => {
-      const stack: FtmlContent[] = [
-        ...normalizeToRoot(assertFtmlStatement(definition.statement)).content,
-      ];
-      while (stack.length) {
-        const node = stack.pop();
-        if (!node || typeof node === "string") continue;
-        if (
-          (isDefiniendumNode(node) || node.type === "symref") &&
-          node.uri &&
-          declared.has(node.uri)
-        ) {
-          return true;
-        }
-        if (node.content?.length) stack.push(...node.content);
-      }
-      return false;
-    });
+    return candidates.filter(
+      (definition) =>
+        countSymbolReferences(
+          assertFtmlStatement(definition.statement),
+          declared,
+        ) > 0,
+    );
   });
 
 export const createDefinition = createServerFn({ method: "POST" })
@@ -216,9 +212,7 @@ export const createDefinition = createServerFn({ method: "POST" })
               language: data.language,
             },
           },
-          update: declaredSymbol.alias
-            ? { alias: declaredSymbol.alias }
-            : {},
+          update: declaredSymbol.alias ? { alias: declaredSymbol.alias } : {},
           create: {
             symbolName: declaredSymbol.symbolName,
             alias: declaredSymbol.alias,
@@ -290,11 +284,95 @@ export const updateDefinition = createServerFn({ method: "POST" })
 export const deleteDefinition = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
-    await prisma.definition.delete({
-      where: { id: data.id },
-    });
+    const userRes = await currentUser();
+    if (!userRes.loggedIn) throw new Error("Unauthorized");
 
-    return { success: true };
+    const userId = userRes.user.id;
+
+    return prisma.$transaction(async (tx) => {
+      const target = await tx.definition.findUniqueOrThrow({
+        where: { id: data.id },
+      });
+      const declared = getDeclaredSymbolUris(
+        assertFtmlStatement(target.statement),
+      );
+
+      let affectedDefinitionCount = 0;
+      let removedReferenceCount = 0;
+
+      if (declared.size > 0) {
+        const candidates = await tx.definition.findMany({
+          where: { id: { not: data.id } },
+          select: {
+            id: true,
+            originalText: true,
+            statement: true,
+            currentVersion: true,
+          },
+        });
+
+        for (const definition of candidates) {
+          const cleanup = removeSymbolReferences(
+            assertFtmlStatement(definition.statement),
+            declared,
+          );
+          if (cleanup.removedCount === 0) continue;
+
+          const nextVersion = definition.currentVersion + 1;
+          const serialized = JSON.parse(JSON.stringify(cleanup.statement));
+
+          await tx.definitionVersion.create({
+            data: {
+              definitionId: definition.id,
+              versionNumber: nextVersion,
+              originalText: definition.originalText,
+              statement: serialized,
+              editedById: userId,
+            },
+          });
+
+          await tx.definition.update({
+            where: { id: definition.id },
+            data: {
+              statement: serialized,
+              updatedById: userId,
+              currentVersion: nextVersion,
+            },
+          });
+
+          await tx.definitionSymbolicRef.deleteMany({
+            where: {
+              definitionId: definition.id,
+              symbolicReference: {
+                conceptUri: { in: Array.from(declared) },
+              },
+            },
+          });
+
+          affectedDefinitionCount += 1;
+          removedReferenceCount += cleanup.removedCount;
+        }
+      }
+
+      await tx.definition.delete({
+        where: { id: data.id },
+      });
+
+      if (declared.size > 0) {
+        await tx.symbolicReference.deleteMany({
+          where: {
+            conceptUri: { in: Array.from(declared) },
+            definitions: { none: {} },
+          },
+        });
+      }
+
+      return {
+        success: true,
+        affectedDefinitionCount,
+        removedReferenceCount,
+      };
+    });
   });
 
 export const updateDefinitionFilePath = createServerFn({ method: "POST" })

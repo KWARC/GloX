@@ -114,7 +114,7 @@ export function useStexCurationActions(
           : current,
     );
     await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
+      queryKey: ["definitionsByIdentity"],
     });
     await queryClient.invalidateQueries({ queryKey: ["fileIdentities"] });
   }

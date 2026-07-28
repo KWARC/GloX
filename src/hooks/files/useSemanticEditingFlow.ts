@@ -91,11 +91,15 @@ export function useSemanticEditingFlow({
     setDeleteLoading(true);
     try {
       await deleteDefinition({ data: { id: deleteTarget.id } });
-      queryClient.setQueryData<ExtractedItem[]>(["definitions", documentId], (current = []) =>
-        current.filter((definition) => definition.id !== deleteTarget.id),
+      queryClient.setQueryData<ExtractedItem[]>(
+        ["definitions", documentId],
+        (current = []) =>
+          current.filter((definition) => definition.id !== deleteTarget.id),
       );
-      await queryClient.invalidateQueries({ queryKey: ["definitions", documentId] });
-      await queryClient.invalidateQueries({ queryKey: ["definitionsByIdentity"] });
+      await queryClient.invalidateQueries({ queryKey: ["definitions"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["definitionsByIdentity"],
+      });
       await queryClient.invalidateQueries({ queryKey: ["fileIdentities"] });
       if (lockedByExtractId === deleteTarget.id) {
         setLockedByExtractId(null);
@@ -175,8 +179,8 @@ export function useSemanticEditingFlow({
       const payload: DefiniendumNode = {
         type: "definiendum",
         uri: newUri,
-          content: [
-            params.mode === "CREATE"
+        content: [
+          params.mode === "CREATE"
             ? params.symbolName
             : params.selectedSymbol.source === "DB"
               ? params.selectedSymbol.symbolName
@@ -212,7 +216,9 @@ export function useSemanticEditingFlow({
           },
         });
         if (result.linkedExistingSymbol) {
-          alert("The existing local symbol was linked instead of creating a duplicate declaration.");
+          alert(
+            "The existing local symbol was linked instead of creating a duplicate declaration.",
+          );
         }
       } else if (params.selectedSymbol.source === "DB") {
         await createSymbolDefiniendum({
