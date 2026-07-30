@@ -1,7 +1,8 @@
+import { DocumentLocationDialog } from "@/components/DocumentLocationDialog";
 import { FileDialogs } from "@/components/files/FileDialogs";
 import { FileDocumentLayout } from "@/components/files/FileDocumentLayout";
+import { FileDocumentSkeleton } from "@/components/files/FileDocumentSkeleton";
 import { MarkReferenceLatexModal } from "@/components/MarkReferenceLatexModal";
-import { DocumentLocationDialog } from "@/components/DocumentLocationDialog";
 import { useDefinitionExtractionFlow } from "@/hooks/files/useDefinitionExtractionFlow";
 import { useFileDocumentData } from "@/hooks/files/useFileDocumentData";
 import { useFileSniffyReferenceSuggestions } from "@/hooks/files/useFileSniffyReferenceSuggestions";
@@ -35,9 +36,9 @@ import {
   IconBrain,
   IconChevronLeft,
   IconChevronRight,
-  IconFileAlert,
   IconEye,
   IconEyeOff,
+  IconFileAlert,
   IconSparkles,
   IconX,
 } from "@tabler/icons-react";
@@ -227,16 +228,7 @@ function RouteComponent() {
   }, [document, markReferences]);
 
   if (docLoading || pagesLoading) {
-    return (
-      <Center h="100vh">
-        <Stack align="center" gap="md">
-          <Loader size="lg" color="blue" />
-          <Text size="sm" c="dimmed" fw={500}>
-            Loading document…
-          </Text>
-        </Stack>
-      </Center>
-    );
+    return <FileDocumentSkeleton />;
   }
 
   if (!document) {

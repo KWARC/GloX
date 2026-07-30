@@ -81,8 +81,8 @@ export type DefinitionIdentityInput = Pick<
 
 export const findDefinitionsByIdentity = createServerFn({ method: "POST" })
   .inputValidator((data: DefinitionIdentityInput) => data)
-  .handler(async ({ data }) =>
-    prisma.definition.findMany({
+  .handler(async ({ data }) => {
+    const definitions = await prisma.definition.findMany({
       where: {
         futureRepo: data.futureRepo.trim(),
         filePath: data.filePath.trim(),
@@ -97,8 +97,13 @@ export const findDefinitionsByIdentity = createServerFn({ method: "POST" })
         kind: true,
       },
       orderBy: { createdAt: "asc" },
-    }),
-  );
+    });
+
+    return definitions.map((definition) => ({
+      ...definition,
+      statement: assertFtmlStatement(definition.statement),
+    }));
+  });
 
 export const getDefinitionDeletionImpact = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)

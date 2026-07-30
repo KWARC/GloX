@@ -1,4 +1,5 @@
 import { Duplicate } from "@/components/Duplicate";
+import { DeduplicationPageSkeleton } from "@/components/PageSkeletons";
 import { getAllSymbols } from "@/serverFns/symbol.server";
 import { Box, Stack, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
@@ -15,7 +16,7 @@ function DeduplicationPage() {
     queryFn: () => getAllSymbols(),
   });
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <DeduplicationPageSkeleton />;
 
   const grouped: Record<string, Symbol[]> = {};
 

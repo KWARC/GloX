@@ -1,4 +1,5 @@
 import { CurationSection } from "@/components/CurationSection";
+import { CurationPageSkeleton } from "@/components/PageSkeletons";
 import { adminUser } from "@/server/auth/isAdmin.server";
 import { Box, Stack } from "@mantine/core";
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -29,6 +30,9 @@ export const Route = createFileRoute("/curation")({
 
     return null;
   },
+  pendingComponent: CurationPageSkeleton,
+  pendingMs: 0,
+  pendingMinMs: 300,
   component: RouteComponent,
 });
 
