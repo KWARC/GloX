@@ -1,4 +1,8 @@
+import { ProfilePageSkeleton } from "@/components/PageSkeletons";
+import { AccountInformationCard } from "@/components/profile/AccountInformationCard";
+import { PersonalInfoCard } from "@/components/profile/PersonalInfoCard";
 import { RoleChangeConfirmationModal } from "@/components/profile/RoleChangeConfirmationModal";
+import { UserManagementCard } from "@/components/profile/UserManagementCard";
 import { currentUser } from "@/server/auth/currentUser";
 import {
   listAdminProfileUsers,
@@ -7,25 +11,24 @@ import {
   type UserRoleValue,
 } from "@/serverFns/adminUsers.server";
 import { updateProfile } from "@/serverFns/updateProfile.server";
-import {
-  Container,
-  Group,
-  Paper,
-  Stack,
-  Tabs,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Container, Group, Paper, Stack, Tabs, Title } from "@mantine/core";
 import { IconSettings, IconUsers } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { AccountInformationCard } from "@/components/profile/AccountInformationCard";
-import { PersonalInfoCard } from "@/components/profile/PersonalInfoCard";
-import { UserManagementCard } from "@/components/profile/UserManagementCard";
 import { getDisplayName } from "../../hooks/profileUtils";
 
 export const Route = createFileRoute("/profile/")({
+  loader: async () => {
+    const user = await currentUser();
+    if (!user?.loggedIn) {
+      throw redirect({ to: "/login", search: { target: "/profile" } });
+    }
+    return null;
+  },
+  pendingComponent: ProfilePageSkeleton,
+  pendingMs: 0,
+  pendingMinMs: 300,
   component: RouteComponent,
 });
 
@@ -52,16 +55,7 @@ function RouteComponent() {
     nextRole: UserRoleValue;
   } | null>(null);
 
-  if (!isLoading && !userData?.loggedIn) {
-    navigate({ to: "/login", search: { target: "/profile" } });
-    return null;
-  }
-
   const user = userData?.user;
-  if (!user) {
-    return null;
-  }
-
   const isAdmin = user?.role === "ADMIN";
 
   const {
@@ -79,6 +73,19 @@ function RouteComponent() {
       mutationFn: ({ userId, role }: { userId: string; role: UserRoleValue }) =>
         updateAdminUserRole({ data: { userId, role } }),
     });
+
+  if (isLoading) {
+    return <ProfilePageSkeleton />;
+  }
+
+  if (!isLoading && !userData?.loggedIn) {
+    navigate({ to: "/login", search: { target: "/profile" } });
+    return null;
+  }
+
+  if (!user) {
+    return <ProfilePageSkeleton />;
+  }
 
   const handleEditClick = () => {
     setFirstName(user?.firstName || "");
@@ -202,18 +209,6 @@ function RouteComponent() {
     setError(result.error || "Failed to update user role");
     setRoleConfirmTarget(null);
   };
-
-  if (isLoading) {
-    return (
-      <Container size="sm" mt="xl">
-        <Paper shadow="sm" p="xl" withBorder>
-          <Stack align="center">
-            <Text>Loading...</Text>
-          </Stack>
-        </Paper>
-      </Container>
-    );
-  }
 
   return (
     <Container size={isAdmin ? "lg" : "sm"} mt="xl">

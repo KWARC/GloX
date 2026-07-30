@@ -1,6 +1,8 @@
-import { MyDocument, myDocumentsQuery } from "@/queries/document";
-import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
 import { DocumentLocationDialog } from "@/components/DocumentLocationDialog";
+import { FileDocumentSkeleton } from "@/components/files/FileDocumentSkeleton";
+import { DocumentsTableSkeleton } from "@/components/PageSkeletons";
+import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
+import { MyDocument, myDocumentsQuery } from "@/queries/document";
 import { currentUser } from "@/server/auth/currentUser";
 import {
   checkDocumentDefinitions,
@@ -9,9 +11,9 @@ import {
 import {
   ActionIcon,
   Badge,
+  Box,
   Button,
   Group,
-  Loader,
   Modal,
   Select,
   Stack,
@@ -85,6 +87,10 @@ export function DocumentsTable({
   const [defCount, setDefCount] = useState(0);
   const [markReferenceCount, setMarkReferenceCount] = useState(0);
   const [moveDocument, setMoveDocument] = useState<MyDocument | null>(null);
+  const [openingDocument, setOpeningDocument] = useState<{
+    id: string;
+    filename: string;
+  } | null>(null);
 
   const isAdmin = auth?.user?.role === "ADMIN";
 
@@ -134,16 +140,35 @@ export function DocumentsTable({
     },
   });
 
+  const openDocument = (doc: MyDocument) => {
+    if (openingDocument) return;
+
+    setOpeningDocument({ id: doc.id, filename: doc.filename });
+    navigate({
+      to: "/files/$documentId",
+      params: { documentId: doc.id },
+    }).catch(() => setOpeningDocument(null));
+  };
+
   if (isLoading) {
-    return (
-      <Stack align="center" p="xl">
-        <Loader />
-      </Stack>
-    );
+    return <DocumentsTableSkeleton />;
   }
 
   return (
     <>
+      {openingDocument && (
+        <Box
+          pos="absolute"
+          inset={0}
+          style={{
+            zIndex: 100,
+            background: "white",
+          }}
+        >
+          <FileDocumentSkeleton filename={openingDocument.filename} />
+        </Box>
+      )}
+
       <Stack gap="md">
         <Group justify="space-between" align="flex-end">
           <Title order={2}>{title}</Title>
@@ -229,12 +254,8 @@ export function DocumentsTable({
                   <Table.Tr
                     key={doc.id}
                     style={{ cursor: "pointer" }}
-                    onClick={() =>
-                      navigate({
-                        to: "/files/$documentId",
-                        params: { documentId: doc.id },
-                      })
-                    }
+                    aria-busy={openingDocument?.id === doc.id}
+                    onClick={() => openDocument(doc)}
                   >
                     <Table.Td>
                       <Stack gap={2}>
@@ -287,15 +308,15 @@ export function DocumentsTable({
                       <Text size="sm">{formatDate(doc.createdAt)}</Text>
                     </Table.Td>
 
-                    <Table.Td ta="center">
-                      <Group gap="xs" justify="center">
+                    <Table.Td ta="center" style={{ whiteSpace: "nowrap" }}>
+                      <Group gap="xs" justify="center" wrap="nowrap">
                         <UploadAttributionInfo
                           attributions={[
                             { label: "Uploaded by", user: doc.user },
                           ]}
                         />
 
-                        <Tooltip label="Move PDF location" withArrow>
+                        <Tooltip label="Move File location" withArrow>
                           <ActionIcon
                             variant="subtle"
                             color="blue"
@@ -318,7 +339,10 @@ export function DocumentsTable({
                             event.stopPropagation();
 
                             const res = await checkDefs(doc.id);
-                            setTargetDoc({ id: doc.id, filename: doc.filename });
+                            setTargetDoc({
+                              id: doc.id,
+                              filename: doc.filename,
+                            });
                             setDefCount(res.definitionCount);
                             setMarkReferenceCount(res.markReferenceCount);
                             setConfirmOpen(true);

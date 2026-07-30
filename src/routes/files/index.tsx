@@ -1,4 +1,5 @@
 import { DocumentsTable } from "@/components/DocumentsTable";
+import { DocumentsTableSkeleton } from "@/components/PageSkeletons";
 import { currentUser } from "@/server/auth/currentUser";
 import { Stack } from "@mantine/core";
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -11,6 +12,13 @@ export const Route = createFileRoute("/files/")({
     }
     return null;
   },
+  pendingComponent: () => (
+    <Stack p="md">
+      <DocumentsTableSkeleton />
+    </Stack>
+  ),
+  pendingMs: 0,
+  pendingMinMs: 300,
   component: RouteComponent,
 });
 

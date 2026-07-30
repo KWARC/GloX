@@ -1,4 +1,5 @@
 import { CurationMarkReferenceBox } from "@/components/CurationMarkReferenceBox";
+import { CurationPageSkeleton } from "@/components/PageSkeletons";
 import { StexCuration } from "@/components/stex-curation/StexCuration";
 import {
   DefinitionStatus,
@@ -13,7 +14,6 @@ import {
   Box,
   Divider,
   Group,
-  Loader,
   Select,
   Stack,
   Table,
@@ -45,25 +45,32 @@ export function CurationSection({
         },
       }),
   });
-  const { data: markReferenceFiles = [] } = useQuery({
-    queryKey: ["curation-mark-reference-files", moduleDescriptionVisibility],
-    queryFn: () =>
-      listMarkReferenceFiles({
-        data: {
-          moduleDescriptionVisibility,
-        },
-      }),
-  });
-  const { mutateAsync: removeMarkReference, variables: deletingMarkReferenceId } =
-    useMutation({
-      mutationFn: (referenceId: string) =>
-        deleteMarkReference({ data: { id: referenceId } }),
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: ["curation-mark-reference-files"],
-        });
-      },
+  const { data: markReferenceFiles = [], isLoading: markReferencesLoading } =
+    useQuery({
+      queryKey: ["curation-mark-reference-files", moduleDescriptionVisibility],
+      queryFn: () =>
+        listMarkReferenceFiles({
+          data: {
+            moduleDescriptionVisibility,
+          },
+        }),
     });
+  const {
+    mutateAsync: removeMarkReference,
+    variables: deletingMarkReferenceId,
+  } = useMutation({
+    mutationFn: (referenceId: string) =>
+      deleteMarkReference({ data: { id: referenceId } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["curation-mark-reference-files"],
+      });
+    },
+  });
+
+  if (isLoading || markReferencesLoading) {
+    return <CurationPageSkeleton />;
+  }
 
   return (
     <Stack w="100%" gap="md">
@@ -79,7 +86,6 @@ export function CurationSection({
           </Stack>
 
           <Group gap="sm" align="flex-end">
-            {isLoading && <Loader size="sm" color="blue" />}
             <Select
               label="Filter by Content status"
               placeholder="All statuses"
@@ -151,7 +157,9 @@ export function CurationSection({
       <CurationMarkReferenceBox
         files={markReferenceFiles}
         deletingId={deletingMarkReferenceId ?? null}
-        onDelete={removeMarkReference}
+        onDelete={async (referenceId) => {
+          await removeMarkReference(referenceId);
+        }}
       />
 
       {fileGroups.length > 0 && (

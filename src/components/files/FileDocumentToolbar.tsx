@@ -31,10 +31,19 @@ export function FileDocumentToolbar({
       <IconFileText
         size={isMobile ? 18 : 16}
         color="var(--mantine-color-blue-6)"
+        style={{ flexShrink: 0 }}
       />
-      <Text size={isMobile ? "md" : "sm"} fw={600} c="gray.7" style={{ flexShrink: 0 }}>
-        {document.filename}
-      </Text>
+      <Tooltip label={document.filename} openDelay={500} withArrow>
+        <Text
+          size={isMobile ? "md" : "sm"}
+          fw={600}
+          c="gray.7"
+          truncate
+          style={{ flex: "1 1 auto", minWidth: 0 }}
+        >
+          {document.filename}
+        </Text>
+      </Tooltip>
       <Badge
         size={isMobile ? "sm" : "xs"}
         variant="light"
@@ -43,15 +52,19 @@ export function FileDocumentToolbar({
       >
         {pages.length} {pages.length === 1 ? "page" : "pages"}
       </Badge>
-      <Box style={{ flex: 1 }} />
 
-      <Tooltip label="Move PDF location" withArrow>
-        <ActionIcon variant="subtle" color="blue" onClick={onMoveLocation}>
+      <Tooltip label="Move File location" withArrow>
+        <ActionIcon
+          variant="subtle"
+          color="blue"
+          onClick={onMoveLocation}
+          style={{ flexShrink: 0 }}
+        >
           <IconFolderSymlink size={16} />
         </ActionIcon>
       </Tooltip>
 
-      {llmButtons}
+      <Box style={{ display: "flex", flexShrink: 0 }}>{llmButtons}</Box>
     </Group>
   );
 }

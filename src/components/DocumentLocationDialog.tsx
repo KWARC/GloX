@@ -79,7 +79,7 @@ export function DocumentLocationDialog({
   }
 
   return (
-    <Modal opened={opened} onClose={reset} title="Move PDF location" centered>
+    <Modal opened={opened} onClose={reset} title="Move File location" centered>
       <Stack>
         <Text size="sm" c="dimmed">Move this PDF and all extracted content to a new repository location. Content filenames stay unchanged.</Text>
         <TextInput label="Future Repo" value={futureRepo} onChange={(event) => { setFutureRepo(event.currentTarget.value); setPreview(null); }} />
