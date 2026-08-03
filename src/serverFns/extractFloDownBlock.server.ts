@@ -8,12 +8,12 @@ import {
 import { ExtractedItem } from "@/server/text-selection";
 import {
   DefiniendumNode,
-  FloDownContent,
   FloDownStatement,
   assertFloDownStatement,
   isDefiniendumNode,
   normalizeToRoot,
 } from "@/types/floDown.types";
+import { getInlineContent, walkInlines } from "@/server/ftml/statementContent";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import { ExtractBlockType, buildStatementFromText } from "@/types/blockType";
 import {
@@ -25,24 +25,18 @@ import { FileIdentity } from "./latex.server";
 function extractDeclaredSymbols(statement: FloDownStatement) {
   const symbols = new Map<string, string | null>();
   const root = normalizeToRoot(statement);
-  const stack: FloDownContent[] = [...root.content];
 
-  while (stack.length > 0) {
-    const node = stack.pop();
-    if (!node || typeof node === "string") continue;
+  for (const block of root.content) {
+    walkInlines(getInlineContent(block), (item) => {
+      if (!isDefiniendumNode(item) || item.symdecl !== true) return;
 
-    if (isDefiniendumNode(node) && node.symdecl === true) {
-      const symbolName = node.uri.trim();
-      if (symbolName) {
-        const alias = extractDefiniendumAlias(node, symbolName);
-        const existing = symbols.get(symbolName);
-        symbols.set(symbolName, existing ?? alias);
-      }
-    }
+      const symbolName = item.uri.trim();
+      if (!symbolName) return;
 
-    if (node.content?.length) {
-      stack.push(...node.content);
-    }
+      const alias = extractDefiniendumAlias(item, symbolName);
+      const existing = symbols.get(symbolName);
+      symbols.set(symbolName, existing ?? alias);
+    });
   }
 
   return Array.from(symbols.entries()).map(([symbolName, alias]) => ({

@@ -1,24 +1,22 @@
 /**
- * FTML AST types for GloX `FloDownBlock.statement` JSON.
+ * Types for `FloDownBlock.statement` JSON and in-memory curation.
  *
- * Canonical block/inline shapes come from `public/flodown/flodown.d.ts`.
- * This file re-exports those types and adds the GloX storage/draft deltas:
- * - `RootNode` / array envelope on `FloDownStatement`
- * - `FloDownContent` looseness during curation
- * - `DefinitionNode` without persisted `for_symbols`
- * - `DefiniendumNode.symdecl` (draft/UI; stripped before persist)
+ * Persistence: `PersistedBlock` + `declaredSymbols` column (FloDown shapes only).
+ * Draft-only: `DefiniendumNode.symdecl`, `RootNode` — stripped before persist.
+ * Export: `toExportDefinition` fills `for_symbols` from `declaredSymbols`.
+ *
+ * Canonical shapes: `public/flodown/flodown.d.ts`.
  */
 /// <reference path="../../public/flodown/flodown.d.ts" />
 
-// ---------------------------------------------------------------------------
-// FloDown canonical types (internal building blocks)
-// ---------------------------------------------------------------------------
-
 type SymbolUri = wasm_bindgen.SymbolUri;
-type FloDownInline = wasm_bindgen.FloDownInline;
-type FloDownInlineInDefinition = wasm_bindgen.FloDownInlineInDefinition;
 type FloDownBlock = wasm_bindgen.FloDownBlock;
-type HeadingLevel = wasm_bindgen.HeadingLevel;
+type FloDownBlockInDefinition = wasm_bindgen.FloDownBlockInDefinition;
+
+export type FloDownInline = wasm_bindgen.FloDownInline;
+export type FloDownInlineInDefinition = wasm_bindgen.FloDownInlineInDefinition;
+export type Inline = wasm_bindgen.Inline;
+export type InlineInDefinition = wasm_bindgen.InlineInDefinition;
 
 export type SymrefNode = Extract<FloDownInline, { type: "symref" }>;
 
@@ -27,94 +25,92 @@ type FloDownDefiniendum = Extract<
   { type: "definiendum" }
 >;
 
-/**
- * GloX extension of FloDown `definiendum`.
- * `symdecl: true` declares a local symbol; `false` is reference-only.
- */
+/** Draft/UI only — `symdecl` stripped before persist. Not part of `PersistedBlock`. */
 export type DefiniendumNode = FloDownDefiniendum & { symdecl: boolean };
 
-// ---------------------------------------------------------------------------
-// GloX deltas on FloDown blocks
-// ---------------------------------------------------------------------------
-
-/** Mixed inline / block content during curation transforms. */
-export type FloDownContent = string | FloDownNode;
-
-export type ParagraphNode = Omit<
-  Extract<FloDownBlock, { type: "paragraph" }>,
-  "content"
-> & { content: FloDownContent[] };
-
-type FloDownDefinition = Extract<FloDownBlock, { type: "definition" }>;
-
-/** `for_symbols` is derived at export; not persisted in GloX. */
-export type DefinitionNode = Omit<FloDownDefinition, "for_symbols" | "content"> & {
-  for_symbols?: SymbolUri[];
-  content: FloDownContent[];
-};
-
-/** FloDown blocks with GloX definition/paragraph looseness. */
-export type FloDownStatementBlock =
-  | Exclude<FloDownBlock, { type: "definition" } | { type: "paragraph" }>
-  | DefinitionNode
-  | ParagraphNode;
+export type DefiniensNode = Extract<FloDownInlineInDefinition, { type: "definiens" }>;
 
 /**
- * Structural superset for AST tree walkers.
- * Prefer concrete node types when constructing AST nodes.
+ * Union for inline helpers (`mapInlines`, `walkInlines`, …). May include draft
+ * `DefiniendumNode` during editing; persisted blocks use `Inline` / `InlineInDefinition`.
  */
-export interface FloDownNode {
-  type: string;
-  content?: FloDownContent[];
-  uri?: SymbolUri;
-  for_symbols?: SymbolUri[];
-  symdecl?: boolean;
-  text?: string;
-  language?: string;
-  level?: HeadingLevel;
-  lines?: FloDownStatementBlock[][];
-  url?: string;
-}
+export type FloDownContent = Inline | InlineInDefinition | DefiniendumNode;
 
-/** GloX-only: combines multiple blocks when merging FloDown blocks. */
+export type ParagraphNode = Extract<FloDownBlock, { type: "paragraph" }>;
+export type DefinitionInnerParagraph = Extract<
+  FloDownBlockInDefinition,
+  { type: "paragraph" }
+>;
+export type DefinitionNode = Extract<FloDownBlock, { type: "definition" }>;
+
+/** One curated block per DB row. */
+export type PersistedBlock = ParagraphNode | DefinitionNode;
+
+/** Block-level nodes in a statement tree. */
+export type FloDownAstNode =
+  | PersistedBlock
+  | RootNode
+  | DefinitionInnerParagraph
+  | FloDownInline
+  | FloDownInlineInDefinition;
+
+/** In-memory envelope when merging or editing multiple blocks. */
 export interface RootNode {
   type: "root";
-  content: FloDownNode[];
+  content: PersistedBlock[];
 }
 
-/**
- * JSON persisted on `FloDownBlock.statement`.
- * Usually one block; may be wrapped in `root` or an array after merge.
- */
-export type FloDownStatement = RootNode | FloDownNode | FloDownNode[];
+export type FloDownStatement = PersistedBlock | RootNode | PersistedBlock[];
 
-// ---------------------------------------------------------------------------
-// Type guards
-// ---------------------------------------------------------------------------
-
-export function isNode(value: FloDownContent): value is FloDownNode {
+export function isInlineNode(
+  value: FloDownContent,
+): value is Exclude<FloDownContent, string> {
   return typeof value !== "string";
 }
 
-export function isRootNode(node: FloDownNode): node is RootNode {
+/** @deprecated Use isInlineNode for content items or isPersistedBlock for blocks. */
+export const isNode = isInlineNode;
+
+export function isPersistedBlock(
+  node: FloDownAstNode | FloDownStatement,
+): node is PersistedBlock {
+  return (
+    typeof node === "object" &&
+    node !== null &&
+    "type" in node &&
+    (node.type === "paragraph" || node.type === "definition")
+  );
+}
+
+export function hasInlineChildren(
+  item: FloDownContent,
+): item is Exclude<FloDownContent, string> & { content: FloDownContent[] } {
+  return typeof item !== "string" && "content" in item && Array.isArray(item.content);
+}
+
+export function isRootNode(node: FloDownAstNode): node is RootNode {
   return node.type === "root";
 }
 
-export function isDefinitionNode(node: FloDownNode): node is DefinitionNode {
+export function isDefinitionNode(node: FloDownAstNode): node is DefinitionNode {
   return node.type === "definition";
 }
 
-export function isParagraphNode(node: FloDownNode): node is ParagraphNode {
+export function isParagraphNode(
+  node: FloDownAstNode,
+): node is ParagraphNode | DefinitionInnerParagraph {
   return node.type === "paragraph";
 }
 
-export function isDefiniendumNode(node: FloDownNode): node is DefiniendumNode {
-  return node.type === "definiendum";
+export function isDefiniendumNode(
+  node: FloDownContent,
+): node is DefiniendumNode {
+  return typeof node !== "string" && node.type === "definiendum";
 }
 
-// ---------------------------------------------------------------------------
-// Normalization
-// ---------------------------------------------------------------------------
+export function isSymrefNode(node: FloDownContent): node is SymrefNode {
+  return typeof node !== "string" && node.type === "symref";
+}
 
 export function normalizeToRoot(ast: FloDownStatement): RootNode {
   if (Array.isArray(ast)) {
@@ -122,7 +118,7 @@ export function normalizeToRoot(ast: FloDownStatement): RootNode {
   }
 
   if (ast.type === "root") {
-    return ast as RootNode;
+    return ast;
   }
 
   return { type: "root", content: [ast] };
@@ -140,4 +136,14 @@ export function assertFloDownStatement(value: unknown): FloDownStatement {
     throw new Error("Invalid FloDown statement: not an object");
   }
   return value as FloDownStatement;
+}
+
+export function toExportDefinition(
+  definition: DefinitionNode,
+  forSymbols: SymbolUri[],
+): DefinitionNode {
+  return {
+    ...definition,
+    for_symbols: forSymbols,
+  };
 }

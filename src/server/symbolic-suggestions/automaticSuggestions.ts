@@ -4,7 +4,8 @@ import { normalizeToRoot } from "@/types/floDown.types";
 import { Catalog, Verbalization } from "../symbolic-catalog/catalogSearch";
 import { buildSuggestionCatalog } from "./catalogBuilders";
 import { candidateKey, toCandidate } from "./candidates";
-import { buildContext, extractPlainText, resolveConflicts, walkTextNodes } from "./floDownTraversal";
+import { walkEditableTextNodes } from "@/server/ftml/statementContent";
+import { buildContext, extractPlainText, resolveConflicts } from "./floDownTraversal";
 import type {
   CatalogEntry,
   SuggestedReference,
@@ -69,7 +70,7 @@ export function suggestRefsForFloDownBlock(
   const candidateSymRefs: Record<string, UnifiedSymbolicReference> = {};
   const suggestionCatalog = buildSuggestionCatalog(floDownBlock, catalog);
 
-  walkTextNodes(root, (textNode, plainOffset, nodePath) => {
+  walkEditableTextNodes(root, (textNode, plainOffset, nodePath) => {
     for (const match of findAllCatalogMatches(
       suggestionCatalog,
       textNode,

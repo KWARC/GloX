@@ -8,12 +8,12 @@ import {
 import { findDefiniendum } from "@/server/parseUri";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
+import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import {
   assertFloDownStatement,
+  DefiniendumNode,
   FloDownStatement,
-  isDefiniendumNode,
   isDefinitionNode,
-  isParagraphNode,
   normalizeToRoot,
   RootNode,
   unwrapRoot,
@@ -94,6 +94,7 @@ function floDownBlockMatchesDeclaredSymbol(
     fileName: string;
     language: string;
     statement: unknown;
+    declaredSymbols?: string[];
   },
   symbol: {
     symbolName: string;
@@ -112,36 +113,12 @@ function floDownBlockMatchesDeclaredSymbol(
     return false;
   }
 
-  const root = normalizeToRoot(assertFloDownStatement(floDownBlock.statement));
+  const declared = resolveDeclaredSymbolNames(
+    assertFloDownStatement(floDownBlock.statement),
+    floDownBlock.declaredSymbols,
+  );
 
-  for (const block of root.content) {
-    if (!isDefinitionNode(block)) continue;
-
-    if (
-      Array.isArray(block.for_symbols) &&
-      block.for_symbols.includes(symbol.symbolName)
-    ) {
-      return true;
-    }
-
-    const stack = [...(block.content ?? [])];
-    while (stack.length > 0) {
-      const node = stack.pop();
-      if (!node || typeof node === "string") continue;
-
-      if (isDefiniendumNode(node) && node.symdecl === true) {
-        if (node.uri === symbol.symbolName) {
-          return true;
-        }
-      }
-
-      if (node.content?.length) {
-        stack.push(...node.content);
-      }
-    }
-  }
-
-  return false;
+  return declared.includes(symbol.symbolName);
 }
 
 function addAssociatedFloDownBlock(
@@ -168,6 +145,7 @@ async function buildSymbolAssociations() {
         id: true,
         documentId: true,
         statement: true,
+        declaredSymbols: true,
         pageNumber: true,
         futureRepo: true,
         filePath: true,
@@ -366,11 +344,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
 
       const firstContent = definitionNode.content?.[0];
 
-      if (
-        !firstContent ||
-        typeof firstContent === "string" ||
-        !isParagraphNode(firstContent)
-      ) {
+      if (!firstContent || firstContent.type !== "paragraph") {
         throw new Error("Expected paragraph node inside definition");
       }
 
@@ -392,7 +366,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         );
       }
 
-      const definiendumNode = {
+      const definiendumNode: DefiniendumNode = {
         type: "definiendum",
         uri,
         content: [alias || selectedText],
@@ -484,8 +458,11 @@ export const getFloDownBlockBySymbol = createServerFn({ method: "POST" })
       for (const node of root.content) {
         if (!isDefinitionNode(node)) continue;
 
-        if (node.content && findDefiniendum(node.content, symbolName)) {
-          return def;
+        for (const inner of node.content) {
+          if (inner.type !== "paragraph") continue;
+          if (findDefiniendum(inner.content, symbolName)) {
+            return def;
+          }
         }
       }
     }

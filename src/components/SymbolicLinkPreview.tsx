@@ -25,7 +25,7 @@ export function SymbolicLinkPreview({
     }
   })();
 
-  const statement: FloDownStatement = isHttp(uri)
+  const statement: FloDownStatement = (isHttp(uri)
     ? {
         type: "paragraph",
         content: [
@@ -51,7 +51,7 @@ export function SymbolicLinkPreview({
             ],
           },
         ],
-      };
+      }) as FloDownStatement;
 
   return (
     <Box

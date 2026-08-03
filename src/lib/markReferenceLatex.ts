@@ -2,9 +2,11 @@ import { initFloDown } from "@/lib/flodownClient";
 import { parseUri } from "@/server/parseUri";
 import { isHttp } from "@/server/ftml/generateStexFromFtml";
 import type {
+  DefinitionNode,
   FloDownContent,
-  FloDownNode,
+  Inline,
   ParagraphNode,
+  PersistedBlock,
   SymrefNode,
 } from "@/types/floDown.types";
 
@@ -22,7 +24,7 @@ type MarkReferenceLatexIdentity = {
 };
 
 type FloDownBlock = {
-  addElement: (node: FloDownNode) => void;
+  addElement: (node: PersistedBlock | DefinitionNode | ParagraphNode) => void;
   getStex(): string;
   clear: () => void;
 };
@@ -70,7 +72,7 @@ function buildPageParagraph(
   pageNumber: number,
   references: MarkReferenceLatexItem[],
 ): ParagraphNode {
-  const content: FloDownContent[] = [
+  const content: Inline[] = [
     `Page ${pageNumber} of this file contains the following references: `,
   ];
 
@@ -128,7 +130,7 @@ export async function buildMarkReferenceLatex(
       );
       fdVisible.addElement({
         ...paragraph,
-        content: rewriteContent(paragraph.content, identity),
+        content: rewriteContent(paragraph.content, identity) as Inline[],
       });
     }
 

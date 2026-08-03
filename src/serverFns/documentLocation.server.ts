@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
+import { getInlineContent, walkInlines } from "@/server/ftml/statementContent";
 import {
   assertFloDownStatement,
   isDefiniendumNode,
@@ -18,17 +19,16 @@ type MovingSymbol = {
 
 function declaredSymbols(statement: unknown) {
   const symbols = new Set<string>();
-  const stack = [...normalizeToRoot(assertFloDownStatement(statement)).content];
-  while (stack.length) {
-    const node = stack.pop();
-    if (!node || typeof node === "string") continue;
-    if (isDefiniendumNode(node) && node.symdecl && node.uri) symbols.add(node.uri);
-    if (node.content?.length) {
-      for (const child of node.content) {
-        if (typeof child !== "string") stack.push(child);
+  const root = normalizeToRoot(assertFloDownStatement(statement));
+
+  for (const block of root.content) {
+    walkInlines(getInlineContent(block), (item) => {
+      if (isDefiniendumNode(item) && item.symdecl && item.uri) {
+        symbols.add(item.uri);
       }
-    }
+    });
   }
+
   return symbols;
 }
 

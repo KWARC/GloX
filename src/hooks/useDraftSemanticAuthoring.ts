@@ -4,13 +4,14 @@ import {
   pathTraversesSemanticNode,
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
+import { getInlineContent } from "@/server/ftml/statementContent";
 import { normalizeSymRef } from "@/server/parseUri";
 import {
   DefiniendumNode,
   DefinitionNode,
   FloDownContent,
-  FloDownNode,
   FloDownStatement,
+  PersistedBlock,
   RootNode,
   SymrefNode,
   normalizeToRoot,
@@ -33,6 +34,7 @@ export type DraftSelectionPopup = {
 function buildPlainDefinitionStatement(text: string): DefinitionNode {
   return {
     type: "definition",
+    for_symbols: [],
     content: [
       {
         type: "paragraph",
@@ -81,25 +83,8 @@ function findLocationByGlobalOffset(
 ) {
   let cursor = 0;
 
-  for (const [paragraphIndex, node] of root.content.entries()) {
-    let paragraphContent: FloDownContent[] = [];
-
-    if (node.type === "paragraph") {
-      paragraphContent = node.content ?? [];
-    } else if (node.type === "definition") {
-      const firstChild = node.content?.[0];
-      if (
-        firstChild &&
-        typeof firstChild !== "string" &&
-        firstChild.type === "paragraph"
-      ) {
-        paragraphContent = firstChild.content ?? [];
-      } else {
-        continue;
-      }
-    } else {
-      continue;
-    }
+  for (const [paragraphIndex, block] of root.content.entries()) {
+    const paragraphContent = getInlineContent(block);
 
     for (const [contentIndex, item] of paragraphContent.entries()) {
       if (typeof item === "string") {
@@ -251,10 +236,15 @@ export function statementHasDeclaredSymbol(
   return declaredSymbols.includes(symbolName.trim());
 }
 
-function containsSemanticNodes(node: FloDownContent | FloDownNode): boolean {
+function containsSemanticNodes(node: FloDownContent | PersistedBlock): boolean {
   if (typeof node === "string") return false;
   if (node.type === "definiendum" || node.type === "symref") return true;
-  return (node.content ?? []).some(containsSemanticNodes);
+  if (node.type === "paragraph" || node.type === "definition") {
+    const content =
+      node.type === "paragraph" ? node.content : getInlineContent(node);
+    return content.some(containsSemanticNodes);
+  }
+  return ("content" in node ? (node.content ?? []) : []).some(containsSemanticNodes);
 }
 
 export function useDraftSemanticAuthoring(

@@ -3,7 +3,8 @@ import { normalizeToRoot } from "@/types/floDown.types";
 import { Catalog, Verbalization } from "../symbolic-catalog/catalogSearch";
 import type { StaticCatalogDef } from "../symbolic-catalog/loadCatalog";
 import { isEligibleForAutomaticSuggestion } from "./eligibility";
-import { getStringContent, isDeclaredDefiniendum, walkNodes } from "./floDownTraversal";
+import { getStringContent, isDeclaredDefiniendum } from "./floDownTraversal";
+import { walkInlines, getInlineContent } from "@/server/ftml/statementContent";
 import type { CatalogEntry } from "./types";
 
 export function buildSuggestionCatalog(
@@ -36,31 +37,35 @@ export function buildFloDownBlockCatalog(
     const root = normalizeToRoot(extract.statement);
     const entries: CatalogEntry[] = [];
 
-    walkNodes(root, (node) => {
-      if (!isDeclaredDefiniendum(node)) return;
+    for (const block of root.content) {
+      walkInlines(getInlineContent(block), (node) => {
+        if (!isDeclaredDefiniendum(node)) return;
 
-      const name = getStringContent(node.content).trim() || node.uri;
-      if (!name) return;
+        const name = getStringContent(
+          typeof node === "string" ? [node] : (node.content ?? []),
+        ).trim() || node.uri;
+        if (!name) return;
 
-      entries.push({
-        id: node.uri,
-        name,
-        canonicalForm: name.toLowerCase(),
-        aliases: node.uri === name ? [] : [node.uri],
-        symbolicUri: node.uri,
-        language: extract.language,
-        sourceFloDownBlockId: extract.id,
-        statement: extract.statement,
-        symRef: {
-          source: "DB",
-          symbolName: node.uri,
-          futureRepo: extract.futureRepo,
-          filePath: extract.filePath,
-          fileName: extract.fileName,
+        entries.push({
+          id: node.uri,
+          name,
+          canonicalForm: name.toLowerCase(),
+          aliases: node.uri === name ? [] : [node.uri],
+          symbolicUri: node.uri,
           language: extract.language,
-        },
+          sourceFloDownBlockId: extract.id,
+          statement: extract.statement,
+          symRef: {
+            source: "DB",
+            symbolName: node.uri,
+            futureRepo: extract.futureRepo,
+            filePath: extract.filePath,
+            fileName: extract.fileName,
+            language: extract.language,
+          },
+        });
       });
-    });
+    }
 
     return entries;
   });

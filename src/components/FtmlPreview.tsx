@@ -1,21 +1,15 @@
 import { initFloDown } from "@/lib/flodownClient";
-import { buildForSymbols } from "@/server/ftml/declaredSymbols";
+import { toExportBlock } from "@/server/ftml/generateStexFromFtml";
 import {
   collectExternalSymbols,
-  isHttp,
-} from "@/server/ftml/generateStexFromFtml";
+} from "@/server/ftml/statementContent";
 import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
-  DefiniendumNode,
   DefinitionNode,
-  FloDownContent,
-  FloDownNode,
   FloDownStatement,
-  isDefiniendumNode,
   isDefinitionNode,
   normalizeToRoot,
-  ParagraphNode,
-  SymrefNode,
+  PersistedBlock
 } from "@/types/floDown.types";
 import { useEffect, useRef } from "react";
 
@@ -25,9 +19,9 @@ interface FtmlPreviewProps {
   declaredSymbols?: string[];
 }
 
-type FloDownBlock = {
+type FloDownWasmBlock = {
   mountTo: (el: HTMLElement) => void;
-  addElement: (node: FloDownNode) => void;
+  addElement: (node: PersistedBlock | DefinitionNode) => void;
   addSymbolDeclaration: (name: string) => string;
   getStex(): string;
   getFtml(): string;
@@ -37,96 +31,8 @@ type FloDownBlock = {
 
 type FloDownLib = {
   setBackendUrl: (url: string) => void;
-  FloDown: { fromUri: (uri: string) => FloDownBlock };
+  FloDown: { fromUri: (uri: string) => FloDownWasmBlock };
 };
-
-function deepClone<T>(value: T): T {
-  return structuredClone(value);
-}
-
-function rewriteContentArray(
-  content: FloDownContent[],
-  uriMap: Map<string, string>,
-  docId: string,
-): FloDownContent[] {
-  return content.map((c) =>
-    typeof c === "string" ? c : rewriteNode(c, uriMap, docId),
-  );
-}
-
-function rewriteNode(
-  node: FloDownNode,
-  uriMap: Map<string, string>,
-  docId: string,
-  blockStatement?: FloDownStatement,
-): FloDownNode {
-  if (isDefinitionNode(node)) {
-    const def = node as DefinitionNode;
-    const statement = blockStatement ?? def;
-    return {
-      ...def,
-      for_symbols: buildForSymbols(statement, uriMap),
-      content: rewriteContentArray(def.content, uriMap, docId),
-    };
-  }
-
-  if (isDefiniendumNode(node)) {
-    const n = node as DefiniendumNode;
-
-    if (isHttp(n.uri)) {
-      return {
-        ...n,
-        content: rewriteContentArray(n.content ?? [], uriMap, docId),
-      };
-    }
-
-    const resolved = uriMap.get(n.uri);
-
-    if (resolved) {
-      return {
-        ...n,
-        uri: resolved,
-        content: rewriteContentArray(n.content ?? [], uriMap, docId),
-      };
-    }
-
-    return {
-      ...n,
-      uri: `http://temp-visible?a=temp&d=${docId}&l=en&s=${n.uri}`,
-      content: rewriteContentArray(n.content ?? [], uriMap, docId),
-    };
-  }
-
-  if (node.type === "symref") {
-    const n = node as SymrefNode;
-
-    if (isHttp(n.uri)) return n;
-    const resolved = uriMap.get(n.uri);
-
-    if (resolved) {
-      return {
-        ...n,
-        uri: resolved,
-        content: rewriteContentArray(n.content ?? [], uriMap, docId),
-      };
-    }
-
-    return {
-      ...n,
-      uri: `http://temp-visible?a=temp&d=${docId}&l=en&s=${n.uri}`,
-      content: rewriteContentArray(n.content ?? [], uriMap, docId),
-    };
-  }
-
-  if (node.content) {
-    return {
-      ...node,
-      content: rewriteContentArray(node.content, uriMap, docId),
-    };
-  }
-
-  return node;
-}
 
 export function FtmlPreview({
   ftmlAst,
@@ -135,8 +41,8 @@ export function FtmlPreview({
 }: FtmlPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
-  const fdHiddenRef = useRef<FloDownBlock | null>(null);
-  const fdVisibleRef = useRef<FloDownBlock | null>(null);
+  const fdHiddenRef = useRef<FloDownWasmBlock | null>(null);
+  const fdVisibleRef = useRef<FloDownWasmBlock | null>(null);
 
   useEffect(() => {
     const containerEl = containerRef.current;
@@ -174,21 +80,19 @@ export function FtmlPreview({
         if (disposed) return;
 
         if (block.type === "paragraph") {
-          fdVisible.addElement(deepClone(block as ParagraphNode));
+          fdVisible.addElement(block);
           continue;
         }
 
         if (!isDefinitionNode(block)) continue;
 
         const def = block as DefinitionNode;
-
-        const external = new Set<string>();
-        collectExternalSymbols(def, external, declaredOnThisRow);
+        const external = collectExternalSymbols(def, declaredOnThisRow);
 
         const deps =
-          external.size > 0
+          external.length > 0
             ? await getDefiningDefinitions({
-                data: { labels: Array.from(external) },
+                data: { labels: external },
               })
             : {};
 
@@ -206,13 +110,17 @@ export function FtmlPreview({
             }
           }
 
-          const rewrittenDep = rewriteNode(
-            deepClone(dep.definition),
-            hiddenUriMap,
-            docId,
-            dep.definition,
+          fdHidden.addElement(
+            toExportBlock(
+              dep.definition,
+              hiddenUriMap,
+              "temp",
+              "temp",
+              docId,
+              dep.definition,
+              dep.declaredSymbols,
+            ) as DefinitionNode,
           );
-          fdHidden.addElement(rewrittenDep);
         }
 
         for (const symbol of declaredOnThisRow) {
@@ -225,8 +133,17 @@ export function FtmlPreview({
           }
         }
 
-        const rewritten = rewriteNode(deepClone(def), visibleUriMap, docId, def);
-        fdVisible.addElement(rewritten);
+        fdVisible.addElement(
+          toExportBlock(
+            def,
+            visibleUriMap,
+            "temp",
+            "temp",
+            docId,
+            def,
+            Array.from(declaredOnThisRow),
+          ) as DefinitionNode,
+        );
       }
     })();
 

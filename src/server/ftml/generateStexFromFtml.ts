@@ -1,46 +1,24 @@
 import { initFloDown } from "@/lib/flodownClient";
 import { buildForSymbols } from "@/server/ftml/declaredSymbols";
+import {
+  collectExternalSymbols,
+  isHttp,
+  mapInlineContent,
+  mapInlines,
+} from "@/server/ftml/statementContent";
 import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefiniendumNode,
   DefinitionNode,
   FloDownContent,
-  FloDownNode,
   FloDownStatement,
   isDefiniendumNode,
   normalizeToRoot,
+  PersistedBlock,
+  toExportDefinition,
 } from "@/types/floDown.types";
 
-export function isHttp(uri: string) {
-  return uri.startsWith("http://") || uri.startsWith("https://");
-}
-
-export function collectExternalSymbols(
-  node: FloDownNode | FloDownContent,
-  acc: Set<string>,
-  declaredOnThisRow: ReadonlySet<string> = new Set(),
-): void {
-  if (typeof node === "string") return;
-
-  if (node.type === "symref" && node.uri && !isHttp(node.uri)) {
-    acc.add(node.uri);
-  }
-
-  if (
-    isDefiniendumNode(node) &&
-    node.uri &&
-    !isHttp(node.uri) &&
-    !declaredOnThisRow.has(node.uri)
-  ) {
-    acc.add(node.uri);
-  }
-
-  if (node.content) {
-    node.content.forEach((c) =>
-      collectExternalSymbols(c, acc, declaredOnThisRow),
-    );
-  }
-}
+export { isHttp };
 
 function isMathHubUri(uri: string): boolean {
   return (
@@ -49,123 +27,64 @@ function isMathHubUri(uri: string): boolean {
   );
 }
 
-function finalFTML(
-  node: FloDownNode,
-  uriMap: Map<string, string>,
-  futureRepo: string,
-  filePath: string,
-  fileName: string,
-  blockStatement: FloDownStatement,
-): FloDownNode {
-  if (node.type === "definition") {
-    const def = node as DefinitionNode;
-    return {
-      ...def,
-      for_symbols: buildForSymbols(blockStatement, uriMap),
-      content: rewrite(
-        node.content ?? [],
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-        blockStatement,
-      ),
-    };
-  }
-
-  if (node.type === "definiendum") {
-    const n = node as DefiniendumNode;
-
-    if (n.uri && !isHttp(n.uri) && !uriMap.has(n.uri)) {
-      return {
-        ...n,
-        uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${n.uri}`,
-        content: rewrite(
-          n.content ?? [],
-          uriMap,
-          futureRepo,
-          filePath,
-          fileName,
-          blockStatement,
-        ),
-      };
-    }
-
-    return {
-      ...n,
-      uri: uriMap.get(n.uri!) ?? n.uri,
-      content: rewrite(
-        n.content ?? [],
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-        blockStatement,
-      ),
-    };
-  }
-
-  if (node.type === "symref") {
-    const u = node.uri;
-
-    if (u && !isMathHubUri(u)) {
-      return {
-        ...node,
-        uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${u}`,
-        content: rewrite(
-          node.content ?? [],
-          uriMap,
-          futureRepo,
-          filePath,
-          fileName,
-          blockStatement,
-        ),
-      };
-    }
-
-    return {
-      ...node,
-      uri: uriMap.get(node.uri!) ?? node.uri,
-      content: rewrite(
-        node.content ?? [],
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-        blockStatement,
-      ),
-    };
-  }
-
-  if (node.content) {
-    return {
-      ...node,
-      content: rewrite(
-        node.content,
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-        blockStatement,
-      ),
-    };
-  }
-
-  return node;
-}
-
-function rewrite(
+function rewriteInlineUris(
   content: FloDownContent[],
   uriMap: Map<string, string>,
   futureRepo: string,
   filePath: string,
   fileName: string,
-  blockStatement: FloDownStatement,
 ): FloDownContent[] {
-  return content.map((c) =>
-    typeof c === "string"
-      ? c
-      : finalFTML(c, uriMap, futureRepo, filePath, fileName, blockStatement),
+  return mapInlines(content, (item) => {
+    if (typeof item === "string") return item;
+
+    if (isDefiniendumNode(item)) {
+      const n = item as DefiniendumNode;
+      if (n.uri && !isHttp(n.uri) && !uriMap.has(n.uri)) {
+        return {
+          ...n,
+          uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${n.uri}`,
+        };
+      }
+      return { ...n, uri: uriMap.get(n.uri) ?? n.uri };
+    }
+
+    if (item.type === "symref") {
+      const u = item.uri;
+      if (u && !isMathHubUri(u)) {
+        return {
+          ...item,
+          uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${u}`,
+        };
+      }
+      return { ...item, uri: uriMap.get(item.uri) ?? item.uri };
+    }
+
+    return item;
+  });
+}
+
+export function toExportBlock(
+  block: PersistedBlock,
+  uriMap: Map<string, string>,
+  futureRepo: string,
+  filePath: string,
+  fileName: string,
+  blockStatement: FloDownStatement,
+  declaredSymbols: readonly string[],
+): PersistedBlock | DefinitionNode {
+  if (block.type === "paragraph") {
+    return mapInlineContent(block, (content) =>
+      rewriteInlineUris(content, uriMap, futureRepo, filePath, fileName),
+    );
+  }
+
+  const rewritten = mapInlineContent(block as DefinitionNode, (content) =>
+    rewriteInlineUris(content, uriMap, futureRepo, filePath, fileName),
+  ) as DefinitionNode;
+
+  return toExportDefinition(
+    rewritten,
+    buildForSymbols(blockStatement, uriMap, declaredSymbols),
   );
 }
 
@@ -193,34 +112,39 @@ export async function generateStexFromFloDown(
     const block = root.content[blockIndex];
 
     if (block.type === "paragraph") {
-      fdVisible.addElement(block);
+      fdVisible.addElement(
+        toExportBlock(
+          block,
+          new Map(),
+          futureRepo,
+          filePath,
+          fileName,
+          block,
+          [],
+        ) as PersistedBlock,
+      );
       continue;
     }
 
     if (block.type !== "definition") continue;
 
     const def = block as DefinitionNode;
-    const blockStatement = def;
     const declaredOnThisRow = new Set(
       declaredSymbolsPerBlock[blockIndex] ?? [],
     );
 
-    const external = new Set<string>();
-    collectExternalSymbols(def, external, declaredOnThisRow);
+    const external = collectExternalSymbols(def, declaredOnThisRow);
 
     const deps =
-      external.size > 0
+      external.length > 0
         ? await getDefiningDefinitions({
-            data: { labels: Array.from(external) },
+            data: { labels: external },
           })
         : {};
 
     const hiddenUriMap = new Map<string, string>();
     const visibleUriMap = new Map<string, string>();
-    const uniqueDeps = new Map<string, (typeof deps)[string]>();
-    for (const [label, dep] of Object.entries(deps)) {
-      uniqueDeps.set(label, dep);
-    }
+    const uniqueDeps = new Map(Object.entries(deps));
 
     for (const dep of uniqueDeps.values()) {
       for (const label of dep.declaredSymbols) {
@@ -231,16 +155,17 @@ export async function generateStexFromFloDown(
         }
       }
 
-      const rewritten = finalFTML(
-        dep.definition,
-        hiddenUriMap,
-        futureRepo,
-        filePath,
-        fileName,
-        dep.definition,
+      fdHidden.addElement(
+        toExportBlock(
+          dep.definition,
+          hiddenUriMap,
+          futureRepo,
+          filePath,
+          fileName,
+          dep.definition,
+          dep.declaredSymbols,
+        ) as DefinitionNode,
       );
-
-      fdHidden.addElement(rewritten);
     }
 
     for (const symbol of declaredOnThisRow) {
@@ -253,16 +178,18 @@ export async function generateStexFromFloDown(
       }
     }
 
-    const rewritten = finalFTML(
-      def,
-      visibleUriMap,
-      futureRepo,
-      filePath,
-      fileName,
-      blockStatement,
+    const declaredOnThisRowList = declaredSymbolsPerBlock[blockIndex] ?? [];
+    fdVisible.addElement(
+      toExportBlock(
+        def,
+        visibleUriMap,
+        futureRepo,
+        filePath,
+        fileName,
+        def,
+        declaredOnThisRowList,
+      ) as DefinitionNode,
     );
-
-    fdVisible.addElement(rewritten);
   }
 
   return fdVisible.getStex();

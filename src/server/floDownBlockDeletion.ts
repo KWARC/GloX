@@ -1,11 +1,16 @@
 import {
   FloDownContent,
-  FloDownNode,
   FloDownStatement,
+  hasInlineChildren,
   isDefiniendumNode,
   normalizeToRoot,
   unwrapRoot,
 } from "@/types/floDown.types";
+import {
+  getInlineContent,
+  mapInlineContent,
+  walkInlines,
+} from "@/server/ftml/statementContent";
 
 export function getDeclaredSymbolUris(
   statement: FloDownStatement,
@@ -16,25 +21,19 @@ export function getDeclaredSymbolUris(
   }
 
   const declared = new Set<string>();
-  const stack: FloDownContent[] = [...normalizeToRoot(statement).content];
+  const root = normalizeToRoot(statement);
 
-  while (stack.length > 0) {
-    const node = stack.pop();
-    if (!node || typeof node === "string") continue;
-
-    if (isDefiniendumNode(node) && node.symdecl === true && node.uri.trim()) {
-      declared.add(node.uri);
-    }
-
-    if (node.content?.length) {
-      stack.push(...node.content);
-    }
+  for (const block of root.content) {
+    walkInlines(getInlineContent(block), (item) => {
+      if (isDefiniendumNode(item) && item.symdecl === true && item.uri.trim()) {
+        declared.add(item.uri);
+      }
+    });
   }
 
   return declared;
 }
 
-/** Symbol names this row declares (DB column, with legacy symdecl fallback). */
 export function resolveDeclaredSymbolNames(
   statement: FloDownStatement,
   declaredSymbols?: readonly string[],
@@ -47,19 +46,15 @@ export function countSymbolReferences(
   symbolUris: ReadonlySet<string>,
 ): number {
   let count = 0;
-  const stack: FloDownContent[] = [...normalizeToRoot(statement).content];
+  const root = normalizeToRoot(statement);
 
-  while (stack.length > 0) {
-    const node = stack.pop();
-    if (!node || typeof node === "string") continue;
-
-    if (node.type === "symref" && node.uri && symbolUris.has(node.uri)) {
-      count += 1;
-    }
-
-    if (node.content?.length) {
-      stack.push(...node.content);
-    }
+  for (const block of root.content) {
+    walkInlines(getInlineContent(block), (item) => {
+      if (typeof item === "string") return;
+      if (item.type === "symref" && item.uri && symbolUris.has(item.uri)) {
+        count += 1;
+      }
+    });
   }
 
   return count;
@@ -70,41 +65,62 @@ export function removeSymbolReferences(
   symbolUris: ReadonlySet<string>,
 ): { statement: FloDownStatement; removedCount: number } {
   let removedCount = 0;
-
-  function visitContent(content: FloDownContent[]): FloDownContent[] {
-    const result: FloDownContent[] = [];
-
-    for (const item of content) {
-      if (typeof item === "string") {
-        appendContent(result, item);
-        continue;
-      }
-
-      if (item.type === "symref" && item.uri && symbolUris.has(item.uri)) {
-        removedCount += 1;
-        for (const child of visitContent(item.content ?? [])) {
-          appendContent(result, child);
-        }
-        continue;
-      }
-
-      const copy: FloDownNode = { ...item };
-      if (item.content) {
-        copy.content = visitContent(item.content);
-      }
-      appendContent(result, copy);
-    }
-
-    return result;
-  }
-
   const root = normalizeToRoot(structuredClone(statement));
-  root.content = visitContent(root.content) as FloDownNode[];
+
+  root.content = root.content.map((block) =>
+    mapInlineContent(block, (content) => {
+      const result: FloDownContent[] = [];
+
+      for (const item of content) {
+        if (typeof item === "string") {
+          appendContent(result, item);
+          continue;
+        }
+
+        if (item.type === "symref" && item.uri && symbolUris.has(item.uri)) {
+          removedCount += 1;
+          for (const unwrapped of unwrapSymrefContent(item.content ?? [])) {
+            appendContent(result, unwrapped);
+          }
+          continue;
+        }
+
+        if (hasInlineChildren(item)) {
+          for (const unwrapped of unwrapSymrefContent(item.content)) {
+            appendContent(result, unwrapped);
+          }
+          continue;
+        }
+
+        appendContent(result, item);
+      }
+
+      return result;
+    }),
+  );
 
   return {
     statement: unwrapRoot(root),
     removedCount,
   };
+}
+
+function unwrapSymrefContent(content: FloDownContent[]): FloDownContent[] {
+  const result: FloDownContent[] = [];
+  for (const item of content) {
+    if (typeof item === "string") {
+      appendContent(result, item);
+      continue;
+    }
+    if (hasInlineChildren(item)) {
+      for (const unwrapped of unwrapSymrefContent(item.content)) {
+        appendContent(result, unwrapped);
+      }
+      continue;
+    }
+    appendContent(result, item);
+  }
+  return result;
 }
 
 function appendContent(result: FloDownContent[], item: FloDownContent) {

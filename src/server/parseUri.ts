@@ -1,11 +1,15 @@
 import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import {
+  hasInlineChildren,
   isDefiniendumNode,
+  isPersistedBlock,
   type DefiniendumNode,
-  type DefinitionNode,
   type FloDownContent,
-  type FloDownNode,
   type FloDownStatement,
+  type Inline,
+  type InlineInDefinition,
+  type PersistedBlock,
+  type RootNode,
 } from "@/types/floDown.types";
 
 type RemoveSemanticOperation = {
@@ -23,7 +27,18 @@ export type SemanticOperation =
   | RemoveSemanticOperation
   | ReplaceSemanticOperation;
 
-type FloDownTree = FloDownStatement | FloDownNode | FloDownContent | FloDownContent[];
+type FloDownTree = FloDownStatement | FloDownContent | FloDownContent[];
+
+function isPersistedBlockArray(
+  node: readonly unknown[],
+): node is PersistedBlock[] {
+  const first = node[0];
+  return (
+    typeof first === "object" &&
+    first !== null &&
+    isPersistedBlock(first as PersistedBlock)
+  );
+}
 
 export type ParsedMathHubUri = {
   archive: string;
@@ -121,7 +136,7 @@ export function findDefiniendum(content: FloDownContent[], symbolName: string): 
       }
     }
 
-    if (c.content && findDefiniendum(c.content, symbolName)) {
+    if (hasInlineChildren(c) && findDefiniendum(c.content, symbolName)) {
       return true;
     }
   }
@@ -139,65 +154,104 @@ export function transform(ast: FloDownTree, operation: SemanticOperation): FloDo
   return ast;
 }
 
+function removeSemanticFromInlines(
+  content: FloDownContent[],
+  target: { type: "definiendum" | "symref"; uri: string },
+): FloDownContent[] {
+  const result: FloDownContent[] = [];
+
+  for (const child of content) {
+    if (
+      typeof child === "object" &&
+      child.type === target.type &&
+      child.uri === target.uri
+    ) {
+      if (hasInlineChildren(child)) {
+        for (const c of child.content) {
+          result.push(c);
+        }
+      }
+      continue;
+    }
+
+    if (typeof child === "string") {
+      result.push(child);
+      continue;
+    }
+
+    if (hasInlineChildren(child)) {
+      result.push({
+        ...child,
+        content: removeSemanticFromInlines(child.content, target),
+      } as FloDownContent);
+      continue;
+    }
+
+    result.push(child);
+  }
+
+  return normalizeContent(result);
+}
+
 function removeSemanticNode(
   node: FloDownTree,
   target: { type: "definiendum" | "symref"; uri: string },
 ): FloDownTree {
   if (Array.isArray(node)) {
-    const result: FloDownContent[] = [];
-
-    for (const child of node) {
-      if (
-        typeof child === "object" &&
-        child &&
-        (child as FloDownNode).type === target.type &&
-        (child as FloDownNode).uri === target.uri
-      ) {
-        const childNode = child as FloDownNode;
-
-        if (childNode.content) {
-          for (const c of childNode.content as FloDownContent[]) {
-            result.push(c);
-          }
-        }
-      } else {
-        const transformed = removeSemanticNode(child as FloDownTree, target);
-
-        if (Array.isArray(transformed)) {
-          result.push(...transformed);
-        } else {
-          result.push(transformed as FloDownContent);
-        }
-      }
+    if (isPersistedBlockArray(node)) {
+      return node.map((block) =>
+        removeSemanticNode(block, target) as PersistedBlock,
+      );
     }
-
-    return normalizeContent(result);
+    return removeSemanticFromInlines(node as FloDownContent[], target);
   }
+
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return node;
 
-  const copy: FloDownNode = { ...(node as FloDownNode) };
-  if (copy.content) {
-    copy.content = normalizeContent(
-      removeSemanticNode(copy.content as FloDownContent[], target) as FloDownContent[],
-    );
+  if (node.type === "root") {
+    const root = node as RootNode;
+    return {
+      ...root,
+      content: root.content.map(
+        (block) => removeSemanticNode(block, target) as PersistedBlock,
+      ),
+    };
   }
-  return copy;
+
+  if (isPersistedBlock(node)) {
+    if (node.type === "definition") {
+      return {
+        ...node,
+        content: node.content.map((inner) => {
+          if (inner.type !== "paragraph") return inner;
+          return {
+            ...inner,
+            content: removeSemanticFromInlines(
+              inner.content,
+              target,
+            ) as InlineInDefinition[],
+          };
+        }),
+      };
+    }
+
+    return {
+      ...node,
+      content: removeSemanticFromInlines(
+        node.content,
+        target,
+      ) as Inline[],
+    };
+  }
+
+  return node;
 }
+
 function removeSemanticNodeWithIndex(
   node: FloDownTree,
   target: { type: "definiendum" | "symref"; uri: string },
 ): FloDownTree {
-  if (!node || typeof node !== "object") return node;
-
-  if ((node as FloDownNode).type === "definition") {
-    const definitionNode = node as DefinitionNode;
-    return {
-      ...definitionNode,
-      content: removeSemanticNode(definitionNode.content as FloDownContent[], target) as FloDownContent[],
-    };
-  }
-
   return removeSemanticNode(node, target);
 }
 
@@ -215,71 +269,104 @@ function normalizeUri(u: string | undefined): string | undefined {
   return u;
 }
 
+function replaceSemanticInInlines(
+  content: FloDownContent[],
+  target: { type: "definiendum" | "symref"; uri: string },
+  payload: ReplacePayload,
+): FloDownContent[] {
+  return content.map((item) => {
+    if (typeof item === "string") return item;
+
+    const currentUri = normalizeUri("uri" in item ? item.uri : undefined);
+    const targetUri = normalizeUri(target.uri);
+
+    if (
+      (item.type === "definiendum" || item.type === "symref") &&
+      currentUri === targetUri
+    ) {
+      if (item.type === "definiendum" && payload.type === "definiendum") {
+        return {
+          ...(item as DefiniendumNode),
+          uri: payload.uri,
+          content: payload.content ?? item.content,
+          symdecl: payload.symdecl,
+        } as FloDownContent;
+      }
+
+      if (item.type === "symref" && payload.type === "symref") {
+        return {
+          ...item,
+          uri: payload.uri,
+          content: payload.content ?? item.content,
+        } as FloDownContent;
+      }
+    }
+
+    if (hasInlineChildren(item)) {
+      return {
+        ...item,
+        content: replaceSemanticInInlines(item.content, target, payload),
+      } as FloDownContent;
+    }
+
+    return item;
+  });
+}
+
 function replaceSemanticNode(
   node: FloDownTree,
   target: { type: "definiendum" | "symref"; uri: string },
   payload: ReplacePayload,
 ): FloDownTree {
   if (Array.isArray(node)) {
-    return node.map((child) =>
-      replaceSemanticNode(child as FloDownTree, target, payload),
-    ) as typeof node;
+    if (isPersistedBlockArray(node)) {
+      return node.map((block) =>
+        replaceSemanticNode(block, target, payload) as PersistedBlock,
+      );
+    }
+    return replaceSemanticInInlines(node as FloDownContent[], target, payload);
   }
 
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return node;
 
-  const current = node as FloDownNode;
-
-  if (current.type === "definition") {
-    const def = current as DefinitionNode;
-
-    const updatedContent = replaceSemanticNode(
-      def.content as FloDownContent[],
-      target,
-      payload,
-    ) as FloDownContent[];
-
+  if (node.type === "root") {
+    const root = node as RootNode;
     return {
-      ...def,
-      content: updatedContent,
+      ...root,
+      content: root.content.map(
+        (block) => replaceSemanticNode(block, target, payload) as PersistedBlock,
+      ),
     };
   }
 
-  const currentUri = normalizeUri(current.uri);
-  const targetUri = normalizeUri(target.uri);
-
-  const isSemanticNode =
-    current.type === "definiendum" || current.type === "symref";
-
-  if (isSemanticNode && currentUri === targetUri) {
-    if (current.type === "definiendum" && payload.type === "definiendum") {
+  if (isPersistedBlock(node)) {
+    if (node.type === "definition") {
       return {
-        ...(current as DefiniendumNode),
-        uri: payload.uri,
-        content: payload.content ?? current.content,
-        symdecl: payload.symdecl,
-      } as DefiniendumNode;
-    }
-
-    if (current.type === "symref" && payload.type === "symref") {
-      return {
-        ...current,
-        uri: payload.uri,
-        content: payload.content ?? current.content,
+        ...node,
+        content: node.content.map((inner) => {
+          if (inner.type !== "paragraph") return inner;
+          return {
+            ...inner,
+            content: replaceSemanticInInlines(
+              inner.content,
+              target,
+              payload,
+            ) as InlineInDefinition[],
+          };
+        }),
       };
     }
+
+    return {
+      ...node,
+      content: replaceSemanticInInlines(
+        node.content,
+        target,
+        payload,
+      ) as Inline[],
+    };
   }
 
-  const copy: FloDownNode = { ...current };
-
-  if (copy.content) {
-    copy.content = replaceSemanticNode(
-      copy.content as FloDownContent[],
-      target,
-      payload,
-    ) as FloDownContent[];
-  }
-
-  return copy;
+  return node;
 }

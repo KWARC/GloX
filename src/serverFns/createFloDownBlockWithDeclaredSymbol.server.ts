@@ -56,6 +56,7 @@ export type CreatedSymbolTarget = {
 function buildPlainDefinitionStatement(originalText: string): DefinitionNode {
   return {
     type: "definition",
+    for_symbols: [],
     content: [
       {
         type: "paragraph",

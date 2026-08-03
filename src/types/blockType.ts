@@ -1,9 +1,8 @@
 import {
-  FloDownNode,
   FloDownStatement,
   isDefinitionNode,
-  isNode,
   isRootNode,
+  PersistedBlock,
 } from "@/types/floDown.types";
 
 /** Top-level FTML block types supported when creating curated content. */
@@ -15,9 +14,9 @@ export function blockTypeLabel(blockType: ExtractBlockType): string {
   return blockType === "definition" ? "Definition" : "Paragraph";
 }
 
-function unwrapTopLevelNode(statement: FloDownStatement): FloDownNode | null {
+function unwrapTopLevelNode(statement: FloDownStatement): PersistedBlock | null {
   if (Array.isArray(statement)) {
-    return statement.find(isNode) ?? null;
+    return statement[0] ?? null;
   }
 
   if (typeof statement !== "object" || statement === null) {
@@ -25,7 +24,7 @@ function unwrapTopLevelNode(statement: FloDownStatement): FloDownNode | null {
   }
 
   if (isRootNode(statement)) {
-    return statement.content.find(isNode) ?? null;
+    return statement.content[0] ?? null;
   }
 
   return statement;
@@ -55,6 +54,7 @@ export function buildStatementFromText(
 
   return {
     type: "definition",
+    for_symbols: [],
     content: [
       {
         type: "paragraph",

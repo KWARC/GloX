@@ -5,7 +5,12 @@ import {
   SymbolicIndex,
   SymbolicOccurrence,
 } from "@/types/symbolic.types";
-import { FloDownContent, FloDownNode, normalizeToRoot } from "@/types/floDown.types";
+import {
+  extractTextContent,
+  getInlineContent,
+  walkInlines,
+} from "@/server/ftml/statementContent";
+import { normalizeToRoot } from "@/types/floDown.types";
 
 type PageText = {
   id: string;
@@ -24,44 +29,25 @@ function normalizeSurface(value: string): string {
   return value.toLowerCase().trim();
 }
 
-function collectInlineText(content: FloDownContent[] | undefined): string {
-  if (!content) return "";
-
-  return content
-    .map((item) => {
-      if (typeof item === "string") return item;
-      return collectInlineText(item.content);
-    })
-    .join("");
-}
-
-function walkNodes(node: FloDownNode, visit: (node: FloDownNode) => void) {
-  visit(node);
-
-  for (const child of node.content ?? []) {
-    if (typeof child !== "string") walkNodes(child, visit);
-  }
-}
-
-function uniqueTerms(values: string[]): string[] {
-  return [...new Set(values.map(normalizeSurface).filter(Boolean))];
+function collectInlineText(content: Parameters<typeof extractTextContent>[0]): string {
+  return extractTextContent(content);
 }
 
 function getFloDownBlockTerms(floDownBlock: ExtractedItem): string[] {
   const root = normalizeToRoot(floDownBlock.statement);
   const terms: string[] = [];
 
-  for (const node of root.content) {
-    if (node.type === "definition") {
-      terms.push(...(node.for_symbols ?? []));
+  for (const block of root.content) {
+    if (block.type === "definition") {
+      terms.push(...(floDownBlock.declaredSymbols ?? []));
     }
 
-    walkNodes(node, (current) => {
-      if (current.type !== "definiendum") return;
+    walkInlines(getInlineContent(block), (current) => {
+      if (typeof current === "string" || current.type !== "definiendum") return;
 
       if (current.uri) terms.push(current.uri);
 
-      const label = collectInlineText(current.content);
+      const label = collectInlineText(current.content ?? []);
       if (label) terms.push(label);
     });
   }
@@ -69,6 +55,10 @@ function getFloDownBlockTerms(floDownBlock: ExtractedItem): string[] {
   if (floDownBlock.fileName) terms.push(floDownBlock.fileName);
 
   return uniqueTerms(terms);
+}
+
+function uniqueTerms(values: string[]): string[] {
+  return [...new Set(values.map(normalizeSurface).filter(Boolean))];
 }
 
 export function buildFloDownBlockCatalog(
