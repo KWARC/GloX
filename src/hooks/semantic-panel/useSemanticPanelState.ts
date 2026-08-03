@@ -1,28 +1,28 @@
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { useSymbolSearch } from "@/server/useSymbolSearch";
-import { supportsDefinienda } from "@/types/paragraphKind";
+import { supportsDefinienda } from "@/types/blockType";
 import {
   DbSymbolResult,
   MathhubResult,
   SelectedNode,
-  SemanticDefinition,
+  FloDownBlockSemantic,
 } from "@/types/Semantic.types";
 import { useEffect, useMemo, useState } from "react";
 
 export type PendingPropagation = {
   localSymbolUri: string;
   mathHubUri: string;
-  primaryDefinitionId: string;
+  primaryFloDownBlockId: string;
 };
 
 export type PendingMathHubToLocal = {
   mathHubUri: string;
   localSymbolUri: string;
   targetType: "definiendum" | "symref";
-  primaryDefinitionId: string;
+  primaryFloDownBlockId: string;
 };
 
-export function useSemanticPanelState(definition: SemanticDefinition | null) {
+export function useSemanticPanelState(floDownBlock: FloDownBlockSemantic | null) {
   const [selectedNode, setSelectedNode] = useState<SelectedNode>(null);
   const [selectedUri, setSelectedUri] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -34,14 +34,14 @@ export function useSemanticPanelState(definition: SemanticDefinition | null) {
     useState<PendingPropagation | null>(null);
   const [pendingMathHubToLocal, setPendingMathHubToLocal] =
     useState<PendingMathHubToLocal | null>(null);
-  const canEditDefinienda = definition
-    ? supportsDefinienda(definition.kind)
+  const canEditDefinienda = floDownBlock
+    ? supportsDefinienda(floDownBlock.statement)
     : false;
 
   const { definienda, symbolicRefs } = useMemo(() => {
-    if (!definition) return { definienda: [], symbolicRefs: [] };
-    return extractSemanticIndex(definition.statement, definition);
-  }, [definition]);
+    if (!floDownBlock) return { definienda: [], symbolicRefs: [] };
+    return extractSemanticIndex(floDownBlock.statement);
+  }, [floDownBlock]);
 
   useEffect(() => {
     if (!canEditDefinienda && selectedNode?.type === "definiendum") {

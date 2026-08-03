@@ -35,7 +35,7 @@ export function FinalizedDocumentsSection() {
       to: "/create-latex",
       search: {
         documentId: doc.documentId,
-        definitionIds: [],
+        floDownBlockIds: [],
         futureRepo: doc.futureRepo,
         filePath: doc.filePath,
         fileName: doc.fileName,

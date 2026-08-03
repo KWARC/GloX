@@ -4,7 +4,7 @@ import { assertFtmlRoot } from "@/server/ftml/convertLocalSymbolToMathHub";
 import { parseUri, SemanticOperation, transform } from "@/server/parseUri";
 import { createServerFn } from "@tanstack/react-start";
 
-export type UpdateDefinitionAstResult =
+export type UpdateFloDownBlockAstResult =
   | { kind: "ok" }
   | {
       kind: "pendingPropagation";
@@ -12,11 +12,11 @@ export type UpdateDefinitionAstResult =
       mathHubUri: string;
     };
 
-export const updateDefinitionAst = createServerFn({ method: "POST" })
+export const updateFloDownBlockAst = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { definitionId: string; operation: SemanticOperation }) => data,
+    (data: { floDownBlockId: string; operation: SemanticOperation }) => data,
   )
-  .handler(async ({ data }): Promise<UpdateDefinitionAstResult> => {
+  .handler(async ({ data }): Promise<UpdateFloDownBlockAstResult> => {
     const userRes = await currentUser();
     if (!userRes.loggedIn) throw new Error("Unauthorized");
     const userId = userRes.user.id;
@@ -41,8 +41,8 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
         : null;
 
     await prisma.$transaction(async (tx) => {
-      const def = await tx.definition.findUniqueOrThrow({
-        where: { id: data.definitionId },
+      const def = await tx.floDownBlock.findUniqueOrThrow({
+        where: { id: data.floDownBlockId },
       });
       assertFtmlRoot(def.statement);
 
@@ -59,8 +59,8 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
           throw new Error("Invalid MathHub URI: missing symbol");
         }
 
-        const currentDef = await tx.definition.findUniqueOrThrow({
-          where: { id: data.definitionId },
+        const currentDef = await tx.floDownBlock.findUniqueOrThrow({
+          where: { id: data.floDownBlockId },
         });
 
         await tx.symbol.upsert({
@@ -97,9 +97,9 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
       const nextVersion = def.currentVersion + 1;
       const serialized: object = JSON.parse(JSON.stringify(newAst));
 
-      await tx.definitionVersion.create({
+      await tx.floDownBlockVersion.create({
         data: {
-          definitionId: def.id,
+          floDownBlockId: def.id,
           versionNumber: nextVersion,
           originalText: def.originalText,
           statement: serialized,
@@ -107,7 +107,7 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
         },
       });
 
-      await tx.definition.update({
+      await tx.floDownBlock.update({
         where: { id: def.id },
         data: {
           statement: serialized,
@@ -115,25 +115,6 @@ export const updateDefinitionAst = createServerFn({ method: "POST" })
           currentVersion: nextVersion,
         },
       });
-
-      if (
-        data.operation.kind === "removeSemantic" &&
-        data.operation.target.type === "symref"
-      ) {
-        await tx.symbolicReference.deleteMany({
-          where: { conceptUri: data.operation.target.uri },
-        });
-      }
-
-      if (
-        data.operation.kind === "replaceSemantic" &&
-        data.operation.target.type === "symref"
-      ) {
-        await tx.symbolicReference.updateMany({
-          where: { conceptUri: data.operation.target.uri },
-          data: { conceptUri: data.operation.payload.uri },
-        });
-      }
     });
 
     if (isLocalToMathHubConversion && localSymbolUri && mathHubUri) {

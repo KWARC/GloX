@@ -2,10 +2,7 @@ import { myDocumentsQuery } from "@/queries/document";
 import { uploadPdf } from "@/serverFns/upload.server";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-
-const MODULE_DESCRIPTION_REPO = "courses/FAU";
-const MODULE_DESCRIPTION_PATH = "module-description";
+import { useState } from "react";
 
 export function useDocumentUpload() {
   const [file, setFile] = useState<File | null>(null);
@@ -17,16 +14,9 @@ export function useDocumentUpload() {
   const [futureRepo, setFutureRepo] = useState("");
   const [filePath, setFilePath] = useState("");
   const [language, setLanguage] = useState("en");
-  const [moduleDescription, setModuleDescription] = useState(false);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (!moduleDescription) return;
-    setFutureRepo(MODULE_DESCRIPTION_REPO);
-    setFilePath(MODULE_DESCRIPTION_PATH);
-  }, [moduleDescription]);
 
   const reset = () => {
     setFile(null);
@@ -36,7 +26,6 @@ export function useDocumentUpload() {
     setFutureRepo("");
     setFilePath("");
     setLanguage("en");
-    setModuleDescription(false);
   };
 
   const selectFile = (nextFile: File | null) => {
@@ -58,7 +47,6 @@ export function useDocumentUpload() {
       formData.append("futureRepo", futureRepo);
       formData.append("filePath", filePath);
       formData.append("language", language);
-      formData.append("moduleDescription", String(moduleDescription));
 
       const result = await uploadPdf({ data: formData });
 
@@ -105,14 +93,12 @@ export function useDocumentUpload() {
     futureRepo,
     language,
     loading,
-    moduleDescription,
     openExisting,
     reset,
     selectFile,
     setFilePath,
     setFutureRepo,
     setLanguage,
-    setModuleDescription,
     upload,
   };
 }

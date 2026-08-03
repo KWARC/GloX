@@ -13,7 +13,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { IconFileText, IconPencil } from "@tabler/icons-react";
-import { PARAGRAPH_KINDS, ParagraphKind } from "@/types/paragraphKind";
+import { EXTRACT_BLOCK_TYPES, ExtractBlockType, blockTypeLabel } from "@/types/blockType";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 import { DefiniendumDialog } from "./DefiniendumDialog";
@@ -47,9 +47,9 @@ function getFilePathSegments(filePath: string): string[] {
 interface ExtractTextDialogProps {
   opened: boolean;
   initialText: string;
-  definitionName: string;
-  definitionNameDisabled?: boolean;
-  kind: ParagraphKind;
+  paragraphFileName: string;
+  paragraphFileNameDisabled?: boolean;
+  blockType: ExtractBlockType;
   mode?: "definition" | "symbol-target";
   symbolName?: string;
   symbolNameDisabled?: boolean;
@@ -62,13 +62,13 @@ interface ExtractTextDialogProps {
     setFilePath: (value: string) => void;
     setLanguage: (value: string) => void;
   };
-  setDefinitionName: (v: string) => void;
-  setKind: Dispatch<SetStateAction<ParagraphKind>>;
+  setParagraphFileName: (v: string) => void;
+  setBlockType: Dispatch<SetStateAction<ExtractBlockType>>;
   setSymbolName?: Dispatch<SetStateAction<string>>;
   onClose: () => void;
   onSubmit: (payload: {
     text: string;
-    kind: ParagraphKind;
+    blockType: ExtractBlockType;
     statement?: FtmlStatement;
   }) => void;
   title?: string;
@@ -84,14 +84,14 @@ interface ExtractTextDialogProps {
 export function ExtractTextDialog({
   opened,
   initialText,
-  definitionName,
-  definitionNameDisabled = false,
-  kind,
+  paragraphFileName,
+  paragraphFileNameDisabled = false,
+  blockType,
   mode = "definition",
   symbolName = "",
   symbolNameDisabled = false,
-  setDefinitionName,
-  setKind,
+  setParagraphFileName,
+  setBlockType,
   setSymbolName,
   filePath,
   location,
@@ -256,22 +256,22 @@ export function ExtractTextDialog({
           <TextInput
             label="Content Name"
             placeholder="e.g. derivative-rules"
-            value={definitionName}
-            disabled={definitionNameDisabled}
+            value={paragraphFileName}
+            disabled={paragraphFileNameDisabled}
             onChange={(e) =>
-              setDefinitionName(normalizeContentName(e.currentTarget.value))
+              setParagraphFileName(normalizeContentName(e.currentTarget.value))
             }
             styles={{ input: { fontWeight: 500 } }}
           />
           <Select
-            label="Paragraph Kind"
-            data={PARAGRAPH_KINDS.map((value) => ({
+            label="Block type"
+            data={EXTRACT_BLOCK_TYPES.map((value) => ({
               value,
-              label: value,
+              label: blockTypeLabel(value),
             }))}
-            value={kind}
+            value={blockType}
             onChange={(value) => {
-              if (value) setKind(value as ParagraphKind);
+              if (value) setBlockType(value as ExtractBlockType);
             }}
             allowDeselect={false}
           />
@@ -384,7 +384,7 @@ export function ExtractTextDialog({
                 if (!cleaned) return;
                 onSubmit({
                   text: cleaned,
-                  kind,
+                  blockType,
                   statement:
                     enableSemanticAuthoring && semanticEnabled
                       ? draftSemantic.statement
@@ -393,7 +393,7 @@ export function ExtractTextDialog({
               }}
               disabled={
                 !text.trim() ||
-                !definitionName.trim() ||
+                !paragraphFileName.trim() ||
                 (showSymbolNameField && !symbolName.trim())
               }
               leftSection={<IconFileText size={16} />}

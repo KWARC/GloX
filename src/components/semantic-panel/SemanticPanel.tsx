@@ -1,7 +1,7 @@
 import {
   OnDeleteNode,
   OnReplaceNode,
-  SemanticDefinition,
+  FloDownBlockSemantic,
 } from "@/types/Semantic.types";
 import { Box, Center, Flex, Modal, Text } from "@mantine/core";
 import { MathhubtoSymbolPropagationDialog } from "../MathhubtoSymbolPropagationDialog";
@@ -11,11 +11,12 @@ import { SemanticNodeList } from "./SemanticNodeList";
 import { SemanticPanelFooter } from "./SemanticPanelFooter";
 import { SymrefEditor } from "./SymrefEditor";
 import { useSemanticPanelState } from "@/hooks/semantic-panel/useSemanticPanelState";
+import { blockTypeLabel, getTopLevelBlockType } from "@/types/blockType";
 
 type Props = {
   opened: boolean;
   onClose: () => void;
-  definition: SemanticDefinition | null;
+  floDownBlock: FloDownBlockSemantic | null;
   onReplaceNode: OnReplaceNode;
   onDeleteNode: OnDeleteNode;
 };
@@ -23,11 +24,14 @@ type Props = {
 export function SemanticPanel({
   opened,
   onClose,
-  definition,
+  floDownBlock,
   onReplaceNode,
   onDeleteNode,
 }: Props) {
-  const state = useSemanticPanelState(definition);
+  const state = useSemanticPanelState(floDownBlock);
+  const blockTypeLabelText = floDownBlock
+    ? blockTypeLabel(getTopLevelBlockType(floDownBlock.statement))
+    : "";
   const {
     selectedNode,
     canEditDefinienda,
@@ -54,14 +58,14 @@ export function SemanticPanel({
         centered
         overlayProps={{ opacity: 0.55, blur: 3 }}
       >
-        {!definition ? (
+        {!floDownBlock ? (
           <Center h={300}>
             <Text c="dimmed">No definition selected</Text>
           </Center>
         ) : (
           <Flex h="70vh" style={{ overflow: "hidden" }}>
             <SemanticNodeList
-              state={{ ...state, definitionKind: definition.kind }}
+              state={{ ...state, statement: floDownBlock.statement }}
             />
 
             <Box
@@ -75,14 +79,14 @@ export function SemanticPanel({
                     <Text c="dimmed">
                       {canEditDefinienda
                         ? "Select Definienda/Symbolic Ref"
-                        : `This ${definition.kind} only supports symbolic references.`}
+                        : `This ${blockTypeLabelText} only supports symbolic references.`}
                     </Text>
                   </Center>
                 )}
 
                 {canEditDefinienda && selectedNode?.type === "definiendum" && (
                   <DefiniendumEditor
-                    definition={definition}
+                    floDownBlock={floDownBlock}
                     state={state}
                     onReplaceNode={onReplaceNode}
                     onDeleteNode={onDeleteNode}
@@ -91,7 +95,7 @@ export function SemanticPanel({
 
                 {selectedNode?.type === "symref" && (
                   <SymrefEditor
-                    definition={definition}
+                    floDownBlock={floDownBlock}
                     state={state}
                     onReplaceNode={onReplaceNode}
                     onDeleteNode={onDeleteNode}
@@ -110,7 +114,7 @@ export function SemanticPanel({
           opened={pendingPropagation !== null}
           localSymbolUri={pendingPropagation.localSymbolUri}
           mathHubUri={pendingPropagation.mathHubUri}
-          primaryDefinitionId={pendingPropagation.primaryDefinitionId}
+          primaryFloDownBlockId={pendingPropagation.primaryFloDownBlockId}
           onReplaceNode={onReplaceNode}
           onDone={() => {
             setPendingPropagation(null);
@@ -125,7 +129,7 @@ export function SemanticPanel({
           mathHubUri={pendingMathHubToLocal.mathHubUri}
           localSymbolUri={pendingMathHubToLocal.localSymbolUri}
           targetType={pendingMathHubToLocal.targetType}
-          primaryDefinitionId={pendingMathHubToLocal.primaryDefinitionId}
+          primaryFloDownBlockId={pendingMathHubToLocal.primaryFloDownBlockId}
           onReplaceNode={onReplaceNode}
           onDone={() => setPendingMathHubToLocal(null)}
           onCancel={() => setPendingMathHubToLocal(null)}

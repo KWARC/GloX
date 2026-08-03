@@ -17,20 +17,20 @@ export type PropagationCandidate = {
   statement: FtmlRoot;
 };
 
-export const getDefinitionsReferencingSymbol = createServerFn({
+export const getFloDownBlocksReferencingSymbol = createServerFn({
   method: "POST",
 })
   .inputValidator(
-    (data: { localSymbolUri: string; excludeDefinitionId: string }) => data,
+    (data: { localSymbolUri: string; excludeFloDownBlockId: string }) => data,
   )
   .handler(async ({ data }): Promise<PropagationCandidate[]> => {
     const userRes = await currentUser();
     if (!userRes.loggedIn) throw new Error("Unauthorized");
 
-    const { localSymbolUri, excludeDefinitionId } = data;
+    const { localSymbolUri, excludeFloDownBlockId } = data;
 
-    const definitions = await prisma.definition.findMany({
-      where: { id: { not: excludeDefinitionId } },
+    const floDownBlocks = await prisma.floDownBlock.findMany({
+      where: { id: { not: excludeFloDownBlockId } },
       select: {
         id: true,
         statement: true,
@@ -44,7 +44,7 @@ export const getDefinitionsReferencingSymbol = createServerFn({
 
     const candidates: PropagationCandidate[] = [];
 
-    for (const def of definitions) {
+    for (const def of floDownBlocks) {
       const ast = assertFtmlStatement(def.statement);
       if (astReferencesUri(ast, localSymbolUri)) {
         candidates.push({
@@ -62,20 +62,20 @@ export const getDefinitionsReferencingSymbol = createServerFn({
     return candidates;
   });
 
-export const getDefinitionsReferencingMathHubUri = createServerFn({
+export const getFloDownBlocksReferencingMathHubUri = createServerFn({
   method: "POST",
 })
   .inputValidator(
-    (data: { mathHubUri: string; excludeDefinitionId: string }) => data,
+    (data: { mathHubUri: string; excludeFloDownBlockId: string }) => data,
   )
   .handler(async ({ data }): Promise<PropagationCandidate[]> => {
     const userRes = await currentUser();
     if (!userRes.loggedIn) throw new Error("Unauthorized");
 
-    const { mathHubUri, excludeDefinitionId } = data;
+    const { mathHubUri, excludeFloDownBlockId } = data;
 
-    const definitions = await prisma.definition.findMany({
-      where: { id: { not: excludeDefinitionId } },
+    const floDownBlocks = await prisma.floDownBlock.findMany({
+      where: { id: { not: excludeFloDownBlockId } },
       select: {
         id: true,
         statement: true,
@@ -89,7 +89,7 @@ export const getDefinitionsReferencingMathHubUri = createServerFn({
 
     const candidates: PropagationCandidate[] = [];
 
-    for (const def of definitions) {
+    for (const def of floDownBlocks) {
       const ast = assertFtmlStatement(def.statement);
       if (astReferencesUri(ast, mathHubUri)) {
         candidates.push({
@@ -110,7 +110,7 @@ export const getDefinitionsReferencingMathHubUri = createServerFn({
 export const applyMathHubReplacement = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      selectedDefinitionIds: string[];
+      selectedFloDownBlockIds: string[];
       mathHubUri: string;
       newUri: string;
     }) => data,
@@ -120,12 +120,12 @@ export const applyMathHubReplacement = createServerFn({ method: "POST" })
     if (!userRes.loggedIn) throw new Error("Unauthorized");
     const userId = userRes.user.id;
 
-    const { selectedDefinitionIds, mathHubUri, newUri } = data;
+    const { selectedFloDownBlockIds, mathHubUri, newUri } = data;
 
-    if (selectedDefinitionIds.length === 0) return { updated: 0 };
+    if (selectedFloDownBlockIds.length === 0) return { updated: 0 };
 
-    const definitions = await prisma.definition.findMany({
-      where: { id: { in: selectedDefinitionIds } },
+    const floDownBlocks = await prisma.floDownBlock.findMany({
+      where: { id: { in: selectedFloDownBlockIds } },
       select: {
         id: true,
         statement: true,
@@ -135,16 +135,16 @@ export const applyMathHubReplacement = createServerFn({ method: "POST" })
     });
 
     await prisma.$transaction(async (tx) => {
-      for (const def of definitions) {
+      for (const def of floDownBlocks) {
         const ast = assertFtmlStatement(def.statement);
         const updated = propagateUriInAst(ast, mathHubUri, newUri);
 
         const nextVersion = def.currentVersion + 1;
         const serialized: FtmlRoot = JSON.parse(JSON.stringify(updated));
 
-        await tx.definitionVersion.create({
+        await tx.floDownBlockVersion.create({
           data: {
-            definitionId: def.id,
+            floDownBlockId: def.id,
             versionNumber: nextVersion,
             originalText: def.originalText,
             statement: serialized as object,
@@ -152,7 +152,7 @@ export const applyMathHubReplacement = createServerFn({ method: "POST" })
           },
         });
 
-        await tx.definition.update({
+        await tx.floDownBlock.update({
           where: { id: def.id },
           data: {
             statement: serialized as object,
@@ -163,16 +163,16 @@ export const applyMathHubReplacement = createServerFn({ method: "POST" })
       }
     });
 
-    return { updated: definitions.length };
+    return { updated: floDownBlocks.length };
   });
 
 export const applySymbolPropagation = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      selectedDefinitionIds: string[];
+      selectedFloDownBlockIds: string[];
       localSymbolUri: string;
       mathHubUri: string;
-      primaryDefinitionId: string;
+      primaryFloDownBlockId: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -180,15 +180,15 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
     if (!userRes.loggedIn) throw new Error("Unauthorized");
     const userId = userRes.user.id;
 
-    const { selectedDefinitionIds, localSymbolUri, mathHubUri } = data;
+    const { selectedFloDownBlockIds, localSymbolUri, mathHubUri } = data;
 
-    // if (selectedDefinitionIds.length === 0) {
-    //   // await _maybeDeleteSymbol(primaryDefinitionId, localSymbolUri);
+    // if (selectedFloDownBlockIds.length === 0) {
+    //   // await _maybeDeleteSymbol(primaryFloDownBlockId, localSymbolUri);
     //   return { updated: 0 };
     // }
 
-    const definitions = await prisma.definition.findMany({
-      where: { id: { in: selectedDefinitionIds } },
+    const floDownBlocks = await prisma.floDownBlock.findMany({
+      where: { id: { in: selectedFloDownBlockIds } },
       select: {
         id: true,
         statement: true,
@@ -200,7 +200,7 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
     await prisma.$transaction(async (tx) => {
       const updatedAsts: FtmlRoot[] = [];
 
-      for (const def of definitions) {
+      for (const def of floDownBlocks) {
         const ast = assertFtmlStatement(def.statement);
         const updated = propagateUriInAst(ast, localSymbolUri, mathHubUri);
         updatedAsts.push(updated);
@@ -208,9 +208,9 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
         const nextVersion = def.currentVersion + 1;
         const serialized: FtmlRoot = JSON.parse(JSON.stringify(updated));
 
-        await tx.definitionVersion.create({
+        await tx.floDownBlockVersion.create({
           data: {
-            definitionId: def.id,
+            floDownBlockId: def.id,
             versionNumber: nextVersion,
             originalText: def.originalText,
             statement: serialized as object,
@@ -218,7 +218,7 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
           },
         });
 
-        await tx.definition.update({
+        await tx.floDownBlock.update({
           where: { id: def.id },
           data: {
             statement: serialized as object,
@@ -229,8 +229,8 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
       }
       //TODO: We need better way to delete symbols
 
-      // const primaryDef = await tx.definition.findUniqueOrThrow({
-      //   where: { id: primaryDefinitionId },
+      // const primaryDef = await tx.floDownBlock.findUniqueOrThrow({
+      //   where: { id: primaryFloDownBlockId },
       //   select: { statement: true },
       // });
       // updatedAsts.push(assertFtmlStatement(primaryDef.statement));
@@ -240,15 +240,15 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
       // }
     });
 
-    return { updated: definitions.length };
+    return { updated: floDownBlocks.length };
   });
 
 // async function _maybeDeleteSymbol(
-//   primaryDefinitionId: string,
+//   primaryFloDownBlockId: string,
 //   localSymbolUri: string,
 // ): Promise<void> {
-//   const primaryDef = await prisma.definition.findUnique({
-//     where: { id: primaryDefinitionId },
+//   const primaryDef = await prisma.floDownBlock.findUnique({
+//     where: { id: primaryFloDownBlockId },
 //     select: { statement: true },
 //   });
 

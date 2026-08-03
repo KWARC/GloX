@@ -5,33 +5,33 @@ import {
   getSuggestedReferenceCandidateKey,
   SuggestedReference,
   SuggestedReferenceCandidate,
-  suggestRefsForDefinition,
+  suggestRefsForFloDownBlock,
 } from "@/server/symbolic-suggestions";
 import { ExtractedItem } from "@/server/text-selection";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { FtmlStatement } from "@/types/ftml.types";
 import { useEffect, useState } from "react";
 
-type SniffyCatalog = Parameters<typeof suggestRefsForDefinition>[1];
+type SniffyCatalog = Parameters<typeof suggestRefsForFloDownBlock>[1];
 
 type UseSniffyReferenceSuggestionsParams = {
-  definitions: ExtractedItem[];
+  floDownBlocks: ExtractedItem[];
   catalog: SniffyCatalog;
   catalogLoading?: boolean;
   catalogError?: Error | null;
   retryCatalog?: () => Promise<void>;
   invalidate: () => Promise<unknown>;
-  refetchDefinitions: () => Promise<ExtractedItem[]>;
+  refetchFloDownBlocks: () => Promise<ExtractedItem[]>;
 };
 
 export function useSniffyReferenceSuggestions({
-  definitions,
+  floDownBlocks,
   catalog,
   catalogLoading = false,
   catalogError = null,
   retryCatalog,
   invalidate,
-  refetchDefinitions,
+  refetchFloDownBlocks,
 }: UseSniffyReferenceSuggestionsParams) {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestLoading, setSuggestLoading] = useState(false);
@@ -39,90 +39,90 @@ export function useSniffyReferenceSuggestions({
   const [suggestCandidateSymRefs, setSuggestCandidateSymRefs] = useState<
     Record<string, UnifiedSymbolicReference>
   >({});
-  const [activeDefId, setActiveDefId] = useState<string | null>(null);
-  const [activeDefText, setActiveDefText] = useState("");
-  const [activeDefStatement, setActiveDefStatement] =
+  const [activeFloDownBlockId, setActiveFloDownBlockId] = useState<string | null>(null);
+  const [activeFloDownBlockText, setActiveFloDownBlockText] = useState("");
+  const [activeFloDownBlockStatement, setActiveFloDownBlockStatement] =
     useState<FtmlStatement | null>(null);
-  const [pendingDefinitionId, setPendingDefinitionId] = useState<string | null>(
+  const [pendingFloDownBlockId, setPendingFloDownBlockId] = useState<string | null>(
     null,
   );
 
   useEffect(() => {
-    if (!activeDefId) return;
+    if (!activeFloDownBlockId) return;
 
-    const activeDefinition = definitions.find(
-      (definition) => definition.id === activeDefId,
+    const activeFloDownBlock = floDownBlocks.find(
+      (floDownBlock) => floDownBlock.id === activeFloDownBlockId,
     );
-    if (!activeDefinition) return;
+    if (!activeFloDownBlock) return;
 
-    setActiveDefStatement(activeDefinition.statement);
-    setActiveDefText(extractPlainText(activeDefinition.statement));
-  }, [activeDefId, definitions]);
+    setActiveFloDownBlockStatement(activeFloDownBlock.statement);
+    setActiveFloDownBlockText(extractPlainText(activeFloDownBlock.statement));
+  }, [activeFloDownBlockId, floDownBlocks]);
 
   function setEmptySession() {
-    setActiveDefText("");
-    setActiveDefStatement(null);
+    setActiveFloDownBlockText("");
+    setActiveFloDownBlockStatement(null);
     setSuggestions([]);
     setSuggestCandidateSymRefs({});
   }
 
-  function loadSession(definitionId: string, definition: ExtractedItem) {
-    const session = suggestRefsForDefinition(definition, catalog);
+  function loadSession(floDownBlockId: string, floDownBlock: ExtractedItem) {
+    const session = suggestRefsForFloDownBlock(floDownBlock, catalog);
 
-    setActiveDefText(extractPlainText(definition.statement));
-    setActiveDefStatement(definition.statement);
+    setActiveFloDownBlockText(extractPlainText(floDownBlock.statement));
+    setActiveFloDownBlockStatement(floDownBlock.statement);
     setSuggestions(session.suggestions);
     setSuggestCandidateSymRefs({
-      ...buildCandidateSymRefMap(catalog, definitionId),
+      ...buildCandidateSymRefMap(catalog, floDownBlockId),
       ...session.candidateSymRefs,
     });
   }
 
   useEffect(() => {
-    if (!pendingDefinitionId || catalogLoading || catalogError) return;
+    if (!pendingFloDownBlockId || catalogLoading || catalogError) return;
 
-    const definition = definitions.find(
-      (item) => item.id === pendingDefinitionId,
+    const pendingFloDownBlock = floDownBlocks.find(
+      (item) => item.id === pendingFloDownBlockId,
     );
-    if (!definition) {
-      setPendingDefinitionId(null);
+    if (!pendingFloDownBlock) {
+      setPendingFloDownBlockId(null);
       setSuggestLoading(false);
       return;
     }
 
     const timeout = window.setTimeout(() => {
-      loadSession(pendingDefinitionId, definition);
-      setPendingDefinitionId(null);
+      loadSession(pendingFloDownBlockId, pendingFloDownBlock);
+      setPendingFloDownBlockId(null);
       setSuggestLoading(false);
     }, 0);
 
     return () => window.clearTimeout(timeout);
-  }, [catalog, catalogError, catalogLoading, definitions, pendingDefinitionId]);
+  }, [catalog, catalogError, catalogLoading, floDownBlocks, pendingFloDownBlockId]);
 
-  async function handleRecomputeReferences(definitionId: string) {
-    const definition = definitions.find((e) => e.id === definitionId);
-    if (!definition) return;
+  async function handleRecomputeReferences(floDownBlockId: string) {
+    const floDownBlock = floDownBlocks.find((e) => e.id === floDownBlockId);
+    if (!floDownBlock) return;
 
-    setActiveDefId(definitionId);
-    setActiveDefText(extractPlainText(definition.statement));
-    setActiveDefStatement(definition.statement);
+    setActiveFloDownBlockId(floDownBlockId);
+    setActiveFloDownBlockText(extractPlainText(floDownBlock.statement));
+    setActiveFloDownBlockStatement(floDownBlock.statement);
     setSuggestOpen(true);
     setSuggestLoading(true);
 
-    setPendingDefinitionId(definitionId);
+    setPendingFloDownBlockId(floDownBlockId);
   }
 
   async function handleRetryCatalog() {
-    if (!pendingDefinitionId || !retryCatalog) return;
+    if (!pendingFloDownBlockId || !retryCatalog) return;
     setSuggestLoading(true);
     await retryCatalog();
   }
 
-  async function reloadSniffySession(definitionId: string) {
+  async function reloadSniffySession(floDownBlockId: string) {
     await invalidate();
-    const updatedDefinitions = await refetchDefinitions();
-    const updatedDef = updatedDefinitions.find(
-      (definition) => definition.id === definitionId,
+    const updatedFloDownBlocks = await refetchFloDownBlocks();
+    const updatedDef = updatedFloDownBlocks.find(
+      (floDownBlock) => floDownBlock.id === floDownBlockId,
     );
 
     if (!updatedDef) {
@@ -130,21 +130,21 @@ export function useSniffyReferenceSuggestions({
       return;
     }
 
-    loadSession(definitionId, updatedDef);
+    loadSession(floDownBlockId, updatedDef);
   }
 
   async function handleAcceptSuggestion(
     s: SuggestedReference,
     candidate: SuggestedReferenceCandidate,
   ) {
-    if (!activeDefId) return;
+    if (!activeFloDownBlockId) return;
     const symRef =
       suggestCandidateSymRefs[getSuggestedReferenceCandidateKey(candidate)];
     if (!symRef) return;
 
     await symbolicRef({
       data: {
-        definitionId: activeDefId,
+        floDownBlockId: activeFloDownBlockId,
         selection: {
           text: s.text,
           startOffset: s.localStartOffset,
@@ -156,7 +156,7 @@ export function useSniffyReferenceSuggestions({
 
     setSuggestLoading(true);
     try {
-      await reloadSniffySession(activeDefId);
+      await reloadSniffySession(activeFloDownBlockId);
     } finally {
       setSuggestLoading(false);
     }
@@ -169,9 +169,9 @@ export function useSniffyReferenceSuggestions({
     catalogError: catalogError?.message ?? null,
     suggestions,
     suggestCandidateSymRefs,
-    activeDefId,
-    activeDefText,
-    activeDefStatement,
+    activeFloDownBlockId,
+    activeFloDownBlockText,
+    activeFloDownBlockStatement,
     handleRecomputeReferences,
     handleRetryCatalog,
     handleAcceptSuggestion,

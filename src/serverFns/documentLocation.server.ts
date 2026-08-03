@@ -23,7 +23,11 @@ function declaredSymbols(statement: unknown) {
     const node = stack.pop();
     if (!node || typeof node === "string") continue;
     if (isDefiniendumNode(node) && node.symdecl && node.uri) symbols.add(node.uri);
-    if (node.content?.length) stack.push(...node.content);
+    if (node.content?.length) {
+      for (const child of node.content) {
+        if (typeof child !== "string") stack.push(child);
+      }
+    }
   }
   return symbols;
 }
@@ -43,16 +47,16 @@ async function requireMovableDocument(documentId: string) {
 }
 
 async function collectMovingSymbols(documentId: string): Promise<MovingSymbol[]> {
-  const definitions = await prisma.definition.findMany({
+  const floDownBlocks = await prisma.floDownBlock.findMany({
     where: { documentId },
     select: { statement: true, futureRepo: true, filePath: true, fileName: true, language: true },
   });
   const targets = new Map<string, { futureRepo: string; filePath: string; fileName: string; language: string }>();
-  for (const definition of definitions) {
-    for (const symbolName of declaredSymbols(definition.statement)) {
+  for (const floDownBlock of floDownBlocks) {
+    for (const symbolName of declaredSymbols(floDownBlock.statement)) {
       targets.set(
-        `${symbolName}\u0000${definition.futureRepo}\u0000${definition.filePath}\u0000${definition.fileName}\u0000${definition.language}`,
-        { futureRepo: definition.futureRepo, filePath: definition.filePath, fileName: definition.fileName, language: definition.language },
+        `${symbolName}\u0000${floDownBlock.futureRepo}\u0000${floDownBlock.filePath}\u0000${floDownBlock.fileName}\u0000${floDownBlock.language}`,
+        { futureRepo: floDownBlock.futureRepo, filePath: floDownBlock.filePath, fileName: floDownBlock.fileName, language: floDownBlock.language },
       );
     }
   }
@@ -73,7 +77,7 @@ async function getMovePreview(data: MoveInput) {
   if (!futureRepo || !filePath || !language) throw new Error("Future Repo, File Path, and Language are required");
   const document = await requireMovableDocument(data.documentId);
   const [contentCount, movingSymbols] = await Promise.all([
-    prisma.definition.count({ where: { documentId: data.documentId } }),
+    prisma.floDownBlock.count({ where: { documentId: data.documentId } }),
     collectMovingSymbols(data.documentId),
   ]);
   const movingIds = new Set(movingSymbols.map((symbol) => symbol.id));
@@ -125,7 +129,7 @@ export const moveDocumentLocation = createServerFn({ method: "POST" })
     const language = data.language.trim();
     await prisma.$transaction(async (tx) => {
       await tx.document.update({ where: { id: data.documentId }, data: { futureRepo, filePath, language } });
-      await tx.definition.updateMany({ where: { documentId: data.documentId }, data: { futureRepo, filePath, language } });
+      await tx.floDownBlock.updateMany({ where: { documentId: data.documentId }, data: { futureRepo, filePath, language } });
       await tx.latexTable.updateMany({ where: { documentId: data.documentId }, data: { futureRepo, filePath, language } });
       for (const symbol of movingSymbols) {
         await tx.symbol.update({ where: { id: symbol.id }, data: { futureRepo, filePath, language } });

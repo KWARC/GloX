@@ -8,7 +8,7 @@ export type CatalogEntry = {
   aliases: string[];
   symbolicUri: string;
   language?: string;
-  sourceDefinitionId?: string;
+  sourceFloDownBlockId?: string;
   statement?: FtmlStatement;
   symRef: UnifiedSymbolicReference;
 };
@@ -18,7 +18,7 @@ export type SuggestedReferenceCandidate = {
   label: string;
   path?: string;
   confidence: number;
-  definitionId?: string;
+  floDownBlockId?: string;
   uri?: string;
 };
 

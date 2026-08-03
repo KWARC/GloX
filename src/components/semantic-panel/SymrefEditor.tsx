@@ -1,7 +1,7 @@
 import {
   OnDeleteNode,
   OnReplaceNode,
-  SemanticDefinition,
+  FloDownBlockSemantic,
 } from "@/types/Semantic.types";
 import { Button, Group, Paper, Stack, Text } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
@@ -11,14 +11,14 @@ import { SemanticSearchResults } from "./SemanticSearchResults";
 import { SemanticPanelState } from "@/hooks/semantic-panel/useSemanticPanelState";
 
 export type SymrefEditorProps = {
-  definition: SemanticDefinition;
+  floDownBlock: FloDownBlockSemantic;
   state: SemanticPanelState;
   onReplaceNode: OnReplaceNode;
   onDeleteNode: OnDeleteNode;
 };
 
 export function SymrefEditor({
-  definition,
+  floDownBlock,
   state,
   onReplaceNode,
   onDeleteNode,
@@ -72,7 +72,7 @@ export function SymrefEditor({
                   setSavingRename(true);
 
                   await onReplaceNode(
-                    definition.id,
+                    floDownBlock.id,
                     {
                       type: "symref",
                       uri: selectedSymref.uri,
@@ -115,7 +115,7 @@ export function SymrefEditor({
               size="xs"
               color="red"
               onClick={() =>
-                onDeleteNode(definition.id, {
+                onDeleteNode(floDownBlock.id, {
                   type: "symref",
                   uri: selectedSymref.uri,
                 })
@@ -129,7 +129,7 @@ export function SymrefEditor({
 
       <SemanticSearchResults
         mode="symref"
-        definition={definition}
+        floDownBlock={floDownBlock}
         state={state}
         selected={selectedSymref}
         onReplaceNode={onReplaceNode}

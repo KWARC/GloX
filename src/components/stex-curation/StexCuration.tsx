@@ -3,7 +3,7 @@ import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
 import { FileIdentity } from "@/serverFns/latex.server";
 import { Box, Group, Loader, Stack, Table } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
-import { DiscardDefinitionModal } from "./DiscardDefinitionModal";
+import { DiscardFloDownBlockModal } from "./DiscardFloDownBlockModal";
 import { LatexPreviewModal } from "./LatexPreviewModal";
 import { StexCurationDialogs } from "./StexCurationDialogs";
 import { StexCurationFooter } from "./StexCurationFooter";
@@ -13,7 +13,7 @@ import { useStexCurationActions } from "@/hooks/stex-curation/useStexCurationAct
 import { useStexCurationData } from "@/hooks/stex-curation/useStexCurationData";
 import { useStexSemanticFlow } from "@/hooks/stex-curation/useStexSemanticFlow";
 import { useStexSniffyFlow } from "@/hooks/stex-curation/useStexSniffyFlow";
-import { DefinitionDeleteModal, DuplicateDefinitionModal } from "@/components/DefinitionReviewModals";
+import { FloDownBlockDeleteModal, DuplicateFloDownBlockModal } from "@/components/FloDownBlockReviewModals";
 import { ExtractedItem } from "@/server/text-selection";
 import { queryClient } from "@/queryClient";
 import { useState } from "react";
@@ -23,29 +23,29 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
   const navigate = useNavigate();
   const curationData = useStexCurationData(identity);
   const {
-    definitions,
+    floDownBlocks,
     isLoading,
-    definitionIds,
+    floDownBlockIds,
     provenance,
     sniffyCatalog,
     staticCatalogLoading,
     staticCatalogError,
     retryStaticCatalog,
-    definitionSymbolSummaries,
+    floDownBlockSymbolSummaries,
     status,
     statusConf,
     discardReasonFromServer,
   } = curationData;
   const sniffyFlow = useStexSniffyFlow(
     identity,
-    definitions,
+    floDownBlocks,
     sniffyCatalog,
     staticCatalogLoading,
     staticCatalogError,
     retryStaticCatalog,
   );
-  const semanticFlow = useStexSemanticFlow(identity, definitions);
-  const actions = useStexCurationActions(identity, definitionIds, provenance);
+  const semanticFlow = useStexSemanticFlow(identity, floDownBlocks);
+  const actions = useStexCurationActions(identity, floDownBlockIds, provenance);
   const latexReadOnly =
     status === "SUBMITTED_TO_MATHHUB" || status === "DISCARDED";
   const latexSaveDisabled =
@@ -54,7 +54,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
     status === "DISCARDED";
   const isLocked = status === "SUBMITTED_TO_MATHHUB" || status === "DISCARDED";
   const symbolSummaryMap = new Map(
-    definitionSymbolSummaries.map((summary) => [summary.definitionId, summary]),
+    floDownBlockSymbolSummaries.map((summary) => [summary.floDownBlockId, summary]),
   );
 
   return (
@@ -68,12 +68,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               </Group>
             ) : (
               <Stack gap="xs">
-                {definitions.map((definition, index) => {
-                  const symbolSummary = symbolSummaryMap.get(definition.id);
+                {floDownBlocks.map((floDownBlock, index) => {
+                  const symbolSummary = symbolSummaryMap.get(floDownBlock.id);
 
                   return (
                     <Group
-                      key={definition.id}
+                      key={floDownBlock.id}
                       align="stretch"
                       gap="sm"
                       wrap="nowrap"
@@ -81,13 +81,13 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                       <Box style={{ flex: 1, minWidth: 0 }}>
                         <ExtractedTextPanel
                           compact
-                          extracts={[definition]}
+                          extracts={[floDownBlock]}
                           editingId={actions.editingId}
                           selectedId={null}
                           onToggleEdit={actions.handleToggleEdit}
                           onUpdate={actions.handleUpdate}
                           onDownload={actions.handleDownload}
-                          onDelete={(id) => setDeleteTarget(definitions.find((definition) => definition.id === id) ?? null)}
+                          onDelete={(id) => setDeleteTarget(floDownBlocks.find((floDownBlock) => floDownBlock.id === id) ?? null)}
                           onSelection={(extractId) => {
                             semanticFlow.handleSelection("right", {
                               extractId,
@@ -100,10 +100,10 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                             sniffyFlow.handleRecomputeReferences
                           }
                           showPageNumber={false}
-                          showDefinitionMeta
-                          showDefinitionMetaIconOnly
-                          onEditDefinitionMeta={
-                            actions.handleEditDefinitionMeta
+                          showFloDownBlockMeta
+                          showFloDownBlockMetaIconOnly
+                          onEditFloDownBlockMeta={
+                            actions.handleEditFloDownBlockMeta
                           }
                           isLocked={isLocked}
                           onOpenLatexPreview={actions.handleOpenLatexPreview}
@@ -122,12 +122,12 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                             {
                               label: "Extracted by",
                               user:
-                                definition.createdBy ?? definition.updatedBy!,
+                                floDownBlock.createdBy ?? floDownBlock.updatedBy!,
                             },
                             {
                               label: "Last updated by",
                               user:
-                                definition.updatedBy ?? definition.createdBy!,
+                                floDownBlock.updatedBy ?? floDownBlock.createdBy!,
                             },
                           ]}
                         />
@@ -183,7 +183,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               }}
             />
 
-            <DiscardDefinitionModal
+            <DiscardFloDownBlockModal
               discard={{
                 opened: actions.discardOpen,
                 reason: actions.discardReason,
@@ -193,37 +193,37 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               }}
             />
 
-            <DefinitionDeleteModal
+            <FloDownBlockDeleteModal
               opened={!!deleteTarget}
-              definition={deleteTarget}
+              floDownBlock={deleteTarget}
               onCancel={() => setDeleteTarget(null)}
               onConfirm={async () => {
                 if (!deleteTarget) return;
                 await actions.handleDelete(deleteTarget.id);
-                await queryClient.invalidateQueries({ queryKey: ["definitions"] });
+                await queryClient.invalidateQueries({ queryKey: ["floDownBlocks"] });
                 setDeleteTarget(null);
               }}
             />
-            <DuplicateDefinitionModal
-              opened={semanticFlow.duplicateDefinitions.length > 0}
-              definitions={semanticFlow.duplicateDefinitions}
-              onCancel={() => semanticFlow.setDuplicateDefinitions([])}
+            <DuplicateFloDownBlockModal
+              opened={semanticFlow.duplicateFloDownBlocks.length > 0}
+              floDownBlocks={semanticFlow.duplicateFloDownBlocks}
+              onCancel={() => semanticFlow.setDuplicateFloDownBlocks([])}
               onConfirm={semanticFlow.confirmDuplicateCreation}
             />
 
             <StexCurationDialogs
               identity={identity}
               metadata={{
-                opened: actions.definitionMetaEditOpen,
-                definition: actions.definitionMetaTarget,
-                onClose: actions.handleCloseDefinitionMeta,
+                opened: actions.floDownBlockMetaEditOpen,
+                floDownBlock: actions.floDownBlockMetaTarget,
+                onClose: actions.handleCloseFloDownBlockMeta,
               }}
               sniffy={{
                 opened: sniffyFlow.suggestOpen,
                 onClose: () => sniffyFlow.setSuggestOpen(false),
-                activeDefId: sniffyFlow.activeDefId,
-                activeDefStatement: sniffyFlow.activeDefStatement,
-                activeDefText: sniffyFlow.activeDefText,
+                activeFloDownBlockId: sniffyFlow.activeFloDownBlockId,
+                activeFloDownBlockStatement: sniffyFlow.activeFloDownBlockStatement,
+                activeFloDownBlockText: sniffyFlow.activeFloDownBlockText,
                 suggestions: sniffyFlow.suggestions,
                 catalog: sniffyCatalog,
                 loading: sniffyFlow.suggestLoading,
@@ -242,13 +242,13 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
               semantic={{
                 opened: semanticFlow.semanticPanelOpen,
                 onClose: semanticFlow.handleCloseSemanticPanel,
-                definition: semanticFlow.selectedDefinition,
+                floDownBlock: semanticFlow.selectedFloDownBlock,
                 onReplaceNode: semanticFlow.handleReplaceNode,
                 onDeleteNode: semanticFlow.handleDeleteNode,
               }}
               definiendum={{
                 opened: semanticFlow.defDialogOpen,
-                extractedText: semanticFlow.defExtractText,
+                extractedText: semanticFlow.floDownBlockExtractText,
                 onSubmit: semanticFlow.handleDefiniendumSubmit,
                 onClose: () => semanticFlow.setDefDialogOpen(false),
               }}
@@ -260,16 +260,16 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                   !!semanticFlow.createdSymbolTarget,
                 onClose: () => semanticFlow.setMode(null),
                 onSelect: semanticFlow.handleSaveSymbolicRef,
-                onCreateSymbol: semanticFlow.handleCreateSymbolTargetDefinition,
+                onCreateSymbol: semanticFlow.handleCreateSymbolTargetFloDownBlock,
               }}
               extraction={{
                 opened: semanticFlow.extractDialogOpen,
                 initialText: semanticFlow.pendingExtractText,
-                definitionName: semanticFlow.definitionName,
-                kind: semanticFlow.extractKind,
+                paragraphFileName: semanticFlow.paragraphFileName,
+                blockType: semanticFlow.extractBlockType,
                 symbolName: semanticFlow.symbolName,
-                setDefinitionName: semanticFlow.setDefinitionName,
-                setKind: semanticFlow.setExtractKind,
+                setParagraphFileName: semanticFlow.setParagraphFileName,
+                setBlockType: semanticFlow.setExtractBlockType,
                 setSymbolName: semanticFlow.setSymbolName,
                 filePath: `${identity.futureRepo}/ ${identity.filePath}`,
                 onClose: () => {

@@ -24,7 +24,7 @@ export function getLlmSuggestionId(
   return `llm-suggestion-${pageId}-${suggestion.startOffset}-${suggestion.endOffset}`;
 }
 
-export function useLlmDefinitionSuggestions({
+export function useLlmFloDownBlockSuggestions({
   documentId,
   pages,
   extracts,

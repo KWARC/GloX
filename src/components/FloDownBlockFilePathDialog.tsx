@@ -1,9 +1,9 @@
 import { queryClient } from "@/queryClient";
 import { ExtractedItem } from "@/server/text-selection";
 import {
-  updateDefinitionFilePath,
-  updateDefinitionsFilePath,
-} from "@/serverFns/extractDefinition.server";
+  updateFloDownBlockFilePath,
+  updateFloDownBlocksFilePath,
+} from "@/serverFns/extractFloDownBlock.server";
 import { FileIdentity } from "@/serverFns/latex.server";
 import { Button, Modal, Stack, TextInput } from "@mantine/core";
 import type { QueryKey } from "@tanstack/react-query";
@@ -12,15 +12,15 @@ import { useEffect, useState } from "react";
 interface Props {
   opened: boolean;
   onClose: () => void;
-  definition: ExtractedItem | null;
+  floDownBlock: ExtractedItem | null;
   multipleDefinitions?: FileIdentity;
   invalidateKey: QueryKey;
 }
 
-export function DefinitionIdentityDialog({
+export function FloDownBlockIdentityDialog({
   opened,
   onClose,
-  definition,
+  floDownBlock,
   invalidateKey,
   multipleDefinitions: multipleDefinitions,
 }: Props) {
@@ -30,23 +30,23 @@ export function DefinitionIdentityDialog({
   const [language, setLanguage] = useState("");
 
   useEffect(() => {
-    if (definition) {
-      setFutureRepo(definition.futureRepo);
-      setFilePath(definition.filePath);
-      setFileName(definition.fileName);
-      setLanguage(definition.language);
+    if (floDownBlock) {
+      setFutureRepo(floDownBlock.futureRepo);
+      setFilePath(floDownBlock.filePath);
+      setFileName(floDownBlock.fileName);
+      setLanguage(floDownBlock.language);
     } else if (multipleDefinitions) {
       setFutureRepo(multipleDefinitions.futureRepo);
       setFilePath(multipleDefinitions.filePath);
       setFileName(multipleDefinitions.fileName);
       setLanguage(multipleDefinitions.language);
     }
-  }, [definition, multipleDefinitions]);
+  }, [floDownBlock, multipleDefinitions]);
 
   async function handleSave() {
     try {
       if (multipleDefinitions) {
-        await updateDefinitionsFilePath({
+        await updateFloDownBlocksFilePath({
           data: {
             identity: multipleDefinitions,
             futureRepo: futureRepo.trim(),
@@ -55,10 +55,10 @@ export function DefinitionIdentityDialog({
             language: language.trim(),
           },
         });
-      } else if (definition) {
-        await updateDefinitionFilePath({
+      } else if (floDownBlock) {
+        await updateFloDownBlockFilePath({
           data: {
-            id: definition.id,
+            id: floDownBlock.id,
             futureRepo: futureRepo.trim(),
             filePath: filePath.trim(),
             fileName: fileName.trim(),

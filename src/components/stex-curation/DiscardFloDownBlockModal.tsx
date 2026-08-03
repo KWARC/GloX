@@ -1,6 +1,6 @@
 import { Button, Group, Modal, Select, Stack, Textarea } from "@mantine/core";
 
-export type DiscardDefinitionModalProps = {
+export type DiscardFloDownBlockModalProps = {
   discard: {
     opened: boolean;
     reason: string;
@@ -10,9 +10,9 @@ export type DiscardDefinitionModalProps = {
   };
 };
 
-export function DiscardDefinitionModal({
+export function DiscardFloDownBlockModal({
   discard,
-}: DiscardDefinitionModalProps) {
+}: DiscardFloDownBlockModalProps) {
   return (
     <Modal
       opened={discard.opened}

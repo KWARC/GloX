@@ -64,11 +64,11 @@ export function DocumentLocationDialog({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents"] }),
         queryClient.invalidateQueries({ queryKey: ["document", document.id] }),
-        queryClient.invalidateQueries({ queryKey: ["definitions", document.id] }),
-        queryClient.invalidateQueries({ queryKey: ["definitionsByIdentity"] }),
+        queryClient.invalidateQueries({ queryKey: ["floDownBlocks", document.id] }),
+        queryClient.invalidateQueries({ queryKey: ["floDownBlocksByIdentity"] }),
         queryClient.invalidateQueries({ queryKey: ["fileIdentities"] }),
         queryClient.invalidateQueries({ queryKey: ["symbol-search-db"] }),
-        queryClient.invalidateQueries({ queryKey: ["definition-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["logical-paragraph-status"] }),
       ]);
       reset();
     } catch (cause) {

@@ -3,13 +3,13 @@ import { FileDialogs } from "@/components/files/FileDialogs";
 import { FileDocumentLayout } from "@/components/files/FileDocumentLayout";
 import { FileDocumentSkeleton } from "@/components/files/FileDocumentSkeleton";
 import { MarkReferenceLatexModal } from "@/components/MarkReferenceLatexModal";
-import { useDefinitionExtractionFlow } from "@/hooks/files/useDefinitionExtractionFlow";
+import { useFloDownBlockExtractionFlow } from "@/hooks/files/useFloDownBlockExtractionFlow";
 import { useFileDocumentData } from "@/hooks/files/useFileDocumentData";
 import { useFileSniffyReferenceSuggestions } from "@/hooks/files/useFileSniffyReferenceSuggestions";
 import {
   FlattenedLlmSuggestion,
-  useLlmDefinitionSuggestions,
-} from "@/hooks/files/useLlmDefinitionSuggestions";
+  useLlmFloDownBlockSuggestions,
+} from "@/hooks/files/useLlmFloDownBlockSuggestions";
 import { useSemanticEditingFlow } from "@/hooks/files/useSemanticEditingFlow";
 import {
   buildMarkReferenceLatex,
@@ -120,7 +120,7 @@ function RouteComponent() {
     semanticFlow.setLanguage(document.language);
   }, [document?.id]);
 
-  const extractionFlow = useDefinitionExtractionFlow({
+  const extractionFlow = useFloDownBlockExtractionFlow({
     documentId,
     document,
     pages,
@@ -139,7 +139,7 @@ function RouteComponent() {
     getSuggestionState: () => suggestionStateRef.current,
   });
 
-  const llmFlow = useLlmDefinitionSuggestions({
+  const llmFlow = useLlmFloDownBlockSuggestions({
     documentId,
     pages,
     extracts,
@@ -459,7 +459,7 @@ function RouteComponent() {
             onToggleEdit: semanticFlow.handleToggleEdit,
             onOpenSemanticPanel: semanticFlow.handleOpenSemanticPanel,
             onRecomputeReferences: sniffyFlow.handleRecomputeReferences,
-            onEditDefinitionMeta: semanticFlow.handleEditDefinitionMeta,
+            onEditFloDownBlockMeta: semanticFlow.handleEditFloDownBlockMeta,
             onOpenLatexConfig: semanticFlow.handleOpenLatexConfig,
             onCreateDefinition: extractionFlow.handleCreateDefinition,
             onGoToSourcePage: (pageNumber) =>
@@ -472,7 +472,7 @@ function RouteComponent() {
 
       <FileDialogs
         deletion={{
-          definition: semanticFlow.deleteTarget,
+          floDownBlock: semanticFlow.deleteTarget,
           loading: semanticFlow.deleteLoading,
           onCancel: () => semanticFlow.setDeleteTarget(null),
           onConfirm: semanticFlow.confirmDeleteDefinition,
@@ -498,14 +498,14 @@ function RouteComponent() {
           onSave: semanticFlow.handleSaveSymbolicRef,
           onClose: semanticFlow.handleCloseSymbolicRefDialog,
           onCreateSymbol: () => {
-            extractionFlow.handleCreateSymbolTargetDefinition(
+            extractionFlow.handleCreateSymbolTargetFloDownBlock(
               semanticFlow.conceptUri,
             );
           },
         }}
         definiendum={{
           opened: semanticFlow.defDialogOpen,
-          extractedText: semanticFlow.defExtractText,
+          extractedText: semanticFlow.floDownBlockExtractText,
           onClose: () => semanticFlow.setDefDialogOpen(false),
           onSubmit: semanticFlow.handleDefiniendumSubmit,
         }}
@@ -530,10 +530,10 @@ function RouteComponent() {
           opened: semanticFlow.semanticPanelOpen,
           onClose: () => {
             semanticFlow.setSemanticPanelOpen(false);
-            semanticFlow.setSemanticPanelDefId(null);
+            semanticFlow.setSemanticPanelFloDownBlockId(null);
           },
-          definition:
-            extracts.find((e) => e.id === semanticFlow.semanticPanelDefId) ??
+          floDownBlock:
+            extracts.find((e) => e.id === semanticFlow.semanticPanelFloDownBlockId) ??
             null,
           onReplaceNode: semanticFlow.handleReplaceNode,
           onDeleteNode: semanticFlow.handleDeleteNode,
@@ -541,14 +541,14 @@ function RouteComponent() {
         extraction={{
           opened: extractionFlow.extractDialogOpen,
           initialText: extractionFlow.pendingExtractText,
-          definitionName: extractionFlow.definitionName,
-          definitionNameDisabled: false,
-          kind: extractionFlow.extractKind,
+          paragraphFileName: extractionFlow.paragraphFileName,
+          paragraphFileNameDisabled: false,
+          blockType: extractionFlow.extractBlockType,
           mode: extractionFlow.extractDialogMode,
           symbolName: extractionFlow.symbolName,
           symbolNameDisabled: extractionFlow.isMarkReferenceDefinitionFlow,
-          setDefinitionName: extractionFlow.setDefinitionName,
-          setKind: extractionFlow.setExtractKind,
+          setParagraphFileName: extractionFlow.setParagraphFileName,
+          setBlockType: extractionFlow.setExtractBlockType,
           setSymbolName: extractionFlow.setSymbolName,
           filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}/ ${semanticFlow.language}`,
           location: {
@@ -579,8 +579,8 @@ function RouteComponent() {
           enableSemanticAuthoring: true,
           semanticEnabled: extractionFlow.semanticEnabled,
           setSemanticEnabled: extractionFlow.setSemanticEnabled,
-          duplicateDefinitions: extractionFlow.duplicateDefinitions,
-          onCancelDuplicate: () => extractionFlow.setDuplicateDefinitions([]),
+          duplicateFloDownBlocks: extractionFlow.duplicateFloDownBlocks,
+          onCancelDuplicate: () => extractionFlow.setDuplicateFloDownBlocks([]),
           onConfirmDuplicate: extractionFlow.confirmDuplicateCreation,
           onClose: extractionFlow.handleCloseExtractDialog,
           onSubmit: extractionFlow.handleExtractSubmit,
@@ -594,20 +594,20 @@ function RouteComponent() {
           onConfirm: extractionFlow.handleDeclareCreatedSymbolDefiniendum,
         }}
         metadata={{
-          opened: semanticFlow.definitionMetaEditOpen,
+          opened: semanticFlow.floDownBlockMetaEditOpen,
           onClose: () => {
-            semanticFlow.setDefinitionMetaEditOpen(false);
-            semanticFlow.setDefinitionMetaTarget(null);
+            semanticFlow.setFloDownBlockMetaEditOpen(false);
+            semanticFlow.setFloDownBlockMetaTarget(null);
           },
-          definition: semanticFlow.definitionMetaTarget,
-          invalidateKey: ["definitions", documentId],
+          floDownBlock: semanticFlow.floDownBlockMetaTarget,
+          invalidateKey: ["floDownBlocks", documentId],
         }}
         sniffy={{
           opened: sniffyFlow.suggestOpen,
           onClose: () => sniffyFlow.setSuggestOpen(false),
-          activeDefId: sniffyFlow.activeDefId,
-          activeDefStatement: sniffyFlow.activeDefStatement,
-          activeDefText: sniffyFlow.activeDefText,
+          activeFloDownBlockId: sniffyFlow.activeFloDownBlockId,
+          activeFloDownBlockStatement: sniffyFlow.activeFloDownBlockStatement,
+          activeFloDownBlockText: sniffyFlow.activeFloDownBlockText,
           suggestions: sniffyFlow.suggestions,
           catalog: sniffyCatalog,
           loading: sniffyFlow.suggestLoading,

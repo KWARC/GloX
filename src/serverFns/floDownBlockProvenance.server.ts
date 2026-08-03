@@ -1,8 +1,8 @@
 import prisma from "@/lib/prisma";
 import { createServerFn } from "@tanstack/react-start";
 
-type DefinitionProvenanceInput = {
-  definitionIds: string[];
+type FloDownBlockProvenanceInput = {
+  floDownBlockIds: string[];
   documentId: string;
   futureRepo: string;
   filePath: string;
@@ -10,12 +10,12 @@ type DefinitionProvenanceInput = {
   language: string;
 };
 
-export const getDefinitionProvenance = createServerFn({ method: "POST" })
-  .inputValidator((data: DefinitionProvenanceInput) => data)
+export const getFloDownBlockProvenance = createServerFn({ method: "POST" })
+  .inputValidator((data: FloDownBlockProvenanceInput) => data)
   .handler(async ({ data }) => {
-    const defs = await prisma.definition.findMany({
+    const defs = await prisma.floDownBlock.findMany({
       where: {
-        id: { in: data.definitionIds },
+        id: { in: data.floDownBlockIds },
       },
       include: {
         document: {
@@ -24,12 +24,12 @@ export const getDefinitionProvenance = createServerFn({ method: "POST" })
       },
     });
 
-    const ordered = data.definitionIds.map((id) =>
+    const ordered = data.floDownBlockIds.map((id) =>
       defs.find((d) => d.id === id),
     );
 
     return ordered.filter(Boolean).map((def) => ({
-      definitionId: def!.id,
+      floDownBlockId: def!.id,
       documentId: def!.documentId,
       documentName: def!.document.filename,
       pageNumber: def!.pageNumber,

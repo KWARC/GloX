@@ -5,7 +5,7 @@ import type { CatalogEntry, SuggestedReferenceCandidate } from "./types";
 
 export function candidateKey(candidate: SuggestedReferenceCandidate) {
   if (candidate.source === "DB") {
-    return `DB:${candidate.definitionId ?? ""}`;
+    return `DB:${candidate.floDownBlockId ?? ""}`;
   }
   return `MATHHUB:${candidate.uri ?? ""}`;
 }
@@ -43,7 +43,7 @@ export function toCandidate(
       .filter(Boolean)
       .join("/"),
     confidence,
-    definitionId: entry.sourceDefinitionId,
+    floDownBlockId: entry.sourceFloDownBlockId,
   };
 }
 
@@ -59,14 +59,14 @@ export function getSearchTerms(entry: CatalogEntry) {
 
 export function buildCandidateSymRefMap(
   catalog: CatalogEntry[],
-  currentDefinitionId?: string,
+  currentFloDownBlockId?: string,
 ): Record<string, UnifiedSymbolicReference> {
   const candidateSymRefs: Record<string, UnifiedSymbolicReference> = {};
 
   for (const entry of catalog) {
     if (
       entry.symRef.source === "DB" &&
-      entry.sourceDefinitionId === currentDefinitionId
+      entry.sourceFloDownBlockId === currentFloDownBlockId
     ) {
       continue;
     }

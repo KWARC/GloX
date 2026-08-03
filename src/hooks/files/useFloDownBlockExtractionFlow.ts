@@ -10,20 +10,20 @@ import {
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import {
   CreatedSymbolTarget,
-  createDefinitionWithDeclaredSymbol,
+  createFloDownBlockWithDeclaredSymbol,
   declareCreatedSymbolDefiniendum,
-} from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
+} from "@/serverFns/createFloDownBlockWithDeclaredSymbol.server";
 import { createMarkReference } from "@/serverFns/markReference.server";
-import { findDefinitionsByIdentity } from "@/serverFns/extractDefinition.server";
+import { findFloDownBlocksByIdentity } from "@/serverFns/extractFloDownBlock.server";
 import { FtmlStatement } from "@/types/ftml.types";
-import { ParagraphKind } from "@/types/paragraphKind";
+import { ExtractBlockType } from "@/types/blockType";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
-import { FlattenedLlmSuggestion } from "@/hooks/files/useLlmDefinitionSuggestions";
+import { FlattenedLlmSuggestion } from "@/hooks/files/useLlmFloDownBlockSuggestions";
 
 type ExtractDialogMode = "definition" | "symbol-target";
 
-export function useDefinitionExtractionFlow({
+export function useFloDownBlockExtractionFlow({
   documentId,
   document,
   pages,
@@ -63,11 +63,11 @@ export function useDefinitionExtractionFlow({
   const [activePage, setActivePage] = useState<ActivePage | null>(null);
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
   const [pendingExtractText, setPendingExtractText] = useState("");
-  const [definitionName, setDefinitionName] = useState("");
+  const [paragraphFileName, setParagraphFileName] = useState("");
   const [extractDialogMode, setExtractDialogMode] =
     useState<ExtractDialogMode>("definition");
   const [symbolName, setSymbolName] = useState("");
-  const [extractKind, setExtractKind] = useState<ParagraphKind>("Definition");
+  const [extractBlockType, setExtractBlockType] = useState<ExtractBlockType>("definition");
   const [createdSymbolTarget, setCreatedSymbolTarget] =
     useState<CreatedSymbolTarget | null>(null);
   const [isManualDefinitionCreate, setIsManualDefinitionCreate] =
@@ -78,19 +78,19 @@ export function useDefinitionExtractionFlow({
   const [isMarkReferenceDefinitionFlow, setIsMarkReferenceDefinitionFlow] =
     useState(false);
   const [semanticEnabled, setSemanticEnabled] = useState(false);
-  const [duplicateDefinitions, setDuplicateDefinitions] = useState<Awaited<ReturnType<typeof findDefinitionsByIdentity>>>([]);
+  const [duplicateFloDownBlocks, setDuplicateFloDownBlocks] = useState<Awaited<ReturnType<typeof findFloDownBlocksByIdentity>>>([]);
   const [pendingDuplicateSubmit, setPendingDuplicateSubmit] = useState<{
-    text: string; kind: ParagraphKind; statement?: FtmlStatement;
+    text: string; blockType: ExtractBlockType; statement?: FtmlStatement;
   } | null>(null);
   const { extractText } = useExtractionActions(documentId);
 
   function resetExtractState() {
     setExtractDialogOpen(false);
     setPendingExtractText("");
-    setDefinitionName("");
+    setParagraphFileName("");
     setExtractDialogMode("definition");
     setSymbolName("");
-    setExtractKind("Definition");
+    setExtractBlockType("definition");
     setIsManualDefinitionCreate(false);
     setIsMarkReferenceDefinitionFlow(false);
     setSemanticEnabled(false);
@@ -119,32 +119,32 @@ export function useDefinitionExtractionFlow({
     });
     setExtractDialogMode("definition");
     setSymbolName("");
-    setExtractKind("Definition");
+    setExtractBlockType("definition");
     setIsManualDefinitionCreate(false);
   }
 
   function handleCreateDefinition() {
     setActivePage(null);
     setPendingExtractText("");
-    setDefinitionName("");
+    setParagraphFileName("");
     setExtractDialogMode("definition");
     setSymbolName("");
-    setExtractKind("Definition");
+    setExtractBlockType("definition");
     setIsManualDefinitionCreate(true);
     setIsMarkReferenceDefinitionFlow(false);
     setSemanticEnabled(false);
     setExtractDialogOpen(true);
   }
 
-  function handleCreateSymbolTargetDefinition(conceptUri: string) {
+  function handleCreateSymbolTargetFloDownBlock(conceptUri: string) {
     const normalizedName = normalizeContentName(conceptUri);
     setActivePage(null);
     setPendingExtractText(conceptUri);
-    setDefinitionName(normalizedName);
+    setParagraphFileName(normalizedName);
     setSymbolName(conceptUri);
     setCreatedSymbolTarget(null);
     setExtractDialogMode("symbol-target");
-    setExtractKind("Definition");
+    setExtractBlockType("definition");
     setIsManualDefinitionCreate(true);
     setIsMarkReferenceDefinitionFlow(false);
     setSemanticEnabled(false);
@@ -155,7 +155,7 @@ export function useDefinitionExtractionFlow({
     if (!selection) return;
     setExtractDialogMode("definition");
     setSymbolName("");
-    setExtractKind("Definition");
+    setExtractBlockType("definition");
     setIsManualDefinitionCreate(false);
     setIsMarkReferenceDefinitionFlow(false);
     setSemanticEnabled(false);
@@ -187,7 +187,7 @@ export function useDefinitionExtractionFlow({
     setActivePage({ id: page.id, pageNumber: page.pageNumber });
     setExtractDialogMode("definition");
     setSymbolName("");
-    setExtractKind("Definition");
+    setExtractBlockType("definition");
     setIsManualDefinitionCreate(false);
     setIsMarkReferenceDefinitionFlow(false);
     setSemanticEnabled(false);
@@ -197,11 +197,11 @@ export function useDefinitionExtractionFlow({
 
   async function performExtractSubmit({
     text: editedText,
-    kind,
+    blockType,
     statement,
   }: {
     text: string;
-    kind: ParagraphKind;
+    blockType: ExtractBlockType;
     statement?: FtmlStatement;
   }) {
     if (!document) return;
@@ -212,14 +212,14 @@ export function useDefinitionExtractionFlow({
 
     if (isManualDefinitionCreate) {
       if (extractDialogMode === "symbol-target") {
-        const created = await createDefinitionWithDeclaredSymbol({
+        const created = await createFloDownBlockWithDeclaredSymbol({
           data: {
             documentId,
             documentPageId: pages[0]?.id ?? null,
             pageNumber: null,
-            kind,
-            definitionName: definitionName.trim(),
-            definitionText: editedText,
+            blockType,
+            paragraphFileName: paragraphFileName.trim(),
+            originalText: editedText,
             statement,
             symbolName: symbolName.trim(),
             futureRepo: identity.futureRepo,
@@ -229,7 +229,7 @@ export function useDefinitionExtractionFlow({
         });
 
         await queryClient.invalidateQueries({
-          queryKey: ["definitions", documentId],
+          queryKey: ["floDownBlocks", documentId],
         });
         await queryClient.invalidateQueries({
           queryKey: ["symbol-search-db"],
@@ -246,12 +246,12 @@ export function useDefinitionExtractionFlow({
         await extractText({
           documentPageId: pages[0]?.id ?? null,
           pageNumber: null,
-          kind,
+          blockType,
           text: editedText,
           statement,
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
-          fileName: definitionName.trim(),
+          fileName: paragraphFileName.trim(),
           language: identity.language,
         });
       }
@@ -261,12 +261,12 @@ export function useDefinitionExtractionFlow({
       await extractText({
         documentPageId: activePage.id,
         pageNumber: activePage.pageNumber,
-        kind,
+        blockType,
         text: editedText,
         statement,
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
-        fileName: definitionName.trim(),
+        fileName: paragraphFileName.trim(),
         language: identity.language,
       });
     }
@@ -290,20 +290,20 @@ export function useDefinitionExtractionFlow({
 
   async function handleExtractSubmit(input: {
     text: string;
-    kind: ParagraphKind;
+    blockType: ExtractBlockType;
     statement?: FtmlStatement;
   }) {
     if (!document || !validateIdentity()) return;
-    const matches = await findDefinitionsByIdentity({
+    const matches = await findFloDownBlocksByIdentity({
       data: {
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
-        fileName: definitionName.trim(),
+        fileName: paragraphFileName.trim(),
         language: identity.language,
       },
     });
     if (matches.length) {
-      setDuplicateDefinitions(matches);
+      setDuplicateFloDownBlocks(matches);
       setPendingDuplicateSubmit(input);
       return;
     }
@@ -313,7 +313,7 @@ export function useDefinitionExtractionFlow({
   async function confirmDuplicateCreation() {
     if (!pendingDuplicateSubmit) return;
     const input = pendingDuplicateSubmit;
-    setDuplicateDefinitions([]);
+    setDuplicateFloDownBlocks([]);
     setPendingDuplicateSubmit(null);
     await performExtractSubmit(input);
   }
@@ -327,7 +327,7 @@ export function useDefinitionExtractionFlow({
 
     await declareCreatedSymbolDefiniendum({
       data: {
-        definitionId: createdSymbolTarget.definition.id,
+        floDownBlockId: createdSymbolTarget.floDownBlock.id,
         symbolId: createdSymbolTarget.symbol.id,
         selectedText: selection.selectedText,
         startOffset: selection.startOffset,
@@ -336,7 +336,7 @@ export function useDefinitionExtractionFlow({
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      queryKey: ["floDownBlocks", documentId],
     });
     await queryClient.invalidateQueries({
       queryKey: ["symbol-search-db"],
@@ -401,11 +401,11 @@ export function useDefinitionExtractionFlow({
       if (shouldOpenDefinitionDialog) {
         clearAll();
         setPendingExtractText(selectedText);
-        setDefinitionName(normalizeContentName(createdSymbolName));
+        setParagraphFileName(normalizeContentName(createdSymbolName));
         setSymbolName(createdSymbolName);
         setCreatedSymbolTarget(null);
         setExtractDialogMode("symbol-target");
-        setExtractKind("Definition");
+        setExtractBlockType("definition");
         setIsManualDefinitionCreate(true);
         setIsMarkReferenceDefinitionFlow(true);
         setSemanticEnabled(false);
@@ -430,30 +430,30 @@ export function useDefinitionExtractionFlow({
     extractDialogOpen,
     setExtractDialogOpen,
     pendingExtractText,
-    definitionName,
-    setDefinitionName,
+    paragraphFileName,
+    setParagraphFileName,
     extractDialogMode,
     setExtractDialogMode,
     symbolName,
     setSymbolName,
-    extractKind,
-    setExtractKind,
+    extractBlockType,
+    setExtractBlockType,
     createdSymbolTarget,
     setCreatedSymbolTarget,
     isManualDefinitionCreate,
     isMarkReferenceDefinitionFlow,
     semanticEnabled,
-    duplicateDefinitions,
+    duplicateFloDownBlocks,
     pendingDuplicateSubmit,
     markReferenceDialogOpen,
     markReferenceText,
     markReferenceSaving,
     setIsManualDefinitionCreate,
     setSemanticEnabled,
-    setDuplicateDefinitions,
+    setDuplicateFloDownBlocks,
     handleLeftSelection,
     handleCreateDefinition,
-    handleCreateSymbolTargetDefinition,
+    handleCreateSymbolTargetFloDownBlock,
     handleDeclareCreatedSymbolDefiniendum,
     handleOpenSelectionExtract,
     handleOpenMarkReference,

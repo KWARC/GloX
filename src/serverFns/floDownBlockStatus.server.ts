@@ -3,7 +3,7 @@ import { currentUser } from "@/server/auth/currentUser";
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
 
-export const updateDefinitionsStatusByIdentity = createServerFn({
+export const updateFloDownBlocksStatusByIdentity = createServerFn({
   method: "POST",
 })
   .inputValidator(
@@ -21,7 +21,7 @@ export const updateDefinitionsStatusByIdentity = createServerFn({
     const user = await currentUser();
     if (!user.loggedIn) throw new Error("Unauthorized");
 
-    await prisma.definition.updateMany({
+    await prisma.floDownBlock.updateMany({
       where: {
         documentId: data.identity.documentId,
         futureRepo: data.identity.futureRepo,
@@ -38,10 +38,10 @@ export const updateDefinitionsStatusByIdentity = createServerFn({
     return { success: true };
   });
 
-export const getDefinitionFileStatus = createServerFn({ method: "POST" })
+export const getFloDownBlockFileStatus = createServerFn({ method: "POST" })
   .inputValidator((data: FileIdentity) => data)
   .handler(async ({ data }) => {
-    const result = await prisma.definition.findFirst({
+    const result = await prisma.floDownBlock.findFirst({
       where: {
         documentId: data.documentId,
         futureRepo: data.futureRepo,

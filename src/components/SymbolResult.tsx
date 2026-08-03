@@ -18,7 +18,7 @@ import {
 import { IconPlus } from "@tabler/icons-react";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
-import { useDefinitionBySymbol } from "@/serverFns/definitionbysymbol.server";
+import { useFloDownBlockBySymbol } from "@/serverFns/floDownBlockBySymbol.server";
 import { assertFtmlStatement } from "@/types/ftml.types";
 import { FtmlPreview } from "./FtmlPreview";
 
@@ -26,16 +26,16 @@ const SEARCH_RESULTS_HEIGHT = 240;
 const SYMBOL_RESULT_TOOLTIP_Z_INDEX = 7000;
 
 function DbSymbolHoverPreview({ symbolName }: { symbolName: string }) {
-  const { data: definition, isLoading } = useDefinitionBySymbol(symbolName);
+  const { data: floDownBlock, isLoading } = useFloDownBlockBySymbol(symbolName);
 
   if (isLoading) return <Loader size="xs" />;
-  if (!definition) return <Text size="xs" c="dimmed">No content has been created</Text>;
+  if (!floDownBlock) return <Text size="xs" c="dimmed">No content has been created</Text>;
 
   return (
     <Box style={{ maxWidth: 520 }}>
       <FtmlPreview
-        docId={`db-symbol-preview-${definition.id}`}
-        ftmlAst={assertFtmlStatement(definition.statement)}
+        docId={`db-symbol-preview-${floDownBlock.id}`}
+        ftmlAst={assertFtmlStatement(floDownBlock.statement)}
       />
     </Box>
   );

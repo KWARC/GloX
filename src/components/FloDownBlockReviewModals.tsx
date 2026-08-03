@@ -1,24 +1,25 @@
 import { ExtractedItem } from "@/server/text-selection";
+import { blockTypeLabel, getTopLevelBlockType } from "@/types/blockType";
 import { assertFtmlStatement } from "@/types/ftml.types";
-import { getDefinitionDeletionImpact } from "@/serverFns/extractDefinition.server";
+import { getFloDownBlockDeletionImpact } from "@/serverFns/extractFloDownBlock.server";
 import { Alert, Button, Group, Modal, Paper, Stack, Text } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { FtmlPreview } from "./FtmlPreview";
 
-type DuplicateDefinition = Pick<
+type DuplicateFloDownBlock = Pick<
   ExtractedItem,
-  "id" | "originalText" | "statement" | "pageNumber" | "kind"
+  "id" | "originalText" | "statement" | "pageNumber"
 >;
 
-export function DuplicateDefinitionModal({
+export function DuplicateFloDownBlockModal({
   opened,
-  definitions,
+  floDownBlocks,
   onCancel,
   onConfirm,
 }: {
   opened: boolean;
-  definitions: DuplicateDefinition[];
+  floDownBlocks: DuplicateFloDownBlock[];
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -33,21 +34,21 @@ export function DuplicateDefinitionModal({
       <Stack>
         <Text size="sm">
           This repository, path, filename, and language already contain{" "}
-          {definitions.length} content item{definitions.length === 1 ? "" : "s"}
+          {floDownBlocks.length} content item{floDownBlocks.length === 1 ? "" : "s"}
           . Review them before creating another.
         </Text>
-        {definitions.map((definition) => (
-          <Stack key={definition.id} gap={2}>
+        {floDownBlocks.map((floDownBlock) => (
+          <Stack key={floDownBlock.id} gap={2}>
             <Text size="xs" c="dimmed">
-              {definition.pageNumber === null
+              {floDownBlock.pageNumber === null
                 ? "New"
-                : `Page ${definition.pageNumber}`}{" "}
-              · {definition.kind}
+                : `Page ${floDownBlock.pageNumber}`}{" "}
+              · {blockTypeLabel(getTopLevelBlockType(floDownBlock.statement))}
             </Text>
             <Paper withBorder bg="blue.0" py={4} px={6}>
               <FtmlPreview
-                docId={`duplicate-review-${definition.id}`}
-                ftmlAst={definition.statement}
+                docId={`duplicate-review-${floDownBlock.id}`}
+                ftmlAst={floDownBlock.statement}
               />
             </Paper>
           </Stack>
@@ -65,26 +66,26 @@ export function DuplicateDefinitionModal({
   );
 }
 
-export function DefinitionDeleteModal({
-  definition,
+export function FloDownBlockDeleteModal({
+  floDownBlock,
   opened,
   loading = false,
   onCancel,
   onConfirm,
 }: {
-  definition: ExtractedItem | null;
+  floDownBlock: ExtractedItem | null;
   opened: boolean;
   loading?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const { data: associatedDefinitions = [] } = useQuery({
-    queryKey: ["definition-deletion-impact", definition?.id],
+  const { data: associatedFloDownBlocks = [] } = useQuery({
+    queryKey: ["definition-deletion-impact", floDownBlock?.id],
     queryFn: () =>
-      getDefinitionDeletionImpact({ data: { id: definition!.id } }),
-    enabled: opened && !!definition,
+      getFloDownBlockDeletionImpact({ data: { id: floDownBlock!.id } }),
+    enabled: opened && !!floDownBlock,
   });
-  if (!definition) return null;
+  if (!floDownBlock) return null;
   return (
     <Modal
       opened={opened}
@@ -102,16 +103,16 @@ export function DefinitionDeleteModal({
         </Text>
         <Paper withBorder bg="blue.0" py={4} px={6}>
           <FtmlPreview
-            docId={`delete-review-${definition.id}`}
-            ftmlAst={definition.statement}
+            docId={`delete-review-${floDownBlock.id}`}
+            ftmlAst={floDownBlock.statement}
           />
         </Paper>
-        {associatedDefinitions.length > 0 && (
+        {associatedFloDownBlocks.length > 0 && (
           <>
             <Text size="sm" fw={600}>
               This content is referenced in the content below
             </Text>
-            {associatedDefinitions.map((associated) => (
+            {associatedFloDownBlocks.map((associated) => (
               <Paper key={associated.id} withBorder bg="blue.0" py={4} px={6}>
                 <FtmlPreview
                   docId={`delete-impact-${associated.id}`}

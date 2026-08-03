@@ -2,14 +2,14 @@ import { documentByIdQuery } from "@/queries/documentById";
 import { MyDocument } from "@/queries/document";
 import { documentPagesQuery } from "@/queries/documentPages";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
-import { listDefinition } from "@/serverFns/extractDefinition.server";
+import { listFloDownBlocks } from "@/serverFns/extractFloDownBlock.server";
 import { listMarkReferences } from "@/serverFns/markReference.server";
 import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { useQuery } from "@tanstack/react-query";
 import { DocumentPage } from "generated/prisma/browser";
 import { useMemo } from "react";
 
-type ExtractedDefinitions = Awaited<ReturnType<typeof listDefinition>>;
+type ExtractedDefinitions = Awaited<ReturnType<typeof listFloDownBlocks>>;
 type MarkReferences = Awaited<ReturnType<typeof listMarkReferences>>;
 type StaticCatalog = Awaited<ReturnType<typeof listStaticSymbolicCatalog>>;
 type SniffyCatalog = ReturnType<typeof buildStaticCatalog>;
@@ -38,8 +38,8 @@ export function useFileDocumentData(documentId: string): FileDocumentData {
   );
 
   const { data: extracts = [] } = useQuery({
-    queryKey: ["definitions", documentId],
-    queryFn: () => listDefinition({ data: { documentId } }),
+    queryKey: ["floDownBlocks", documentId],
+    queryFn: () => listFloDownBlocks({ data: { documentId } }),
   });
 
   const { data: markReferences = [] } = useQuery({

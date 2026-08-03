@@ -5,7 +5,7 @@ import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
 import { MyDocument, myDocumentsQuery } from "@/queries/document";
 import { currentUser } from "@/server/auth/currentUser";
 import {
-  checkDocumentDefinitions,
+  checkDocumentFloDownBlocks,
   deleteDocument,
 } from "@/serverFns/deleteDocument.server";
 import {
@@ -15,17 +15,14 @@ import {
   Button,
   Group,
   Modal,
-  Select,
   Stack,
   Table,
   Text,
   TextInput,
-  ThemeIcon,
   Title,
   Tooltip,
 } from "@mantine/core";
 import {
-  IconFileDescription,
   IconFolderSymlink,
   IconSearch,
   IconSortAscending,
@@ -76,9 +73,6 @@ export function DocumentsTable({
     searchValue.trim().toLowerCase(),
   );
   const [sortOrder, setSortOrder] = useState<"latest" | "oldest">("latest");
-  const [moduleDescriptionFilter, setModuleDescriptionFilter] = useState<
-    "all" | "only" | "exclude"
-  >("all");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [targetDoc, setTargetDoc] = useState<{
     id: string;
@@ -95,17 +89,9 @@ export function DocumentsTable({
   const isAdmin = auth?.user?.role === "ADMIN";
 
   const filteredDocuments = useMemo(() => {
-    const filtered = data.filter((doc) => {
-      if (moduleDescriptionFilter === "only" && !doc.moduleDescription) {
-        return false;
-      }
-
-      if (moduleDescriptionFilter === "exclude" && doc.moduleDescription) {
-        return false;
-      }
-
-      return matchesSearch(doc, deferredSearchValue);
-    });
+    const filtered = data.filter((doc) =>
+      matchesSearch(doc, deferredSearchValue),
+    );
 
     filtered.sort((left, right) => {
       const leftTime = new Date(left.createdAt).getTime();
@@ -116,7 +102,7 @@ export function DocumentsTable({
     });
 
     return filtered;
-  }, [data, deferredSearchValue, moduleDescriptionFilter, sortOrder]);
+  }, [data, deferredSearchValue, sortOrder]);
 
   const resetConfirmation = () => {
     setConfirmOpen(false);
@@ -127,7 +113,7 @@ export function DocumentsTable({
 
   const { mutateAsync: checkDefs } = useMutation({
     mutationFn: (documentId: string) =>
-      checkDocumentDefinitions({ data: { documentId } }),
+      checkDocumentFloDownBlocks({ data: { documentId } }),
   });
 
   const { mutate: removeDoc, isPending } = useMutation({
@@ -180,22 +166,6 @@ export function DocumentsTable({
               onChange={(event) => setSearchValue(event.currentTarget.value)}
               leftSection={<IconSearch size={16} />}
               w={280}
-            />
-            <Select
-              label="Module descriptions"
-              value={moduleDescriptionFilter}
-              onChange={(value) =>
-                setModuleDescriptionFilter(
-                  (value as "all" | "only" | "exclude") ?? "all",
-                )
-              }
-              data={[
-                { value: "all", label: "Show all" },
-                { value: "only", label: "Only module descriptions" },
-                { value: "exclude", label: "Hide module descriptions" },
-              ]}
-              allowDeselect={false}
-              w={220}
             />
           </Group>
         </Group>
@@ -259,22 +229,7 @@ export function DocumentsTable({
                   >
                     <Table.Td>
                       <Stack gap={2}>
-                        <Group gap={6} wrap="nowrap">
-                          <Text fw={600}>{doc.filename}</Text>
-
-                          {doc.moduleDescription && (
-                            <Tooltip label="Module description" withArrow>
-                              <ThemeIcon
-                                size="sm"
-                                radius="xl"
-                                color="teal"
-                                variant="light"
-                              >
-                                <IconFileDescription size={13} />
-                              </ThemeIcon>
-                            </Tooltip>
-                          )}
-                        </Group>
+                        <Text fw={600}>{doc.filename}</Text>
 
                         <Text size="xs" c="dimmed">
                           [{doc.futureRepo}] [{doc.filePath}] [{doc.language}]
@@ -283,7 +238,7 @@ export function DocumentsTable({
                     </Table.Td>
 
                     <Table.Td ta="center">
-                      <Badge variant="light">{doc.definitionCount}</Badge>
+                      <Badge variant="light">{doc.floDownBlockCount}</Badge>
                     </Table.Td>
 
                     <Table.Td ta="center">
@@ -343,7 +298,7 @@ export function DocumentsTable({
                               id: doc.id,
                               filename: doc.filename,
                             });
-                            setDefCount(res.definitionCount);
+                            setDefCount(res.floDownBlockCount);
                             setMarkReferenceCount(res.markReferenceCount);
                             setConfirmOpen(true);
                           }}

@@ -32,7 +32,7 @@ export const getDefiningDefinitions = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<Record<string, DefinitionNode>> => {
     if (!data.labels.length) return {};
 
-    const definitions = await prisma.definition.findMany({
+    const floDownBlocks = await prisma.floDownBlock.findMany({
       where: { status: { not: "DISCARDED" } },
       select: { statement: true },
     });
@@ -40,7 +40,7 @@ export const getDefiningDefinitions = createServerFn({ method: "POST" })
     const result: Record<string, DefinitionNode> = {};
     const remaining = new Set(data.labels);
 
-    for (const def of definitions) {
+    for (const def of floDownBlocks) {
       if (!remaining.size) break;
 
       const root = normalizeToRoot(assertFtmlStatement(def.statement));

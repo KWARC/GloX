@@ -6,13 +6,11 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { useState } from "react";
 
-export type DefinitionStatus =
+export type FloDownBlockCurationStatus =
   | "EXTRACTED"
   | "FINALIZED_IN_FILE"
   | "SUBMITTED_TO_MATHHUB"
   | "DISCARDED";
-
-export type ModuleDescriptionVisibility = "all" | "only" | "exclude";
 
 export const Route = createFileRoute("/curation")({
   loader: async () => {
@@ -37,11 +35,9 @@ export const Route = createFileRoute("/curation")({
 });
 
 function RouteComponent() {
-  const [curationLevel, setCurationLevel] = useState<DefinitionStatus | null>(
+  const [curationLevel, setCurationLevel] = useState<FloDownBlockCurationStatus | null>(
     null,
   );
-  const [moduleDescriptionVisibility, setModuleDescriptionVisibility] =
-    useState<ModuleDescriptionVisibility>("all");
 
   return (
     <Box
@@ -56,8 +52,6 @@ function RouteComponent() {
         <CurationSection
           curationLevel={curationLevel}
           setCurationLevel={setCurationLevel}
-          moduleDescriptionVisibility={moduleDescriptionVisibility}
-          setModuleDescriptionVisibility={setModuleDescriptionVisibility}
         />
       </Stack>
     </Box>

@@ -2,7 +2,7 @@ import { normalizeSymRef } from "@/server/parseUri";
 import {
   DefiniendumNode,
   OnReplaceNode,
-  SemanticDefinition,
+  FloDownBlockSemantic,
   SymrefNode,
 } from "@/types/Semantic.types";
 import { normalizeMathHubPreviewUrl } from "@/lib/mathhub";
@@ -18,7 +18,7 @@ import {
 } from "@/hooks/semantic-panel/useSemanticPanelState";
 
 type BaseProps = {
-  definition: SemanticDefinition;
+  floDownBlock: FloDownBlockSemantic;
   state: SemanticPanelState;
   onReplaceNode: OnReplaceNode;
 };
@@ -36,7 +36,7 @@ type SymrefProps = BaseProps & {
 export type SemanticSearchResultsProps = DefiniendumProps | SymrefProps;
 
 export function SemanticSearchResults(props: SemanticSearchResultsProps) {
-  const { definition, state, onReplaceNode } = props;
+  const { floDownBlock, state, onReplaceNode } = props;
   const {
     selectedUri,
     setSelectedUri,
@@ -111,13 +111,13 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                                 mathHubUri: props.selected.uri,
                                 localSymbolUri: r.symbolName,
                                 targetType: "definiendum",
-                                primaryDefinitionId: definition.id,
+                                primaryFloDownBlockId: floDownBlock.id,
                               } satisfies PendingMathHubToLocal);
                             } else {
                               setPendingPropagation({
                                 localSymbolUri: props.selected.uri,
                                 mathHubUri: r.symbolName,
-                                primaryDefinitionId: definition.id,
+                                primaryFloDownBlockId: floDownBlock.id,
                               } satisfies PendingPropagation);
                             }
 
@@ -136,7 +136,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                               mathHubUri: props.selected.uri,
                               localSymbolUri: newUri,
                               targetType: "symref",
-                              primaryDefinitionId: definition.id,
+                              primaryFloDownBlockId: floDownBlock.id,
                             } satisfies PendingMathHubToLocal);
                           } else {
                             const { uri } = normalizeSymRef({
@@ -148,7 +148,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                               language: r.language,
                             });
                             onReplaceNode(
-                              definition.id,
+                              floDownBlock.id,
                               {
                                 type: "symref",
                                 uri: props.selected.uri,
@@ -173,7 +173,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                     {props.mode === "definiendum" ? (
                       <DbResultItem
                         r={r}
-                        definition={definition}
+                        floDownBlock={floDownBlock}
                         mode={{
                           type: "definiendum",
                           selected: props.selected,
@@ -186,7 +186,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                     ) : (
                       <DbResultItem
                         r={r}
-                        definition={definition}
+                        floDownBlock={floDownBlock}
                         mode={{
                           type: "symref",
                           selected: props.selected,
@@ -264,7 +264,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                           setPendingPropagation({
                             localSymbolUri: props.selected.uri,
                             mathHubUri: r.uri,
-                            primaryDefinitionId: definition.id,
+                            primaryFloDownBlockId: floDownBlock.id,
                           } satisfies PendingPropagation);
 
                           setSelectedNode({
@@ -281,7 +281,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                         });
 
                         await handleReplaceNode(
-                          definition.id,
+                          floDownBlock.id,
                           {
                             type: "symref",
                             uri: props.selected.uri,

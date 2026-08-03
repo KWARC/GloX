@@ -9,9 +9,9 @@ import { useMediaQuery } from "@mantine/hooks";
 type PersistentSegment = {
   start: number;
   end: number;
-  definition: boolean;
+  extract: boolean;
   reference: boolean;
-  definitionLabel?: string;
+  extractLabel?: string;
   referenceLabel?: string;
 };
 
@@ -37,9 +37,9 @@ function getRenderSegments(
     return {
       start,
       end: cursor,
-      definition: segment.definition,
+      extract: segment.extract,
       reference: segment.reference,
-      definitionLabel: segment.definitionLabel,
+      extractLabel: segment.extractLabel,
       referenceLabel: segment.referenceLabel,
     };
   });
@@ -71,9 +71,9 @@ function getRenderSegments(
       start,
       end,
       content: pageText.slice(start, end),
-      definition: persistent?.definition ?? false,
+      extract: persistent?.extract ?? false,
       reference: persistent?.reference ?? false,
-      definitionLabel: persistent?.definitionLabel,
+      extractLabel: persistent?.extractLabel,
       referenceLabel: persistent?.referenceLabel,
       suggestion: validSuggestions.find(
         (suggestion) =>
@@ -84,18 +84,18 @@ function getRenderSegments(
 }
 
 function getPersistentBackground(segment: RenderSegment) {
-  if (segment.definition && segment.reference) {
+  if (segment.extract && segment.reference) {
     return "linear-gradient(135deg, rgba(147, 197, 253, 0.42) 0 50%, rgba(134, 239, 172, 0.42) 50% 100%)";
   }
 
-  if (segment.definition) return "rgba(147, 197, 253, 0.42)";
+  if (segment.extract) return "rgba(147, 197, 253, 0.42)";
   if (segment.reference) return "rgba(134, 239, 172, 0.42)";
   return undefined;
 }
 
 function getPersistentTooltipLabel(segment: RenderSegment) {
   return [
-    segment.definition ? segment.definitionLabel : undefined,
+    segment.extract ? segment.extractLabel : undefined,
     segment.reference ? segment.referenceLabel : undefined,
   ]
     .filter(Boolean)

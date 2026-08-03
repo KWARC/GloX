@@ -1,7 +1,7 @@
 import {
   OnDeleteNode,
   OnReplaceNode,
-  SemanticDefinition,
+  FloDownBlockSemantic,
 } from "@/types/Semantic.types";
 import { Button, Group, Paper, Stack, Text } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
@@ -11,14 +11,14 @@ import { SemanticSearchResults } from "./SemanticSearchResults";
 import { SemanticPanelState } from "@/hooks/semantic-panel/useSemanticPanelState";
 
 export type DefiniendumEditorProps = {
-  definition: SemanticDefinition;
+  floDownBlock: FloDownBlockSemantic;
   state: SemanticPanelState;
   onReplaceNode: OnReplaceNode;
   onDeleteNode: OnDeleteNode;
 };
 
 export function DefiniendumEditor({
-  definition,
+  floDownBlock,
   state,
   onReplaceNode,
   onDeleteNode,
@@ -86,7 +86,7 @@ export function DefiniendumEditor({
                   setSavingRename(true);
 
                   await onReplaceNode(
-                    definition.id,
+                    floDownBlock.id,
                     {
                       type: "definiendum",
                       uri: selectedDefiniendum.uri,
@@ -133,7 +133,7 @@ export function DefiniendumEditor({
               onClick={async () => {
                 const newUri = selectedUri;
                 await handleReplaceNode(
-                  definition.id,
+                  floDownBlock.id,
                   {
                     type: "definiendum",
                     uri: selectedDefiniendum.uri,
@@ -158,7 +158,7 @@ export function DefiniendumEditor({
               size="xs"
               color="red"
               onClick={() =>
-                onDeleteNode(definition.id, {
+                onDeleteNode(floDownBlock.id, {
                   type: "definiendum",
                   uri: selectedDefiniendum.uri,
                 })
@@ -172,7 +172,7 @@ export function DefiniendumEditor({
 
       <SemanticSearchResults
         mode="definiendum"
-        definition={definition}
+        floDownBlock={floDownBlock}
         state={state}
         selected={selectedDefiniendum}
         onReplaceNode={onReplaceNode}

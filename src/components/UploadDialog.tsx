@@ -3,7 +3,6 @@ import {
   Alert,
   Badge,
   Button,
-  Checkbox,
   Divider,
   FileInput,
   Group,
@@ -24,10 +23,7 @@ import {
 } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-
-const MODULE_DESCRIPTION_REPO = "courses/FAU";
-const MODULE_DESCRIPTION_PATH = "module-description";
+import { useState } from "react";
 
 interface Props {
   opened: boolean;
@@ -45,15 +41,8 @@ export default function UploadDialog({ opened, onClose }: Props) {
   const [futureRepo, setFutureRepo] = useState("");
   const [filePath, setFilePath] = useState("");
   const [language, setLanguage] = useState("en");
-  const [moduleDescription, setModuleDescription] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (!moduleDescription) return;
-    setFutureRepo(MODULE_DESCRIPTION_REPO);
-    setFilePath(MODULE_DESCRIPTION_PATH);
-  }, [moduleDescription]);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -68,7 +57,6 @@ export default function UploadDialog({ opened, onClose }: Props) {
       formData.append("futureRepo", futureRepo);
       formData.append("filePath", filePath);
       formData.append("language", language);
-      formData.append("moduleDescription", String(moduleDescription));
 
       const result = await uploadPdf({ data: formData });
 
@@ -80,7 +68,6 @@ export default function UploadDialog({ opened, onClose }: Props) {
         setFutureRepo("");
         setFilePath("");
         setLanguage("en");
-        setModuleDescription(false);
 
         navigate({
           to: "/files/$documentId",
@@ -107,7 +94,6 @@ export default function UploadDialog({ opened, onClose }: Props) {
       setFutureRepo("");
       setFilePath("");
       setLanguage("en");
-      setModuleDescription(false);
       onClose();
     }
   };
@@ -250,14 +236,6 @@ export default function UploadDialog({ opened, onClose }: Props) {
             <Divider/>
 
             <Stack gap="sm">
-              <Checkbox
-                label="Is this a Module Description?"
-                checked={moduleDescription}
-                onChange={(event) =>
-                  setModuleDescription(event.currentTarget.checked)
-                }
-              />
-
               <TextInput
                 label="Future Repo"
                 placeholder="e.g. smglom/software"

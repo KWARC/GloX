@@ -17,7 +17,7 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 
 type SymbolicRefInput = {
-  definitionId: string;
+  floDownBlockId: string;
   selection: {
     text: string;
     startOffset: number;
@@ -34,7 +34,7 @@ export const symbolicRef = createServerFn({ method: "POST" })
 
     const userId = userRes.user.id;
 
-    const { definitionId, selection, symRef } = data;
+    const { floDownBlockId, selection, symRef } = data;
 
     let parsed: ParsedMathHubUri;
 
@@ -51,16 +51,16 @@ export const symbolicRef = createServerFn({ method: "POST" })
       };
     }
 
-    const definition = await prisma.definition.findUnique({
-      where: { id: definitionId },
+    const floDownBlock = await prisma.floDownBlock.findUnique({
+      where: { id: floDownBlockId },
     });
 
-    if (!definition) {
+    if (!floDownBlock) {
       throw new Error("Content not found");
     }
 
     const currentAst: RootNode = normalizeToRoot(
-      assertFtmlStatement(definition.statement),
+      assertFtmlStatement(floDownBlock.statement),
     );
 
     let location;
@@ -105,15 +105,15 @@ export const symbolicRef = createServerFn({ method: "POST" })
     const statementToStore = unwrapRoot(updatedAst);
 
     await prisma.$transaction(async (tx) => {
-      const existing = await tx.definition.findUniqueOrThrow({
-        where: { id: definitionId },
+      const existing = await tx.floDownBlock.findUniqueOrThrow({
+        where: { id: floDownBlockId },
       });
 
       const nextVersion = existing.currentVersion + 1;
 
-      await tx.definitionVersion.create({
+      await tx.floDownBlockVersion.create({
         data: {
-          definitionId,
+          floDownBlockId: floDownBlockId,
           versionNumber: nextVersion,
           originalText: existing.originalText,
           statement: JSON.parse(JSON.stringify(statementToStore)),
@@ -121,33 +121,14 @@ export const symbolicRef = createServerFn({ method: "POST" })
         },
       });
 
-      await tx.definition.update({
-        where: { id: definitionId },
+      await tx.floDownBlock.update({
+        where: { id: floDownBlockId },
         data: {
           statement: JSON.parse(JSON.stringify(statementToStore)),
           updatedById: userId,
           currentVersion: nextVersion,
         },
       });
-    });
-
-    const symbolicRef = await prisma.symbolicReference.create({
-      data: {
-        name: parsed.symbol,
-        conceptUri: parsed.conceptUri,
-        archive: parsed.archive,
-        filePath: parsed.filePath,
-        fileName: parsed.fileName,
-        language: parsed.language,
-      },
-    });
-
-    await prisma.definitionSymbolicRef.create({
-      data: {
-        definitionId,
-        symbolicReferenceId: symbolicRef.id,
-        source: symRef.source === "DB" ? "DEFINIENDUM" : "MATHHUB",
-      },
     });
 
     return { ok: true };

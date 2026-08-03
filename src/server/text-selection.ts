@@ -1,7 +1,7 @@
 import { queryClient } from "@/queryClient";
-import { createDefinition, updateDefinition } from "@/serverFns/extractDefinition.server";
+import { createFloDownBlock, updateFloDownBlock } from "@/serverFns/extractFloDownBlock.server";
 import { FtmlStatement } from "@/types/ftml.types";
-import { ParagraphKind } from "@/types/paragraphKind";
+import { ExtractBlockType } from "@/types/blockType";
 import { useState } from "react";
 
 export interface PopupState {
@@ -28,7 +28,6 @@ export type ExtractedItem = {
   documentId: string;
   documentPageId: string;
   pageNumber: number | null;
-  kind: ParagraphKind;
   originalText: string;
   statement: FtmlStatement;
   futureRepo: string;
@@ -51,12 +50,6 @@ export type ExtractedItem = {
       symbolName: string;
     };
     isDeclared: boolean;
-  }[];
-  symbolicRefs?: {
-    symbolicReference: {
-      id: string;
-      conceptUri: string;
-    };
   }[];
 
   definienda?: {
@@ -135,7 +128,7 @@ export function useExtractionActions(documentId: string) {
   async function extractText(params: {
     documentPageId?: string | null;
     pageNumber?: number | null;
-    kind: ParagraphKind;
+    blockType?: ExtractBlockType;
     text: string;
     statement?: FtmlStatement;
     futureRepo: string;
@@ -143,12 +136,12 @@ export function useExtractionActions(documentId: string) {
     fileName: string;
     language: string;
   }) {
-    await createDefinition({
+    await createFloDownBlock({
       data: {
         documentId,
         documentPageId: params.documentPageId,
         pageNumber: params.pageNumber,
-        kind: params.kind,
+        blockType: params.blockType,
         originalText: params.text,
         statement: params.statement,
         futureRepo: params.futureRepo,
@@ -159,17 +152,17 @@ export function useExtractionActions(documentId: string) {
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      queryKey: ["floDownBlocks", documentId],
     });
   }
 
   async function updateExtract(id: string, statement: FtmlStatement) {
-    await updateDefinition({
+    await updateFloDownBlock({
       data: { id, statement },
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      queryKey: ["floDownBlocks", documentId],
     });
   }
 

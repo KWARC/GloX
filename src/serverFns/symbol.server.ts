@@ -16,7 +16,6 @@ import {
   RootNode,
   unwrapRoot,
 } from "@/types/ftml.types";
-import { ParagraphKind } from "@/types/paragraphKind";
 import { createServerFn } from "@tanstack/react-start";
 
 type AuthorizedRole = "ADMIN" | "CURATOR";
@@ -40,7 +39,7 @@ async function requireAdminOrCurator(): Promise<{
 }
 
 export type CreateSymbolDefiniendumInput = {
-  definitionId: string;
+  floDownBlockId: string;
   selectedText: string;
   startOffset: number;
   endOffset: number;
@@ -69,10 +68,9 @@ export type SymbolAssociationSummary = {
   language: string;
   createdAt: Date;
   updatedAt: Date;
-  associatedDefinitions: Array<{
+  associatedFloDownBlocks: Array<{
     id: string;
     documentId: string;
-    kind: ParagraphKind;
     statement: FtmlStatement;
     futureRepo: string;
     filePath: string;
@@ -85,10 +83,10 @@ export type SymbolAssociationSummary = {
 };
 
 type AssociatedDefinitionSummary =
-  SymbolAssociationSummary["associatedDefinitions"][number];
+  SymbolAssociationSummary["associatedFloDownBlocks"][number];
 
-function definitionMatchesDeclaredSymbol(
-  definition: {
+function floDownBlockMatchesDeclaredSymbol(
+  floDownBlock: {
     futureRepo: string;
     filePath: string;
     fileName: string;
@@ -104,15 +102,15 @@ function definitionMatchesDeclaredSymbol(
   },
 ): boolean {
   if (
-    definition.futureRepo !== symbol.futureRepo ||
-    definition.filePath !== symbol.filePath ||
-    definition.fileName !== symbol.fileName ||
-    definition.language !== symbol.language
+    floDownBlock.futureRepo !== symbol.futureRepo ||
+    floDownBlock.filePath !== symbol.filePath ||
+    floDownBlock.fileName !== symbol.fileName ||
+    floDownBlock.language !== symbol.language
   ) {
     return false;
   }
 
-  const root = normalizeToRoot(assertFtmlStatement(definition.statement));
+  const root = normalizeToRoot(assertFtmlStatement(floDownBlock.statement));
 
   for (const block of root.content) {
     if (!isDefinitionNode(block)) continue;
@@ -144,39 +142,16 @@ function definitionMatchesDeclaredSymbol(
   return false;
 }
 
-function addAssociatedDefinition(
-  definitionMap: Map<string, AssociatedDefinitionSummary>,
-  definition: AssociatedDefinitionSummary,
+function addAssociatedFloDownBlock(
+  floDownBlockMap: Map<string, AssociatedDefinitionSummary>,
+  floDownBlock: AssociatedDefinitionSummary,
 ) {
-  definitionMap.set(definition.id, definition);
+  floDownBlockMap.set(floDownBlock.id, floDownBlock);
 }
 
 async function buildSymbolAssociations() {
-  const [symbols, definitions] = await Promise.all([
+  const [symbols, floDownBlocks] = await Promise.all([
     prisma.symbol.findMany({
-      include: {
-        symbolicReferences: {
-          include: {
-            definitions: {
-              include: {
-                definition: {
-                  select: {
-                    id: true,
-                    documentId: true,
-                    kind: true,
-                    statement: true,
-                    futureRepo: true,
-                    filePath: true,
-                    fileName: true,
-                    language: true,
-                    pageNumber: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
       orderBy: [
         { symbolName: "asc" },
         { futureRepo: "asc" },
@@ -185,12 +160,11 @@ async function buildSymbolAssociations() {
         { language: "asc" },
       ],
     }),
-    prisma.definition.findMany({
+    prisma.floDownBlock.findMany({
       where: { status: { not: "DISCARDED" } },
       select: {
         id: true,
         documentId: true,
-        kind: true,
         statement: true,
         pageNumber: true,
         futureRepo: true,
@@ -202,42 +176,24 @@ async function buildSymbolAssociations() {
   ]);
 
   return symbols.map((symbol) => {
-    const definitionMap = new Map<string, AssociatedDefinitionSummary>();
+    const floDownBlockMap = new Map<string, AssociatedDefinitionSummary>();
 
-    for (const symbolicReference of symbol.symbolicReferences) {
-      for (const relation of symbolicReference.definitions) {
-        const definition = relation.definition;
-        addAssociatedDefinition(definitionMap, {
-          id: definition.id,
-          documentId: definition.documentId,
-          kind: definition.kind,
-          statement: definition.statement as FtmlStatement,
-          futureRepo: definition.futureRepo,
-          filePath: definition.filePath,
-          fileName: definition.fileName,
-          language: definition.language,
-          pageNumber: definition.pageNumber,
-        });
-      }
-    }
+    for (const floDownBlock of floDownBlocks) {
+      if (!floDownBlockMatchesDeclaredSymbol(floDownBlock, symbol)) continue;
 
-    for (const definition of definitions) {
-      if (!definitionMatchesDeclaredSymbol(definition, symbol)) continue;
-
-      addAssociatedDefinition(definitionMap, {
-        id: definition.id,
-        documentId: definition.documentId,
-        kind: definition.kind,
-        statement: definition.statement as FtmlStatement,
-        futureRepo: definition.futureRepo,
-        filePath: definition.filePath,
-        fileName: definition.fileName,
-        language: definition.language,
-        pageNumber: definition.pageNumber,
+      addAssociatedFloDownBlock(floDownBlockMap, {
+        id: floDownBlock.id,
+        documentId: floDownBlock.documentId,
+        statement: assertFtmlStatement(floDownBlock.statement),
+        futureRepo: floDownBlock.futureRepo,
+        filePath: floDownBlock.filePath,
+        fileName: floDownBlock.fileName,
+        language: floDownBlock.language,
+        pageNumber: floDownBlock.pageNumber,
       });
     }
 
-    const associatedDefinitions = Array.from(definitionMap.values());
+    const associatedFloDownBlocks = Array.from(floDownBlockMap.values());
 
     return {
       id: symbol.id,
@@ -249,9 +205,9 @@ async function buildSymbolAssociations() {
       language: symbol.language,
       createdAt: symbol.createdAt,
       updatedAt: symbol.updatedAt,
-      associatedDefinitions,
-      associatedDefinitionCount: associatedDefinitions.length,
-      canDelete: associatedDefinitions.length === 0,
+      associatedFloDownBlocks,
+      associatedDefinitionCount: associatedFloDownBlocks.length,
+      canDelete: associatedFloDownBlocks.length === 0,
     } satisfies SymbolAssociationSummary;
   });
 }
@@ -309,7 +265,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     return prisma.$transaction(async (tx) => {
       const {
-        definitionId,
+        floDownBlockId,
         selectedText,
         symdecl,
         futureRepo,
@@ -328,15 +284,15 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
 
       const userId = userRes.user.id;
 
-      if (!definitionId || !selectedText.trim()) {
+      if (!floDownBlockId || !selectedText.trim()) {
         throw new Error("Invalid input");
       }
 
-      const definition = await tx.definition.findUnique({
-        where: { id: definitionId },
+      const floDownBlock = await tx.floDownBlock.findUnique({
+        where: { id: floDownBlockId },
       });
 
-      if (!definition?.statement) {
+      if (!floDownBlock?.statement) {
         throw new Error("Content not found");
       }
 
@@ -395,7 +351,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
       }
 
       const root: RootNode = normalizeToRoot(
-        assertFtmlStatement(definition.statement),
+        assertFtmlStatement(floDownBlock.statement),
       );
 
       const firstNode = root.content[0];
@@ -461,16 +417,16 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         updatedDefinition.for_symbols = [...existingSymbols, uri];
       }
 
-      const existing = await tx.definition.findUniqueOrThrow({
-        where: { id: definitionId },
+      const existing = await tx.floDownBlock.findUniqueOrThrow({
+        where: { id: floDownBlockId },
       });
 
       const nextVersion = existing.currentVersion + 1;
       const newStatement = JSON.parse(JSON.stringify(unwrapRoot(updatedRoot)));
 
-      await tx.definitionVersion.create({
+      await tx.floDownBlockVersion.create({
         data: {
-          definitionId,
+          floDownBlockId: floDownBlockId,
           versionNumber: nextVersion,
           originalText: existing.originalText,
           statement: newStatement,
@@ -478,8 +434,8 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         },
       });
 
-      await tx.definition.update({
-        where: { id: definitionId },
+      await tx.floDownBlock.update({
+        where: { id: floDownBlockId },
         data: {
           statement: newStatement,
           updatedById: userId,
@@ -505,13 +461,20 @@ export const searchSymbol = createServerFn({ method: "POST" })
     });
   });
 
-export const getDefinitionBySymbol = createServerFn({ method: "POST" })
+export const getFloDownBlockBySymbol = createServerFn({ method: "POST" })
   .inputValidator((symbolName: string) => symbolName)
   .handler(async ({ data: symbolName }) => {
-    const defs = await prisma.definition.findMany({
+    const defs = await prisma.floDownBlock.findMany({
       select: {
         id: true,
-        kind: true,
+        documentId: true,
+        documentPageId: true,
+        pageNumber: true,
+        originalText: true,
+        futureRepo: true,
+        filePath: true,
+        fileName: true,
+        language: true,
         statement: true,
       },
     });

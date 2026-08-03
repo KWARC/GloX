@@ -3,7 +3,6 @@ import {
   Alert,
   Badge,
   Button,
-  Checkbox,
   Group,
   Paper,
   Progress,
@@ -43,13 +42,11 @@ export function DocumentUploadPanel() {
     futureRepo,
     language,
     loading,
-    moduleDescription,
     openExisting,
     selectFile,
     setFilePath,
     setFutureRepo,
     setLanguage,
-    setModuleDescription,
     upload,
   } = useDocumentUpload();
 
@@ -208,14 +205,6 @@ export function DocumentUploadPanel() {
 
         {file && !loading && (
           <Stack gap="sm">
-            <Checkbox
-              label="Is this a module description?"
-              checked={moduleDescription}
-              onChange={(event) =>
-                setModuleDescription(event.currentTarget.checked)
-              }
-            />
-
             <TextInput
               label="Future Repo"
               placeholder="e.g. smglom/software"

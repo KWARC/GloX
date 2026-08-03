@@ -18,7 +18,7 @@ export type LatexDraft = {
 };
 
 export type LatexKey = {
-  definitionIds: string[];
+  floDownBlockIds: string[];
   documentId: string;
   futureRepo: string;
   filePath: string;
@@ -59,7 +59,7 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
     const {
       latex,
       documentId,
-      definitionIds,
+      floDownBlockIds,
       futureRepo,
       filePath,
       fileName,
@@ -99,8 +99,8 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
       });
     }
 
-    const defs = await prisma.definition.findMany({
-      where: { id: { in: definitionIds } },
+    const defs = await prisma.floDownBlock.findMany({
+      where: { id: { in: floDownBlockIds } },
       orderBy: { createdAt: "asc" },
     });
 
@@ -115,7 +115,7 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
         i,
       );
 
-      await prisma.definition.update({
+      await prisma.floDownBlock.update({
         where: { id: def.id },
         data: {
           statement: JSON.parse(JSON.stringify(updatedStatement)),
@@ -131,7 +131,7 @@ export const saveLatexFinal = createServerFn({ method: "POST" })
     const {
       latex,
       documentId,
-      definitionIds,
+      floDownBlockIds,
       futureRepo,
       filePath,
       fileName,
@@ -166,8 +166,8 @@ export const saveLatexFinal = createServerFn({ method: "POST" })
         });
       }
 
-      const defs = await tx.definition.findMany({
-        where: { id: { in: definitionIds } },
+      const defs = await tx.floDownBlock.findMany({
+        where: { id: { in: floDownBlockIds } },
         orderBy: { createdAt: "asc" }, // REQUIRED
       });
 
@@ -184,9 +184,9 @@ export const saveLatexFinal = createServerFn({ method: "POST" })
 
         const nextVersion = def.currentVersion + 1;
 
-        await tx.definitionVersion.create({
+        await tx.floDownBlockVersion.create({
           data: {
-            definitionId: def.id,
+            floDownBlockId: def.id,
             versionNumber: nextVersion,
             originalText: def.originalText,
             statement: JSON.parse(JSON.stringify(updatedStatement)),
@@ -194,7 +194,7 @@ export const saveLatexFinal = createServerFn({ method: "POST" })
           },
         });
 
-        await tx.definition.update({
+        await tx.floDownBlock.update({
           where: { id: def.id },
           data: {
             statement: JSON.parse(JSON.stringify(updatedStatement)),
@@ -241,7 +241,7 @@ export const getFileIdentities = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const definitions = await prisma.definition.findMany({
+    const floDownBlocks = await prisma.floDownBlock.findMany({
       where: data.status ? { status: data.status } : {},
       distinct: ["futureRepo", "filePath", "fileName", "language"],
       select: {
@@ -259,7 +259,7 @@ export const getFileIdentities = createServerFn({ method: "POST" })
       ],
     });
 
-    return definitions;
+    return floDownBlocks;
   });
 
 export type FileIdentity = {
@@ -270,10 +270,10 @@ export type FileIdentity = {
   language: string;
 };
 
-export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
+export const getFloDownBlocksByIdentity = createServerFn({ method: "POST" })
   .inputValidator((data: FileIdentity) => data)
   .handler(async ({ data }) => {
-    const defs = await prisma.definition.findMany({
+    const defs = await prisma.floDownBlock.findMany({
       where: {
         futureRepo: data.futureRepo,
         filePath: data.filePath,
@@ -281,11 +281,6 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
         language: data.language,
       },
       include: {
-        symbolicRefs: {
-          include: {
-            symbolicReference: true,
-          },
-        },
         llmSuggestedDefiniendas: true,
         createdBy: {
           select: {
@@ -311,8 +306,9 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
       return {
         id: def.id,
         documentId: def.documentId,
+        documentPageId: def.documentPageId,
         pageNumber: def.pageNumber,
-        kind: def.kind,
+        originalText: def.originalText,
         statement,
         futureRepo: def.futureRepo,
         filePath: def.filePath,
@@ -320,7 +316,6 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
         language: def.language,
         createdBy: def.createdBy,
         updatedBy: def.updatedBy,
-        symbolicRefs: def.symbolicRefs,
         definienda:
           def.llmSuggestedDefiniendas?.map((d) => ({
             text: d.definienda,
@@ -381,6 +376,6 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
 
     return {
       symbols,
-      definitions: typedDefinitions,
+      floDownBlocks: typedDefinitions,
     };
   });

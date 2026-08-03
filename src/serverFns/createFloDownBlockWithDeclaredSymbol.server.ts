@@ -14,16 +14,16 @@ import {
   normalizeToRoot,
   unwrapRoot,
 } from "@/types/ftml.types";
-import { ParagraphKind } from "@/types/paragraphKind";
+import { ExtractBlockType } from "@/types/blockType";
 import { createServerFn } from "@tanstack/react-start";
 
-export type CreateDefinitionWithDeclaredSymbolInput = {
+export type CreateFloDownBlockWithDeclaredSymbolInput = {
   documentId: string;
   documentPageId?: string | null;
   pageNumber?: number | null;
-  kind?: ParagraphKind;
-  definitionName: string;
-  definitionText: string;
+  blockType?: ExtractBlockType;
+  paragraphFileName: string;
+  originalText: string;
   statement?: FtmlStatement;
   symbolName: string;
   existingSymbolId?: string;
@@ -33,10 +33,9 @@ export type CreateDefinitionWithDeclaredSymbolInput = {
 };
 
 export type CreatedSymbolTarget = {
-  definition: {
+  floDownBlock: {
     id: string;
     pageNumber: number | null;
-    kind: ParagraphKind;
     statement: FtmlStatement;
     futureRepo: string;
     filePath: string;
@@ -53,26 +52,26 @@ export type CreatedSymbolTarget = {
   };
 };
 
-function buildPlainDefinitionStatement(definitionText: string): DefinitionNode {
+function buildPlainDefinitionStatement(originalText: string): DefinitionNode {
   return {
     type: "definition",
     for_symbols: [],
     content: [
       {
         type: "paragraph",
-        content: [definitionText],
+        content: [originalText],
       },
     ],
   };
 }
 
-export const createDefinitionWithDeclaredSymbol = createServerFn({
+export const createFloDownBlockWithDeclaredSymbol = createServerFn({
   method: "POST",
 })
-  .inputValidator((data: CreateDefinitionWithDeclaredSymbolInput) => data)
+  .inputValidator((data: CreateFloDownBlockWithDeclaredSymbolInput) => data)
   .handler(async ({ data }) => {
-    const definitionName = data.definitionName?.trim();
-    const definitionText = data.definitionText?.trim();
+    const paragraphFileName = data.paragraphFileName?.trim();
+    const originalText = data.originalText?.trim();
     const symbolName = data.symbolName?.trim();
     const existingSymbolId = data.existingSymbolId?.trim();
     const futureRepo = data.futureRepo?.trim();
@@ -81,8 +80,8 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
 
     if (
       !data.documentId ||
-      !definitionName ||
-      !definitionText ||
+      !paragraphFileName ||
+      !originalText ||
       !symbolName ||
       !futureRepo ||
       !filePath ||
@@ -111,7 +110,7 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
     }
 
     const statement =
-      data.statement ?? buildPlainDefinitionStatement(definitionText);
+      data.statement ?? buildPlainDefinitionStatement(originalText);
     const serializedStatement = JSON.parse(JSON.stringify(statement));
 
     const result = await prisma.$transaction(async (tx) => {
@@ -125,7 +124,7 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
                 symbolName,
                 futureRepo,
                 filePath,
-                fileName: definitionName,
+                fileName: paragraphFileName,
                 language,
               },
             },
@@ -134,7 +133,7 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
               symbolName,
               futureRepo,
               filePath,
-              fileName: definitionName,
+              fileName: paragraphFileName,
               language,
             },
           });
@@ -143,17 +142,16 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
         throw new Error("Symbol not found");
       }
 
-      const createdDefinition = await tx.definition.create({
+      const createdFloDownBlock = await tx.floDownBlock.create({
         data: {
           documentId: data.documentId,
           documentPageId,
           pageNumber: null,
-          kind: data.kind ?? "Definition",
-          originalText: definitionText,
+          originalText: originalText,
           statement: serializedStatement,
           futureRepo,
           filePath,
-          fileName: definitionName,
+          fileName: paragraphFileName,
           language,
           createdById: userId,
           updatedById: userId,
@@ -162,11 +160,11 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
         },
       });
 
-      await tx.definitionVersion.create({
+      await tx.floDownBlockVersion.create({
         data: {
-          definitionId: createdDefinition.id,
+          floDownBlockId: createdFloDownBlock.id,
           versionNumber: 1,
-          originalText: definitionText,
+          originalText: originalText,
           statement: serializedStatement,
           editedById: userId,
         },
@@ -178,15 +176,14 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
       });
 
       return {
-        definition: {
-          id: createdDefinition.id,
-          pageNumber: createdDefinition.pageNumber,
-          kind: createdDefinition.kind,
-          statement: assertFtmlStatement(createdDefinition.statement),
-          futureRepo: createdDefinition.futureRepo,
-          filePath: createdDefinition.filePath,
-          fileName: createdDefinition.fileName,
-          language: createdDefinition.language,
+        floDownBlock: {
+          id: createdFloDownBlock.id,
+          pageNumber: createdFloDownBlock.pageNumber,
+          statement: assertFtmlStatement(createdFloDownBlock.statement),
+          futureRepo: createdFloDownBlock.futureRepo,
+          filePath: createdFloDownBlock.filePath,
+          fileName: createdFloDownBlock.fileName,
+          language: createdFloDownBlock.language,
         },
         symbol: {
           id: symbol.id,
@@ -203,7 +200,7 @@ export const createDefinitionWithDeclaredSymbol = createServerFn({
   });
 
 export type DeclareCreatedSymbolDefiniendumInput = {
-  definitionId: string;
+  floDownBlockId: string;
   symbolId: string;
   selectedText: string;
   startOffset: number;
@@ -218,7 +215,7 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
     const selectedText = data.selectedText?.trim();
 
     if (
-      !data.definitionId ||
+      !data.floDownBlockId ||
       !data.symbolId ||
       !selectedText ||
       data.startOffset < 0 ||
@@ -233,12 +230,12 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
     const userId = userRes.user.id;
 
     await prisma.$transaction(async (tx) => {
-      const [definition, symbol] = await Promise.all([
-        tx.definition.findUnique({ where: { id: data.definitionId } }),
+      const [floDownBlock, symbol] = await Promise.all([
+        tx.floDownBlock.findUnique({ where: { id: data.floDownBlockId } }),
         tx.symbol.findUnique({ where: { id: data.symbolId } }),
       ]);
 
-      if (!definition?.statement) {
+      if (!floDownBlock?.statement) {
         throw new Error("Content not found");
       }
 
@@ -246,7 +243,7 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
         throw new Error("Symbol not found");
       }
 
-      const root = normalizeToRoot(assertFtmlStatement(definition.statement));
+      const root = normalizeToRoot(assertFtmlStatement(floDownBlock.statement));
       const occurrences = findAllTextOccurrences(root, selectedText);
       const location = occurrences.find(
         (loc) => loc.offset === data.startOffset,
@@ -288,21 +285,21 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
         updatedDefinition.for_symbols = [...existingSymbols, symbol.symbolName];
       }
 
-      const nextVersion = definition.currentVersion + 1;
+      const nextVersion = floDownBlock.currentVersion + 1;
       const statement = JSON.parse(JSON.stringify(unwrapRoot(updatedRoot)));
 
-      await tx.definitionVersion.create({
+      await tx.floDownBlockVersion.create({
         data: {
-          definitionId: definition.id,
+          floDownBlockId: floDownBlock.id,
           versionNumber: nextVersion,
-          originalText: definition.originalText,
+          originalText: floDownBlock.originalText,
           statement,
           editedById: userId,
         },
       });
 
-      await tx.definition.update({
-        where: { id: definition.id },
+      await tx.floDownBlock.update({
+        where: { id: floDownBlock.id },
         data: {
           statement,
           updatedById: userId,

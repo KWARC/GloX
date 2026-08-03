@@ -16,7 +16,6 @@ export type DefiniendumInfo = {
 export type SymbolicRefInfo = {
   uri: string;
   text: string;
-  symbolicRefId: string;
 };
 
 function walk(
@@ -54,14 +53,7 @@ function walk(
   }
 }
 
-export function extractSemanticIndex(
-  statement: FtmlRoot,
-  definition: {
-    symbolicRefs?: {
-      symbolicReference: { id: string; conceptUri: string };
-    }[];
-  },
-) {
+export function extractSemanticIndex(statement: FtmlRoot) {
   const root = normalizeToRoot(statement);
 
   const collected = {
@@ -77,23 +69,5 @@ export function extractSemanticIndex(
     symdecl: d.symdecl,
   }));
 
-  const symbolicRefs = collected.symrefs.map((r) => {
-    const match = definition.symbolicRefs?.find(
-      (x) => x.symbolicReference.conceptUri === r.uri,
-    );
-
-    if (!match) {
-      return {
-        ...r,
-        symbolicRefId: null,
-        unlinked: true,
-      };
-    }
-    return {
-      ...r,
-      symbolicRefId: match.symbolicReference.id,
-    };
-  });
-
-  return { definienda, symbolicRefs };
+  return { definienda, symbolicRefs: collected.symrefs };
 }

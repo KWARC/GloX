@@ -1,4 +1,4 @@
-export type DefinitionCatalogSource = {
+export type FloDownBlockCatalogSource = {
   id: string;
   name: string;
   canonicalForm: string;
@@ -7,13 +7,13 @@ export type DefinitionCatalogSource = {
 };
 
 export type CatalogEntry = {
-  definitionId: string;
+  floDownBlockId: string;
   terms: string[];
   patterns?: string[];
 };
 
 export type SymbolicOccurrence = {
-  definitionId: string;
+  floDownBlockId: string;
   pageId: string;
   startOffset: number;
   endOffset: number;

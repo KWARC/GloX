@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 3000",
-    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "build": "pnpm typecheck && vite build",
     "preview": "node -r dotenv/config .output/server/index.mjs ",
     "test": "vitest run"
   },

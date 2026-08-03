@@ -3,9 +3,9 @@ import { FtmlStatement } from "@/types/ftml.types";
 import { Box, Group, Loader, Stack } from "@mantine/core";
 import { ExtractedTextPanel } from "../ExtractedTextList";
 
-export type DefinitionsSectionProps = {
+export type FloDownBlocksSectionProps = {
   data: {
-    definitions: ExtractedItem[];
+    floDownBlocks: ExtractedItem[];
     isLoading: boolean;
   };
   state: {
@@ -18,18 +18,18 @@ export type DefinitionsSectionProps = {
     onDownload: () => void;
     onDelete: (id: string) => void;
     onSelection: (extractId: string) => void;
-    onOpenSemanticPanel: (definitionId: string) => void;
-    onRecomputeReferences: (definitionId: string) => void;
-    onEditDefinitionMeta: (item: ExtractedItem) => void;
+    onOpenSemanticPanel: (floDownBlockId: string) => void;
+    onRecomputeReferences: (floDownBlockId: string) => void;
+    onEditFloDownBlockMeta: (item: ExtractedItem) => void;
     onOpenLatexPreview: () => void;
   };
 };
 
-export function DefinitionsSection({
+export function FloDownBlocksSection({
   data,
   state,
   actions,
-}: DefinitionsSectionProps) {
+}: FloDownBlocksSectionProps) {
   return (
     <Box py={2}>
       {data.isLoading && (
@@ -42,7 +42,7 @@ export function DefinitionsSection({
         <Stack gap="xs">
           <ExtractedTextPanel
             compact
-            extracts={data.definitions}
+            extracts={data.floDownBlocks}
             editingId={state.editingId}
             selectedId={null}
             onToggleEdit={actions.onToggleEdit}
@@ -53,9 +53,9 @@ export function DefinitionsSection({
             onOpenSemanticPanel={actions.onOpenSemanticPanel}
             onRecomputeReferences={actions.onRecomputeReferences}
             showPageNumber={false}
-            showDefinitionMeta
-            showDefinitionMetaIconOnly
-            onEditDefinitionMeta={actions.onEditDefinitionMeta}
+            showFloDownBlockMeta
+            showFloDownBlockMetaIconOnly
+            onEditFloDownBlockMeta={actions.onEditFloDownBlockMeta}
             isLocked={state.isLocked}
             onOpenLatexPreview={actions.onOpenLatexPreview}
           />

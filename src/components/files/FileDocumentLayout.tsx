@@ -38,9 +38,9 @@ export type ExtractsPanelProps = {
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
   onToggleEdit: (id: string) => void;
-  onOpenSemanticPanel: (definitionId: string) => void;
-  onRecomputeReferences: (definitionId: string) => void;
-  onEditDefinitionMeta: (item: ExtractedItem) => void;
+  onOpenSemanticPanel: (floDownBlockId: string) => void;
+  onRecomputeReferences: (floDownBlockId: string) => void;
+  onEditFloDownBlockMeta: (item: ExtractedItem) => void;
   onOpenLatexConfig: () => void;
   onCreateDefinition: () => void;
   onGoToSourcePage: (pageNumber: number) => void;
@@ -91,7 +91,7 @@ export function FileDocumentLayout({
     onToggleEdit,
     onOpenSemanticPanel,
     onRecomputeReferences,
-    onEditDefinitionMeta,
+    onEditFloDownBlockMeta,
     onOpenLatexConfig,
     onCreateDefinition,
     onGoToSourcePage,
@@ -174,7 +174,7 @@ export function FileDocumentLayout({
             onToggleEdit={onToggleEdit}
             onOpenSemanticPanel={onOpenSemanticPanel}
             onRecomputeReferences={onRecomputeReferences}
-            onEditDefinitionMeta={onEditDefinitionMeta}
+            onEditFloDownBlockMeta={onEditFloDownBlockMeta}
             onGoToSourcePage={onGoToSourcePage}
             showJsonEdit={showJsonEdit}
           />

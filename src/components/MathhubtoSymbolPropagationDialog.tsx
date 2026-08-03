@@ -1,7 +1,7 @@
 import {
   PropagationCandidate,
   applyMathHubReplacement,
-  getDefinitionsReferencingMathHubUri,
+  getFloDownBlocksReferencingMathHubUri,
 } from "@/serverFns/SymbolPropagation.server";
 import { OnReplaceNode } from "@/types/Semantic.types";
 import {
@@ -25,7 +25,7 @@ interface MathhubtoSymbolPropagationDialogProps {
   mathHubUri: string;
   localSymbolUri: string;
   targetType: "definiendum" | "symref";
-  primaryDefinitionId: string;
+  primaryFloDownBlockId: string;
   onReplaceNode: OnReplaceNode;
   onDone: () => void;
   onCancel: () => void;
@@ -36,7 +36,7 @@ export function MathhubtoSymbolPropagationDialog({
   mathHubUri,
   localSymbolUri,
   targetType,
-  primaryDefinitionId,
+  primaryFloDownBlockId,
   onReplaceNode,
   onDone,
   onCancel,
@@ -49,11 +49,11 @@ export function MathhubtoSymbolPropagationDialog({
       queryKey: [
         "mathhub-to-local-propagation-candidates",
         mathHubUri,
-        primaryDefinitionId,
+        primaryFloDownBlockId,
       ],
       queryFn: () =>
-        getDefinitionsReferencingMathHubUri({
-          data: { mathHubUri, excludeDefinitionId: primaryDefinitionId },
+        getFloDownBlocksReferencingMathHubUri({
+          data: { mathHubUri, excludeFloDownBlockId: primaryFloDownBlockId },
         }),
       enabled: opened,
     },
@@ -90,21 +90,21 @@ export function MathhubtoSymbolPropagationDialog({
     setApplying(true);
     try {
       await onReplaceNode(
-        primaryDefinitionId,
+        primaryFloDownBlockId,
         { type: targetType, uri: mathHubUri },
         targetType === "definiendum"
           ? { type: "definiendum", uri: localSymbolUri, symdecl: false }
           : { type: "symref", uri: localSymbolUri },
       );
 
-      const selectedDefinitionIds = candidates
+      const selectedFloDownBlockIds = candidates
         .filter((c) => selectedIds.has(c.id))
         .map((c) => c.id);
 
-      if (selectedDefinitionIds.length > 0) {
+      if (selectedFloDownBlockIds.length > 0) {
         await applyMathHubReplacement({
           data: {
-            selectedDefinitionIds,
+            selectedFloDownBlockIds,
             mathHubUri,
             newUri: localSymbolUri,
           },

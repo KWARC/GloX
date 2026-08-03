@@ -1,4 +1,4 @@
-import type { CreatedSymbolTarget } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
+import type { CreatedSymbolTarget } from "@/serverFns/createFloDownBlockWithDeclaredSymbol.server";
 import {
   Button,
   Group,
@@ -37,7 +37,7 @@ export function CreateSymbolDefiniendumDialog({
     if (!opened) return;
     setSelection(null);
     setSubmitting(false);
-  }, [opened, target?.definition.id]);
+  }, [opened, target?.floDownBlock.id]);
 
   const handleSelection = () => {
     const selected = window.getSelection();
@@ -96,7 +96,7 @@ export function CreateSymbolDefiniendumDialog({
                   New definition
                 </Text>
                 <Text size="xs" ff="monospace" c="dimmed">
-                  {target.definition.fileName}
+                  {target.floDownBlock.fileName}
                 </Text>
               </Group>
 
@@ -105,8 +105,8 @@ export function CreateSymbolDefiniendumDialog({
                 onMouseUp={handleSelection}
               >
                 <FtmlPreview
-                  docId={target.definition.id}
-                  ftmlAst={target.definition.statement}
+                  docId={target.floDownBlock.id}
+                  ftmlAst={target.floDownBlock.statement}
                 />
               </div>
             </Paper>

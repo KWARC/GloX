@@ -2,10 +2,10 @@ import prisma from "@/lib/prisma";
 import { FtmlStatement, RootNode, normalizeToRoot } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
-export const getCombinedDefinitionFtml = createServerFn({ method: "GET" })
+export const getCombinedFloDownBlockFtml = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
-      definitionIds: string[];
+      floDownBlockIds: string[];
       documentId: string;
       futureRepo: string;
       filePath: string;
@@ -14,9 +14,9 @@ export const getCombinedDefinitionFtml = createServerFn({ method: "GET" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const defs = await prisma.definition.findMany({
+    const defs = await prisma.floDownBlock.findMany({
       where: {
-        id: { in: data.definitionIds },
+        id: { in: data.floDownBlockIds },
       },
       select: {
         id: true,
@@ -37,7 +37,7 @@ export const getCombinedDefinitionFtml = createServerFn({ method: "GET" })
       content: [],
     };
 
-    for (const id of data.definitionIds) {
+    for (const id of data.floDownBlockIds) {
       const statement = defMap.get(id);
       if (!statement) continue;
 

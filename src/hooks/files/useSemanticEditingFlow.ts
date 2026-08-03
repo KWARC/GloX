@@ -8,12 +8,12 @@ import {
   useValidation,
 } from "@/server/text-selection";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
-import { deleteDefinition } from "@/serverFns/extractDefinition.server";
+import { deleteFloDownBlock } from "@/serverFns/extractFloDownBlock.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
-import { updateDefinitionAst } from "@/serverFns/updateDefinition.server";
+import { updateFloDownBlockAst } from "@/serverFns/updateFloDownBlock.server";
 import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
-import { supportsDefinienda } from "@/types/paragraphKind";
+import { supportsDefinienda } from "@/types/blockType";
 import { NavigateOptions, RegisteredRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -58,8 +58,8 @@ export function useSemanticEditingFlow({
   const [mode, setMode] = useState<"SymbolicRef" | null>(null);
   const [conceptUri, setConceptUri] = useState<string>("");
   const [defDialogOpen, setDefDialogOpen] = useState(false);
-  const [defExtractId, setDefExtractId] = useState<string | null>(null);
-  const [defExtractText, setDefExtractText] = useState("");
+  const [floDownBlockExtractId, setFloDownBlockExtractId] = useState<string | null>(null);
+  const [floDownBlockExtractText, setFloDownBlockExtractText] = useState("");
   const [symbolicRefSaving, setSymbolicRefSaving] = useState(false);
   const [lockedByExtractId, setLockedByExtractId] = useState<string | null>(
     null,
@@ -67,11 +67,11 @@ export function useSemanticEditingFlow({
   const [latexConfigOpen, setLatexConfigOpen] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
-  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
+  const [semanticPanelFloDownBlockId, setSemanticPanelFloDownBlockId] = useState<string | null>(
     null,
   );
-  const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
-  const [definitionMetaTarget, setDefinitionMetaTarget] =
+  const [floDownBlockMetaEditOpen, setFloDownBlockMetaEditOpen] = useState(false);
+  const [floDownBlockMetaTarget, setFloDownBlockMetaTarget] =
     useState<ExtractedItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ExtractedItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -90,15 +90,15 @@ export function useSemanticEditingFlow({
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      await deleteDefinition({ data: { id: deleteTarget.id } });
+      await deleteFloDownBlock({ data: { id: deleteTarget.id } });
       queryClient.setQueryData<ExtractedItem[]>(
-        ["definitions", documentId],
+        ["floDownBlocks", documentId],
         (current = []) =>
-          current.filter((definition) => definition.id !== deleteTarget.id),
+          current.filter((floDownBlock) => floDownBlock.id !== deleteTarget.id),
       );
-      await queryClient.invalidateQueries({ queryKey: ["definitions"] });
+      await queryClient.invalidateQueries({ queryKey: ["floDownBlocks"] });
       await queryClient.invalidateQueries({
-        queryKey: ["definitionsByIdentity"],
+        queryKey: ["floDownBlocksByIdentity"],
       });
       await queryClient.invalidateQueries({ queryKey: ["fileIdentities"] });
       if (lockedByExtractId === deleteTarget.id) {
@@ -111,36 +111,36 @@ export function useSemanticEditingFlow({
     }
   }
 
-  function handleOpenSemanticPanel(definitionId: string) {
-    setSemanticPanelDefId(definitionId);
+  function handleOpenSemanticPanel(floDownBlockId: string) {
+    setSemanticPanelFloDownBlockId(floDownBlockId);
     setSemanticPanelOpen(true);
   }
 
-  function handleEditDefinitionMeta(item: ExtractedItem) {
-    setDefinitionMetaTarget(item);
+  function handleEditFloDownBlockMeta(item: ExtractedItem) {
+    setFloDownBlockMetaTarget(item);
     setFutureRepo(item.futureRepo);
     setFilePath(item.filePath);
     setFileName(item.fileName);
     setLanguage(item.language);
-    setDefinitionMetaEditOpen(true);
+    setFloDownBlockMetaEditOpen(true);
   }
 
   async function handleDeleteNode(
-    definitionId: string,
+    floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
   ) {
-    await updateDefinitionAst({
+    await updateFloDownBlockAst({
       data: {
-        definitionId,
+        floDownBlockId,
         operation: { kind: "removeSemantic", target },
       },
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      queryKey: ["floDownBlocks", documentId],
     });
     setSemanticPanelOpen(false);
-    setSemanticPanelDefId(null);
+    setSemanticPanelFloDownBlockId(null);
   }
 
   function handleRightSelection(extractId: string) {
@@ -159,7 +159,7 @@ export function useSemanticEditingFlow({
   }
 
   async function handleDefiniendumSubmit(params: DefiniendumSubmitParams) {
-    if (!defExtractId) return;
+    if (!floDownBlockExtractId) return;
     if (!validateIdentity()) return;
 
     if (editingNodeId) {
@@ -189,9 +189,9 @@ export function useSemanticEditingFlow({
         symdecl: isDeclared,
       };
 
-      await updateDefinitionAst({
+      await updateFloDownBlockAst({
         data: {
-          definitionId: defExtractId,
+          floDownBlockId: floDownBlockExtractId,
           operation: {
             kind: "replaceSemantic",
             target: { type: "definiendum", uri: editingNodeId },
@@ -203,8 +203,8 @@ export function useSemanticEditingFlow({
       if (params.mode === "CREATE") {
         const result = await createSymbolDefiniendum({
           data: {
-            definitionId: defExtractId,
-            selectedText: defExtractText,
+            floDownBlockId: floDownBlockExtractId,
+            selectedText: floDownBlockExtractText,
             startOffset: selection!.startOffset,
             endOffset: selection!.endOffset,
             symdecl: true,
@@ -223,8 +223,8 @@ export function useSemanticEditingFlow({
       } else if (params.selectedSymbol.source === "DB") {
         await createSymbolDefiniendum({
           data: {
-            definitionId: defExtractId,
-            selectedText: defExtractText,
+            floDownBlockId: floDownBlockExtractId,
+            selectedText: floDownBlockExtractText,
             startOffset: selection!.startOffset,
             endOffset: selection!.endOffset,
             symdecl: false,
@@ -240,8 +240,8 @@ export function useSemanticEditingFlow({
       } else {
         await createSymbolDefiniendum({
           data: {
-            definitionId: defExtractId,
-            selectedText: defExtractText,
+            floDownBlockId: floDownBlockExtractId,
+            selectedText: floDownBlockExtractText,
             startOffset: selection!.startOffset,
             endOffset: selection!.endOffset,
             symdecl: false,
@@ -257,27 +257,27 @@ export function useSemanticEditingFlow({
       }
 
       await queryClient.invalidateQueries({
-        queryKey: ["definitions", documentId],
+        queryKey: ["floDownBlocks", documentId],
       });
     }
 
     setEditingNodeId(null);
     setDefDialogOpen(false);
-    setDefExtractId(null);
-    setDefExtractText("");
+    setFloDownBlockExtractId(null);
+    setFloDownBlockExtractText("");
     clearAll();
   }
 
   async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
-    if (!defExtractId) return;
+    if (!floDownBlockExtractId) return;
     setSymbolicRefSaving(true);
     try {
       if (editingNodeId) {
         const { uri } = normalizeSymRef(symRef);
 
-        await updateDefinitionAst({
+        await updateFloDownBlockAst({
           data: {
-            definitionId: defExtractId,
+            floDownBlockId: floDownBlockExtractId,
             operation: {
               kind: "replaceSemantic",
               target: { type: "symref", uri: editingNodeId },
@@ -293,7 +293,7 @@ export function useSemanticEditingFlow({
 
         await symbolicRef({
           data: {
-            definitionId: defExtractId,
+            floDownBlockId: floDownBlockExtractId,
             selection: {
               text: selection.text,
               startOffset: selection.startOffset,
@@ -305,7 +305,7 @@ export function useSemanticEditingFlow({
       }
 
       await queryClient.invalidateQueries({
-        queryKey: ["definitions", documentId],
+        queryKey: ["floDownBlocks", documentId],
       });
       setEditingNodeId(null);
       setMode(null);
@@ -318,7 +318,7 @@ export function useSemanticEditingFlow({
   function handleOpenSymbolicRef(extractId: string) {
     if (!selection) return;
 
-    setDefExtractId(extractId);
+    setFloDownBlockExtractId(extractId);
     setConceptUri(selection.text);
     setMode("SymbolicRef");
 
@@ -327,18 +327,18 @@ export function useSemanticEditingFlow({
 
   function handleCloseSymbolicRefDialog() {
     setMode(null);
-    setDefExtractId(null);
+    setFloDownBlockExtractId(null);
     clearAll();
   }
 
   async function handleReplaceNode(
-    definitionId: string,
+    floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
     payload: ReplacePayload,
   ) {
-    const result = await updateDefinitionAst({
+    const result = await updateFloDownBlockAst({
       data: {
-        definitionId,
+        floDownBlockId,
         operation: {
           kind: "replaceSemantic",
           target,
@@ -348,7 +348,7 @@ export function useSemanticEditingFlow({
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      queryKey: ["floDownBlocks", documentId],
     });
 
     return result;
@@ -385,7 +385,7 @@ export function useSemanticEditingFlow({
       to: "/create-latex",
       search: {
         documentId,
-        definitionIds: filteredDefinitions.map((e) => e.id),
+        floDownBlockIds: filteredDefinitions.map((e) => e.id),
         futureRepo: config.futureRepo,
         filePath: config.filePath,
         fileName: config.fileName,
@@ -399,10 +399,10 @@ export function useSemanticEditingFlow({
   function openDefiniendumFromSelection() {
     if (!selection) return;
     const extract = extracts.find((e) => e.id === selection.extractId);
-    if (!extract || !supportsDefinienda(extract.kind)) return;
+    if (!extract || !supportsDefinienda(extract.statement)) return;
     clearPopupOnly();
-    setDefExtractId(extract.id);
-    setDefExtractText(selection.text);
+    setFloDownBlockExtractId(extract.id);
+    setFloDownBlockExtractText(selection.text);
     setDefDialogOpen(true);
   }
 
@@ -417,7 +417,7 @@ export function useSemanticEditingFlow({
     !!selection?.extractId &&
     (() => {
       const extract = extracts.find((e) => e.id === selection.extractId);
-      return !!extract && supportsDefinienda(extract.kind);
+      return !!extract && supportsDefinienda(extract.statement);
     })();
 
   return {
@@ -433,20 +433,20 @@ export function useSemanticEditingFlow({
     setLockedByExtractId,
     defDialogOpen,
     setDefDialogOpen,
-    defExtractId,
-    defExtractText,
+    floDownBlockExtractId,
+    floDownBlockExtractText,
     symbolicRefSaving,
     mode,
     conceptUri,
     editingNodeId,
     semanticPanelOpen,
     setSemanticPanelOpen,
-    semanticPanelDefId,
-    setSemanticPanelDefId,
-    definitionMetaEditOpen,
-    setDefinitionMetaEditOpen,
-    definitionMetaTarget,
-    setDefinitionMetaTarget,
+    semanticPanelFloDownBlockId,
+    setSemanticPanelFloDownBlockId,
+    floDownBlockMetaEditOpen,
+    setFloDownBlockMetaEditOpen,
+    floDownBlockMetaTarget,
+    setFloDownBlockMetaTarget,
     deleteTarget,
     deleteLoading,
     setDeleteTarget,
@@ -459,7 +459,7 @@ export function useSemanticEditingFlow({
     handleSaveSymbolicRef,
     handleReplaceNode,
     handleDeleteNode,
-    handleEditDefinitionMeta,
+    handleEditFloDownBlockMeta,
     handleRightSelection,
     handleDeleteDefinition,
     handleToggleEdit,

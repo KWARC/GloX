@@ -5,7 +5,7 @@ import type { CatalogEntry, SuggestedReferenceCandidate } from "./types";
 export function searchReferenceCandidates(
   query: string,
   catalog: CatalogEntry[],
-  currentDefinitionId?: string,
+  currentFloDownBlockId?: string,
 ): SuggestedReferenceCandidate[] {
   const seen = new Set<string>();
 
@@ -13,7 +13,7 @@ export function searchReferenceCandidates(
     .flatMap((entry) => {
       if (
         entry.symRef.source === "DB" &&
-        entry.sourceDefinitionId === currentDefinitionId
+        entry.sourceFloDownBlockId === currentFloDownBlockId
       ) {
         return [];
       }

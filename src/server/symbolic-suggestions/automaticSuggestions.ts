@@ -58,16 +58,16 @@ export function findAllCatalogMatches(
 
   return matches;
 }
-export function suggestRefsForDefinition(
-  definition: ExtractedItem,
+export function suggestRefsForFloDownBlock(
+  floDownBlock: ExtractedItem,
   catalog: CatalogEntry[],
   ignoreOptions: SuggestionIgnoreOptions = {},
 ): SuggestedReferenceSession {
-  const root = normalizeToRoot(definition.statement);
-  const definitionText = extractPlainText(definition.statement);
+  const root = normalizeToRoot(floDownBlock.statement);
+  const originalText = extractPlainText(floDownBlock.statement);
   const out: SuggestedReference[] = [];
   const candidateSymRefs: Record<string, UnifiedSymbolicReference> = {};
-  const suggestionCatalog = buildSuggestionCatalog(definition, catalog);
+  const suggestionCatalog = buildSuggestionCatalog(floDownBlock, catalog);
 
   walkTextNodes(root, (textNode, plainOffset, nodePath) => {
     for (const match of findAllCatalogMatches(
@@ -89,7 +89,7 @@ export function suggestRefsForDefinition(
 
       out.push({
         text: match.text,
-        context: buildContext(definitionText, plainStartOffset, plainEndOffset),
+        context: buildContext(originalText, plainStartOffset, plainEndOffset),
         nodePath,
         localStartOffset: match.start,
         localEndOffset: match.end,

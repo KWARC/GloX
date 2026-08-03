@@ -4,18 +4,17 @@ import {
   countSymbolReferences,
   getDeclaredSymbolUris,
   removeSymbolReferences,
-} from "@/server/definitionDeletion";
+} from "@/server/floDownBlockDeletion";
 import { ExtractedItem } from "@/server/text-selection";
 import {
   DefiniendumNode,
-  DefinitionNode,
   FtmlContent,
   FtmlStatement,
   assertFtmlStatement,
   isDefiniendumNode,
   normalizeToRoot,
 } from "@/types/ftml.types";
-import { ParagraphKind } from "@/types/paragraphKind";
+import { ExtractBlockType, buildStatementFromText } from "@/types/blockType";
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
 
@@ -61,11 +60,11 @@ function extractDefiniendumAlias(
   return alias;
 }
 
-export type CreateDefinitionInput = {
+export type CreateFloDownBlockInput = {
   documentId: string;
   documentPageId?: string | null;
   pageNumber?: number | null;
-  kind?: ParagraphKind;
+  blockType?: ExtractBlockType;
   originalText: string;
   statement?: FtmlStatement;
   futureRepo: string;
@@ -74,15 +73,15 @@ export type CreateDefinitionInput = {
   language: string;
 };
 
-export type DefinitionIdentityInput = Pick<
-  CreateDefinitionInput,
+export type FloDownBlockIdentityInput = Pick<
+  CreateFloDownBlockInput,
   "futureRepo" | "filePath" | "fileName" | "language"
 >;
 
-export const findDefinitionsByIdentity = createServerFn({ method: "POST" })
-  .inputValidator((data: DefinitionIdentityInput) => data)
+export const findFloDownBlocksByIdentity = createServerFn({ method: "POST" })
+  .inputValidator((data: FloDownBlockIdentityInput) => data)
   .handler(async ({ data }) => {
-    const definitions = await prisma.definition.findMany({
+    const floDownBlocks = await prisma.floDownBlock.findMany({
       where: {
         futureRepo: data.futureRepo.trim(),
         filePath: data.filePath.trim(),
@@ -94,21 +93,20 @@ export const findDefinitionsByIdentity = createServerFn({ method: "POST" })
         originalText: true,
         statement: true,
         pageNumber: true,
-        kind: true,
       },
       orderBy: { createdAt: "asc" },
     });
 
-    return definitions.map((definition) => ({
-      ...definition,
-      statement: assertFtmlStatement(definition.statement),
+    return floDownBlocks.map((floDownBlock) => ({
+      ...floDownBlock,
+      statement: assertFtmlStatement(floDownBlock.statement),
     }));
   });
 
-export const getDefinitionDeletionImpact = createServerFn({ method: "POST" })
+export const getFloDownBlockDeletionImpact = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
-    const target = await prisma.definition.findUniqueOrThrow({
+    const target = await prisma.floDownBlock.findUniqueOrThrow({
       where: { id: data.id },
     });
     const declared = getDeclaredSymbolUris(
@@ -116,27 +114,26 @@ export const getDefinitionDeletionImpact = createServerFn({ method: "POST" })
     );
     if (!declared.size) return [];
 
-    const candidates = await prisma.definition.findMany({
+    const candidates = await prisma.floDownBlock.findMany({
       where: { id: { not: data.id } },
       select: {
         id: true,
         statement: true,
         pageNumber: true,
-        kind: true,
         originalText: true,
       },
     });
     return candidates.filter(
-      (definition) =>
+      (floDownBlock) =>
         countSymbolReferences(
-          assertFtmlStatement(definition.statement),
+          assertFtmlStatement(floDownBlock.statement),
           declared,
         ) > 0,
     );
   });
 
-export const createDefinition = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateDefinitionInput) => data)
+export const createFloDownBlock = createServerFn({ method: "POST" })
+  .inputValidator((data: CreateFloDownBlockInput) => data)
   .handler(async ({ data }) => {
     const hasPageNumber =
       typeof data.pageNumber === "number" || data.pageNumber === null;
@@ -173,26 +170,19 @@ export const createDefinition = createServerFn({ method: "POST" })
 
     const statement: FtmlStatement =
       data.statement ??
-      ({
-        type: "definition",
-        for_symbols: [],
-        content: [
-          {
-            type: "paragraph",
-            content: [data.originalText.trim()],
-          },
-        ],
-      } satisfies DefinitionNode);
+      buildStatementFromText(
+        data.blockType ?? "definition",
+        data.originalText,
+      );
 
     await prisma.$transaction(async (tx) => {
       const declaredSymbols = extractDeclaredSymbols(statement);
 
-      const def = await tx.definition.create({
+      const def = await tx.floDownBlock.create({
         data: {
           documentId: data.documentId,
           documentPageId,
           pageNumber: data.pageNumber,
-          kind: data.kind ?? "Definition",
           originalText: data.originalText.trim(),
           statement: JSON.parse(JSON.stringify(statement)),
           futureRepo: data.futureRepo,
@@ -229,9 +219,9 @@ export const createDefinition = createServerFn({ method: "POST" })
         });
       }
 
-      await tx.definitionVersion.create({
+      await tx.floDownBlockVersion.create({
         data: {
-          definitionId: def.id,
+          floDownBlockId: def.id,
           versionNumber: 1,
           originalText: data.originalText.trim(),
           statement: JSON.parse(JSON.stringify(statement)),
@@ -248,7 +238,7 @@ export const createDefinition = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-export const updateDefinition = createServerFn({ method: "POST" })
+export const updateFloDownBlock = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; statement: FtmlStatement }) => data)
   .handler(async ({ data }) => {
     const userRes = await currentUser();
@@ -257,15 +247,15 @@ export const updateDefinition = createServerFn({ method: "POST" })
     const userId = userRes.user.id;
 
     await prisma.$transaction(async (tx) => {
-      const existing = await tx.definition.findUniqueOrThrow({
+      const existing = await tx.floDownBlock.findUniqueOrThrow({
         where: { id: data.id },
       });
 
       const nextVersion = existing.currentVersion + 1;
 
-      await tx.definitionVersion.create({
+      await tx.floDownBlockVersion.create({
         data: {
-          definitionId: existing.id,
+          floDownBlockId: existing.id,
           versionNumber: nextVersion,
           originalText: existing.originalText,
           statement: JSON.parse(JSON.stringify(data.statement)),
@@ -273,7 +263,7 @@ export const updateDefinition = createServerFn({ method: "POST" })
         },
       });
 
-      await tx.definition.update({
+      await tx.floDownBlock.update({
         where: { id: data.id },
         data: {
           statement: JSON.parse(JSON.stringify(data.statement)),
@@ -286,7 +276,7 @@ export const updateDefinition = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-export const deleteDefinition = createServerFn({ method: "POST" })
+export const deleteFloDownBlock = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
     const userRes = await currentUser();
@@ -295,7 +285,7 @@ export const deleteDefinition = createServerFn({ method: "POST" })
     const userId = userRes.user.id;
 
     return prisma.$transaction(async (tx) => {
-      const target = await tx.definition.findUniqueOrThrow({
+      const target = await tx.floDownBlock.findUniqueOrThrow({
         where: { id: data.id },
       });
       const declared = getDeclaredSymbolUris(
@@ -306,7 +296,7 @@ export const deleteDefinition = createServerFn({ method: "POST" })
       let removedReferenceCount = 0;
 
       if (declared.size > 0) {
-        const candidates = await tx.definition.findMany({
+        const candidates = await tx.floDownBlock.findMany({
           where: { id: { not: data.id } },
           select: {
             id: true,
@@ -316,41 +306,32 @@ export const deleteDefinition = createServerFn({ method: "POST" })
           },
         });
 
-        for (const definition of candidates) {
+        for (const floDownBlock of candidates) {
           const cleanup = removeSymbolReferences(
-            assertFtmlStatement(definition.statement),
+            assertFtmlStatement(floDownBlock.statement),
             declared,
           );
           if (cleanup.removedCount === 0) continue;
 
-          const nextVersion = definition.currentVersion + 1;
+          const nextVersion = floDownBlock.currentVersion + 1;
           const serialized = JSON.parse(JSON.stringify(cleanup.statement));
 
-          await tx.definitionVersion.create({
+          await tx.floDownBlockVersion.create({
             data: {
-              definitionId: definition.id,
+              floDownBlockId: floDownBlock.id,
               versionNumber: nextVersion,
-              originalText: definition.originalText,
+              originalText: floDownBlock.originalText,
               statement: serialized,
               editedById: userId,
             },
           });
 
-          await tx.definition.update({
-            where: { id: definition.id },
+          await tx.floDownBlock.update({
+            where: { id: floDownBlock.id },
             data: {
               statement: serialized,
               updatedById: userId,
               currentVersion: nextVersion,
-            },
-          });
-
-          await tx.definitionSymbolicRef.deleteMany({
-            where: {
-              definitionId: definition.id,
-              symbolicReference: {
-                conceptUri: { in: Array.from(declared) },
-              },
             },
           });
 
@@ -359,18 +340,9 @@ export const deleteDefinition = createServerFn({ method: "POST" })
         }
       }
 
-      await tx.definition.delete({
+      await tx.floDownBlock.delete({
         where: { id: data.id },
       });
-
-      if (declared.size > 0) {
-        await tx.symbolicReference.deleteMany({
-          where: {
-            conceptUri: { in: Array.from(declared) },
-            definitions: { none: {} },
-          },
-        });
-      }
 
       return {
         success: true,
@@ -380,7 +352,7 @@ export const deleteDefinition = createServerFn({ method: "POST" })
     });
   });
 
-export const updateDefinitionFilePath = createServerFn({ method: "POST" })
+export const updateFloDownBlockFilePath = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       id: string;
@@ -392,11 +364,11 @@ export const updateDefinitionFilePath = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     return prisma.$transaction(async (tx) => {
-      const current = await tx.definition.findUniqueOrThrow({
+      const current = await tx.floDownBlock.findUniqueOrThrow({
         where: { id: data.id },
       });
 
-      const targetDefs = await tx.definition.findMany({
+      const targetDefs = await tx.floDownBlock.findMany({
         where: {
           futureRepo: data.futureRepo,
           filePath: data.filePath,
@@ -416,7 +388,7 @@ export const updateDefinitionFilePath = createServerFn({ method: "POST" })
         }
       }
 
-      const definition = await tx.definition.update({
+      const floDownBlock = await tx.floDownBlock.update({
         where: { id: data.id },
         data: {
           futureRepo: data.futureRepo,
@@ -426,7 +398,7 @@ export const updateDefinitionFilePath = createServerFn({ method: "POST" })
         },
       });
 
-      const statement = assertFtmlStatement(definition.statement);
+      const statement = assertFtmlStatement(floDownBlock.statement);
 
       const symbols: string[] = [];
 
@@ -476,7 +448,7 @@ export const updateDefinitionFilePath = createServerFn({ method: "POST" })
     });
   });
 
-export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
+export const updateFloDownBlocksFilePath = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       identity: FileIdentity;
@@ -490,7 +462,7 @@ export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
     const { identity, futureRepo, filePath, fileName, language } = data;
 
     return prisma.$transaction(async (tx) => {
-      const defs = await tx.definition.findMany({
+      const defs = await tx.floDownBlock.findMany({
         where: {
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
@@ -509,7 +481,7 @@ export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
         throw new Error("Source definitions have mixed status");
       }
 
-      const targetDefs = await tx.definition.findMany({
+      const targetDefs = await tx.floDownBlock.findMany({
         where: {
           futureRepo,
           filePath,
@@ -526,7 +498,7 @@ export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
 
         if (!sameTargetStatus) {
           throw new Error(
-            "Cannot move definitions: target path contains different status definitions",
+            "Cannot move floDownBlocks: target path contains different status definitions",
           );
         }
       }
@@ -556,7 +528,7 @@ export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
         }
       }
 
-      await tx.definition.updateMany({
+      await tx.floDownBlock.updateMany({
         where: {
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
@@ -587,19 +559,13 @@ export const updateDefinitionsFilePath = createServerFn({ method: "POST" })
     });
   });
 
-export const listDefinition = createServerFn({ method: "GET" })
+export const listFloDownBlocks = createServerFn({ method: "GET" })
   .inputValidator((data: { documentId: string }) => data)
   .handler(async ({ data }) => {
-    const defs = await prisma.definition.findMany({
+    const defs = await prisma.floDownBlock.findMany({
       where: { documentId: data.documentId },
       orderBy: { createdAt: "asc" },
       include: {
-        symbolicRefs: {
-          include: {
-            symbolicReference: true,
-          },
-        },
-
         llmSuggestedDefiniendas: true,
       },
     });
@@ -616,14 +582,12 @@ export const listDefinition = createServerFn({ method: "GET" })
         documentId: def.documentId,
         documentPageId: def.documentPageId,
         pageNumber: def.pageNumber,
-        kind: def.kind,
         originalText: def.originalText,
         statement,
         futureRepo: def.futureRepo,
         filePath: def.filePath,
         fileName: def.fileName,
         language: def.language,
-        symbolicRefs: def.symbolicRefs,
         status: def.status,
 
         definienda:

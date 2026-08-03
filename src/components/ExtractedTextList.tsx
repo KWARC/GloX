@@ -1,4 +1,5 @@
 import { ExtractedItem } from "@/server/text-selection";
+import { blockTypeLabel, getTopLevelBlockType } from "@/types/blockType";
 import {
   ActionIcon,
   Group,
@@ -36,13 +37,13 @@ interface ExtractedTextPanelProps {
   onDownload?: (item: ExtractedItem) => void;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
-  onOpenSemanticPanel: (definitionId: string) => void;
-  onRecomputeReferences?: (definitionId: string) => void;
+  onOpenSemanticPanel: (floDownBlockId: string) => void;
+  onRecomputeReferences?: (floDownBlockId: string) => void;
   onOpenLatexPreview?: (item: ExtractedItem) => void;
   showPageNumber?: boolean;
-  showDefinitionMeta?: boolean;
-  onEditDefinitionMeta?: (item: ExtractedItem) => void;
-  showDefinitionMetaIconOnly?: boolean;
+  showFloDownBlockMeta?: boolean;
+  onEditFloDownBlockMeta?: (item: ExtractedItem) => void;
+  showFloDownBlockMetaIconOnly?: boolean;
   showJsonEdit?: boolean;
   showActions?: boolean;
   onGoToSourcePage?: (pageNumber: number) => void;
@@ -59,12 +60,12 @@ export function ExtractedTextPanel({
   onOpenSemanticPanel,
   onRecomputeReferences,
   showPageNumber = true,
-  showDefinitionMeta = true,
-  showDefinitionMetaIconOnly = false,
+  showFloDownBlockMeta = true,
+  showFloDownBlockMetaIconOnly = false,
   showJsonEdit = true,
   showActions = true,
   onGoToSourcePage,
-  onEditDefinitionMeta,
+  onEditFloDownBlockMeta,
   isLocked = false,
   compact = false,
 }: ExtractedTextPanelProps) {
@@ -138,8 +139,8 @@ export function ExtractedTextPanel({
                     {showPageNumber ? (
                       <Text size={isMobile ? "sm" : "xs"}>
                         {item.pageNumber === null
-                          ? `New · ${item.kind}`
-                          : `Page ${item.pageNumber} · ${item.kind}`}
+                          ? `New · ${blockTypeLabel(getTopLevelBlockType(item.statement))}`
+                          : `Page ${item.pageNumber} · ${blockTypeLabel(getTopLevelBlockType(item.statement))}`}
                       </Text>
                     ) : (
                       <div />
@@ -263,19 +264,19 @@ export function ExtractedTextPanel({
                     </div>
                   )}
 
-                  {showDefinitionMeta && (
+                  {showFloDownBlockMeta && (
                     <Tooltip label="Move file path" withArrow>
                       <Group
                         gap={compact ? 4 : 6}
                         mt={compact ? 3 : 6}
                         title={`Archive: ${item.futureRepo} | Module Path: ${item.filePath} | Module: ${item.fileName} | Lang: ${item.language}`}
                         style={{
-                          cursor: onEditDefinitionMeta ? "pointer" : "default",
+                          cursor: onEditFloDownBlockMeta ? "pointer" : "default",
                         }}
-                        onClick={() => onEditDefinitionMeta?.(item)}
+                        onClick={() => onEditFloDownBlockMeta?.(item)}
                       >
                         <FolderSymlink size={14} />
-                        {!showDefinitionMetaIconOnly && (
+                        {!showFloDownBlockMetaIconOnly && (
                           <Text size={isMobile ? "xs" : "10px"} c="dimmed" ff="monospace">
                             [{item.futureRepo}] [{item.filePath}] [{item.fileName}
                             ] [{item.language}]
