@@ -12,6 +12,33 @@ interface SelectionPopupProps {
   onClose: () => void;
 }
 
+function clampPopupPosition(
+  popup: PopupState,
+  paper: HTMLElement,
+): { top: number; left: number } {
+  const rect = paper.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const GAP = 8;
+
+  let left = popup.x;
+  let top = popup.y;
+
+  if (left + rect.width > vw - GAP) {
+    left = popup.x - rect.width - GAP;
+  }
+
+  left = Math.max(GAP, Math.min(left, vw - rect.width - GAP));
+
+  if (top + rect.height > vh - GAP) {
+    top = popup.y - rect.height - GAP;
+  }
+
+  top = Math.max(GAP, Math.min(top, vh - rect.height - GAP));
+
+  return { top, left };
+}
+
 export function SelectionPopup({
   popup,
   onExtract,
@@ -20,38 +47,20 @@ export function SelectionPopup({
   onSymbolicRef,
   onClose,
 }: SelectionPopupProps) {
-  const [position, setPosition] = useState<{
-    top: number;
-    left: number;
-  } | null>(null);
+  const [position, setPosition] = useState(() => ({
+    top: popup.y,
+    left: popup.x,
+  }));
   const paperRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!paperRef.current) return;
+    setPosition({ top: popup.y, left: popup.x });
 
-    const rect = paperRef.current.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const paper = paperRef.current;
+    if (!paper) return;
 
-    const GAP = 8;
-
-    let left = popup.x;
-    let top = popup.y;
-
-    if (left + rect.width > vw - GAP) {
-      left = popup.x - rect.width - GAP;
-    }
-
-    left = Math.max(GAP, Math.min(left, vw - rect.width - GAP));
-
-    if (top + rect.height > vh - GAP) {
-      top = popup.y - rect.height - GAP;
-    }
-
-    top = Math.max(GAP, Math.min(top, vh - rect.height - GAP));
-
-    setPosition({ top, left });
-  }, [popup, popup.source]);
+    setPosition(clampPopupPosition(popup, paper));
+  }, [popup.x, popup.y, popup.source]);
 
   return (
     <Portal>
@@ -63,13 +72,12 @@ export function SelectionPopup({
         radius="md"
         style={{
           position: "fixed",
-          top: position?.top ?? 0,
-          left: position?.left ?? 0,
+          top: position.top,
+          left: position.left,
           zIndex: 3000,
           display: "flex",
           gap: 6,
           alignItems: "center",
-          visibility: position ? "visible" : "hidden",
           border: "2px solid",
           borderColor:
             popup.source === "left"
@@ -120,7 +128,7 @@ export function SelectionPopup({
             )}
             {onSymbolicRef && (
               <>
-                <Divider orientation="vertical" />
+                {onDefiniendum && <Divider orientation="vertical" />}
                 <Text
                   size="sm"
                   fw={600}

@@ -124,6 +124,17 @@ export function SymbolicRef({
             onCreateSymbol={onCreateSymbol}
           />
 
+          {onCreateSymbol && (
+            <Stack gap={4} align="center">
+              <Text size="xs" c="dimmed">
+                Cannot find the symbol?
+              </Text>
+              <Button variant="subtle" size="xs" onClick={onCreateSymbol}>
+                Create New Symbol
+              </Button>
+            </Stack>
+          )}
+
           {selectedSymbol?.source === "MATHHUB" && (
             <Paper withBorder p="sm" bg="green.0" radius="md">
               <Text size="xs" fw={600} c="dimmed" mb={4}>

@@ -31,7 +31,7 @@ export const getFloDownBlockProvenance = createServerFn({ method: "POST" })
     return ordered.filter(Boolean).map((def) => ({
       floDownBlockId: def!.id,
       documentId: def!.documentId,
-      documentName: def!.document.filename,
+      documentName: def!.document?.filename ?? "Module definition",
       pageNumber: def!.pageNumber,
       createdAt: def!.createdAt,
       updatedAt: def!.updatedAt,

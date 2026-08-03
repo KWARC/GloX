@@ -572,8 +572,8 @@ export const listFloDownBlocks = createServerFn({ method: "GET" })
 
       return {
         id: def.id,
-        documentId: def.documentId,
-        documentPageId: def.documentPageId,
+        documentId: def.documentId!,
+        documentPageId: def.documentPageId!,
         pageNumber: def.pageNumber,
         originalText: def.originalText,
         statement,

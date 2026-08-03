@@ -54,6 +54,31 @@ model User {
   updatedFloDownBlocks   FloDownBlock[]        @relation("FloDownBlockUpdatedBy")
   createdMarkReferences  MarkReference[]       @relation("MarkReferenceCreatedBy")
   confirmedSymbols       Symbol[]
+  gloxifiedModules       ModuleDescription[]   @relation("ModuleDescriptionGloxifiedBy")
+}
+
+model ModuleDescription {
+  id       String @id @default(uuid())
+  moduleId String @unique
+
+  titleStatement     Json
+  inhaltStatement    Json
+  lernzieleStatement Json
+
+  futureRepo      String @default("courses/FAU/module-descriptions")
+  modulesFilePath String @default("modules")
+  defsFilePath    String @default("defs")
+  language        String @default("de")
+
+  gloxifiedById String
+  gloxifiedBy   User   @relation("ModuleDescriptionGloxifiedBy", fields: [gloxifiedById], references: [id])
+
+  floDownBlocks FloDownBlock[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([gloxifiedById])
 }
 
 model Document {
@@ -139,11 +164,14 @@ model Symbol {
 model FloDownBlock {
   id String @id @default(uuid())
 
-  documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  documentPageId String
-  documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
+  documentPageId String?
+  documentPage   DocumentPage? @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
+
+  moduleDescriptionId String?
+  moduleDescription   ModuleDescription? @relation(fields: [moduleDescriptionId], references: [id], onDelete: Cascade)
 
   pageNumber Int?
 
@@ -179,6 +207,7 @@ model FloDownBlock {
 
   @@index([documentPageId])
   @@index([documentId])
+  @@index([moduleDescriptionId])
   @@index([futureRepo, filePath, fileName, language])
 }
 

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { documentFloDownBlockWhere } from "@/server/floDownBlockProvenance";
 import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import { ExtractedItem } from "@/server/text-selection";
 import {
@@ -159,7 +160,9 @@ export const getFileIdentities = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const floDownBlocks = await prisma.floDownBlock.findMany({
-      where: data.status ? { status: data.status } : {},
+      where: data.status
+        ? { ...documentFloDownBlockWhere, status: data.status }
+        : documentFloDownBlockWhere,
       distinct: ["futureRepo", "filePath", "fileName", "language"],
       select: {
         documentId: true,
@@ -176,7 +179,10 @@ export const getFileIdentities = createServerFn({ method: "POST" })
       ],
     });
 
-    return floDownBlocks;
+    return floDownBlocks.filter(
+      (row): row is typeof row & { documentId: string } =>
+        row.documentId != null,
+    );
   });
 
 export type FileIdentity = {
@@ -192,6 +198,8 @@ export const getFloDownBlocksByIdentity = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const defs = await prisma.floDownBlock.findMany({
       where: {
+        ...documentFloDownBlockWhere,
+        documentId: data.documentId,
         futureRepo: data.futureRepo,
         filePath: data.filePath,
         fileName: data.fileName,
@@ -222,8 +230,8 @@ export const getFloDownBlocksByIdentity = createServerFn({ method: "POST" })
 
       return {
         id: def.id,
-        documentId: def.documentId,
-        documentPageId: def.documentPageId,
+        documentId: def.documentId!,
+        documentPageId: def.documentPageId!,
         pageNumber: def.pageNumber,
         originalText: def.originalText,
         statement,

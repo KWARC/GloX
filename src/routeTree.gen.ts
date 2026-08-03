@@ -20,7 +20,9 @@ import { Route as CreateLatexRouteImport } from './routes/create-latex'
 import { Route as DeduplicationRouteImport } from './routes/Deduplication'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
+import { Route as ModuleDescriptionsIndexRouteImport } from './routes/module-descriptions/index'
 import { Route as FilesIndexRouteImport } from './routes/files/index'
+import { Route as ModuleDescriptionModuleIdRouteImport } from './routes/module-description/$moduleId'
 import { Route as FilesDocumentIdRouteImport } from './routes/files/$documentId'
 
 const VerifyRoute = VerifyRouteImport.update({
@@ -78,11 +80,22 @@ const ProfileIndexRoute = ProfileIndexRouteImport.update({
   path: '/profile/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModuleDescriptionsIndexRoute = ModuleDescriptionsIndexRouteImport.update({
+  id: '/module-descriptions/',
+  path: '/module-descriptions/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FilesIndexRoute = FilesIndexRouteImport.update({
   id: '/files/',
   path: '/files/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModuleDescriptionModuleIdRoute =
+  ModuleDescriptionModuleIdRouteImport.update({
+    id: '/module-description/$moduleId',
+    path: '/module-description/$moduleId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const FilesDocumentIdRoute = FilesDocumentIdRouteImport.update({
   id: '/files/$documentId',
   path: '/files/$documentId',
@@ -101,7 +114,9 @@ export interface FileRoutesByFullPath {
   '/symbols': typeof SymbolsRoute
   '/verify': typeof VerifyRoute
   '/files/$documentId': typeof FilesDocumentIdRoute
+  '/module-description/$moduleId': typeof ModuleDescriptionModuleIdRoute
   '/files': typeof FilesIndexRoute
+  '/module-descriptions': typeof ModuleDescriptionsIndexRoute
   '/profile': typeof ProfileIndexRoute
 }
 export interface FileRoutesByTo {
@@ -116,7 +131,9 @@ export interface FileRoutesByTo {
   '/symbols': typeof SymbolsRoute
   '/verify': typeof VerifyRoute
   '/files/$documentId': typeof FilesDocumentIdRoute
+  '/module-description/$moduleId': typeof ModuleDescriptionModuleIdRoute
   '/files': typeof FilesIndexRoute
+  '/module-descriptions': typeof ModuleDescriptionsIndexRoute
   '/profile': typeof ProfileIndexRoute
 }
 export interface FileRoutesById {
@@ -132,7 +149,9 @@ export interface FileRoutesById {
   '/symbols': typeof SymbolsRoute
   '/verify': typeof VerifyRoute
   '/files/$documentId': typeof FilesDocumentIdRoute
+  '/module-description/$moduleId': typeof ModuleDescriptionModuleIdRoute
   '/files/': typeof FilesIndexRoute
+  '/module-descriptions/': typeof ModuleDescriptionsIndexRoute
   '/profile/': typeof ProfileIndexRoute
 }
 export interface FileRouteTypes {
@@ -149,7 +168,9 @@ export interface FileRouteTypes {
     | '/symbols'
     | '/verify'
     | '/files/$documentId'
+    | '/module-description/$moduleId'
     | '/files'
+    | '/module-descriptions'
     | '/profile'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -164,7 +185,9 @@ export interface FileRouteTypes {
     | '/symbols'
     | '/verify'
     | '/files/$documentId'
+    | '/module-description/$moduleId'
     | '/files'
+    | '/module-descriptions'
     | '/profile'
   id:
     | '__root__'
@@ -179,7 +202,9 @@ export interface FileRouteTypes {
     | '/symbols'
     | '/verify'
     | '/files/$documentId'
+    | '/module-description/$moduleId'
     | '/files/'
+    | '/module-descriptions/'
     | '/profile/'
   fileRoutesById: FileRoutesById
 }
@@ -195,7 +220,9 @@ export interface RootRouteChildren {
   SymbolsRoute: typeof SymbolsRoute
   VerifyRoute: typeof VerifyRoute
   FilesDocumentIdRoute: typeof FilesDocumentIdRoute
+  ModuleDescriptionModuleIdRoute: typeof ModuleDescriptionModuleIdRoute
   FilesIndexRoute: typeof FilesIndexRoute
+  ModuleDescriptionsIndexRoute: typeof ModuleDescriptionsIndexRoute
   ProfileIndexRoute: typeof ProfileIndexRoute
 }
 
@@ -278,11 +305,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/module-descriptions/': {
+      id: '/module-descriptions/'
+      path: '/module-descriptions'
+      fullPath: '/module-descriptions'
+      preLoaderRoute: typeof ModuleDescriptionsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/files/': {
       id: '/files/'
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof FilesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/module-description/$moduleId': {
+      id: '/module-description/$moduleId'
+      path: '/module-description/$moduleId'
+      fullPath: '/module-description/$moduleId'
+      preLoaderRoute: typeof ModuleDescriptionModuleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/files/$documentId': {
@@ -307,7 +348,9 @@ const rootRouteChildren: RootRouteChildren = {
   SymbolsRoute: SymbolsRoute,
   VerifyRoute: VerifyRoute,
   FilesDocumentIdRoute: FilesDocumentIdRoute,
+  ModuleDescriptionModuleIdRoute: ModuleDescriptionModuleIdRoute,
   FilesIndexRoute: FilesIndexRoute,
+  ModuleDescriptionsIndexRoute: ModuleDescriptionsIndexRoute,
   ProfileIndexRoute: ProfileIndexRoute,
 }
 export const routeTree = rootRouteImport

@@ -54,13 +54,7 @@ function getSelectionOffsets(
   const selectedText = selection.toString();
 
   if (!selectedText.trim()) return null;
-  if (
-    range.startContainer !== range.endContainer ||
-    range.startContainer.nodeType !== Node.TEXT_NODE ||
-    !container.contains(range.startContainer)
-  ) {
-    return null;
-  }
+  if (!container.contains(range.commonAncestorContainer)) return null;
 
   const prefixRange = range.cloneRange();
   prefixRange.selectNodeContents(container);
@@ -284,8 +278,8 @@ export function useDraftSemanticAuthoring(
     const range = selected.getRangeAt(0);
     const rect = range.getBoundingClientRect();
     setPopup({
-      x: rect.right + window.scrollX + 8,
-      y: rect.top + window.scrollY - 4,
+      x: rect.right + 8,
+      y: rect.top - 4,
       source: "right",
     });
   }

@@ -213,6 +213,19 @@ export default function Header() {
                   },
                 }}
               />
+              <NavLink
+                label="Module descriptions"
+                component={Link}
+                to="/module-descriptions"
+                onClick={() => setOpened(false)}
+                leftSection={<IconFiles size={18} />}
+                styles={{
+                  root: {
+                    borderRadius: "8px",
+                    padding: "12px",
+                  },
+                }}
+              />
             </>
           )}
           {loggedIn && isAdmin && (

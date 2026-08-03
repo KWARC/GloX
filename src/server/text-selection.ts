@@ -97,8 +97,8 @@ export function useTextSelection() {
     });
 
     setPopup({
-      x: rect.right + window.scrollX + 8,
-      y: rect.top + window.scrollY - 4,
+      x: rect.right + 8,
+      y: rect.top - 4,
       source,
     });
 

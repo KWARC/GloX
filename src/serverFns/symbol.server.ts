@@ -72,7 +72,7 @@ export type SymbolAssociationSummary = {
   updatedAt: Date;
   associatedFloDownBlocks: Array<{
     id: string;
-    documentId: string;
+    documentId: string | null;
     statement: FloDownStatement;
     futureRepo: string;
     filePath: string;
