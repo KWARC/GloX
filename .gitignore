@@ -13,3 +13,5 @@ todos.json
 
 /generated/prisma
 /uploads/
+modules/modules
+modules/programs
