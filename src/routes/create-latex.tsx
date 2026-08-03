@@ -149,7 +149,6 @@ function CreateLatexPage() {
       getLatexHistory({
         data: {
           documentId,
-          floDownBlockIds,
           futureRepo,
           filePath,
           fileName,
@@ -235,7 +234,6 @@ function CreateLatexPage() {
       await saveLatexDraft({
         data: {
           documentId,
-          floDownBlockIds,
           futureRepo,
           filePath,
           fileName,
@@ -255,7 +253,6 @@ function CreateLatexPage() {
       await saveLatexFinal({
         data: {
           documentId,
-          floDownBlockIds,
           futureRepo,
           filePath,
           fileName,

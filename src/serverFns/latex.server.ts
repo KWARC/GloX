@@ -1,5 +1,4 @@
 import prisma from "@/lib/prisma";
-import { latexToDefinitionStatement } from "@/server/ftml/latexToFtml";
 import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import { ExtractedItem } from "@/server/text-selection";
 import {
@@ -13,8 +12,7 @@ export type LatexDraft = {
   savedAt: string;
 };
 
-export type LatexKey = {
-  floDownBlockIds: string[];
+export type LatexFileIdentity = {
   documentId: string;
   futureRepo: string;
   filePath: string;
@@ -50,17 +48,10 @@ function normalizeHistory(value: unknown): LatexDraft[] {
 }
 
 export const saveLatexDraft = createServerFn({ method: "POST" })
-  .inputValidator((data: LatexKey & { latex: string }) => data)
+  .inputValidator((data: LatexFileIdentity & { latex: string }) => data)
   .handler(async ({ data }) => {
-    const {
-      latex,
-      documentId,
-      floDownBlockIds,
-      futureRepo,
-      filePath,
-      fileName,
-      language,
-    } = data;
+    const { latex, documentId, futureRepo, filePath, fileName, language } =
+      data;
 
     const existing = await prisma.latexTable.findFirst({
       where: { documentId, futureRepo, filePath, fileName, language },
@@ -94,119 +85,49 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
         },
       });
     }
+  });
 
-    const defs = await prisma.floDownBlock.findMany({
-      where: { id: { in: floDownBlockIds } },
-      orderBy: { createdAt: "asc" },
+export const saveLatexFinal = createServerFn({ method: "POST" })
+  .inputValidator((data: LatexFileIdentity & { latex: string }) => data)
+  .handler(async ({ data }) => {
+    const { latex, documentId, futureRepo, filePath, fileName, language } =
+      data;
+
+    const existing = await prisma.latexTable.findFirst({
+      where: { documentId, futureRepo, filePath, fileName, language },
     });
 
-    for (let i = 0; i < defs.length; i++) {
-      const def = defs[i];
-
-      const existingStatement = assertFtmlStatement(def.statement);
-
-      const updatedStatement = latexToDefinitionStatement(
-        latex,
-        existingStatement,
-        i,
-      );
-
-      await prisma.floDownBlock.update({
-        where: { id: def.id },
+    if (!existing) {
+      await prisma.latexTable.create({
         data: {
-          statement: JSON.parse(JSON.stringify(updatedStatement)),
-          status: "EXTRACTED",
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+          finalLatex: latex,
+          history: JSON.parse(JSON.stringify([] as LatexDraft[])),
+          isFinal: true,
+        },
+      });
+    } else {
+      await prisma.latexTable.update({
+        where: { id: existing.id },
+        data: {
+          finalLatex: latex,
+          isFinal: true,
         },
       });
     }
   });
 
-export const saveLatexFinal = createServerFn({ method: "POST" })
-  .inputValidator((data: LatexKey & { latex: string }) => data)
-  .handler(async ({ data }) => {
-    const {
-      latex,
-      documentId,
-      floDownBlockIds,
-      futureRepo,
-      filePath,
-      fileName,
-      language,
-    } = data;
-
-    await prisma.$transaction(async (tx) => {
-      const existing = await tx.latexTable.findFirst({
-        where: { documentId, futureRepo, filePath, fileName, language },
-      });
-
-      if (!existing) {
-        await tx.latexTable.create({
-          data: {
-            documentId,
-            futureRepo,
-            filePath,
-            fileName,
-            language,
-            finalLatex: latex,
-            history: JSON.parse(JSON.stringify([] as LatexDraft[])),
-            isFinal: true,
-          },
-        });
-      } else {
-        await tx.latexTable.update({
-          where: { id: existing.id },
-          data: {
-            finalLatex: latex,
-            isFinal: true,
-          },
-        });
-      }
-
-      const defs = await tx.floDownBlock.findMany({
-        where: { id: { in: floDownBlockIds } },
-        orderBy: { createdAt: "asc" }, // REQUIRED
-      });
-
-      for (let i = 0; i < defs.length; i++) {
-        const def = defs[i];
-
-        const existingStatement = assertFtmlStatement(def.statement);
-
-        const updatedStatement = latexToDefinitionStatement(
-          latex,
-          existingStatement,
-          i,
-        );
-
-        const nextVersion = def.currentVersion + 1;
-
-        await tx.floDownBlockVersion.create({
-          data: {
-            floDownBlockId: def.id,
-            versionNumber: nextVersion,
-            originalText: def.originalText,
-            statement: JSON.parse(JSON.stringify(updatedStatement)),
-            editedById: def.updatedById ?? def.createdById,
-          },
-        });
-
-        await tx.floDownBlock.update({
-          where: { id: def.id },
-          data: {
-            statement: JSON.parse(JSON.stringify(updatedStatement)),
-            currentVersion: nextVersion,
-            status: "FINALIZED_IN_FILE",
-          },
-        });
-      }
-    });
-  });
-
 export const getLatexHistory = createServerFn({ method: "GET" })
-  .inputValidator((data: LatexKey) => data)
+  .inputValidator((data: LatexFileIdentity) => data)
   .handler(async ({ data }) => {
+    const { documentId, futureRepo, filePath, fileName, language } = data;
+
     const record = await prisma.latexTable.findFirst({
-      where: data,
+      where: { documentId, futureRepo, filePath, fileName, language },
       orderBy: { createdAt: "desc" },
     });
 

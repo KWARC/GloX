@@ -171,17 +171,12 @@ export function useStexCurationActions(
     await saveLatexDraft({
       data: {
         latex: latexCode,
-        floDownBlockIds,
         documentId: identity.documentId,
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
         fileName: identity.fileName,
         language: identity.language,
       },
-    });
-
-    await queryClient.invalidateQueries({
-      queryKey: ["floDownBlocksByIdentity", identity],
     });
 
     setLatexOpen(false);
@@ -191,28 +186,12 @@ export function useStexCurationActions(
     await saveLatexFinal({
       data: {
         latex: latexCode,
-        floDownBlockIds,
         documentId: identity.documentId,
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
         fileName: identity.fileName,
         language: identity.language,
       },
-    });
-
-    await queryClient.invalidateQueries({
-      queryKey: ["floDownBlocksByIdentity", identity],
-    });
-
-    await queryClient.invalidateQueries({
-      queryKey: [
-        "logical-paragraph-status",
-        identity.documentId,
-        identity.futureRepo,
-        identity.filePath,
-        identity.fileName,
-        identity.language,
-      ],
     });
 
     setLatexOpen(false);
