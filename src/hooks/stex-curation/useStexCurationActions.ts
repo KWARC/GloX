@@ -1,8 +1,8 @@
 import { queryClient } from "@/queryClient";
 import { injectProvenance } from "@/server/ftml/addProvenanceData";
-import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
+import { generateStexFromFloDown } from "@/server/ftml/generateStexFromFtml";
 import { ExtractedItem } from "@/server/text-selection";
-import { getCombinedFloDownBlockFtml } from "@/serverFns/floDownBlockAggregate.server";
+import { getCombinedFloDownStatement } from "@/serverFns/floDownBlockAggregate.server";
 import { getFloDownBlockProvenance } from "@/serverFns/floDownBlockProvenance.server";
 import { updateFloDownBlocksStatusByIdentity } from "@/serverFns/floDownBlockStatus.server";
 import {
@@ -14,7 +14,7 @@ import {
   saveLatexDraft,
   saveLatexFinal,
 } from "@/serverFns/latex.server";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { useState } from "react";
 
 type FloDownBlockProvenance = Awaited<ReturnType<typeof getFloDownBlockProvenance>>;
@@ -50,7 +50,7 @@ export function useStexCurationActions(
 
   async function handleDownload() {
     try {
-      const ftml = await getCombinedFloDownBlockFtml({
+      const combined = await getCombinedFloDownStatement({
         data: {
           floDownBlockIds,
           documentId: identity.documentId,
@@ -61,17 +61,17 @@ export function useStexCurationActions(
         },
       });
 
-      if (!ftml?.ftml) {
-        alert("No FTML found.");
+      if (!combined?.statement) {
+        alert("No FloDown statement found.");
         return;
       }
 
-      let stex = await generateStexFromFtml(
-        ftml.ftml,
+      let stex = await generateStexFromFloDown(
+        combined.statement,
         identity.futureRepo,
         identity.filePath,
         identity.fileName,
-        ftml.declaredSymbolsPerBlock,
+        combined.declaredSymbolsPerBlock,
       );
       stex = injectProvenance(stex ?? "", provenance);
 
@@ -120,7 +120,7 @@ export function useStexCurationActions(
     await queryClient.invalidateQueries({ queryKey: ["fileIdentities"] });
   }
 
-  async function handleUpdate(id: string, statement: FtmlStatement) {
+  async function handleUpdate(id: string, statement: FloDownStatement) {
     await updateFloDownBlock({ data: { id, statement } });
     setEditingId(null);
     await queryClient.invalidateQueries({
@@ -134,7 +134,7 @@ export function useStexCurationActions(
 
   async function handleOpenLatexPreview() {
     try {
-      const ftml = await getCombinedFloDownBlockFtml({
+      const combined = await getCombinedFloDownStatement({
         data: {
           floDownBlockIds,
           documentId: identity.documentId,
@@ -145,17 +145,17 @@ export function useStexCurationActions(
         },
       });
 
-      if (!ftml?.ftml) {
-        alert("No FTML found");
+      if (!combined?.statement) {
+        alert("No FloDown statement found");
         return;
       }
 
-      let stex = await generateStexFromFtml(
-        ftml.ftml,
+      let stex = await generateStexFromFloDown(
+        combined.statement,
         identity.futureRepo,
         identity.filePath,
         identity.fileName,
-        ftml.declaredSymbolsPerBlock,
+        combined.declaredSymbolsPerBlock,
       );
       stex = injectProvenance(stex ?? "", provenance);
 

@@ -8,14 +8,14 @@ import { normalizeSymRef } from "@/server/parseUri";
 import {
   DefiniendumNode,
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlStatement,
+  FloDownContent,
+  FloDownNode,
+  FloDownStatement,
   RootNode,
   SymrefNode,
   normalizeToRoot,
   unwrapRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import { RefObject, useEffect, useState } from "react";
 
 export type DraftSelectionRange = {
@@ -82,7 +82,7 @@ function findLocationByGlobalOffset(
   let cursor = 0;
 
   for (const [paragraphIndex, node] of root.content.entries()) {
-    let paragraphContent: FtmlContent[] = [];
+    let paragraphContent: FloDownContent[] = [];
 
     if (node.type === "paragraph") {
       paragraphContent = node.content ?? [];
@@ -131,7 +131,7 @@ function findLocationByGlobalOffset(
 }
 
 function insertDefiniendumNode(
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   selection: DraftSelectionRange,
   payload:
     | {
@@ -150,7 +150,7 @@ function insertDefiniendumNode(
               uri: string;
             };
       },
-): FtmlStatement {
+): FloDownStatement {
   const root = normalizeToRoot(statement);
   const location = findLocationByGlobalOffset(
     root,
@@ -203,10 +203,10 @@ function insertDefiniendumNode(
 }
 
 function insertSymrefNode(
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   selection: DraftSelectionRange,
   symRef: UnifiedSymbolicReference,
-): FtmlStatement {
+): FloDownStatement {
   const root = normalizeToRoot(statement);
   const location = findLocationByGlobalOffset(
     root,
@@ -251,7 +251,7 @@ export function statementHasDeclaredSymbol(
   return declaredSymbols.includes(symbolName.trim());
 }
 
-function containsSemanticNodes(node: FtmlContent | FtmlNode): boolean {
+function containsSemanticNodes(node: FloDownContent | FloDownNode): boolean {
   if (typeof node === "string") return false;
   if (node.type === "definiendum" || node.type === "symref") return true;
   return (node.content ?? []).some(containsSemanticNodes);
@@ -262,7 +262,7 @@ export function useDraftSemanticAuthoring(
   enabled: boolean,
   previewRef: RefObject<HTMLDivElement | null>,
 ) {
-  const [statement, setStatement] = useState<FtmlStatement>(() =>
+  const [statement, setStatement] = useState<FloDownStatement>(() =>
     buildPlainDefinitionStatement(text),
   );
   const [declaredSymbols, setDeclaredSymbols] = useState<string[]>([]);

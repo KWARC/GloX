@@ -1,10 +1,10 @@
 import prisma from "@/lib/prisma";
 import {
-  assertFtmlStatement,
+  assertFloDownStatement,
   DefinitionNode,
   isDefinitionNode,
   normalizeToRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export type DefiningDefinition = {
@@ -28,7 +28,7 @@ export const getDefiningDefinitions = createServerFn({ method: "POST" })
     for (const row of floDownBlocks) {
       if (!remaining.size) break;
 
-      const root = normalizeToRoot(assertFtmlStatement(row.statement));
+      const root = normalizeToRoot(assertFloDownStatement(row.statement));
       const definition = root.content.find(isDefinitionNode);
       if (!definition) continue;
 

@@ -1,6 +1,6 @@
 import { SelectedNode } from "@/types/Semantic.types";
 import { blockTypeLabel, getTopLevelBlockType } from "@/types/blockType";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { Box, Group, Paper, Stack, Text } from "@mantine/core";
 import { SemanticPanelState } from "@/hooks/semantic-panel/useSemanticPanelState";
 
@@ -14,7 +14,7 @@ export type SemanticNodeListProps = {
     | "canEditDefinienda"
   > & {
     selectedNode: SelectedNode;
-    statement: FtmlStatement;
+    statement: FloDownStatement;
   };
 };
 

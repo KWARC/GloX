@@ -2,9 +2,9 @@ import prisma from "@/lib/prisma";
 import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import { ExtractedItem } from "@/server/text-selection";
 import {
-  assertFtmlStatement,
-  FtmlStatement,
-} from "@/types/ftml.types";
+  assertFloDownStatement,
+  FloDownStatement,
+} from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export type LatexDraft = {
@@ -218,7 +218,7 @@ export const getFloDownBlocksByIdentity = createServerFn({ method: "POST" })
     });
 
     const typedDefinitions: ExtractedItem[] = defs.map((def) => {
-      const statement = assertFtmlStatement(def.statement) as FtmlStatement;
+      const statement = assertFloDownStatement(def.statement) as FloDownStatement;
 
       return {
         id: def.id,

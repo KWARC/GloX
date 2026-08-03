@@ -6,13 +6,13 @@ import {
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
 import {
-  assertFtmlStatement,
+  assertFloDownStatement,
   DefiniendumNode,
   DefinitionNode,
-  FtmlStatement,
+  FloDownStatement,
   normalizeToRoot,
   unwrapRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import { ExtractBlockType } from "@/types/blockType";
@@ -25,7 +25,7 @@ export type CreateFloDownBlockWithDeclaredSymbolInput = {
   blockType?: ExtractBlockType;
   paragraphFileName: string;
   originalText: string;
-  statement?: FtmlStatement;
+  statement?: FloDownStatement;
   symbolName: string;
   existingSymbolId?: string;
   futureRepo: string;
@@ -37,7 +37,7 @@ export type CreatedSymbolTarget = {
   floDownBlock: {
     id: string;
     pageNumber: number | null;
-    statement: FtmlStatement;
+    statement: FloDownStatement;
     futureRepo: string;
     filePath: string;
     fileName: string;
@@ -195,7 +195,7 @@ export const createFloDownBlockWithDeclaredSymbol = createServerFn({
         floDownBlock: {
           id: createdFloDownBlock.id,
           pageNumber: createdFloDownBlock.pageNumber,
-          statement: assertFtmlStatement(createdFloDownBlock.statement),
+          statement: assertFloDownStatement(createdFloDownBlock.statement),
           futureRepo: createdFloDownBlock.futureRepo,
           filePath: createdFloDownBlock.filePath,
           fileName: createdFloDownBlock.fileName,
@@ -259,7 +259,7 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
         throw new Error("Symbol not found");
       }
 
-      const root = normalizeToRoot(assertFtmlStatement(floDownBlock.statement));
+      const root = normalizeToRoot(assertFloDownStatement(floDownBlock.statement));
       const occurrences = findAllTextOccurrences(root, selectedText);
       const location = occurrences.find(
         (loc) => loc.offset === data.startOffset,

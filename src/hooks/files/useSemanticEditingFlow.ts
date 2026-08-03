@@ -12,7 +12,7 @@ import { deleteFloDownBlock } from "@/serverFns/extractFloDownBlock.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import { updateFloDownBlockAst } from "@/serverFns/updateFloDownBlock.server";
-import { DefiniendumNode, FtmlStatement } from "@/types/ftml.types";
+import { DefiniendumNode, FloDownStatement } from "@/types/floDown.types";
 import { supportsDefinienda } from "@/types/blockType";
 import { NavigateOptions, RegisteredRouter } from "@tanstack/react-router";
 import { useState } from "react";
@@ -358,7 +358,7 @@ export function useSemanticEditingFlow({
     setEditingId(editingId === id ? null : id);
   }
 
-  async function handleUpdateExtract(id: string, statement: FtmlStatement) {
+  async function handleUpdateExtract(id: string, statement: FloDownStatement) {
     await updateExtract(id, statement);
     setEditingId(null);
   }

@@ -1,31 +1,25 @@
 import {
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlRoot,
+  FloDownContent,
+  FloDownNode,
+  FloDownStatement,
   isDefiniendumNode,
   isDefinitionNode,
-} from "@/types/ftml.types";
-
-export function assertFtmlRoot(value: unknown): asserts value is FtmlRoot {
-  if (!value || typeof value !== "object") {
-    throw new Error("Invalid FTML AST");
-  }
-}
+} from "@/types/floDown.types";
 
 function replaceUriInContent(
-  content: FtmlContent[],
+  content: FloDownContent[],
   localUri: string,
   mathHubUri: string,
-): FtmlContent[] {
-  return content.map((item): FtmlContent => {
+): FloDownContent[] {
+  return content.map((item): FloDownContent => {
     if (typeof item === "string") return item;
 
     if (
       (item.type === "definiendum" || item.type === "symref") &&
       item.uri === localUri
     ) {
-      const replaced: FtmlNode = { ...item, uri: mathHubUri };
+      const replaced: FloDownNode = { ...item, uri: mathHubUri };
       if (typeof item !== "string" && item.content)
         replaced.content = replaceUriInContent(
           item.content,
@@ -39,17 +33,17 @@ function replaceUriInContent(
       return {
         ...item,
         content: replaceUriInContent(item.content, localUri, mathHubUri),
-      } as FtmlNode;
+      } as FloDownNode;
     }
     return item;
   });
 }
 
 function propagateUriInNode(
-  node: FtmlNode,
+  node: FloDownNode,
   localUri: string,
   mathHubUri: string,
-): FtmlNode {
+): FloDownNode {
   if (isDefinitionNode(node)) {
     const updatedContent = replaceUriInContent(
       node.content,
@@ -64,7 +58,7 @@ function propagateUriInNode(
     (node.type === "definiendum" || node.type === "symref") &&
     node.uri === localUri
   ) {
-    const replaced: FtmlNode = { ...node, uri: mathHubUri };
+    const replaced: FloDownNode = { ...node, uri: mathHubUri };
     if (node.content)
       replaced.content = replaceUriInContent(
         node.content,
@@ -84,10 +78,10 @@ function propagateUriInNode(
 }
 
 export function propagateUriInAst(
-  ast: FtmlRoot,
+  ast: FloDownStatement,
   localUri: string,
   mathHubUri: string,
-): FtmlRoot {
+): FloDownStatement {
   if (Array.isArray(ast)) {
     return ast.map((node) =>
       typeof node === "string"
@@ -108,8 +102,8 @@ export function propagateUriInAst(
   return propagateUriInNode(ast, localUri, mathHubUri);
 }
 
-export function astReferencesUri(ast: FtmlRoot, localUri: string): boolean {
-  function scanContent(content: FtmlContent[]): boolean {
+export function astReferencesUri(ast: FloDownStatement, localUri: string): boolean {
+  function scanContent(content: FloDownContent[]): boolean {
     for (const item of content) {
       if (typeof item === "string") continue;
 
@@ -149,10 +143,10 @@ export function astReferencesUri(ast: FtmlRoot, localUri: string): boolean {
 }
 
 export function definitionContainsLocalSymbol(
-  statements: FtmlRoot[],
+  statements: FloDownStatement[],
   symbolUri: string,
 ): boolean {
-  function checkContent(content: FtmlContent[]): boolean {
+  function checkContent(content: FloDownContent[]): boolean {
     for (const item of content) {
       if (typeof item === "string") continue;
 

@@ -1,6 +1,6 @@
 import { ExtractedItem } from "@/server/text-selection";
 import { blockTypeLabel, getTopLevelBlockType } from "@/types/blockType";
-import { assertFtmlStatement } from "@/types/ftml.types";
+import { assertFloDownStatement } from "@/types/floDown.types";
 import { getFloDownBlockDeletionImpact } from "@/serverFns/extractFloDownBlock.server";
 import { Alert, Button, Group, Modal, Paper, Stack, Text } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
@@ -116,7 +116,7 @@ export function FloDownBlockDeleteModal({
               <Paper key={associated.id} withBorder bg="blue.0" py={4} px={6}>
                 <FtmlPreview
                   docId={`delete-impact-${associated.id}`}
-                  ftmlAst={assertFtmlStatement(associated.statement)}
+                  ftmlAst={assertFloDownStatement(associated.statement)}
                 />
               </Paper>
             ))}

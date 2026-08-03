@@ -1,10 +1,10 @@
 import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import type { ExtractedItem } from "@/server/text-selection";
-import { normalizeToRoot } from "@/types/ftml.types";
+import { normalizeToRoot } from "@/types/floDown.types";
 import { Catalog, Verbalization } from "../symbolic-catalog/catalogSearch";
 import { buildSuggestionCatalog } from "./catalogBuilders";
 import { candidateKey, toCandidate } from "./candidates";
-import { buildContext, extractPlainText, resolveConflicts, walkTextNodes } from "./ftmlTraversal";
+import { buildContext, extractPlainText, resolveConflicts, walkTextNodes } from "./floDownTraversal";
 import type {
   CatalogEntry,
   SuggestedReference,

@@ -1,10 +1,10 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import {
-  assertFtmlStatement,
+  assertFloDownStatement,
   isDefiniendumNode,
   normalizeToRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
 type MoveInput = { documentId: string; futureRepo: string; filePath: string; language: string };
@@ -18,7 +18,7 @@ type MovingSymbol = {
 
 function declaredSymbols(statement: unknown) {
   const symbols = new Set<string>();
-  const stack = [...normalizeToRoot(assertFtmlStatement(statement)).content];
+  const stack = [...normalizeToRoot(assertFloDownStatement(statement)).content];
   while (stack.length) {
     const node = stack.pop();
     if (!node || typeof node === "string") continue;

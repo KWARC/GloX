@@ -23,7 +23,7 @@ import {
   updateFloDownBlockAst,
   UpdateFloDownBlockAstResult,
 } from "@/serverFns/updateFloDownBlock.server";
-import { assertFtmlStatement, FtmlStatement } from "@/types/ftml.types";
+import { assertFloDownStatement, FloDownStatement } from "@/types/floDown.types";
 import { OnReplaceNode, FloDownBlockSemantic } from "@/types/Semantic.types";
 import { Box, Button, Group, Loader, Paper, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
@@ -112,7 +112,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     try {
       return {
         id: rawDefinition.id,
-        statement: assertFtmlStatement(rawDefinition.statement),
+        statement: assertFloDownStatement(rawDefinition.statement),
       };
     } catch {
       return null;
@@ -128,7 +128,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
         documentPageId: rawDefinition.documentPageId ?? "",
         pageNumber: rawDefinition.pageNumber ?? 0,
         originalText: rawDefinition.originalText ?? "",
-        statement: assertFtmlStatement(rawDefinition.statement),
+        statement: assertFloDownStatement(rawDefinition.statement),
         futureRepo: rawDefinition.futureRepo ?? "",
         filePath: rawDefinition.filePath ?? "",
         fileName: rawDefinition.fileName ?? "",
@@ -158,7 +158,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     setEditingId((prev) => (prev === id ? null : id));
   }
 
-  async function handleUpdate(id: string, statement: FtmlStatement) {
+  async function handleUpdate(id: string, statement: FloDownStatement) {
     await updateFloDownBlock({ data: { id, statement } });
     setEditingId(null);
     await queryClient.invalidateQueries({

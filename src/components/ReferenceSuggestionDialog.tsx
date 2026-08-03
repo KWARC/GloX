@@ -8,7 +8,7 @@ import {
   getSuggestedReferenceCandidateKey,
   searchReferenceCandidates,
 } from "@/server/symbolic-suggestions";
-import type { FtmlStatement } from "@/types/ftml.types";
+import type { FloDownStatement } from "@/types/floDown.types";
 import {
   Box,
   Button,
@@ -32,7 +32,7 @@ type Props = {
   opened: boolean;
   onClose: () => void;
   floDownBlockId: string;
-  floDownBlockStatement: FtmlStatement | null;
+  floDownBlockStatement: FloDownStatement | null;
   originalText: string;
   suggestions: SuggestedReference[];
   catalog: CatalogEntry[];

@@ -1,5 +1,5 @@
 import { ExtractedItem } from "@/server/text-selection";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { Box, Group, Loader, Stack } from "@mantine/core";
 import { ExtractedTextPanel } from "../ExtractedTextList";
 
@@ -14,7 +14,7 @@ export type FloDownBlocksSectionProps = {
   };
   actions: {
     onToggleEdit: (id: string) => void;
-    onUpdate: (id: string, statement: FtmlStatement) => Promise<void>;
+    onUpdate: (id: string, statement: FloDownStatement) => Promise<void>;
     onDownload: () => void;
     onDelete: (id: string) => void;
     onSelection: (extractId: string) => void;

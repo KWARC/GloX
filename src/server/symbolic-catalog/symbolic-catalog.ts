@@ -5,7 +5,7 @@ import {
   SymbolicIndex,
   SymbolicOccurrence,
 } from "@/types/symbolic.types";
-import { FtmlContent, FtmlNode, normalizeToRoot } from "@/types/ftml.types";
+import { FloDownContent, FloDownNode, normalizeToRoot } from "@/types/floDown.types";
 
 type PageText = {
   id: string;
@@ -24,7 +24,7 @@ function normalizeSurface(value: string): string {
   return value.toLowerCase().trim();
 }
 
-function collectInlineText(content: FtmlContent[] | undefined): string {
+function collectInlineText(content: FloDownContent[] | undefined): string {
   if (!content) return "";
 
   return content
@@ -35,7 +35,7 @@ function collectInlineText(content: FtmlContent[] | undefined): string {
     .join("");
 }
 
-function walkNodes(node: FtmlNode, visit: (node: FtmlNode) => void) {
+function walkNodes(node: FloDownNode, visit: (node: FloDownNode) => void) {
   visit(node);
 
   for (const child of node.content ?? []) {

@@ -1,9 +1,9 @@
 import type { ExtractedItem } from "@/server/text-selection";
-import { normalizeToRoot } from "@/types/ftml.types";
+import { normalizeToRoot } from "@/types/floDown.types";
 import { Catalog, Verbalization } from "../symbolic-catalog/catalogSearch";
 import type { StaticCatalogDef } from "../symbolic-catalog/loadCatalog";
 import { isEligibleForAutomaticSuggestion } from "./eligibility";
-import { getStringContent, isDeclaredDefiniendum, walkNodes } from "./ftmlTraversal";
+import { getStringContent, isDeclaredDefiniendum, walkNodes } from "./floDownTraversal";
 import type { CatalogEntry } from "./types";
 
 export function buildSuggestionCatalog(

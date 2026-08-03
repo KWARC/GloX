@@ -8,26 +8,26 @@ import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefiniendumNode,
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlStatement,
+  FloDownContent,
+  FloDownNode,
+  FloDownStatement,
   isDefiniendumNode,
   isDefinitionNode,
   normalizeToRoot,
   ParagraphNode,
   SymrefNode,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import { useEffect, useRef } from "react";
 
 interface FtmlPreviewProps {
-  ftmlAst: FtmlStatement;
+  ftmlAst: FloDownStatement;
   docId: string;
   declaredSymbols?: string[];
 }
 
 type FloDownBlock = {
   mountTo: (el: HTMLElement) => void;
-  addElement: (node: FtmlNode) => void;
+  addElement: (node: FloDownNode) => void;
   addSymbolDeclaration: (name: string) => string;
   getStex(): string;
   getFtml(): string;
@@ -45,21 +45,21 @@ function deepClone<T>(value: T): T {
 }
 
 function rewriteContentArray(
-  content: FtmlContent[],
+  content: FloDownContent[],
   uriMap: Map<string, string>,
   docId: string,
-): FtmlContent[] {
+): FloDownContent[] {
   return content.map((c) =>
     typeof c === "string" ? c : rewriteNode(c, uriMap, docId),
   );
 }
 
 function rewriteNode(
-  node: FtmlNode,
+  node: FloDownNode,
   uriMap: Map<string, string>,
   docId: string,
-  blockStatement?: FtmlStatement,
-): FtmlNode {
+  blockStatement?: FloDownStatement,
+): FloDownNode {
   if (isDefinitionNode(node)) {
     const def = node as DefinitionNode;
     const statement = blockStatement ?? def;

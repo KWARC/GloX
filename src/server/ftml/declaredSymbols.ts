@@ -1,17 +1,17 @@
 import {
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlStatement,
+  FloDownContent,
+  FloDownNode,
+  FloDownStatement,
   isDefiniendumNode,
   isDefinitionNode,
   isNode,
   isRootNode,
   normalizeToRoot,
   unwrapRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 
-function walkContent(content: FtmlContent[], visit: (node: FtmlNode) => void) {
+function walkContent(content: FloDownContent[], visit: (node: FloDownNode) => void) {
   for (const item of content) {
     if (typeof item === "string") continue;
     visit(item);
@@ -21,7 +21,7 @@ function walkContent(content: FtmlContent[], visit: (node: FtmlNode) => void) {
   }
 }
 
-function walkStatement(statement: FtmlStatement, visit: (node: FtmlNode) => void) {
+function walkStatement(statement: FloDownStatement, visit: (node: FloDownNode) => void) {
   const root = normalizeToRoot(statement);
   for (const block of root.content) {
     if (!isNode(block)) continue;
@@ -33,7 +33,7 @@ function walkStatement(statement: FtmlStatement, visit: (node: FtmlNode) => void
 }
 
 /** All definiendum URIs in statement content (deduped, stable order). */
-export function collectDefiniendumUris(statement: FtmlStatement): string[] {
+export function collectDefiniendumUris(statement: FloDownStatement): string[] {
   const uris: string[] = [];
   const seen = new Set<string>();
 
@@ -48,7 +48,7 @@ export function collectDefiniendumUris(statement: FtmlStatement): string[] {
   return uris;
 }
 
-function stripNodeForPersist(node: FtmlNode): FtmlNode {
+function stripNodeForPersist(node: FloDownNode): FloDownNode {
   if (isDefinitionNode(node)) {
     const { for_symbols: _forSymbols, ...rest } = node;
     return {
@@ -73,7 +73,7 @@ function stripNodeForPersist(node: FtmlNode): FtmlNode {
   };
 }
 
-function stripContentForPersist(content: FtmlContent[]): FtmlContent[] {
+function stripContentForPersist(content: FloDownContent[]): FloDownContent[] {
   return content.map((item) => {
     if (typeof item === "string") return item;
     return stripNodeForPersist(item);
@@ -82,8 +82,8 @@ function stripContentForPersist(content: FtmlContent[]): FtmlContent[] {
 
 /** Remove persisted-only fields: symdecl, for_symbols. */
 export function sanitizeStatementForPersist(
-  statement: FtmlStatement,
-): FtmlStatement {
+  statement: FloDownStatement,
+): FloDownStatement {
   const root = normalizeToRoot(statement);
   const stripped = {
     ...root,
@@ -96,7 +96,7 @@ export function sanitizeStatementForPersist(
 
 /** Build ephemeral for_symbols for export from definienda + URI map. */
 export function buildForSymbols(
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   uriMap: Map<string, string>,
 ): string[] {
   return collectDefiniendumUris(statement).map((uri) => uriMap.get(uri) ?? uri);
@@ -104,7 +104,7 @@ export function buildForSymbols(
 
 export function attachForSymbolsToDefinition(
   definition: DefinitionNode,
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   uriMap: Map<string, string>,
 ): DefinitionNode {
   return {
@@ -121,7 +121,7 @@ export function isDeclaredOnRow(
 }
 
 /** Top-level blocks from a statement (handles root/array/single). */
-export function getTopLevelBlocks(statement: FtmlStatement): FtmlNode[] {
+export function getTopLevelBlocks(statement: FloDownStatement): FloDownNode[] {
   if (Array.isArray(statement)) {
     return statement.filter(isNode);
   }

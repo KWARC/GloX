@@ -1,10 +1,10 @@
 import {
-  FtmlNode,
-  FtmlStatement,
+  FloDownNode,
+  FloDownStatement,
   isDefinitionNode,
   isNode,
   isRootNode,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 
 /** Top-level FTML block types supported when creating curated content. */
 export const EXTRACT_BLOCK_TYPES = ["definition", "paragraph"] as const;
@@ -15,7 +15,7 @@ export function blockTypeLabel(blockType: ExtractBlockType): string {
   return blockType === "definition" ? "Definition" : "Paragraph";
 }
 
-function unwrapTopLevelNode(statement: FtmlStatement): FtmlNode | null {
+function unwrapTopLevelNode(statement: FloDownStatement): FloDownNode | null {
   if (Array.isArray(statement)) {
     return statement.find(isNode) ?? null;
   }
@@ -31,7 +31,7 @@ function unwrapTopLevelNode(statement: FtmlStatement): FtmlNode | null {
   return statement;
 }
 
-export function getTopLevelBlockType(statement: FtmlStatement): ExtractBlockType {
+export function getTopLevelBlockType(statement: FloDownStatement): ExtractBlockType {
   const node = unwrapTopLevelNode(statement);
   if (node && isDefinitionNode(node)) {
     return "definition";
@@ -39,14 +39,14 @@ export function getTopLevelBlockType(statement: FtmlStatement): ExtractBlockType
   return "paragraph";
 }
 
-export function supportsDefinienda(statement: FtmlStatement): boolean {
+export function supportsDefinienda(statement: FloDownStatement): boolean {
   return getTopLevelBlockType(statement) === "definition";
 }
 
 export function buildStatementFromText(
   blockType: ExtractBlockType,
   text: string,
-): FtmlStatement {
+): FloDownStatement {
   const trimmed = text.trim();
 
   if (blockType === "paragraph") {

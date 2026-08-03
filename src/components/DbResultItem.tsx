@@ -1,5 +1,5 @@
 import { useFloDownBlockBySymbol } from "@/serverFns/floDownBlockBySymbol.server";
-import { assertFtmlStatement } from "@/types/ftml.types";
+import { assertFloDownStatement } from "@/types/floDown.types";
 import {
   DbSymbolResult,
   DefiniendumNode,
@@ -66,7 +66,7 @@ export function DbResultItem(props: DbResultItemProps) {
       {def && (
         <Box mt="xs" h={120}>
           <FtmlPreview
-            ftmlAst={assertFtmlStatement(def.statement)}
+            ftmlAst={assertFloDownStatement(def.statement)}
             docId={def.id}
           />
         </Box>

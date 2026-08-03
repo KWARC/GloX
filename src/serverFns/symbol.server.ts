@@ -9,15 +9,15 @@ import { findDefiniendum } from "@/server/parseUri";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import {
-  assertFtmlStatement,
-  FtmlStatement,
+  assertFloDownStatement,
+  FloDownStatement,
   isDefiniendumNode,
   isDefinitionNode,
   isParagraphNode,
   normalizeToRoot,
   RootNode,
   unwrapRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
 type AuthorizedRole = "ADMIN" | "CURATOR";
@@ -73,7 +73,7 @@ export type SymbolAssociationSummary = {
   associatedFloDownBlocks: Array<{
     id: string;
     documentId: string;
-    statement: FtmlStatement;
+    statement: FloDownStatement;
     futureRepo: string;
     filePath: string;
     fileName: string;
@@ -112,7 +112,7 @@ function floDownBlockMatchesDeclaredSymbol(
     return false;
   }
 
-  const root = normalizeToRoot(assertFtmlStatement(floDownBlock.statement));
+  const root = normalizeToRoot(assertFloDownStatement(floDownBlock.statement));
 
   for (const block of root.content) {
     if (!isDefinitionNode(block)) continue;
@@ -186,7 +186,7 @@ async function buildSymbolAssociations() {
       addAssociatedFloDownBlock(floDownBlockMap, {
         id: floDownBlock.id,
         documentId: floDownBlock.documentId,
-        statement: assertFtmlStatement(floDownBlock.statement),
+        statement: assertFloDownStatement(floDownBlock.statement),
         futureRepo: floDownBlock.futureRepo,
         filePath: floDownBlock.filePath,
         fileName: floDownBlock.fileName,
@@ -353,7 +353,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
       }
 
       const root: RootNode = normalizeToRoot(
-        assertFtmlStatement(floDownBlock.statement),
+        assertFloDownStatement(floDownBlock.statement),
       );
 
       const firstNode = root.content[0];
@@ -479,7 +479,7 @@ export const getFloDownBlockBySymbol = createServerFn({ method: "POST" })
     });
 
     for (const def of defs) {
-      const root = normalizeToRoot(assertFtmlStatement(def.statement));
+      const root = normalizeToRoot(assertFloDownStatement(def.statement));
 
       for (const node of root.content) {
         if (!isDefinitionNode(node)) continue;

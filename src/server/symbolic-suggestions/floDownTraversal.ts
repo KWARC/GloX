@@ -1,27 +1,27 @@
-import type { FtmlContent, FtmlNode, FtmlStatement } from "@/types/ftml.types";
-import { normalizeToRoot } from "@/types/ftml.types";
+import type { FloDownContent, FloDownNode, FloDownStatement } from "@/types/floDown.types";
+import { normalizeToRoot } from "@/types/floDown.types";
 import type { SuggestedReference } from "./types";
 
 const SEMANTIC_TYPES = new Set(["symref", "definiendum", "definiens"]);
-export function getStringContent(content: FtmlContent[] | undefined): string {
+export function getStringContent(content: FloDownContent[] | undefined): string {
   return (content ?? [])
     .map((c) => (typeof c === "string" ? c : getStringContent(c.content)))
     .join("");
 }
 
-function walkPlainText(node: FtmlNode): string {
+function walkPlainText(node: FloDownNode): string {
   return (node.content ?? [])
     .map((c) => (typeof c === "string" ? c : walkPlainText(c)))
     .join("");
 }
 
-export function extractPlainText(statement: FtmlStatement): string {
+export function extractPlainText(statement: FloDownStatement): string {
   const root = normalizeToRoot(statement);
   return walkPlainText(root);
 }
 
 export function walkTextNodes(
-  node: FtmlNode,
+  node: FloDownNode,
   visit: (text: string, plainOffset: number, nodePath: number[]) => void,
   insideSemantic = false,
   plainOffset = 0,
@@ -53,9 +53,9 @@ export function walkTextNodes(
 }
 
 export function isDeclaredDefiniendum(
-  node: FtmlNode,
-): node is FtmlNode & { type: "definiendum"; symdecl: true; uri: string } {
-  const candidate = node as FtmlNode & { symdecl?: unknown };
+  node: FloDownNode,
+): node is FloDownNode & { type: "definiendum"; symdecl: true; uri: string } {
+  const candidate = node as FloDownNode & { symdecl?: unknown };
   return (
     candidate.type === "definiendum" &&
     candidate.symdecl === true &&
@@ -63,7 +63,7 @@ export function isDeclaredDefiniendum(
   );
 }
 
-export function walkNodes(node: FtmlNode, visit: (node: FtmlNode) => void) {
+export function walkNodes(node: FloDownNode, visit: (node: FloDownNode) => void) {
   visit(node);
 
   for (const child of node.content ?? []) {

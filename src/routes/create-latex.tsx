@@ -1,8 +1,8 @@
 import { currentUser } from "@/server/auth/currentUser";
 import { injectProvenance } from "@/server/ftml/addProvenanceData";
-import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
+import { generateStexFromFloDown } from "@/server/ftml/generateStexFromFtml";
 import {
-  getCombinedFloDownBlockFtml,
+  getCombinedFloDownStatement,
   getFinalizedLatexById,
 } from "@/serverFns/floDownBlockAggregate.server";
 import { getFloDownBlockProvenance } from "@/serverFns/floDownBlockProvenance.server";
@@ -89,9 +89,9 @@ function CreateLatexPage() {
   const [savingFinal, setSavingFinal] = useState(false);
   const [isFromHistory, setIsFromHistory] = useState(false);
 
-  const { data: combinedFtml, isLoading: ftmlLoading } = useQuery({
+  const { data: combinedStatement, isLoading: statementLoading } = useQuery({
     queryKey: [
-      "combined-ftml",
+      "combined-statement",
       documentId,
       futureRepo,
       filePath,
@@ -99,7 +99,7 @@ function CreateLatexPage() {
       language,
     ],
     queryFn: () =>
-      getCombinedFloDownBlockFtml({
+      getCombinedFloDownStatement({
         data: {
           floDownBlockIds,
           documentId,
@@ -119,16 +119,16 @@ function CreateLatexPage() {
   });
 
   const { data: stex, isLoading: stexLoading } = useQuery({
-    queryKey: ["stex", combinedFtml],
+    queryKey: ["stex", combinedStatement],
     queryFn: () =>
-      generateStexFromFtml(
-        combinedFtml!.ftml,
+      generateStexFromFloDown(
+        combinedStatement!.statement,
         futureRepo,
         filePath,
         fileName,
-        combinedFtml!.declaredSymbolsPerBlock,
+        combinedStatement!.declaredSymbolsPerBlock,
       ),
-    enabled: !finalized && !!combinedFtml?.ftml,
+    enabled: !finalized && !!combinedStatement?.statement,
     staleTime: Infinity,
   });
 
@@ -204,7 +204,7 @@ function CreateLatexPage() {
     ? (finalizedData?.latex ?? "")
     : (editedLatex ?? generatedLatex ?? historyData?.finalLatex ?? "");
 
-  if (!finalized && (ftmlLoading || stexLoading)) {
+  if (!finalized && (statementLoading || stexLoading)) {
     return (
       <Box p="xl" h="100dvh">
         <Stack align="center" justify="center" h="100%">

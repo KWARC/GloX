@@ -21,7 +21,7 @@ import { SymbolicRef } from "./SymbolicRef";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { useDraftSemanticAuthoring } from "@/hooks/useDraftSemanticAuthoring";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { SelectionPopup } from "./SelectionPopup";
 
 export function normalizeContentName(value: string) {
@@ -69,7 +69,7 @@ interface ExtractTextDialogProps {
   onSubmit: (payload: {
     text: string;
     blockType: ExtractBlockType;
-    statement?: FtmlStatement;
+    statement?: FloDownStatement;
     declaredSymbols?: string[];
   }) => void;
   title?: string;

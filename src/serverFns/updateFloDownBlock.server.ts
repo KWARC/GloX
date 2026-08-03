@@ -1,13 +1,12 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
-import { assertFtmlRoot } from "@/server/ftml/convertLocalSymbolToMathHub";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import {
   addDeclaredSymbol,
   removeDeclaredSymbol,
 } from "@/server/floDownBlockDeclaredSymbols";
 import { parseUri, SemanticOperation, transform } from "@/server/parseUri";
-import { assertFtmlStatement } from "@/types/ftml.types";
+import { assertFloDownStatement } from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export type UpdateFloDownBlockAstResult =
@@ -50,7 +49,7 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
       const def = await tx.floDownBlock.findUniqueOrThrow({
         where: { id: data.floDownBlockId },
       });
-      assertFtmlRoot(def.statement);
+      assertFloDownStatement(def.statement);
 
       let operation = data.operation;
 
@@ -100,8 +99,8 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
       }
 
       const newAst = sanitizeStatementForPersist(
-        assertFtmlStatement(
-          transform(structuredClone(def.statement), operation),
+        assertFloDownStatement(
+          transform(structuredClone(assertFloDownStatement(def.statement)), operation),
         ),
       );
       const nextVersion = def.currentVersion + 1;

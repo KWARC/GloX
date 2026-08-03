@@ -3,7 +3,7 @@ import { ReplacePayload } from "@/server/parseUri";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import { getFloDownBlockBySymbol } from "@/serverFns/symbol.server";
 import { UpdateFloDownBlockAstResult } from "@/serverFns/updateFloDownBlock.server";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 
 type SemanticIndex = ReturnType<typeof extractSemanticIndex>;
 
@@ -24,7 +24,7 @@ export type SelectedNode =
 
 export type FloDownBlockSemantic = {
   id: string;
-  statement: FtmlStatement;
+  statement: FloDownStatement;
   declaredSymbols?: string[];
 };
 

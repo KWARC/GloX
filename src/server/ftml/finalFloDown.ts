@@ -1,12 +1,12 @@
 import {
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlRoot,
+  FloDownContent,
+  FloDownNode,
+  FloDownStatement,
   isDefiniendumNode,
   isDefinitionNode,
   RootNode,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import {
   attachForSymbolsToDefinition,
   buildForSymbols,
@@ -17,14 +17,14 @@ type FloDownInstance = {
 };
 
 export function finalFloDown(
-  ast: FtmlRoot,
+  ast: FloDownStatement,
   fd: FloDownInstance,
   declaredSymbols: readonly string[] = [],
-): FtmlRoot {
-  const clone: FtmlRoot = structuredClone(ast);
+): FloDownStatement {
+  const clone: FloDownStatement = structuredClone(ast);
   const statementForSymbols = clone;
 
-  function transformNode(node: FtmlNode): FtmlNode {
+  function transformNode(node: FloDownNode): FloDownNode {
     if (isDefinitionNode(node)) {
       return transformDefinition(node);
     }
@@ -60,9 +60,9 @@ export function finalFloDown(
   }
 
   function transformContent(
-    content: FtmlContent[],
+    content: FloDownContent[],
     symbolMap?: Map<string, string>,
-  ): FtmlContent[] {
+  ): FloDownContent[] {
     return content.map((item) => {
       if (typeof item === "string") return item;
 

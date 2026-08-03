@@ -2,11 +2,11 @@ import { initFloDown } from "@/lib/flodownClient";
 import { parseUri } from "@/server/parseUri";
 import { isHttp } from "@/server/ftml/generateStexFromFtml";
 import type {
-  FtmlContent,
-  FtmlNode,
+  FloDownContent,
+  FloDownNode,
   ParagraphNode,
   SymrefNode,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 
 type MarkReferenceLatexItem = {
   pageNumber: number;
@@ -22,7 +22,7 @@ type MarkReferenceLatexIdentity = {
 };
 
 type FloDownBlock = {
-  addElement: (node: FtmlNode) => void;
+  addElement: (node: FloDownNode) => void;
   getStex(): string;
   clear: () => void;
 };
@@ -42,9 +42,9 @@ function getDisplaySymbol(symbolName: string): string {
 }
 
 function rewriteContent(
-  content: FtmlContent[],
+  content: FloDownContent[],
   identity: MarkReferenceLatexIdentity,
-): FtmlContent[] {
+): FloDownContent[] {
   return content.map((item) => {
     if (typeof item === "string") return item;
     if (item.type !== "symref") return item;
@@ -70,7 +70,7 @@ function buildPageParagraph(
   pageNumber: number,
   references: MarkReferenceLatexItem[],
 ): ParagraphNode {
-  const content: FtmlContent[] = [
+  const content: FloDownContent[] = [
     `Page ${pageNumber} of this file contains the following references: `,
   ];
 

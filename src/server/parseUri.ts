@@ -3,10 +3,10 @@ import {
   isDefiniendumNode,
   type DefiniendumNode,
   type DefinitionNode,
-  type FtmlContent,
-  type FtmlNode,
-  type FtmlRoot,
-} from "@/types/ftml.types";
+  type FloDownContent,
+  type FloDownNode,
+  type FloDownStatement,
+} from "@/types/floDown.types";
 
 type RemoveSemanticOperation = {
   kind: "removeSemantic";
@@ -23,7 +23,7 @@ export type SemanticOperation =
   | RemoveSemanticOperation
   | ReplaceSemanticOperation;
 
-type FtmlTree = FtmlRoot | FtmlNode | FtmlContent | FtmlContent[];
+type FloDownTree = FloDownStatement | FloDownNode | FloDownContent | FloDownContent[];
 
 export type ParsedMathHubUri = {
   archive: string;
@@ -37,14 +37,14 @@ export type ParsedMathHubUri = {
 export type ReplaceDefiniendumPayload = {
   type: "definiendum";
   uri: string;
-  content?: FtmlContent[];
+  content?: FloDownContent[];
   symdecl: boolean;
 };
 
 export type ReplaceSymrefPayload = {
   type: "symref";
   uri: string;
-  content?: FtmlContent[];
+  content?: FloDownContent[];
 };
 
 export type ReplacePayload = ReplaceDefiniendumPayload | ReplaceSymrefPayload;
@@ -73,8 +73,8 @@ export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
   return { uri: `${symRef.symbolName}`, text: symRef.symbolName };
 }
 
-function normalizeContent(content: FtmlContent[]): FtmlContent[] {
-  const result: FtmlContent[] = [];
+function normalizeContent(content: FloDownContent[]): FloDownContent[] {
+  const result: FloDownContent[] = [];
 
   for (const item of content) {
     if (typeof item === "string") {
@@ -95,7 +95,7 @@ function normalizeContent(content: FtmlContent[]): FtmlContent[] {
   return result;
 }
 
-export function findDefiniendum(content: FtmlContent[], symbolName: string): boolean {
+export function findDefiniendum(content: FloDownContent[], symbolName: string): boolean {
   const normalize = (u: string) => {
     if (!u) return u;
 
@@ -129,7 +129,7 @@ export function findDefiniendum(content: FtmlContent[], symbolName: string): boo
   return false;
 }
 
-export function transform(ast: FtmlTree, operation: SemanticOperation): FtmlTree {
+export function transform(ast: FloDownTree, operation: SemanticOperation): FloDownTree {
   if (operation.kind === "removeSemantic") {
     return removeSemanticNodeWithIndex(ast, operation.target);
   }
@@ -140,33 +140,33 @@ export function transform(ast: FtmlTree, operation: SemanticOperation): FtmlTree
 }
 
 function removeSemanticNode(
-  node: FtmlTree,
+  node: FloDownTree,
   target: { type: "definiendum" | "symref"; uri: string },
-): FtmlTree {
+): FloDownTree {
   if (Array.isArray(node)) {
-    const result: FtmlContent[] = [];
+    const result: FloDownContent[] = [];
 
     for (const child of node) {
       if (
         typeof child === "object" &&
         child &&
-        (child as FtmlNode).type === target.type &&
-        (child as FtmlNode).uri === target.uri
+        (child as FloDownNode).type === target.type &&
+        (child as FloDownNode).uri === target.uri
       ) {
-        const childNode = child as FtmlNode;
+        const childNode = child as FloDownNode;
 
         if (childNode.content) {
-          for (const c of childNode.content as FtmlContent[]) {
+          for (const c of childNode.content as FloDownContent[]) {
             result.push(c);
           }
         }
       } else {
-        const transformed = removeSemanticNode(child as FtmlTree, target);
+        const transformed = removeSemanticNode(child as FloDownTree, target);
 
         if (Array.isArray(transformed)) {
           result.push(...transformed);
         } else {
-          result.push(transformed as FtmlContent);
+          result.push(transformed as FloDownContent);
         }
       }
     }
@@ -176,25 +176,25 @@ function removeSemanticNode(
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return node;
 
-  const copy: FtmlNode = { ...(node as FtmlNode) };
+  const copy: FloDownNode = { ...(node as FloDownNode) };
   if (copy.content) {
     copy.content = normalizeContent(
-      removeSemanticNode(copy.content as FtmlContent[], target) as FtmlContent[],
+      removeSemanticNode(copy.content as FloDownContent[], target) as FloDownContent[],
     );
   }
   return copy;
 }
 function removeSemanticNodeWithIndex(
-  node: FtmlTree,
+  node: FloDownTree,
   target: { type: "definiendum" | "symref"; uri: string },
-): FtmlTree {
+): FloDownTree {
   if (!node || typeof node !== "object") return node;
 
-  if ((node as FtmlNode).type === "definition") {
+  if ((node as FloDownNode).type === "definition") {
     const definitionNode = node as DefinitionNode;
     return {
       ...definitionNode,
-      content: removeSemanticNode(definitionNode.content as FtmlContent[], target) as FtmlContent[],
+      content: removeSemanticNode(definitionNode.content as FloDownContent[], target) as FloDownContent[],
     };
   }
 
@@ -216,29 +216,29 @@ function normalizeUri(u: string | undefined): string | undefined {
 }
 
 function replaceSemanticNode(
-  node: FtmlTree,
+  node: FloDownTree,
   target: { type: "definiendum" | "symref"; uri: string },
   payload: ReplacePayload,
-): FtmlTree {
+): FloDownTree {
   if (Array.isArray(node)) {
     return node.map((child) =>
-      replaceSemanticNode(child as FtmlTree, target, payload),
+      replaceSemanticNode(child as FloDownTree, target, payload),
     ) as typeof node;
   }
 
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return node;
 
-  const current = node as FtmlNode;
+  const current = node as FloDownNode;
 
   if (current.type === "definition") {
     const def = current as DefinitionNode;
 
     const updatedContent = replaceSemanticNode(
-      def.content as FtmlContent[],
+      def.content as FloDownContent[],
       target,
       payload,
-    ) as FtmlContent[];
+    ) as FloDownContent[];
 
     return {
       ...def,
@@ -271,14 +271,14 @@ function replaceSemanticNode(
     }
   }
 
-  const copy: FtmlNode = { ...current };
+  const copy: FloDownNode = { ...current };
 
   if (copy.content) {
     copy.content = replaceSemanticNode(
-      copy.content as FtmlContent[],
+      copy.content as FloDownContent[],
       target,
       payload,
-    ) as FtmlContent[];
+    ) as FloDownContent[];
   }
 
   return copy;

@@ -8,12 +8,12 @@ import {
 import { ExtractedItem } from "@/server/text-selection";
 import {
   DefiniendumNode,
-  FtmlContent,
-  FtmlStatement,
-  assertFtmlStatement,
+  FloDownContent,
+  FloDownStatement,
+  assertFloDownStatement,
   isDefiniendumNode,
   normalizeToRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import { ExtractBlockType, buildStatementFromText } from "@/types/blockType";
 import {
@@ -22,10 +22,10 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
 
-function extractDeclaredSymbols(statement: FtmlStatement) {
+function extractDeclaredSymbols(statement: FloDownStatement) {
   const symbols = new Map<string, string | null>();
   const root = normalizeToRoot(statement);
-  const stack: FtmlContent[] = [...root.content];
+  const stack: FloDownContent[] = [...root.content];
 
   while (stack.length > 0) {
     const node = stack.pop();
@@ -70,7 +70,7 @@ export type CreateFloDownBlockInput = {
   pageNumber?: number | null;
   blockType?: ExtractBlockType;
   originalText: string;
-  statement?: FtmlStatement;
+  statement?: FloDownStatement;
   declaredSymbols?: string[];
   futureRepo: string;
   filePath: string;
@@ -104,7 +104,7 @@ export const findFloDownBlocksByIdentity = createServerFn({ method: "POST" })
 
     return floDownBlocks.map((floDownBlock) => ({
       ...floDownBlock,
-      statement: assertFtmlStatement(floDownBlock.statement),
+      statement: assertFloDownStatement(floDownBlock.statement),
     }));
   });
 
@@ -115,7 +115,7 @@ export const getFloDownBlockDeletionImpact = createServerFn({ method: "POST" })
       where: { id: data.id },
     });
     const declared = getDeclaredSymbolUris(
-      assertFtmlStatement(target.statement),
+      assertFloDownStatement(target.statement),
       target.declaredSymbols,
     );
     if (!declared.size) return [];
@@ -132,7 +132,7 @@ export const getFloDownBlockDeletionImpact = createServerFn({ method: "POST" })
     return candidates.filter(
       (floDownBlock) =>
         countSymbolReferences(
-          assertFtmlStatement(floDownBlock.statement),
+          assertFloDownStatement(floDownBlock.statement),
           declared,
         ) > 0,
     );
@@ -174,7 +174,7 @@ export const createFloDownBlock = createServerFn({ method: "POST" })
       throw new Error("Document has no pages");
     }
 
-    const rawStatement: FtmlStatement =
+    const rawStatement: FloDownStatement =
       data.statement ??
       buildStatementFromText(
         data.blockType ?? "definition",
@@ -236,7 +236,7 @@ export const createFloDownBlock = createServerFn({ method: "POST" })
   });
 
 export const updateFloDownBlock = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string; statement: FtmlStatement }) => data)
+  .inputValidator((data: { id: string; statement: FloDownStatement }) => data)
   .handler(async ({ data }) => {
     const userRes = await currentUser();
     if (!userRes.loggedIn) throw new Error("Unauthorized");
@@ -287,7 +287,7 @@ export const deleteFloDownBlock = createServerFn({ method: "POST" })
         where: { id: data.id },
       });
       const declared = getDeclaredSymbolUris(
-        assertFtmlStatement(target.statement),
+        assertFloDownStatement(target.statement),
         target.declaredSymbols,
       );
 
@@ -307,7 +307,7 @@ export const deleteFloDownBlock = createServerFn({ method: "POST" })
 
         for (const floDownBlock of candidates) {
           const cleanup = removeSymbolReferences(
-            assertFtmlStatement(floDownBlock.statement),
+            assertFloDownStatement(floDownBlock.statement),
             declared,
           );
           if (cleanup.removedCount === 0) continue;
@@ -397,7 +397,7 @@ export const updateFloDownBlockFilePath = createServerFn({ method: "POST" })
         },
       });
 
-      const statement = assertFtmlStatement(floDownBlock.statement);
+      const statement = assertFloDownStatement(floDownBlock.statement);
 
       const symbols: string[] = [];
 
@@ -505,7 +505,7 @@ export const updateFloDownBlocksFilePath = createServerFn({ method: "POST" })
       const symbols: string[] = [];
 
       for (const def of defs) {
-        const statement = assertFtmlStatement(def.statement);
+        const statement = assertFloDownStatement(def.statement);
 
         const nodes = Array.isArray(statement)
           ? statement
@@ -574,7 +574,7 @@ export const listFloDownBlocks = createServerFn({ method: "GET" })
         throw new Error("Content has no FTML statement");
       }
 
-      const statement = assertFtmlStatement(def.statement) as FtmlStatement;
+      const statement = assertFloDownStatement(def.statement) as FloDownStatement;
 
       return {
         id: def.id,

@@ -4,19 +4,19 @@ import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefiniendumNode,
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlStatement,
+  FloDownContent,
+  FloDownNode,
+  FloDownStatement,
   isDefiniendumNode,
   normalizeToRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 
 export function isHttp(uri: string) {
   return uri.startsWith("http://") || uri.startsWith("https://");
 }
 
 export function collectExternalSymbols(
-  node: FtmlNode | FtmlContent,
+  node: FloDownNode | FloDownContent,
   acc: Set<string>,
   declaredOnThisRow: ReadonlySet<string> = new Set(),
 ): void {
@@ -50,13 +50,13 @@ function isMathHubUri(uri: string): boolean {
 }
 
 function finalFTML(
-  node: FtmlNode,
+  node: FloDownNode,
   uriMap: Map<string, string>,
   futureRepo: string,
   filePath: string,
   fileName: string,
-  blockStatement: FtmlStatement,
-): FtmlNode {
+  blockStatement: FloDownStatement,
+): FloDownNode {
   if (node.type === "definition") {
     const def = node as DefinitionNode;
     return {
@@ -155,13 +155,13 @@ function finalFTML(
 }
 
 function rewrite(
-  content: FtmlContent[],
+  content: FloDownContent[],
   uriMap: Map<string, string>,
   futureRepo: string,
   filePath: string,
   fileName: string,
-  blockStatement: FtmlStatement,
-): FtmlContent[] {
+  blockStatement: FloDownStatement,
+): FloDownContent[] {
   return content.map((c) =>
     typeof c === "string"
       ? c
@@ -169,8 +169,8 @@ function rewrite(
   );
 }
 
-export async function generateStexFromFtml(
-  ftmlAst: FtmlStatement,
+export async function generateStexFromFloDown(
+  statement: FloDownStatement,
   futureRepo: string,
   filePath: string,
   fileName: string,
@@ -187,7 +187,7 @@ export async function generateStexFromFtml(
     `http://${futureRepo}?a=${filePath}&d=${fileName}&l=en`,
   );
 
-  const root = normalizeToRoot(ftmlAst);
+  const root = normalizeToRoot(statement);
 
   for (let blockIndex = 0; blockIndex < root.content.length; blockIndex += 1) {
     const block = root.content[blockIndex];

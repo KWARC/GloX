@@ -1,10 +1,10 @@
 import { extractTextContent } from "@/server/ftml/astOperations";
 import {
-  FtmlNode,
-  FtmlRoot,
+  FloDownNode,
+  FloDownStatement,
   isDefiniendumNode,
   normalizeToRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 
 export type DefiniendumInfo = {
   uri: string;
@@ -19,7 +19,7 @@ export type SymbolicRefInfo = {
 };
 
 function walk(
-  node: FtmlNode | FtmlNode[],
+  node: FloDownNode | FloDownNode[],
   acc: {
     definienda: { uri: string; text: string; symdecl: boolean }[];
     symrefs: { uri: string; text: string }[];
@@ -54,7 +54,7 @@ function walk(
 }
 
 export function extractSemanticIndex(
-  statement: FtmlRoot,
+  statement: FloDownStatement,
   declaredSymbols: readonly string[] = [],
 ) {
   const root = normalizeToRoot(statement);

@@ -1,13 +1,13 @@
 import prisma from "@/lib/prisma";
-import { FtmlStatement, RootNode, normalizeToRoot } from "@/types/ftml.types";
+import { FloDownStatement, RootNode, normalizeToRoot } from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
-export type CombinedFloDownBlockFtml = {
-  ftml: RootNode;
+export type CombinedFloDownStatement = {
+  statement: RootNode;
   declaredSymbolsPerBlock: string[][];
 };
 
-export const getCombinedFloDownBlockFtml = createServerFn({ method: "GET" })
+export const getCombinedFloDownStatement = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
       floDownBlockIds: string[];
@@ -18,7 +18,7 @@ export const getCombinedFloDownBlockFtml = createServerFn({ method: "GET" })
       language: string;
     }) => data,
   )
-  .handler(async ({ data }): Promise<CombinedFloDownBlockFtml> => {
+  .handler(async ({ data }): Promise<CombinedFloDownStatement> => {
     const defs = await prisma.floDownBlock.findMany({
       where: {
         id: { in: data.floDownBlockIds },
@@ -38,7 +38,7 @@ export const getCombinedFloDownBlockFtml = createServerFn({ method: "GET" })
       defs.map((row) => [
         row.id,
         {
-          statement: row.statement as FtmlStatement | null,
+          statement: row.statement as FloDownStatement | null,
           declaredSymbols: row.declaredSymbols,
         },
       ]),
@@ -61,7 +61,7 @@ export const getCombinedFloDownBlockFtml = createServerFn({ method: "GET" })
       }
     }
 
-    return { ftml: combined, declaredSymbolsPerBlock };
+    return { statement: combined, declaredSymbolsPerBlock };
   });
 
 export const getFinalizedLatexById = createServerFn({ method: "GET" })

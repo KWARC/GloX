@@ -19,7 +19,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 import { useFloDownBlockBySymbol } from "@/serverFns/floDownBlockBySymbol.server";
-import { assertFtmlStatement } from "@/types/ftml.types";
+import { assertFloDownStatement } from "@/types/floDown.types";
 import { FtmlPreview } from "./FtmlPreview";
 
 const SEARCH_RESULTS_HEIGHT = 240;
@@ -35,7 +35,7 @@ function DbSymbolHoverPreview({ symbolName }: { symbolName: string }) {
     <Box style={{ maxWidth: 520 }}>
       <FtmlPreview
         docId={`db-symbol-preview-${floDownBlock.id}`}
-        ftmlAst={assertFtmlStatement(floDownBlock.statement)}
+        ftmlAst={assertFloDownStatement(floDownBlock.statement)}
       />
     </Box>
   );

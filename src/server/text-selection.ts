@@ -1,6 +1,6 @@
 import { queryClient } from "@/queryClient";
 import { createFloDownBlock, updateFloDownBlock } from "@/serverFns/extractFloDownBlock.server";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { ExtractBlockType } from "@/types/blockType";
 import { useState } from "react";
 
@@ -29,7 +29,7 @@ export type ExtractedItem = {
   documentPageId: string;
   pageNumber: number | null;
   originalText: string;
-  statement: FtmlStatement;
+  statement: FloDownStatement;
   declaredSymbols?: string[];
   futureRepo: string;
   filePath: string;
@@ -131,7 +131,7 @@ export function useExtractionActions(documentId: string) {
     pageNumber?: number | null;
     blockType?: ExtractBlockType;
     text: string;
-    statement?: FtmlStatement;
+    statement?: FloDownStatement;
     declaredSymbols?: string[];
     futureRepo: string;
     filePath: string;
@@ -159,7 +159,7 @@ export function useExtractionActions(documentId: string) {
     });
   }
 
-  async function updateExtract(id: string, statement: FtmlStatement) {
+  async function updateExtract(id: string, statement: FloDownStatement) {
     await updateFloDownBlock({
       data: { id, statement },
     });

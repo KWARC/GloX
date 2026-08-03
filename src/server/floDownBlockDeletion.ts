@@ -1,14 +1,14 @@
 import {
-  FtmlContent,
-  FtmlNode,
-  FtmlStatement,
+  FloDownContent,
+  FloDownNode,
+  FloDownStatement,
   isDefiniendumNode,
   normalizeToRoot,
   unwrapRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 
 export function getDeclaredSymbolUris(
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   declaredSymbols?: readonly string[],
 ): Set<string> {
   if (declaredSymbols && declaredSymbols.length > 0) {
@@ -16,7 +16,7 @@ export function getDeclaredSymbolUris(
   }
 
   const declared = new Set<string>();
-  const stack: FtmlContent[] = [...normalizeToRoot(statement).content];
+  const stack: FloDownContent[] = [...normalizeToRoot(statement).content];
 
   while (stack.length > 0) {
     const node = stack.pop();
@@ -36,18 +36,18 @@ export function getDeclaredSymbolUris(
 
 /** Symbol names this row declares (DB column, with legacy symdecl fallback). */
 export function resolveDeclaredSymbolNames(
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   declaredSymbols?: readonly string[],
 ): string[] {
   return Array.from(getDeclaredSymbolUris(statement, declaredSymbols));
 }
 
 export function countSymbolReferences(
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   symbolUris: ReadonlySet<string>,
 ): number {
   let count = 0;
-  const stack: FtmlContent[] = [...normalizeToRoot(statement).content];
+  const stack: FloDownContent[] = [...normalizeToRoot(statement).content];
 
   while (stack.length > 0) {
     const node = stack.pop();
@@ -66,13 +66,13 @@ export function countSymbolReferences(
 }
 
 export function removeSymbolReferences(
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   symbolUris: ReadonlySet<string>,
-): { statement: FtmlStatement; removedCount: number } {
+): { statement: FloDownStatement; removedCount: number } {
   let removedCount = 0;
 
-  function visitContent(content: FtmlContent[]): FtmlContent[] {
-    const result: FtmlContent[] = [];
+  function visitContent(content: FloDownContent[]): FloDownContent[] {
+    const result: FloDownContent[] = [];
 
     for (const item of content) {
       if (typeof item === "string") {
@@ -88,7 +88,7 @@ export function removeSymbolReferences(
         continue;
       }
 
-      const copy: FtmlNode = { ...item };
+      const copy: FloDownNode = { ...item };
       if (item.content) {
         copy.content = visitContent(item.content);
       }
@@ -99,7 +99,7 @@ export function removeSymbolReferences(
   }
 
   const root = normalizeToRoot(structuredClone(statement));
-  root.content = visitContent(root.content) as FtmlNode[];
+  root.content = visitContent(root.content) as FloDownNode[];
 
   return {
     statement: unwrapRoot(root),
@@ -107,7 +107,7 @@ export function removeSymbolReferences(
   };
 }
 
-function appendContent(result: FtmlContent[], item: FtmlContent) {
+function appendContent(result: FloDownContent[], item: FloDownContent) {
   if (item === "") return;
 
   if (

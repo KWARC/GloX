@@ -15,7 +15,7 @@ import {
 } from "@/serverFns/createFloDownBlockWithDeclaredSymbol.server";
 import { createMarkReference } from "@/serverFns/markReference.server";
 import { findFloDownBlocksByIdentity } from "@/serverFns/extractFloDownBlock.server";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { ExtractBlockType } from "@/types/blockType";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
@@ -82,7 +82,7 @@ export function useFloDownBlockExtractionFlow({
   const [pendingDuplicateSubmit, setPendingDuplicateSubmit] = useState<{
     text: string;
     blockType: ExtractBlockType;
-    statement?: FtmlStatement;
+    statement?: FloDownStatement;
     declaredSymbols?: string[];
   } | null>(null);
   const { extractText } = useExtractionActions(documentId);
@@ -206,7 +206,7 @@ export function useFloDownBlockExtractionFlow({
   }: {
     text: string;
     blockType: ExtractBlockType;
-    statement?: FtmlStatement;
+    statement?: FloDownStatement;
     declaredSymbols?: string[];
   }) {
     if (!document) return;
@@ -298,7 +298,7 @@ export function useFloDownBlockExtractionFlow({
   async function handleExtractSubmit(input: {
     text: string;
     blockType: ExtractBlockType;
-    statement?: FtmlStatement;
+    statement?: FloDownStatement;
     declaredSymbols?: string[];
   }) {
     if (!document || !validateIdentity()) return;

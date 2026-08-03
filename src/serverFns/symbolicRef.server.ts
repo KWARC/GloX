@@ -10,10 +10,10 @@ import { ParsedMathHubUri, parseUri } from "@/server/parseUri";
 import {
   RootNode,
   SymrefNode,
-  assertFtmlStatement,
+  assertFloDownStatement,
   normalizeToRoot,
   unwrapRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
 type SymbolicRefInput = {
@@ -60,7 +60,7 @@ export const symbolicRef = createServerFn({ method: "POST" })
     }
 
     const currentAst: RootNode = normalizeToRoot(
-      assertFtmlStatement(floDownBlock.statement),
+      assertFloDownStatement(floDownBlock.statement),
     );
 
     let location;

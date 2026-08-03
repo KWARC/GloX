@@ -4,7 +4,7 @@ import {
   astReferencesUri,
   propagateUriInAst,
 } from "@/server/ftml/convertLocalSymbolToMathHub";
-import { assertFtmlStatement, FtmlRoot } from "@/types/ftml.types";
+import { assertFloDownStatement, FloDownStatement } from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export type PropagationCandidate = {
@@ -14,7 +14,7 @@ export type PropagationCandidate = {
   fileName: string;
   language: string;
   pageNumber: number | null;
-  statement: FtmlRoot;
+  statement: FloDownStatement;
 };
 
 export const getFloDownBlocksReferencingSymbol = createServerFn({
@@ -45,7 +45,7 @@ export const getFloDownBlocksReferencingSymbol = createServerFn({
     const candidates: PropagationCandidate[] = [];
 
     for (const def of floDownBlocks) {
-      const ast = assertFtmlStatement(def.statement);
+      const ast = assertFloDownStatement(def.statement);
       if (astReferencesUri(ast, localSymbolUri)) {
         candidates.push({
           id: def.id,
@@ -90,7 +90,7 @@ export const getFloDownBlocksReferencingMathHubUri = createServerFn({
     const candidates: PropagationCandidate[] = [];
 
     for (const def of floDownBlocks) {
-      const ast = assertFtmlStatement(def.statement);
+      const ast = assertFloDownStatement(def.statement);
       if (astReferencesUri(ast, mathHubUri)) {
         candidates.push({
           id: def.id,
@@ -136,11 +136,11 @@ export const applyMathHubReplacement = createServerFn({ method: "POST" })
 
     await prisma.$transaction(async (tx) => {
       for (const def of floDownBlocks) {
-        const ast = assertFtmlStatement(def.statement);
+        const ast = assertFloDownStatement(def.statement);
         const updated = propagateUriInAst(ast, mathHubUri, newUri);
 
         const nextVersion = def.currentVersion + 1;
-        const serialized: FtmlRoot = JSON.parse(JSON.stringify(updated));
+        const serialized: FloDownStatement = JSON.parse(JSON.stringify(updated));
 
         await tx.floDownBlockVersion.create({
           data: {
@@ -198,15 +198,15 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
     });
 
     await prisma.$transaction(async (tx) => {
-      const updatedAsts: FtmlRoot[] = [];
+      const updatedAsts: FloDownStatement[] = [];
 
       for (const def of floDownBlocks) {
-        const ast = assertFtmlStatement(def.statement);
+        const ast = assertFloDownStatement(def.statement);
         const updated = propagateUriInAst(ast, localSymbolUri, mathHubUri);
         updatedAsts.push(updated);
 
         const nextVersion = def.currentVersion + 1;
-        const serialized: FtmlRoot = JSON.parse(JSON.stringify(updated));
+        const serialized: FloDownStatement = JSON.parse(JSON.stringify(updated));
 
         await tx.floDownBlockVersion.create({
           data: {
@@ -233,7 +233,7 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
       //   where: { id: primaryFloDownBlockId },
       //   select: { statement: true },
       // });
-      // updatedAsts.push(assertFtmlStatement(primaryDef.statement));
+      // updatedAsts.push(assertFloDownStatement(primaryDef.statement));
 
       // if (!definitionContainsLocalSymbol(updatedAsts, localSymbolUri)) {
       //   await tx.symbol.deleteMany({ where: { symbolName: localSymbolUri } });
@@ -254,7 +254,7 @@ export const applySymbolPropagation = createServerFn({ method: "POST" })
 
 //   if (!primaryDef) return;
 
-//   const ast = assertFtmlStatement(primaryDef.statement);
+//   const ast = assertFloDownStatement(primaryDef.statement);
 
 //   if (!definitionContainsLocalSymbol([ast], localSymbolUri)) {
 //     await prisma.symbol.deleteMany({ where: { symbolName: localSymbolUri } });

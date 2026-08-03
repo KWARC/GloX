@@ -1,4 +1,4 @@
-import { FtmlContent, FtmlNode, RootNode } from "@/types/ftml.types";
+import { FloDownContent, FloDownNode, RootNode } from "@/types/floDown.types";
 
 export interface TextLocation {
   paragraphIndex: number;
@@ -12,14 +12,14 @@ export function cloneAst<T>(ast: T): T {
 }
 
 export function walkAst(
-  node: FtmlContent | FtmlContent[],
+  node: FloDownContent | FloDownContent[],
   visitor: (
-    node: FtmlNode,
+    node: FloDownNode,
     path: number[],
-    parent?: FtmlNode,
+    parent?: FloDownNode,
   ) => void | boolean,
   path: number[] = [],
-  parent?: FtmlNode,
+  parent?: FloDownNode,
 ): void | boolean {
   if (Array.isArray(node)) {
     for (let i = 0; i < node.length; i++) {
@@ -40,7 +40,7 @@ export function walkAst(
   }
 }
 
-export function extractTextContent(node: FtmlContent | FtmlContent[]): string {
+export function extractTextContent(node: FloDownContent | FloDownContent[]): string {
   if (Array.isArray(node)) {
     return node.map(extractTextContent).join("");
   }
@@ -84,7 +84,7 @@ export function findAllTextOccurrences(
   const locations: TextLocation[] = [];
 
   root.content.forEach((node, paragraphIndex) => {
-    let paragraphContent: FtmlContent[];
+    let paragraphContent: FloDownContent[];
 
     if (node.type === "paragraph") {
       paragraphContent = node.content || [];
@@ -134,13 +134,13 @@ export function replaceTextWithNode(
   location: TextLocation,
   startOffset: number,
   endOffset: number,
-  node: FtmlNode,
+  node: FloDownNode,
 ): RootNode {
   const cloned = cloneAst(root);
 
   const targetParagraph = cloned.content[location.paragraphIndex];
 
-  let paragraphContent: FtmlContent[];
+  let paragraphContent: FloDownContent[];
 
   if (targetParagraph.type === "paragraph") {
     paragraphContent = targetParagraph.content || [];
@@ -168,7 +168,7 @@ export function replaceTextWithNode(
   const before = textNode.slice(0, startOffset);
   const after = textNode.slice(endOffset);
 
-  const replacement: FtmlContent[] = [];
+  const replacement: FloDownContent[] = [];
   if (before) replacement.push(before);
   replacement.push(node);
   if (after) replacement.push(after);

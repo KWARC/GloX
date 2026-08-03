@@ -9,7 +9,7 @@ import {
 } from "@/server/symbolic-suggestions";
 import { ExtractedItem } from "@/server/text-selection";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { useEffect, useState } from "react";
 
 type SniffyCatalog = Parameters<typeof suggestRefsForFloDownBlock>[1];
@@ -42,7 +42,7 @@ export function useSniffyReferenceSuggestions({
   const [activeFloDownBlockId, setActiveFloDownBlockId] = useState<string | null>(null);
   const [activeFloDownBlockText, setActiveFloDownBlockText] = useState("");
   const [activeFloDownBlockStatement, setActiveFloDownBlockStatement] =
-    useState<FtmlStatement | null>(null);
+    useState<FloDownStatement | null>(null);
   const [pendingFloDownBlockId, setPendingFloDownBlockId] = useState<string | null>(
     null,
   );
