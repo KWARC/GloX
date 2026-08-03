@@ -1,14 +1,18 @@
 import { FtmlPreview } from "@/components/FtmlPreview";
-import { MarkReferenceLatexModal } from "@/components/MarkReferenceLatexModal";
+import { IndexStatusMenu } from "@/components/IndexStatusMenu";
+import { ModuleDescriptionLatexModal } from "@/components/module-descriptions/ModuleDescriptionLatexModal";
 import { ModuleStatementSection } from "@/components/module-descriptions/ModuleStatementSection";
 import { generateModuleDescriptionTexPreview } from "@/lib/moduleDescriptionTex";
+import type { TexFilePreview } from "@/lib/moduleDescriptionTex";
 import {
   deleteModuleDescription,
   getModuleDescriptionPage,
   gloxifyModuleDescription,
   resetModuleSemantics,
+  updateModuleDescriptionIndexStatus,
 } from "@/serverFns/moduleDescription.server";
 import { assertFloDownStatement } from "@/types/floDown.types";
+import { INDEX_STATUS_CONFIG, IndexStatus } from "@/types/indexStatus";
 import {
   Alert,
   Badge,
@@ -53,6 +57,7 @@ function ModuleDescriptionDetailPage() {
 
   const role = auth?.user?.role;
   const canPreviewTex = role === "ADMIN" || role === "CURATOR";
+  const canEditStatus = role === "ADMIN" || role === "CURATOR";
 
   const [futureRepo, setFutureRepo] = useState("courses/FAU/module-descriptions");
   const [modulesFilePath, setModulesFilePath] = useState("modules");
@@ -62,8 +67,10 @@ function ModuleDescriptionDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [latexOpen, setLatexOpen] = useState(false);
-  const [latexCode, setLatexCode] = useState("");
-  const [latexFileName, setLatexFileName] = useState("");
+  const [latexPreview, setLatexPreview] = useState<{
+    moduleTex: TexFilePreview;
+    definitionTex: TexFilePreview[];
+  } | null>(null);
   const [latexError, setLatexError] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -78,6 +85,7 @@ function ModuleDescriptionDetailPage() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
+      void queryClient.invalidateQueries({ queryKey: ["gloxified-module-descriptions"] });
     },
   });
 
@@ -87,6 +95,7 @@ function ModuleDescriptionDetailPage() {
     onSuccess: () => {
       setDeleteOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
+      void queryClient.invalidateQueries({ queryKey: ["gloxified-module-descriptions"] });
     },
   });
 
@@ -96,6 +105,23 @@ function ModuleDescriptionDetailPage() {
     onSuccess: () => {
       setResetOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({
+      moduleDescriptionId,
+      indexStatus,
+    }: {
+      moduleDescriptionId: string;
+      indexStatus: IndexStatus;
+    }) =>
+      updateModuleDescriptionIndexStatus({
+        data: { moduleDescriptionId, indexStatus },
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
+      void queryClient.invalidateQueries({ queryKey: ["gloxified-module-descriptions"] });
     },
   });
 
@@ -116,8 +142,7 @@ function ModuleDescriptionDetailPage() {
     },
     onMutate: () => setLatexError(null),
     onSuccess: (result) => {
-      setLatexCode(result.moduleTex.tex);
-      setLatexFileName(result.moduleTex.fileName);
+      setLatexPreview(result);
       setLatexOpen(true);
     },
     onError: (err) => {
@@ -243,6 +268,33 @@ function ModuleDescriptionDetailPage() {
         </Stack>
       ) : (
         <Stack gap="md">
+          <Paper withBorder p="md" radius="md">
+            <Group justify="space-between" align="center">
+              <Text size="sm" fw={600}>
+                Curation status
+              </Text>
+              {canEditStatus ? (
+                <IndexStatusMenu
+                  status={mod.indexStatus}
+                  disabled={statusMutation.isPending}
+                  onStatusChange={(indexStatus) =>
+                    statusMutation.mutate({
+                      moduleDescriptionId: mod.id,
+                      indexStatus,
+                    })
+                  }
+                />
+              ) : (
+                <Badge
+                  variant="light"
+                  color={INDEX_STATUS_CONFIG[mod.indexStatus].color}
+                >
+                  {INDEX_STATUS_CONFIG[mod.indexStatus].label}
+                </Badge>
+              )}
+            </Group>
+          </Paper>
+
           <Group>
             <Button variant="light" color="orange" onClick={() => setResetOpen(true)}>
               Reset semantics
@@ -374,23 +426,14 @@ function ModuleDescriptionDetailPage() {
         </Group>
       </Modal>
 
-      <MarkReferenceLatexModal
-        opened={latexOpen}
-        code={latexCode}
-        fileName={latexFileName}
-        onClose={() => setLatexOpen(false)}
-        onDownload={() => {
-          const blob = new Blob([latexCode], { type: "application/x-tex" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = latexFileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }}
-      />
+      {latexPreview && (
+        <ModuleDescriptionLatexModal
+          opened={latexOpen}
+          moduleTex={latexPreview.moduleTex}
+          definitionTex={latexPreview.definitionTex}
+          onClose={() => setLatexOpen(false)}
+        />
+      )}
     </Stack>
   );
 }

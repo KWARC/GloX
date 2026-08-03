@@ -31,7 +31,11 @@ export type GenerateModuleTexInput = {
   futureRepo: string;
   modulesFilePath: string;
   definitionBlocks: DefinitionBlockInput[];
-  singleDefinitionOnly?: boolean;
+};
+
+export type TexFilePreview = {
+  fileName: string;
+  tex: string;
 };
 
 type FloDownWasmBlock = {
@@ -115,40 +119,37 @@ async function mountDefinitionDeps(
   );
 }
 
-async function addBlock(
-  fdHidden: FloDownWasmBlock,
+async function addParagraphBlock(
   fdVisible: FloDownWasmBlock,
   block: PersistedBlock,
   identity: { futureRepo: string; filePath: string; fileName: string },
-  declaredOnThisRow: Set<string>,
 ) {
-  if (block.type === "paragraph") {
-    fdVisible.addElement(
-      toExportBlock(
-        block,
-        new Map(),
-        identity.futureRepo,
-        identity.filePath,
-        identity.fileName,
-        block,
-        Array.from(declaredOnThisRow),
-      ) as PersistedBlock,
-    );
-    return;
-  }
+  if (block.type !== "paragraph") return;
 
-  if (isDefinitionNode(block)) {
-    await mountDefinitionDeps(
-      fdHidden,
-      fdVisible,
+  fdVisible.addElement(
+    toExportBlock(
       block,
-      identity,
-      declaredOnThisRow,
-    );
-  }
+      new Map(),
+      identity.futureRepo,
+      identity.filePath,
+      identity.fileName,
+      block,
+      [],
+    ) as PersistedBlock,
+  );
 }
 
-export async function generateModuleDescriptionTex(
+async function initFloDownBlocks(
+  floDown: FloDownLib,
+  visibleUri: string,
+  hiddenUri: string,
+): Promise<{ fdHidden: FloDownWasmBlock; fdVisible: FloDownWasmBlock }> {
+  const fdHidden = floDown.FloDown.fromUri(hiddenUri);
+  const fdVisible = floDown.FloDown.fromUri(visibleUri);
+  return { fdHidden, fdVisible };
+}
+
+export async function generateModuleDescriptionModuleTex(
   input: GenerateModuleTexInput,
 ): Promise<string> {
   if (typeof window === "undefined") {
@@ -158,19 +159,17 @@ export async function generateModuleDescriptionTex(
   const floDown = (await initFloDown()) as FloDownLib;
   floDown.setBackendUrl(FLODOWN_BACKEND_URL);
 
-  const fdHidden = floDown.FloDown.fromUri(
-    buildDocumentUri("hidden", "temp", input.moduleId, input.language),
-  );
-  const fdVisible = floDown.FloDown.fromUri(
+  const { fdHidden, fdVisible } = await initFloDownBlocks(
+    floDown,
     buildDocumentUri(
       input.futureRepo,
       input.modulesFilePath,
       input.moduleId,
       input.language,
     ),
+    buildDocumentUri("hidden", "temp", input.moduleId, input.language),
   );
 
-  // Keep references alive until getStex() returns (see public/flodown/test.html).
   const alive: FloDownWasmBlock[] = [fdHidden, fdVisible];
 
   const moduleIdentity = {
@@ -179,28 +178,8 @@ export async function generateModuleDescriptionTex(
     fileName: input.moduleId,
   };
 
-  if (input.singleDefinitionOnly) {
-    for (const defBlock of input.definitionBlocks) {
-      const root = normalizeToRoot(defBlock.statement);
-      for (const block of root.content) {
-        if (!isDefinitionNode(block)) continue;
-        await mountDefinitionDeps(
-          fdHidden,
-          fdVisible,
-          block,
-          {
-            futureRepo: defBlock.futureRepo,
-            filePath: defBlock.filePath,
-            fileName: defBlock.fileName,
-          },
-          new Set(defBlock.declaredSymbols),
-        );
-      }
-    }
-
-    return alive[1].getStex().trimEnd();
-  }
-
+  // Register symbols from definition files so symrefs in module fields resolve,
+  // but do not embed definition content in the module .tex file.
   for (const defBlock of input.definitionBlocks) {
     for (const sym of defBlock.declaredSymbols) {
       fdHidden.addSymbolDeclaration(sym);
@@ -215,26 +194,51 @@ export async function generateModuleDescriptionTex(
   ]) {
     const root = normalizeToRoot(statement);
     for (const block of root.content) {
-      await addBlock(fdHidden, fdVisible, block, moduleIdentity, new Set());
+      await addParagraphBlock(fdVisible, block, moduleIdentity);
     }
   }
 
-  for (const defBlock of input.definitionBlocks) {
-    const root = normalizeToRoot(defBlock.statement);
-    for (const block of root.content) {
-      if (!isDefinitionNode(block)) continue;
-      await mountDefinitionDeps(
-        fdHidden,
-        fdVisible,
-        block,
-        {
-          futureRepo: defBlock.futureRepo,
-          filePath: defBlock.filePath,
-          fileName: defBlock.fileName,
-        },
-        new Set(defBlock.declaredSymbols),
-      );
-    }
+  return alive[1].getStex().trimEnd();
+}
+
+export async function generateModuleDescriptionDefinitionTex(
+  moduleId: string,
+  defBlock: DefinitionBlockInput,
+): Promise<string> {
+  if (typeof window === "undefined") {
+    throw new Error("FloDown LaTeX export must run in the browser");
+  }
+
+  const floDown = (await initFloDown()) as FloDownLib;
+  floDown.setBackendUrl(FLODOWN_BACKEND_URL);
+
+  const { fdHidden, fdVisible } = await initFloDownBlocks(
+    floDown,
+    buildDocumentUri(
+      defBlock.futureRepo,
+      defBlock.filePath,
+      defBlock.fileName,
+      defBlock.language,
+    ),
+    buildDocumentUri("hidden", "temp", moduleId, defBlock.language),
+  );
+
+  const alive: FloDownWasmBlock[] = [fdHidden, fdVisible];
+
+  const root = normalizeToRoot(defBlock.statement);
+  for (const block of root.content) {
+    if (!isDefinitionNode(block)) continue;
+    await mountDefinitionDeps(
+      fdHidden,
+      fdVisible,
+      block,
+      {
+        futureRepo: defBlock.futureRepo,
+        filePath: defBlock.filePath,
+        fileName: defBlock.fileName,
+      },
+      new Set(defBlock.declaredSymbols),
+    );
   }
 
   return alive[1].getStex().trimEnd();
@@ -243,12 +247,33 @@ export async function generateModuleDescriptionTex(
 export async function generateModuleDescriptionTexPreview(
   input: GenerateModuleTexInput,
 ) {
-  const tex = await generateModuleDescriptionTex(input);
+  const moduleTex = await generateModuleDescriptionModuleTex(input);
+
+  const definitionTex = await Promise.all(
+    input.definitionBlocks.map(async (block) => ({
+      fileName: `${block.fileName}.${block.language}.tex`,
+      tex: await generateModuleDescriptionDefinitionTex(input.moduleId, block),
+    })),
+  );
 
   return {
     moduleTex: {
       fileName: `${input.moduleId}.${input.language}.tex`,
-      tex,
+      tex: moduleTex,
     },
+    definitionTex,
   };
+}
+
+/** @deprecated Use generateModuleDescriptionModuleTex */
+export async function generateModuleDescriptionTex(
+  input: GenerateModuleTexInput & { singleDefinitionOnly?: boolean },
+): Promise<string> {
+  if (input.singleDefinitionOnly && input.definitionBlocks.length === 1) {
+    return generateModuleDescriptionDefinitionTex(
+      input.moduleId,
+      input.definitionBlocks[0],
+    );
+  }
+  return generateModuleDescriptionModuleTex(input);
 }

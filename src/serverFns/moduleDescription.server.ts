@@ -12,6 +12,7 @@ import {
   pathTraversesSemanticNode,
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
+import { extractPlainText } from "@/server/ftml/statementContent";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
@@ -25,6 +26,7 @@ import {
   unwrapRoot,
 } from "@/types/floDown.types";
 import { ExtractBlockType } from "@/types/blockType";
+import type { IndexStatus } from "@/types/indexStatus";
 import { createServerFn } from "@tanstack/react-start";
 import type { UpdateFloDownBlockAstResult } from "@/serverFns/updateFloDownBlock.server";
 
@@ -46,6 +48,24 @@ async function requireExtractorPlus() {
     throw new Error("Forbidden");
   }
   return { userId: userRes.user.id, role };
+}
+
+async function requireCuratorOrAdmin() {
+  const userRes = await currentUser();
+  if (!userRes.loggedIn) throw new Error("Unauthorized");
+  const role = userRes.user.role;
+  if (role !== "ADMIN" && role !== "CURATOR") {
+    throw new Error("Forbidden");
+  }
+  return userRes.user.id;
+}
+
+function titleFromStatement(statement: unknown): string {
+  try {
+    return extractPlainText(assertFloDownStatement(statement)).trim();
+  } catch {
+    return "";
+  }
 }
 
 function buildPlainDefinitionStatement(originalText: string): DefinitionNode {
@@ -164,6 +184,7 @@ export const getModuleDescriptionPage = createServerFn({ method: "POST" })
             modulesFilePath: dbRow.modulesFilePath,
             defsFilePath: dbRow.defsFilePath,
             language: dbRow.language,
+            indexStatus: dbRow.indexStatus,
             definitionBlocks: dbRow.floDownBlocks.map((block) => ({
               id: block.id,
               originalText: block.originalText,
@@ -503,6 +524,91 @@ export const resetModuleSemantics = createServerFn({ method: "POST" })
     });
 
     return { ok: true };
+  });
+
+export const listGloxifiedModuleDescriptions = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      page?: number;
+      pageSize?: number;
+      status?: IndexStatus | null;
+      query?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    await requireExtractorPlus();
+
+    const page = Math.max(1, data.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, data.pageSize ?? 20));
+    const query = data.query?.trim() ?? "";
+
+    const where = {
+      ...(data.status ? { indexStatus: data.status } : {}),
+      ...(query
+        ? {
+            OR: [
+              { moduleId: { contains: query, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      prisma.moduleDescription.findMany({
+        where,
+        orderBy: [{ updatedAt: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          moduleId: true,
+          titleStatement: true,
+          indexStatus: true,
+          language: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.moduleDescription.count({ where }),
+    ]);
+
+    const items = await Promise.all(
+      rows.map(async (row) => {
+        const searchEntry = await getModuleSearchEntry(row.moduleId);
+        const title =
+          searchEntry?.title ||
+          titleFromStatement(row.titleStatement) ||
+          row.moduleId;
+
+        return {
+          id: row.id,
+          moduleId: row.moduleId,
+          title,
+          indexStatus: row.indexStatus,
+          language: row.language,
+          updatedAt: row.updatedAt.toISOString(),
+        };
+      }),
+    );
+
+    return { items, total, page, pageSize };
+  });
+
+export const updateModuleDescriptionIndexStatus = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    (data: { moduleDescriptionId: string; indexStatus: IndexStatus }) => data,
+  )
+  .handler(async ({ data }) => {
+    await requireCuratorOrAdmin();
+
+    const row = await prisma.moduleDescription.update({
+      where: { id: data.moduleDescriptionId },
+      data: { indexStatus: data.indexStatus },
+      select: { id: true, moduleId: true, indexStatus: true },
+    });
+
+    return row;
   });
 
 // Re-export for queries that should only see document blocks

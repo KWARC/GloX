@@ -73,12 +73,15 @@ model ModuleDescription {
   gloxifiedById String
   gloxifiedBy   User   @relation("ModuleDescriptionGloxifiedBy", fields: [gloxifiedById], references: [id])
 
+  indexStatus IndexStatus @default(EXTRACTED)
+
   floDownBlocks FloDownBlock[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([gloxifiedById])
+  @@index([indexStatus])
 }
 
 model Document {
