@@ -89,7 +89,7 @@ function CreateLatexPage() {
   const [savingFinal, setSavingFinal] = useState(false);
   const [isFromHistory, setIsFromHistory] = useState(false);
 
-  const { data: ftmlAst, isLoading: ftmlLoading } = useQuery({
+  const { data: combinedFtml, isLoading: ftmlLoading } = useQuery({
     queryKey: [
       "combined-ftml",
       documentId,
@@ -119,10 +119,16 @@ function CreateLatexPage() {
   });
 
   const { data: stex, isLoading: stexLoading } = useQuery({
-    queryKey: ["stex", ftmlAst],
+    queryKey: ["stex", combinedFtml],
     queryFn: () =>
-      generateStexFromFtml(ftmlAst!, futureRepo, filePath, fileName),
-    enabled: !finalized && !!ftmlAst,
+      generateStexFromFtml(
+        combinedFtml!.ftml,
+        futureRepo,
+        filePath,
+        fileName,
+        combinedFtml!.declaredSymbolsPerBlock,
+      ),
+    enabled: !finalized && !!combinedFtml?.ftml,
     staleTime: Infinity,
   });
 

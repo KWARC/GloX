@@ -6,6 +6,8 @@ import {
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
 import { findDefiniendum } from "@/server/parseUri";
+import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
+import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import {
   assertFtmlStatement,
   FtmlStatement,
@@ -405,31 +407,28 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         definiendumNode,
       );
 
-      const updatedDefinition = updatedRoot.content.find(isDefinitionNode);
-
-      if (!updatedDefinition) {
-        throw new Error("Content not found after update");
-      }
-
-      const existingSymbols = updatedDefinition.for_symbols ?? [];
-
-      if (!existingSymbols.includes(uri)) {
-        updatedDefinition.for_symbols = [...existingSymbols, uri];
-      }
-
       const existing = await tx.floDownBlock.findUniqueOrThrow({
         where: { id: floDownBlockId },
       });
 
       const nextVersion = existing.currentVersion + 1;
-      const newStatement = JSON.parse(JSON.stringify(unwrapRoot(updatedRoot)));
+      const newStatement = sanitizeStatementForPersist(unwrapRoot(updatedRoot));
+
+      if (symdecl && !linkedExistingSymbol) {
+        await addDeclaredSymbol(tx, floDownBlockId, uri, {
+          futureRepo: existing.futureRepo,
+          filePath: existing.filePath,
+          fileName: existing.fileName,
+          language: existing.language,
+        });
+      }
 
       await tx.floDownBlockVersion.create({
         data: {
           floDownBlockId: floDownBlockId,
           versionNumber: nextVersion,
           originalText: existing.originalText,
-          statement: newStatement,
+          statement: JSON.parse(JSON.stringify(newStatement)),
           editedById: userId,
         },
       });
@@ -437,7 +436,7 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
       await tx.floDownBlock.update({
         where: { id: floDownBlockId },
         data: {
-          statement: newStatement,
+          statement: JSON.parse(JSON.stringify(newStatement)),
           updatedById: userId,
           currentVersion: nextVersion,
         },

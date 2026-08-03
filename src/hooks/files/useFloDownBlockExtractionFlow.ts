@@ -80,7 +80,10 @@ export function useFloDownBlockExtractionFlow({
   const [semanticEnabled, setSemanticEnabled] = useState(false);
   const [duplicateFloDownBlocks, setDuplicateFloDownBlocks] = useState<Awaited<ReturnType<typeof findFloDownBlocksByIdentity>>>([]);
   const [pendingDuplicateSubmit, setPendingDuplicateSubmit] = useState<{
-    text: string; blockType: ExtractBlockType; statement?: FtmlStatement;
+    text: string;
+    blockType: ExtractBlockType;
+    statement?: FtmlStatement;
+    declaredSymbols?: string[];
   } | null>(null);
   const { extractText } = useExtractionActions(documentId);
 
@@ -199,10 +202,12 @@ export function useFloDownBlockExtractionFlow({
     text: editedText,
     blockType,
     statement,
+    declaredSymbols,
   }: {
     text: string;
     blockType: ExtractBlockType;
     statement?: FtmlStatement;
+    declaredSymbols?: string[];
   }) {
     if (!document) return;
     if (!validateIdentity()) return;
@@ -237,7 +242,7 @@ export function useFloDownBlockExtractionFlow({
 
         if (isMarkReferenceDefinitionFlow) {
           setCreatedSymbolTarget(null);
-        } else if (statementHasDeclaredSymbol(statement, symbolName.trim())) {
+        } else if (statementHasDeclaredSymbol(declaredSymbols, symbolName.trim())) {
           setCreatedSymbolTarget(null);
         } else {
           setCreatedSymbolTarget(created);
@@ -249,6 +254,7 @@ export function useFloDownBlockExtractionFlow({
           blockType,
           text: editedText,
           statement,
+          declaredSymbols,
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
           fileName: paragraphFileName.trim(),
@@ -264,6 +270,7 @@ export function useFloDownBlockExtractionFlow({
         blockType,
         text: editedText,
         statement,
+        declaredSymbols,
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
         fileName: paragraphFileName.trim(),
@@ -292,6 +299,7 @@ export function useFloDownBlockExtractionFlow({
     text: string;
     blockType: ExtractBlockType;
     statement?: FtmlStatement;
+    declaredSymbols?: string[];
   }) {
     if (!document || !validateIdentity()) return;
     const matches = await findFloDownBlocksByIdentity({

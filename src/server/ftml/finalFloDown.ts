@@ -7,13 +7,22 @@ import {
   isDefinitionNode,
   RootNode,
 } from "@/types/ftml.types";
+import {
+  attachForSymbolsToDefinition,
+  buildForSymbols,
+} from "@/server/ftml/declaredSymbols";
 
 type FloDownInstance = {
   addSymbolDeclaration: (symbol: string) => string;
 };
 
-export function finalFloDown(ast: FtmlRoot, fd: FloDownInstance): FtmlRoot {
+export function finalFloDown(
+  ast: FtmlRoot,
+  fd: FloDownInstance,
+  declaredSymbols: readonly string[] = [],
+): FtmlRoot {
   const clone: FtmlRoot = structuredClone(ast);
+  const statementForSymbols = clone;
 
   function transformNode(node: FtmlNode): FtmlNode {
     if (isDefinitionNode(node)) {
@@ -31,8 +40,6 @@ export function finalFloDown(ast: FtmlRoot, fd: FloDownInstance): FtmlRoot {
   function transformDefinition(def: DefinitionNode): DefinitionNode {
     const symbolMap = new Map<string, string>();
 
-    const declaredSymbols = def.for_symbols ?? [];
-
     for (const symbol of declaredSymbols) {
       if (isMathHubUri(symbol)) continue;
 
@@ -40,10 +47,15 @@ export function finalFloDown(ast: FtmlRoot, fd: FloDownInstance): FtmlRoot {
       symbolMap.set(symbol, runtimeUri);
     }
 
+    const withSymbols = attachForSymbolsToDefinition(
+      def,
+      statementForSymbols,
+      symbolMap,
+    );
+
     return {
-      ...def,
-      for_symbols: declaredSymbols.map((s) => symbolMap.get(s) ?? s),
-      content: transformContent(def.content, symbolMap),
+      ...withSymbols,
+      content: transformContent(withSymbols.content, symbolMap),
     };
   }
 
@@ -98,3 +110,5 @@ export function finalFloDown(ast: FtmlRoot, fd: FloDownInstance): FtmlRoot {
 
   return transformNode(clone);
 }
+
+export { buildForSymbols };

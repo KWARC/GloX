@@ -50,7 +50,7 @@ export function useStexCurationActions(
 
   async function handleDownload() {
     try {
-      const ftmlAst = await getCombinedFloDownBlockFtml({
+      const ftml = await getCombinedFloDownBlockFtml({
         data: {
           floDownBlockIds,
           documentId: identity.documentId,
@@ -61,16 +61,17 @@ export function useStexCurationActions(
         },
       });
 
-      if (!ftmlAst) {
+      if (!ftml?.ftml) {
         alert("No FTML found.");
         return;
       }
 
       let stex = await generateStexFromFtml(
-        ftmlAst,
+        ftml.ftml,
         identity.futureRepo,
         identity.filePath,
         identity.fileName,
+        ftml.declaredSymbolsPerBlock,
       );
       stex = injectProvenance(stex ?? "", provenance);
 
@@ -133,7 +134,7 @@ export function useStexCurationActions(
 
   async function handleOpenLatexPreview() {
     try {
-      const ftmlAst = await getCombinedFloDownBlockFtml({
+      const ftml = await getCombinedFloDownBlockFtml({
         data: {
           floDownBlockIds,
           documentId: identity.documentId,
@@ -144,16 +145,17 @@ export function useStexCurationActions(
         },
       });
 
-      if (!ftmlAst) {
+      if (!ftml?.ftml) {
         alert("No FTML found");
         return;
       }
 
       let stex = await generateStexFromFtml(
-        ftmlAst,
+        ftml.ftml,
         identity.futureRepo,
         identity.filePath,
         identity.fileName,
+        ftml.declaredSymbolsPerBlock,
       );
       stex = injectProvenance(stex ?? "", provenance);
 

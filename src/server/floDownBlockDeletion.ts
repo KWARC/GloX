@@ -7,7 +7,14 @@ import {
   unwrapRoot,
 } from "@/types/ftml.types";
 
-export function getDeclaredSymbolUris(statement: FtmlStatement): Set<string> {
+export function getDeclaredSymbolUris(
+  statement: FtmlStatement,
+  declaredSymbols?: readonly string[],
+): Set<string> {
+  if (declaredSymbols && declaredSymbols.length > 0) {
+    return new Set(declaredSymbols);
+  }
+
   const declared = new Set<string>();
   const stack: FtmlContent[] = [...normalizeToRoot(statement).content];
 
@@ -25,6 +32,14 @@ export function getDeclaredSymbolUris(statement: FtmlStatement): Set<string> {
   }
 
   return declared;
+}
+
+/** Symbol names this row declares (DB column, with legacy symdecl fallback). */
+export function resolveDeclaredSymbolNames(
+  statement: FtmlStatement,
+  declaredSymbols?: readonly string[],
+): string[] {
+  return Array.from(getDeclaredSymbolUris(statement, declaredSymbols));
 }
 
 export function countSymbolReferences(

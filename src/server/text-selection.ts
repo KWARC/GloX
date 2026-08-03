@@ -30,6 +30,7 @@ export type ExtractedItem = {
   pageNumber: number | null;
   originalText: string;
   statement: FtmlStatement;
+  declaredSymbols?: string[];
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -131,6 +132,7 @@ export function useExtractionActions(documentId: string) {
     blockType?: ExtractBlockType;
     text: string;
     statement?: FtmlStatement;
+    declaredSymbols?: string[];
     futureRepo: string;
     filePath: string;
     fileName: string;
@@ -144,6 +146,7 @@ export function useExtractionActions(documentId: string) {
         blockType: params.blockType,
         originalText: params.text,
         statement: params.statement,
+        declaredSymbols: params.declaredSymbols,
         futureRepo: params.futureRepo,
         filePath: params.filePath,
         fileName: params.fileName,

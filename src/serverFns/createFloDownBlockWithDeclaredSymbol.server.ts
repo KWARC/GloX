@@ -10,10 +10,11 @@ import {
   DefiniendumNode,
   DefinitionNode,
   FtmlStatement,
-  isDefinitionNode,
   normalizeToRoot,
   unwrapRoot,
 } from "@/types/ftml.types";
+import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
+import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import { ExtractBlockType } from "@/types/blockType";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -55,7 +56,6 @@ export type CreatedSymbolTarget = {
 function buildPlainDefinitionStatement(originalText: string): DefinitionNode {
   return {
     type: "definition",
-    for_symbols: [],
     content: [
       {
         type: "paragraph",
@@ -109,9 +109,11 @@ export const createFloDownBlockWithDeclaredSymbol = createServerFn({
       throw new Error("Document has no pages");
     }
 
-    const statement =
+    const rawStatement =
       data.statement ?? buildPlainDefinitionStatement(originalText);
+    const statement = sanitizeStatementForPersist(rawStatement);
     const serializedStatement = JSON.parse(JSON.stringify(statement));
+    const isNewSymbol = !existingSymbolId;
 
     const result = await prisma.$transaction(async (tx) => {
       const symbol = existingSymbolId
@@ -169,6 +171,20 @@ export const createFloDownBlockWithDeclaredSymbol = createServerFn({
           editedById: userId,
         },
       });
+
+      if (isNewSymbol) {
+        await addDeclaredSymbol(
+          tx,
+          createdFloDownBlock.id,
+          symbol.symbolName,
+          {
+            futureRepo,
+            filePath,
+            fileName: paragraphFileName,
+            language,
+          },
+        );
+      }
 
       await tx.document.update({
         where: { id: data.documentId },
@@ -275,25 +291,27 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
         definiendumNode,
       );
 
-      const updatedDefinition = updatedRoot.content.find(isDefinitionNode);
-      if (!updatedDefinition) {
-        throw new Error("Content not found after update");
-      }
-
-      const existingSymbols = updatedDefinition.for_symbols ?? [];
-      if (!existingSymbols.includes(symbol.symbolName)) {
-        updatedDefinition.for_symbols = [...existingSymbols, symbol.symbolName];
-      }
-
       const nextVersion = floDownBlock.currentVersion + 1;
-      const statement = JSON.parse(JSON.stringify(unwrapRoot(updatedRoot)));
+      const statement = sanitizeStatementForPersist(unwrapRoot(updatedRoot));
+
+      await addDeclaredSymbol(
+        tx,
+        floDownBlock.id,
+        symbol.symbolName,
+        {
+          futureRepo: floDownBlock.futureRepo,
+          filePath: floDownBlock.filePath,
+          fileName: floDownBlock.fileName,
+          language: floDownBlock.language,
+        },
+      );
 
       await tx.floDownBlockVersion.create({
         data: {
           floDownBlockId: floDownBlock.id,
           versionNumber: nextVersion,
           originalText: floDownBlock.originalText,
-          statement,
+          statement: JSON.parse(JSON.stringify(statement)),
           editedById: userId,
         },
       });
@@ -301,7 +319,7 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
       await tx.floDownBlock.update({
         where: { id: floDownBlock.id },
         data: {
-          statement,
+          statement: JSON.parse(JSON.stringify(statement)),
           updatedById: userId,
           currentVersion: nextVersion,
         },

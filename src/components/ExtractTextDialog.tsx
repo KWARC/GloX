@@ -70,6 +70,7 @@ interface ExtractTextDialogProps {
     text: string;
     blockType: ExtractBlockType;
     statement?: FtmlStatement;
+    declaredSymbols?: string[];
   }) => void;
   title?: string;
   textLabel?: string;
@@ -362,6 +363,7 @@ export function ExtractTextDialog({
                   <FtmlPreview
                     ftmlAst={draftSemantic.statement}
                     docId="draft-definition"
+                    declaredSymbols={draftSemantic.declaredSymbols}
                   />
                 </div>
               </Paper>
@@ -388,6 +390,10 @@ export function ExtractTextDialog({
                   statement:
                     enableSemanticAuthoring && semanticEnabled
                       ? draftSemantic.statement
+                      : undefined,
+                  declaredSymbols:
+                    enableSemanticAuthoring && semanticEnabled
+                      ? draftSemantic.declaredSymbols
                       : undefined,
                 });
               }}

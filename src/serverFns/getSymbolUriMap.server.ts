@@ -2,60 +2,43 @@ import prisma from "@/lib/prisma";
 import {
   assertFtmlStatement,
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  isDefiniendumNode,
   isDefinitionNode,
   normalizeToRoot,
 } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
-function collectDeclaredLabels(
-  node: FtmlNode | FtmlContent,
-  acc: Set<string>,
-): void {
-  if (typeof node === "string") return;
-
-  if (isDefiniendumNode(node) && node.symdecl === true && node.uri) {
-    acc.add(node.uri);
-  }
-
-  if (node.content) {
-    for (const child of node.content) {
-      collectDeclaredLabels(child, acc);
-    }
-  }
-}
+export type DefiningDefinition = {
+  definition: DefinitionNode;
+  declaredSymbols: string[];
+};
 
 export const getDefiningDefinitions = createServerFn({ method: "POST" })
   .inputValidator((data: { labels: string[] }) => data)
-  .handler(async ({ data }): Promise<Record<string, DefinitionNode>> => {
+  .handler(async ({ data }): Promise<Record<string, DefiningDefinition>> => {
     if (!data.labels.length) return {};
 
     const floDownBlocks = await prisma.floDownBlock.findMany({
       where: { status: { not: "DISCARDED" } },
-      select: { statement: true },
+      select: { statement: true, declaredSymbols: true },
     });
 
-    const result: Record<string, DefinitionNode> = {};
+    const result: Record<string, DefiningDefinition> = {};
     const remaining = new Set(data.labels);
 
-    for (const def of floDownBlocks) {
+    for (const row of floDownBlocks) {
       if (!remaining.size) break;
 
-      const root = normalizeToRoot(assertFtmlStatement(def.statement));
+      const root = normalizeToRoot(assertFtmlStatement(row.statement));
+      const definition = root.content.find(isDefinitionNode);
+      if (!definition) continue;
 
-      for (const block of root.content) {
-        if (!isDefinitionNode(block)) continue;
-
-        const declared = new Set<string>();
-        collectDeclaredLabels(block, declared);
-
-        for (const label of declared) {
-          if (remaining.has(label)) {
-            result[label] = block;
-            remaining.delete(label);
-          }
+      for (const label of row.declaredSymbols) {
+        if (remaining.has(label)) {
+          result[label] = {
+            definition,
+            declaredSymbols: row.declaredSymbols,
+          };
+          remaining.delete(label);
         }
       }
     }

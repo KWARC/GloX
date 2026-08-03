@@ -33,7 +33,6 @@ export type DraftSelectionPopup = {
 function buildPlainDefinitionStatement(text: string): DefinitionNode {
   return {
     type: "definition",
-    for_symbols: [],
     content: [
       {
         type: "paragraph",
@@ -200,17 +199,6 @@ function insertDefiniendumNode(
     node,
   );
 
-  const definition = updatedRoot.content.find(
-    (item): item is DefinitionNode => item.type === "definition",
-  );
-
-  if (definition) {
-    const existingSymbols = definition.for_symbols ?? [];
-    if (!existingSymbols.includes(node.uri)) {
-      definition.for_symbols = [...existingSymbols, node.uri];
-    }
-  }
-
   return unwrapRoot(updatedRoot);
 }
 
@@ -256,16 +244,11 @@ function insertSymrefNode(
 }
 
 export function statementHasDeclaredSymbol(
-  statement: FtmlStatement | undefined,
+  declaredSymbols: readonly string[] | undefined,
   symbolName: string,
 ): boolean {
-  if (!statement || !symbolName.trim()) return false;
-
-  const root = normalizeToRoot(statement);
-  return root.content.some((node) => {
-    if (node.type !== "definition") return false;
-    return (node.for_symbols ?? []).includes(symbolName.trim());
-  });
+  if (!declaredSymbols?.length || !symbolName.trim()) return false;
+  return declaredSymbols.includes(symbolName.trim());
 }
 
 function containsSemanticNodes(node: FtmlContent | FtmlNode): boolean {
@@ -282,11 +265,13 @@ export function useDraftSemanticAuthoring(
   const [statement, setStatement] = useState<FtmlStatement>(() =>
     buildPlainDefinitionStatement(text),
   );
+  const [declaredSymbols, setDeclaredSymbols] = useState<string[]>([]);
   const [selection, setSelection] = useState<DraftSelectionRange | null>(null);
   const [popup, setPopup] = useState<DraftSelectionPopup | null>(null);
 
   useEffect(() => {
     setStatement(buildPlainDefinitionStatement(text));
+    setDeclaredSymbols([]);
     setSelection(null);
     setPopup(null);
   }, [text, enabled]);
@@ -351,6 +336,12 @@ export function useDraftSemanticAuthoring(
     }
 
     setStatement((current) => insertDefiniendumNode(current, selection, payload));
+    if (payload.mode === "CREATE") {
+      const symbolName = payload.symbolName.trim();
+      setDeclaredSymbols((current) =>
+        current.includes(symbolName) ? current : [...current, symbolName],
+      );
+    }
     clearSelection();
   }
 
@@ -365,6 +356,7 @@ export function useDraftSemanticAuthoring(
 
   return {
     statement,
+    declaredSymbols,
     selection,
     popup,
     hasSemantics,

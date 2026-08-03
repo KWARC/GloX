@@ -2,6 +2,11 @@ import prisma from "@/lib/prisma";
 import { FtmlStatement, RootNode, normalizeToRoot } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
+export type CombinedFloDownBlockFtml = {
+  ftml: RootNode;
+  declaredSymbolsPerBlock: string[][];
+};
+
 export const getCombinedFloDownBlockFtml = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
@@ -13,7 +18,7 @@ export const getCombinedFloDownBlockFtml = createServerFn({ method: "GET" })
       language: string;
     }) => data,
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<CombinedFloDownBlockFtml> => {
     const defs = await prisma.floDownBlock.findMany({
       where: {
         id: { in: data.floDownBlockIds },
@@ -21,6 +26,7 @@ export const getCombinedFloDownBlockFtml = createServerFn({ method: "GET" })
       select: {
         id: true,
         statement: true,
+        declaredSymbols: true,
       },
     });
 
@@ -29,23 +35,33 @@ export const getCombinedFloDownBlockFtml = createServerFn({ method: "GET" })
     }
 
     const defMap = new Map(
-      defs.map((d) => [d.id, d.statement as FtmlStatement | null]),
+      defs.map((row) => [
+        row.id,
+        {
+          statement: row.statement as FtmlStatement | null,
+          declaredSymbols: row.declaredSymbols,
+        },
+      ]),
     );
 
     const combined: RootNode = {
       type: "root",
       content: [],
     };
+    const declaredSymbolsPerBlock: string[][] = [];
 
     for (const id of data.floDownBlockIds) {
-      const statement = defMap.get(id);
-      if (!statement) continue;
+      const row = defMap.get(id);
+      if (!row?.statement) continue;
 
-      const root = normalizeToRoot(statement);
-      combined.content.push(...root.content);
+      const root = normalizeToRoot(row.statement);
+      for (const block of root.content) {
+        combined.content.push(block);
+        declaredSymbolsPerBlock.push(row.declaredSymbols);
+      }
     }
 
-    return combined;
+    return { ftml: combined, declaredSymbolsPerBlock };
   });
 
 export const getFinalizedLatexById = createServerFn({ method: "GET" })

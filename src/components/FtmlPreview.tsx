@@ -1,4 +1,5 @@
 import { initFloDown } from "@/lib/flodownClient";
+import { buildForSymbols } from "@/server/ftml/declaredSymbols";
 import {
   collectExternalSymbols,
   isHttp,
@@ -21,6 +22,7 @@ import { useEffect, useRef } from "react";
 interface FtmlPreviewProps {
   ftmlAst: FtmlStatement;
   docId: string;
+  declaredSymbols?: string[];
 }
 
 type FloDownBlock = {
@@ -52,33 +54,18 @@ function rewriteContentArray(
   );
 }
 
-function collectDeclaredLabels(
-  node: FtmlNode | FtmlContent,
-  acc: Set<string>,
-): void {
-  if (typeof node === "string") return;
-
-  if (isDefiniendumNode(node) && node.symdecl === true && node.uri) {
-    acc.add(node.uri);
-  }
-
-  if (node.content) {
-    for (const child of node.content) {
-      collectDeclaredLabels(child, acc);
-    }
-  }
-}
-
 function rewriteNode(
   node: FtmlNode,
   uriMap: Map<string, string>,
   docId: string,
+  blockStatement?: FtmlStatement,
 ): FtmlNode {
   if (isDefinitionNode(node)) {
     const def = node as DefinitionNode;
+    const statement = blockStatement ?? def;
     return {
       ...def,
-      for_symbols: def.for_symbols.map((s) => uriMap.get(s) ?? s),
+      for_symbols: buildForSymbols(statement, uriMap),
       content: rewriteContentArray(def.content, uriMap, docId),
     };
   }
@@ -103,15 +90,11 @@ function rewriteNode(
       };
     }
 
-    if (!n.symdecl) {
-      return {
-        ...n,
-        uri: `http://temp-visible?a=temp&d=${docId}&l=en&s=${n.uri}`,
-        content: rewriteContentArray(n.content ?? [], uriMap, docId),
-      };
-    }
-
-    return n;
+    return {
+      ...n,
+      uri: `http://temp-visible?a=temp&d=${docId}&l=en&s=${n.uri}`,
+      content: rewriteContentArray(n.content ?? [], uriMap, docId),
+    };
   }
 
   if (node.type === "symref") {
@@ -145,7 +128,11 @@ function rewriteNode(
   return node;
 }
 
-export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
+export function FtmlPreview({
+  ftmlAst,
+  docId,
+  declaredSymbols = [],
+}: FtmlPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
   const fdHiddenRef = useRef<FloDownBlock | null>(null);
@@ -181,6 +168,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
       fdVisible.mountTo(containerEl);
 
       const root = normalizeToRoot(ftmlAst);
+      const declaredOnThisRow = new Set(declaredSymbols);
 
       for (const block of root.content) {
         if (disposed) return;
@@ -195,9 +183,9 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
         const def = block as DefinitionNode;
 
         const external = new Set<string>();
-        collectExternalSymbols(def, external);
+        collectExternalSymbols(def, external, declaredOnThisRow);
 
-        const deps: Record<string, DefinitionNode> =
+        const deps =
           external.size > 0
             ? await getDefiningDefinitions({
                 data: { labels: Array.from(external) },
@@ -208,34 +196,26 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
 
         const hiddenUriMap = new Map<string, string>();
         const visibleUriMap = new Map<string, string>();
-        const uniqueDeps = new Set<DefinitionNode>();
 
-        for (const depDef of Object.values(deps)) {
-          uniqueDeps.add(depDef);
-        }
-
-        for (const depDef of uniqueDeps) {
-          const labels = new Set<string>();
-          collectDeclaredLabels(depDef, labels);
-
-          for (const label of labels) {
+        for (const dep of Object.values(deps)) {
+          for (const label of dep.declaredSymbols) {
             if (!hiddenUriMap.has(label)) {
               const hiddenUri = fdHidden.addSymbolDeclaration(label);
-
               hiddenUriMap.set(label, hiddenUri);
-              visibleUriMap.set(label, hiddenUri); 
+              visibleUriMap.set(label, hiddenUri);
             }
           }
 
           const rewrittenDep = rewriteNode(
-            deepClone(depDef),
+            deepClone(dep.definition),
             hiddenUriMap,
             docId,
+            dep.definition,
           );
           fdHidden.addElement(rewrittenDep);
         }
 
-        for (const symbol of def.for_symbols) {
+        for (const symbol of declaredOnThisRow) {
           if (!symbol.startsWith("http") && !visibleUriMap.has(symbol)) {
             const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
             const visibleUri = fdVisible.addSymbolDeclaration(symbol);
@@ -245,7 +225,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
           }
         }
 
-        const rewritten = rewriteNode(deepClone(def), visibleUriMap, docId);
+        const rewritten = rewriteNode(deepClone(def), visibleUriMap, docId, def);
         fdVisible.addElement(rewritten);
       }
     })();
@@ -270,7 +250,7 @@ export function FtmlPreview({ ftmlAst, docId }: FtmlPreviewProps) {
       if (containerEl) containerEl.innerHTML = "";
       if (hiddenEl) hiddenEl.innerHTML = "";
     };
-  }, [ftmlAst, docId]);
+  }, [ftmlAst, docId, declaredSymbols]);
 
   return (
     <>

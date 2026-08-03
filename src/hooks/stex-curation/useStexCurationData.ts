@@ -1,5 +1,6 @@
 import { queryClient } from "@/queryClient";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
+import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import { ExtractedItem } from "@/server/text-selection";
 import { getFloDownBlockProvenance } from "@/serverFns/floDownBlockProvenance.server";
 import { getFloDownBlockFileStatus } from "@/serverFns/floDownBlockStatus.server";
@@ -8,13 +9,6 @@ import {
   getFloDownBlocksByIdentity,
 } from "@/serverFns/latex.server";
 import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
-import {
-  FtmlNode,
-  FtmlRoot,
-  isDefiniendumNode,
-  isNode,
-  normalizeToRoot,
-} from "@/types/ftml.types";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
@@ -121,7 +115,9 @@ export function useStexCurationData(identity: FileIdentity) {
 
   const actualSymbols = Array.from(
     new Set(
-      floDownBlocks.flatMap((def) => extractSymbolsFromStatement(def.statement)),
+      floDownBlocks.flatMap((def) =>
+        resolveDeclaredSymbolNames(def.statement, def.declaredSymbols),
+      ),
     ),
   );
 
@@ -159,44 +155,14 @@ export async function refetchFloDownBlocksByIdentity(identity: FileIdentity) {
   return updatedData.floDownBlocks;
 }
 
-export function extractSymbolsFromStatement(statement: FtmlRoot): string[] {
-  const root = normalizeToRoot(statement);
-  const symbols: string[] = [];
-  const seen = new Set<string>();
-
-  function walk(node: FtmlNode) {
-    if (isDefiniendumNode(node) && node.symdecl === true) {
-      const label = (node.content ?? [])
-        .filter((c): c is string => typeof c === "string")
-        .join("");
-
-      if (label && !seen.has(label)) {
-        seen.add(label);
-        symbols.push(label);
-      }
-    }
-
-    if (node.content) {
-      for (const child of node.content) {
-        if (isNode(child)) {
-          walk(child);
-        }
-      }
-    }
-  }
-
-  for (const node of root.content) {
-    walk(node);
-  }
-
-  return symbols;
-}
-
 export function buildFloDownBlockSymbolSummaries(
   floDownBlocks: ExtractedItem[],
 ): FloDownBlockSymbolSummary[] {
   return floDownBlocks.map((floDownBlock) => ({
     floDownBlockId: floDownBlock.id,
-    symbols: extractSymbolsFromStatement(floDownBlock.statement),
+    symbols: resolveDeclaredSymbolNames(
+      floDownBlock.statement,
+      floDownBlock.declaredSymbols,
+    ),
   }));
 }

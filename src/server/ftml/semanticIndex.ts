@@ -53,7 +53,10 @@ function walk(
   }
 }
 
-export function extractSemanticIndex(statement: FtmlRoot) {
+export function extractSemanticIndex(
+  statement: FtmlRoot,
+  declaredSymbols: readonly string[] = [],
+) {
   const root = normalizeToRoot(statement);
 
   const collected = {
@@ -66,7 +69,7 @@ export function extractSemanticIndex(statement: FtmlRoot) {
   const definienda = collected.definienda.map((d) => ({
     ...d,
     symbolId: d.uri,
-    symdecl: d.symdecl,
+    symdecl: declaredSymbols.includes(d.uri),
   }));
 
   return { definienda, symbolicRefs: collected.symrefs };

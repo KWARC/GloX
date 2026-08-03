@@ -55,7 +55,11 @@ export function buildStatementFromText(
 
   return {
     type: "definition",
-    for_symbols: [],
-    content: [{ type: "paragraph", content: [trimmed] }],
+    content: [
+      {
+        type: "paragraph",
+        content: [trimmed],
+      },
+    ],
   };
 }

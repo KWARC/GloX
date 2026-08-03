@@ -1,7 +1,13 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { assertFtmlRoot } from "@/server/ftml/convertLocalSymbolToMathHub";
+import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
+import {
+  addDeclaredSymbol,
+  removeDeclaredSymbol,
+} from "@/server/floDownBlockDeclaredSymbols";
 import { parseUri, SemanticOperation, transform } from "@/server/parseUri";
+import { assertFtmlStatement } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export type UpdateFloDownBlockAstResult =
@@ -93,9 +99,50 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
         };
       }
 
-      const newAst = transform(structuredClone(def.statement), operation);
+      const newAst = sanitizeStatementForPersist(
+        assertFtmlStatement(
+          transform(structuredClone(def.statement), operation),
+        ),
+      );
       const nextVersion = def.currentVersion + 1;
       const serialized: object = JSON.parse(JSON.stringify(newAst));
+
+      if (
+        operation.kind === "replaceSemantic" &&
+        operation.payload.type === "definiendum" &&
+        operation.payload.symdecl === true &&
+        !operation.payload.uri.startsWith("http")
+      ) {
+        await addDeclaredSymbol(
+          tx,
+          def.id,
+          operation.payload.uri,
+          {
+            futureRepo: def.futureRepo,
+            filePath: def.filePath,
+            fileName: def.fileName,
+            language: def.language,
+          },
+        );
+      }
+
+      if (
+        operation.kind === "removeSemantic" &&
+        operation.target.type === "definiendum" &&
+        def.declaredSymbols.includes(operation.target.uri)
+      ) {
+        await removeDeclaredSymbol(
+          tx,
+          def.id,
+          operation.target.uri,
+          {
+            futureRepo: def.futureRepo,
+            filePath: def.filePath,
+            fileName: def.fileName,
+            language: def.language,
+          },
+        );
+      }
 
       await tx.floDownBlockVersion.create({
         data: {

@@ -13,23 +13,6 @@ export function assertFtmlRoot(value: unknown): asserts value is FtmlRoot {
   }
 }
 
-function hasLocalDefiniendum(node: DefinitionNode, symbolUri: string): boolean {
-  function scan(content: FtmlContent[]): boolean {
-    for (const item of content) {
-      if (typeof item === "string") continue;
-      if (
-        isDefiniendumNode(item) &&
-        item.symdecl === true &&
-        item.uri === symbolUri
-      )
-        return true;
-      if (item.content && scan(item.content)) return true;
-    }
-    return false;
-  }
-  return scan(node.content);
-}
-
 function replaceUriInContent(
   content: FtmlContent[],
   localUri: string,
@@ -74,15 +57,6 @@ function propagateUriInNode(
       mathHubUri,
     );
     const updatedDef: DefinitionNode = { ...node, content: updatedContent };
-
-    if (
-      updatedDef.for_symbols.includes(localUri) &&
-      !hasLocalDefiniendum(updatedDef, localUri)
-    ) {
-      updatedDef.for_symbols = updatedDef.for_symbols.filter(
-        (s) => s !== localUri,
-      );
-    }
     return updatedDef;
   }
 

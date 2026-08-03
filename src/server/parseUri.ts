@@ -194,9 +194,6 @@ function removeSemanticNodeWithIndex(
     const definitionNode = node as DefinitionNode;
     return {
       ...definitionNode,
-      for_symbols: Array.isArray(definitionNode.for_symbols)
-        ? definitionNode.for_symbols.filter((s: string) => s !== target.uri)
-        : definitionNode.for_symbols,
       content: removeSemanticNode(definitionNode.content as FtmlContent[], target) as FtmlContent[],
     };
   }
@@ -243,21 +240,9 @@ function replaceSemanticNode(
       payload,
     ) as FtmlContent[];
 
-    const targetUriNorm = normalizeUri(target.uri);
-    let symbols = Array.isArray(def.for_symbols)
-      ? def.for_symbols.filter((s) => normalizeUri(s) !== targetUriNorm)
-      : [];
-
-    if (payload.type === "definiendum" && payload.uri && !payload.uri.startsWith("http")) {
-      symbols.push(payload.uri);
-    }
-
-    symbols = Array.from(new Set(symbols));
-
     return {
       ...def,
       content: updatedContent,
-      for_symbols: symbols,
     };
   }
 

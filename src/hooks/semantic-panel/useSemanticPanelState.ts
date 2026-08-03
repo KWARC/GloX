@@ -1,4 +1,5 @@
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
+import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import { useSymbolSearch } from "@/server/useSymbolSearch";
 import { supportsDefinienda } from "@/types/blockType";
 import {
@@ -40,7 +41,11 @@ export function useSemanticPanelState(floDownBlock: FloDownBlockSemantic | null)
 
   const { definienda, symbolicRefs } = useMemo(() => {
     if (!floDownBlock) return { definienda: [], symbolicRefs: [] };
-    return extractSemanticIndex(floDownBlock.statement);
+    const declaredSymbols = resolveDeclaredSymbolNames(
+      floDownBlock.statement,
+      floDownBlock.declaredSymbols,
+    );
+    return extractSemanticIndex(floDownBlock.statement, declaredSymbols);
   }, [floDownBlock]);
 
   useEffect(() => {

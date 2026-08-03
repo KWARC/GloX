@@ -14,7 +14,11 @@ import {
   isDefiniendumNode,
   normalizeToRoot,
 } from "@/types/ftml.types";
+import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import { ExtractBlockType, buildStatementFromText } from "@/types/blockType";
+import {
+  setDeclaredSymbols,
+} from "@/server/floDownBlockDeclaredSymbols";
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
 
@@ -67,6 +71,7 @@ export type CreateFloDownBlockInput = {
   blockType?: ExtractBlockType;
   originalText: string;
   statement?: FtmlStatement;
+  declaredSymbols?: string[];
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -111,6 +116,7 @@ export const getFloDownBlockDeletionImpact = createServerFn({ method: "POST" })
     });
     const declared = getDeclaredSymbolUris(
       assertFtmlStatement(target.statement),
+      target.declaredSymbols,
     );
     if (!declared.size) return [];
 
@@ -168,16 +174,18 @@ export const createFloDownBlock = createServerFn({ method: "POST" })
       throw new Error("Document has no pages");
     }
 
-    const statement: FtmlStatement =
+    const rawStatement: FtmlStatement =
       data.statement ??
       buildStatementFromText(
         data.blockType ?? "definition",
         data.originalText,
       );
+    const statement = sanitizeStatementForPersist(rawStatement);
+    const declaredSymbolNames =
+      data.declaredSymbols ??
+      extractDeclaredSymbols(rawStatement).map((symbol) => symbol.symbolName);
 
     await prisma.$transaction(async (tx) => {
-      const declaredSymbols = extractDeclaredSymbols(statement);
-
       const def = await tx.floDownBlock.create({
         data: {
           documentId: data.documentId,
@@ -196,28 +204,17 @@ export const createFloDownBlock = createServerFn({ method: "POST" })
         },
       });
 
-      for (const declaredSymbol of declaredSymbols) {
-        await tx.symbol.upsert({
-          where: {
-            symbolName_futureRepo_filePath_fileName_language: {
-              symbolName: declaredSymbol.symbolName,
-              futureRepo: data.futureRepo,
-              filePath: data.filePath,
-              fileName: data.fileName,
-              language: data.language,
-            },
-          },
-          update: declaredSymbol.alias ? { alias: declaredSymbol.alias } : {},
-          create: {
-            symbolName: declaredSymbol.symbolName,
-            alias: declaredSymbol.alias,
-            futureRepo: data.futureRepo,
-            filePath: data.filePath,
-            fileName: data.fileName,
-            language: data.language,
-          },
-        });
-      }
+      await setDeclaredSymbols(
+        tx,
+        def.id,
+        declaredSymbolNames,
+        {
+          futureRepo: data.futureRepo,
+          filePath: data.filePath,
+          fileName: data.fileName,
+          language: data.language,
+        },
+      );
 
       await tx.floDownBlockVersion.create({
         data: {
@@ -252,13 +249,14 @@ export const updateFloDownBlock = createServerFn({ method: "POST" })
       });
 
       const nextVersion = existing.currentVersion + 1;
+      const statement = sanitizeStatementForPersist(data.statement);
 
       await tx.floDownBlockVersion.create({
         data: {
           floDownBlockId: existing.id,
           versionNumber: nextVersion,
           originalText: existing.originalText,
-          statement: JSON.parse(JSON.stringify(data.statement)),
+          statement: JSON.parse(JSON.stringify(statement)),
           editedById: userId,
         },
       });
@@ -266,7 +264,7 @@ export const updateFloDownBlock = createServerFn({ method: "POST" })
       await tx.floDownBlock.update({
         where: { id: data.id },
         data: {
-          statement: JSON.parse(JSON.stringify(data.statement)),
+          statement: JSON.parse(JSON.stringify(statement)),
           updatedById: userId,
           currentVersion: nextVersion,
         },
@@ -290,6 +288,7 @@ export const deleteFloDownBlock = createServerFn({ method: "POST" })
       });
       const declared = getDeclaredSymbolUris(
         assertFtmlStatement(target.statement),
+        target.declaredSymbols,
       );
 
       let affectedDefinitionCount = 0;
@@ -584,6 +583,7 @@ export const listFloDownBlocks = createServerFn({ method: "GET" })
         pageNumber: def.pageNumber,
         originalText: def.originalText,
         statement,
+        declaredSymbols: def.declaredSymbols,
         futureRepo: def.futureRepo,
         filePath: def.filePath,
         fileName: def.fileName,

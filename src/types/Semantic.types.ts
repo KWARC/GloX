@@ -25,6 +25,7 @@ export type SelectedNode =
 export type FloDownBlockSemantic = {
   id: string;
   statement: FtmlStatement;
+  declaredSymbols?: string[];
 };
 
 export type OnReplaceNode = (

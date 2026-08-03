@@ -258,6 +258,7 @@ export function ExtractedTextPanel({
                         key={item.id}
                         docId={item.id}
                         ftmlAst={item.statement}
+                        declaredSymbols={item.declaredSymbols}
                       />
 
                       {/* <SuggestedDefinienda item={item} /> */}

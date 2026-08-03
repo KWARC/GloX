@@ -150,6 +150,9 @@ model FloDownBlock {
   originalText String @db.Text
   statement    Json
 
+  /// Local symbol names this row introduces via addSymbolDeclaration at export.
+  declaredSymbols String[] @default([])
+
   status          FloDownBlockStatus @default(EXTRACTED)
   discardedReason String?
 

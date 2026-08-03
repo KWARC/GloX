@@ -1,14 +1,10 @@
 import prisma from "@/lib/prisma";
 import { latexToDefinitionStatement } from "@/server/ftml/latexToFtml";
+import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import { ExtractedItem } from "@/server/text-selection";
 import {
   assertFtmlStatement,
-  FtmlNode,
   FtmlStatement,
-  isDefiniendumNode,
-  isDefinitionNode,
-  isNode,
-  isParagraphNode,
 } from "@/types/ftml.types";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -310,6 +306,7 @@ export const getFloDownBlocksByIdentity = createServerFn({ method: "POST" })
         pageNumber: def.pageNumber,
         originalText: def.originalText,
         statement,
+        declaredSymbols: def.declaredSymbols,
         futureRepo: def.futureRepo,
         filePath: def.filePath,
         fileName: def.fileName,
@@ -327,50 +324,11 @@ export const getFloDownBlocksByIdentity = createServerFn({ method: "POST" })
     const symbols: { id: string; label: string }[] = [];
 
     for (const def of typedDefinitions) {
-      const statement = def.statement;
-
-      const nodes: FtmlNode[] = Array.isArray(statement)
-        ? statement.filter(isNode)
-        : statement.type === "root"
-          ? (statement.content ?? []).filter(isNode)
-          : [statement];
-
-      for (const node of nodes) {
-        if (!isDefinitionNode(node)) continue;
-
-        for (const child of node.content ?? []) {
-          if (!isNode(child)) continue;
-
-          if (isDefiniendumNode(child) && child.symdecl === true) {
-            const label = (child.content ?? [])
-              .filter((c): c is string => typeof c === "string")
-              .join("");
-
-            symbols.push({
-              id: def.id,
-              label,
-            });
-
-            continue;
-          }
-
-          if (isParagraphNode(child)) {
-            for (const sub of child.content ?? []) {
-              if (!isNode(sub)) continue;
-
-              if (isDefiniendumNode(sub) && sub.symdecl === true) {
-                const label = (sub.content ?? [])
-                  .filter((c): c is string => typeof c === "string")
-                  .join("");
-
-                symbols.push({
-                  id: def.id,
-                  label,
-                });
-              }
-            }
-          }
-        }
+      for (const label of resolveDeclaredSymbolNames(
+        def.statement,
+        def.declaredSymbols,
+      )) {
+        symbols.push({ id: def.id, label });
       }
     }
 
