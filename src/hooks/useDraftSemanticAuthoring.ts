@@ -4,7 +4,7 @@ import {
   pathTraversesSemanticNode,
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
-import { normalizeSymRef, parseUri } from "@/server/parseUri";
+import { normalizeSymRef } from "@/server/parseUri";
 import {
   DefiniendumNode,
   DefinitionNode,
@@ -83,7 +83,7 @@ function findLocationByGlobalOffset(
   let cursor = 0;
 
   for (const [paragraphIndex, node] of root.content.entries()) {
-    let paragraphContent = [];
+    let paragraphContent: FtmlContent[] = [];
 
     if (node.type === "paragraph") {
       paragraphContent = node.content ?? [];
@@ -123,7 +123,7 @@ function findLocationByGlobalOffset(
 
         cursor += item.length;
       } else {
-        cursor += extractTextContent(item);
+        cursor += extractTextContent(item).length;
       }
     }
   }
@@ -168,25 +168,27 @@ function insertDefiniendumNode(
     throw new Error("Cannot insert definiendum inside existing semantic node");
   }
 
+  const verbalization = selection.selectedText;
+
   const node: DefiniendumNode =
     payload.mode === "CREATE"
       ? {
           type: "definiendum",
           uri: payload.symbolName.trim(),
-          content: [payload.symbolName.trim()],
+          content: [verbalization],
           symdecl: true,
         }
       : payload.symbol.source === "DB"
         ? {
             type: "definiendum",
             uri: payload.symbol.symbolName,
-            content: [payload.symbol.symbolName],
+            content: [verbalization],
             symdecl: false,
           }
         : {
             type: "definiendum",
             uri: payload.symbol.uri,
-            content: [parseUri(payload.symbol.uri).symbol],
+            content: [verbalization],
             symdecl: false,
           };
 
@@ -235,11 +237,11 @@ function insertSymrefNode(
     );
   }
 
-  const { uri, text } = normalizeSymRef(symRef);
+  const { uri } = normalizeSymRef(symRef);
   const node: SymrefNode = {
     type: "symref",
     uri,
-    content: [text],
+    content: [selection.selectedText],
   };
 
   const updatedRoot = replaceTextWithNode(
