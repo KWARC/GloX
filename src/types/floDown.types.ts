@@ -36,6 +36,7 @@ export type DefiniensNode = Extract<FloDownInlineInDefinition, { type: "definien
  */
 export type FloDownContent = Inline | InlineInDefinition | DefiniendumNode;
 
+export type HeadingNode = Extract<FloDownBlock, { type: "heading" }>;
 export type ParagraphNode = Extract<FloDownBlock, { type: "paragraph" }>;
 export type DefinitionInnerParagraph = Extract<
   FloDownBlockInDefinition,
@@ -100,6 +101,10 @@ export function isParagraphNode(
   node: FloDownAstNode,
 ): node is ParagraphNode | DefinitionInnerParagraph {
   return node.type === "paragraph";
+}
+
+export function isHeadingNode(node: { type: string }): node is HeadingNode {
+  return node.type === "heading";
 }
 
 export function isDefiniendumNode(

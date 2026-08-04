@@ -201,7 +201,7 @@ export const getModuleDescriptionPage = createServerFn({ method: "POST" })
     };
   });
 
-export const gloxifyModuleDescription = createServerFn({ method: "POST" })
+export const createModuleDescription = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       moduleId: string;
@@ -219,7 +219,7 @@ export const gloxifyModuleDescription = createServerFn({ method: "POST" })
       where: { moduleId },
     });
     if (existing) {
-      throw new Error("Module is already gloxified");
+      throw new Error("Module description already exists");
     }
 
     const catalog = await getModuleJson(moduleId);
@@ -237,7 +237,7 @@ export const gloxifyModuleDescription = createServerFn({ method: "POST" })
         modulesFilePath: data.modulesFilePath?.trim() || DEFAULT_MODULES_PATH,
         defsFilePath: data.defsFilePath?.trim() || DEFAULT_DEFS_PATH,
         language: data.language?.trim() || DEFAULT_LANGUAGE,
-        gloxifiedById: userId,
+        createdById: userId,
       },
     });
 
@@ -526,7 +526,7 @@ export const resetModuleSemantics = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const listGloxifiedModuleDescriptions = createServerFn({ method: "POST" })
+export const listModuleDescriptions = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       page?: number;

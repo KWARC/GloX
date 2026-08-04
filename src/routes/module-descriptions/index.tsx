@@ -1,5 +1,5 @@
 import {
-  listGloxifiedModuleDescriptions,
+  listModuleDescriptions,
   searchModuleDescriptions,
 } from "@/serverFns/moduleDescription.server";
 import {
@@ -26,7 +26,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { currentUser } from "@/server/auth/currentUser";
 import { useEffect, useState } from "react";
 
-const GLOXIFIED_PAGE_SIZE = 20;
+const LIST_PAGE_SIZE = 20;
 
 export const Route = createFileRoute("/module-descriptions/")({
   loader: async () => {
@@ -47,10 +47,10 @@ function ModuleDescriptionsPage() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const [gloxifiedPage, setGloxifiedPage] = useState(1);
+  const [listPage, setListPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<IndexStatus | null>(null);
-  const [gloxifiedQuery, setGloxifiedQuery] = useState("");
-  const [debouncedGloxifiedQuery, setDebouncedGloxifiedQuery] = useState("");
+  const [listQuery, setListQuery] = useState("");
+  const [debouncedListQuery, setDebouncedListQuery] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
@@ -58,13 +58,13 @@ function ModuleDescriptionsPage() {
   }, [query]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedGloxifiedQuery(gloxifiedQuery), 300);
+    const timer = setTimeout(() => setDebouncedListQuery(listQuery), 300);
     return () => clearTimeout(timer);
-  }, [gloxifiedQuery]);
+  }, [listQuery]);
 
   useEffect(() => {
-    setGloxifiedPage(1);
-  }, [statusFilter, debouncedGloxifiedQuery]);
+    setListPage(1);
+  }, [statusFilter, debouncedListQuery]);
 
   const { data: results = [], isFetching } = useQuery({
     queryKey: ["module-descriptions-search", debouncedQuery],
@@ -74,47 +74,44 @@ function ModuleDescriptionsPage() {
   });
 
   const {
-    data: gloxifiedData,
-    isLoading: gloxifiedLoading,
-    isFetching: gloxifiedFetching,
+    data: listData,
+    isLoading: listLoading,
+    isFetching: listFetching,
   } = useQuery({
     queryKey: [
-      "gloxified-module-descriptions",
-      gloxifiedPage,
+      "module-descriptions-list",
+      listPage,
       statusFilter,
-      debouncedGloxifiedQuery,
+      debouncedListQuery,
     ],
     queryFn: () =>
-      listGloxifiedModuleDescriptions({
+      listModuleDescriptions({
         data: {
-          page: gloxifiedPage,
-          pageSize: GLOXIFIED_PAGE_SIZE,
+          page: listPage,
+          pageSize: LIST_PAGE_SIZE,
           status: statusFilter,
-          query: debouncedGloxifiedQuery || undefined,
+          query: debouncedListQuery || undefined,
         },
       }),
   });
 
-  const gloxifiedItems = gloxifiedData?.items ?? [];
-  const gloxifiedTotal = gloxifiedData?.total ?? 0;
-  const totalPages = Math.max(
-    1,
-    Math.ceil(gloxifiedTotal / GLOXIFIED_PAGE_SIZE),
-  );
+  const listItems = listData?.items ?? [];
+  const listTotal = listData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(listTotal / LIST_PAGE_SIZE));
 
   return (
     <Stack p="md" gap="lg" maw={1200} mx="auto" w="100%">
       <Box>
         <Title order={2}>Module descriptions</Title>
         <Text size="sm" c="dimmed" mt={4}>
-          Search the catalog or browse gloxified modules.
+          Search the catalog or browse modules with curation in progress.
         </Text>
       </Box>
 
       <Stack gap="sm">
         <Title order={4}>Catalog search</Title>
         <Text size="sm" c="dimmed">
-          Find a module by ID or title (including modules not yet gloxified).
+          Find a module by ID or title.
         </Text>
         <TextInput
           placeholder="e.g. 33994 or Logopädie"
@@ -166,7 +163,7 @@ function ModuleDescriptionsPage() {
       <Stack gap="sm">
         <Group justify="space-between" align="flex-end">
           <Stack gap={4}>
-            <Title order={4}>Gloxified modules</Title>
+            <Title order={4}>Modules</Title>
             <Text size="sm" c="dimmed">
               Modules with curation in progress or completed
             </Text>
@@ -189,15 +186,15 @@ function ModuleDescriptionsPage() {
 
         <TextInput
           placeholder="Filter by module ID"
-          value={gloxifiedQuery}
-          onChange={(e) => setGloxifiedQuery(e.currentTarget.value)}
+          value={listQuery}
+          onChange={(e) => setListQuery(e.currentTarget.value)}
         />
 
-        {gloxifiedLoading ? (
+        {listLoading ? (
           <Group justify="center" py="md">
             <Loader size="sm" />
           </Group>
-        ) : gloxifiedItems.length === 0 ? (
+        ) : listItems.length === 0 ? (
           <Box
             py="lg"
             style={{
@@ -208,7 +205,7 @@ function ModuleDescriptionsPage() {
             }}
           >
             <Text size="sm" c="dimmed" fw={500}>
-              No gloxified modules found
+              No modules found
             </Text>
           </Box>
         ) : (
@@ -244,7 +241,7 @@ function ModuleDescriptionsPage() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {gloxifiedItems.map((row) => {
+                  {listItems.map((row) => {
                     const statusConf = INDEX_STATUS_CONFIG[row.indexStatus];
                     return (
                       <Table.Tr key={row.id}>
@@ -281,12 +278,12 @@ function ModuleDescriptionsPage() {
 
             <Group justify="space-between" align="center">
               <Text size="sm" c="dimmed">
-                {gloxifiedTotal} module{gloxifiedTotal === 1 ? "" : "s"}
-                {gloxifiedFetching && !gloxifiedLoading ? " (updating…)" : ""}
+                {listTotal} module{listTotal === 1 ? "" : "s"}
+                {listFetching && !listLoading ? " (updating…)" : ""}
               </Text>
               <Pagination
-                value={gloxifiedPage}
-                onChange={setGloxifiedPage}
+                value={listPage}
+                onChange={setListPage}
                 total={totalPages}
               />
             </Group>

@@ -8,8 +8,8 @@ import {
   DefinitionNode,
   FloDownStatement,
   isDefinitionNode,
+  isHeadingNode,
   normalizeToRoot,
-  PersistedBlock
 } from "@/types/floDown.types";
 import { useEffect, useRef } from "react";
 
@@ -21,7 +21,7 @@ interface FtmlPreviewProps {
 
 type FloDownWasmBlock = {
   mountTo: (el: HTMLElement) => void;
-  addElement: (node: PersistedBlock | DefinitionNode) => void;
+  addElement: (node: wasm_bindgen.FloDownBlock) => void;
   addSymbolDeclaration: (name: string) => string;
   getStex(): string;
   getFtml(): string;
@@ -78,6 +78,11 @@ export function FtmlPreview({
 
       for (const block of root.content) {
         if (disposed) return;
+
+        if (isHeadingNode(block)) {
+          fdVisible.addElement(block);
+          continue;
+        }
 
         if (block.type === "paragraph") {
           fdVisible.addElement(block);

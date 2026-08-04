@@ -54,7 +54,7 @@ model User {
   updatedFloDownBlocks   FloDownBlock[]        @relation("FloDownBlockUpdatedBy")
   createdMarkReferences  MarkReference[]       @relation("MarkReferenceCreatedBy")
   confirmedSymbols       Symbol[]
-  gloxifiedModules       ModuleDescription[]   @relation("ModuleDescriptionGloxifiedBy")
+  createdModuleDescriptions ModuleDescription[] @relation("ModuleDescriptionCreatedBy")
 }
 
 model ModuleDescription {
@@ -70,8 +70,8 @@ model ModuleDescription {
   defsFilePath    String @default("defs")
   language        String @default("de")
 
-  gloxifiedById String
-  gloxifiedBy   User   @relation("ModuleDescriptionGloxifiedBy", fields: [gloxifiedById], references: [id])
+  createdById String
+  createdBy   User   @relation("ModuleDescriptionCreatedBy", fields: [createdById], references: [id])
 
   indexStatus IndexStatus @default(EXTRACTED)
 
@@ -80,7 +80,7 @@ model ModuleDescription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([gloxifiedById])
+  @@index([createdById])
   @@index([indexStatus])
 }
 

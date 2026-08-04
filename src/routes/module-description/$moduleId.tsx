@@ -7,7 +7,7 @@ import type { TexFilePreview } from "@/lib/moduleDescriptionTex";
 import {
   deleteModuleDescription,
   getModuleDescriptionPage,
-  gloxifyModuleDescription,
+  createModuleDescription,
   resetModuleSemantics,
   updateModuleDescriptionIndexStatus,
 } from "@/serverFns/moduleDescription.server";
@@ -78,14 +78,14 @@ function ModuleDescriptionDetailPage() {
     queryFn: () => getModuleDescriptionPage({ data: { moduleId } }),
   });
 
-  const gloxifyMutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: () =>
-      gloxifyModuleDescription({
+      createModuleDescription({
         data: { moduleId, futureRepo, modulesFilePath, defsFilePath, language },
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
-      void queryClient.invalidateQueries({ queryKey: ["gloxified-module-descriptions"] });
+      void queryClient.invalidateQueries({ queryKey: ["module-descriptions-list"] });
     },
   });
 
@@ -95,7 +95,7 @@ function ModuleDescriptionDetailPage() {
     onSuccess: () => {
       setDeleteOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
-      void queryClient.invalidateQueries({ queryKey: ["gloxified-module-descriptions"] });
+      void queryClient.invalidateQueries({ queryKey: ["module-descriptions-list"] });
     },
   });
 
@@ -121,7 +121,7 @@ function ModuleDescriptionDetailPage() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
-      void queryClient.invalidateQueries({ queryKey: ["gloxified-module-descriptions"] });
+      void queryClient.invalidateQueries({ queryKey: ["module-descriptions-list"] });
     },
   });
 
@@ -188,7 +188,6 @@ function ModuleDescriptionDetailPage() {
           <Title order={2}>{title}</Title>
           <Group gap="xs" mt="xs">
             <Badge variant="light">{moduleId}</Badge>
-            {mod && <Badge color="green">Gloxified</Badge>}
           </Group>
         </Box>
       </Group>
@@ -258,11 +257,11 @@ function ModuleDescriptionDetailPage() {
             </Stack>
             <Button
               mt="md"
-              onClick={() => gloxifyMutation.mutate()}
-              loading={gloxifyMutation.isPending}
+              onClick={() => createMutation.mutate()}
+              loading={createMutation.isPending}
               disabled={!!data.catalogError}
             >
-              Gloxify
+              Create
             </Button>
           </Paper>
         </Stack>

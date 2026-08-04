@@ -5,7 +5,9 @@ import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefinitionNode,
   FloDownStatement,
+  HeadingNode,
   isDefinitionNode,
+  isHeadingNode,
   normalizeToRoot,
   PersistedBlock,
 } from "@/types/floDown.types";
@@ -36,10 +38,14 @@ export type GenerateModuleTexInput = {
 export type TexFilePreview = {
   fileName: string;
   tex: string;
+  ftmlStatement: FloDownStatement;
+  declaredSymbols?: readonly string[];
 };
 
+type ModulePreviewBlock = PersistedBlock | HeadingNode;
+
 type FloDownWasmBlock = {
-  addElement: (node: PersistedBlock | DefinitionNode) => void;
+  addElement: (node: wasm_bindgen.FloDownBlock) => void;
   addSymbolDeclaration: (name: string) => string;
   getStex(): string;
   clear: () => void;
@@ -49,6 +55,38 @@ type FloDownLib = {
   setBackendUrl: (url: string) => void;
   FloDown: { fromUri: (uri: string) => FloDownWasmBlock };
 };
+
+function sectionHeading(title: string): HeadingNode {
+  return {
+    type: "heading",
+    level: "Section" as unknown as HeadingNode["level"],
+    content: [title],
+  };
+}
+
+export function buildModuleDescriptionStatement(
+  input: Pick<
+    GenerateModuleTexInput,
+    "titleStatement" | "inhaltStatement" | "lernzieleStatement"
+  >,
+): FloDownStatement {
+  const sections = [
+    { heading: "Title", statement: input.titleStatement },
+    { heading: "Inhalt", statement: input.inhaltStatement },
+    {
+      heading: "Lernziele und Kompetenzen",
+      statement: input.lernzieleStatement,
+    },
+  ];
+
+  const content: ModulePreviewBlock[] = [];
+  for (const section of sections) {
+    content.push(sectionHeading(section.heading));
+    content.push(...normalizeToRoot(section.statement).content);
+  }
+
+  return content as FloDownStatement;
+}
 
 function buildDocumentUri(
   futureRepo: string,
@@ -119,11 +157,16 @@ async function mountDefinitionDeps(
   );
 }
 
-async function addParagraphBlock(
+async function addModulePreviewBlock(
   fdVisible: FloDownWasmBlock,
-  block: PersistedBlock,
+  block: ModulePreviewBlock,
   identity: { futureRepo: string; filePath: string; fileName: string },
 ) {
+  if (isHeadingNode(block)) {
+    fdVisible.addElement(block);
+    return;
+  }
+
   if (block.type !== "paragraph") return;
 
   fdVisible.addElement(
@@ -187,15 +230,10 @@ export async function generateModuleDescriptionModuleTex(
     }
   }
 
-  for (const statement of [
-    input.titleStatement,
-    input.inhaltStatement,
-    input.lernzieleStatement,
-  ]) {
-    const root = normalizeToRoot(statement);
-    for (const block of root.content) {
-      await addParagraphBlock(fdVisible, block, moduleIdentity);
-    }
+  const moduleStatement = buildModuleDescriptionStatement(input);
+  const previewBlocks = normalizeToRoot(moduleStatement).content as ModulePreviewBlock[];
+  for (const block of previewBlocks) {
+    await addModulePreviewBlock(fdVisible, block, moduleIdentity);
   }
 
   return alive[1].getStex().trimEnd();
@@ -249,10 +287,14 @@ export async function generateModuleDescriptionTexPreview(
 ) {
   const moduleTex = await generateModuleDescriptionModuleTex(input);
 
+  const moduleStatement = buildModuleDescriptionStatement(input);
+
   const definitionTex = await Promise.all(
     input.definitionBlocks.map(async (block) => ({
       fileName: `${block.fileName}.${block.language}.tex`,
       tex: await generateModuleDescriptionDefinitionTex(input.moduleId, block),
+      ftmlStatement: block.statement,
+      declaredSymbols: block.declaredSymbols,
     })),
   );
 
@@ -260,6 +302,7 @@ export async function generateModuleDescriptionTexPreview(
     moduleTex: {
       fileName: `${input.moduleId}.${input.language}.tex`,
       tex: moduleTex,
+      ftmlStatement: moduleStatement,
     },
     definitionTex,
   };
