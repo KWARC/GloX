@@ -2,7 +2,6 @@ import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
 import {
   ActionIcon,
   Badge,
-  Button,
   Box,
   Group,
   HoverCard,
@@ -126,14 +125,26 @@ export function SymbolResult({
             <Stack gap={4} mt="sm">
               {results.map((result) => {
                 if (result.source === "DB") {
+                  const selected =
+                    selectedSymbol?.source === "DB" &&
+                    selectedSymbol.id === result.id;
+
                   return (
                     <Paper
                       key={`db:${result.id}`}
                       withBorder
                       p={4}
-                      bg={selectedSymbol?.source === "DB" && selectedSymbol.id === result.id ? "blue.0" : undefined}
+                      radius="sm"
+                      bg={selected ? "blue.0" : undefined}
+                      style={{
+                        cursor: "pointer",
+                        borderColor: selected
+                          ? "var(--mantine-color-blue-6)"
+                          : undefined,
+                      }}
+                      onClick={() => onSelectSymbol(result)}
                     >
-                      <Group justify="space-between" w="100%">
+                      <Group justify="space-between" w="100%" wrap="nowrap">
                         <HoverCard
                           width="auto"
                           shadow="md"
@@ -142,9 +153,9 @@ export function SymbolResult({
                           zIndex={SYMBOL_RESULT_TOOLTIP_Z_INDEX}
                         >
                           <HoverCard.Target>
-                            <Button variant="subtle" size="xs" px={4} onClick={() => onSelectSymbol(result)}>
+                            <Text component="span" size="xs" fw={500}>
                               {result.symbolName}
-                            </Button>
+                            </Text>
                           </HoverCard.Target>
                           <HoverCard.Dropdown
                             style={{
@@ -154,7 +165,9 @@ export function SymbolResult({
                               overflowY: "auto",
                             }}
                           >
-                            <Text size="xs" fw={600} c="dimmed" mb={4}>Content preview</Text>
+                            <Text size="xs" fw={600} c="dimmed" mb={4}>
+                              Content preview
+                            </Text>
                             <DbSymbolHoverPreview symbolName={result.symbolName} />
                           </HoverCard.Dropdown>
                         </HoverCard>

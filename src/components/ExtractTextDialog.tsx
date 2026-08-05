@@ -77,6 +77,8 @@ interface ExtractTextDialogProps {
   textPlaceholder?: string;
   submitLabel?: string;
   hideSymbolNameField?: boolean;
+  createSymbolFlow?: boolean;
+  symbolNameLabel?: string;
   enableSemanticAuthoring?: boolean;
   semanticEnabled?: boolean;
   setSemanticEnabled?: Dispatch<SetStateAction<boolean>>;
@@ -103,6 +105,8 @@ export function ExtractTextDialog({
   textPlaceholder,
   submitLabel = "Extract",
   hideSymbolNameField = false,
+  createSymbolFlow = false,
+  symbolNameLabel,
   enableSemanticAuthoring = false,
   semanticEnabled = false,
   setSemanticEnabled,
@@ -114,7 +118,13 @@ export function ExtractTextDialog({
   const [editingLocation, setEditingLocation] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const showSymbolNameField =
-    mode === "symbol-target" && !hideSymbolNameField;
+    createSymbolFlow || (mode === "symbol-target" && !hideSymbolNameField);
+  const resolvedSymbolNameLabel =
+    symbolNameLabel ?? (createSymbolFlow ? "New symbol name" : "Symbol name");
+  const contentNameDisabled = createSymbolFlow || paragraphFileNameDisabled;
+  const effectiveBlockType: ExtractBlockType = createSymbolFlow
+    ? "definition"
+    : blockType;
   const filePathSegments = getFilePathSegments(filePath);
   const draftSemantic = useDraftSemanticAuthoring(
     text,
@@ -134,6 +144,18 @@ export function ExtractTextDialog({
       setSymbolicRefDialogOpen(false);
     }
   }, [opened]);
+
+  useEffect(() => {
+    if (!opened || !createSymbolFlow) return;
+    setParagraphFileName(normalizeContentName(symbolName));
+  }, [opened, createSymbolFlow, symbolName, setParagraphFileName]);
+
+  function handleSymbolNameChange(value: string) {
+    setSymbolName?.(value);
+    if (createSymbolFlow) {
+      setParagraphFileName(normalizeContentName(value));
+    }
+  }
 
   function handleTextChange(nextText: string) {
     setText(nextText);
@@ -254,36 +276,45 @@ export function ExtractTextDialog({
               </Stack>
             </Paper>
           )}
+          {showSymbolNameField && (
+            <TextInput
+              label={resolvedSymbolNameLabel}
+              placeholder="e.g. natural number"
+              value={symbolName}
+              disabled={symbolNameDisabled}
+              onChange={(e) => handleSymbolNameChange(e.currentTarget.value)}
+              styles={{ input: { fontWeight: 500 } }}
+            />
+          )}
           <TextInput
             label="Content Name"
             placeholder="e.g. derivative-rules"
             value={paragraphFileName}
-            disabled={paragraphFileNameDisabled}
+            disabled={contentNameDisabled}
             onChange={(e) =>
               setParagraphFileName(normalizeContentName(e.currentTarget.value))
             }
             styles={{ input: { fontWeight: 500 } }}
           />
-          <Select
-            label="Block type"
-            data={EXTRACT_BLOCK_TYPES.map((value) => ({
-              value,
-              label: blockTypeLabel(value),
-            }))}
-            value={blockType}
-            onChange={(value) => {
-              if (value) setBlockType(value as ExtractBlockType);
-            }}
-            allowDeselect={false}
-          />
-          {showSymbolNameField && (
+          {createSymbolFlow ? (
             <TextInput
-              label="Symbol name"
-              placeholder="e.g. derivative"
-              value={symbolName}
-              disabled={symbolNameDisabled}
-              onChange={(e) => setSymbolName?.(e.currentTarget.value)}
+              label="Block type"
+              value={blockTypeLabel("definition")}
+              disabled
               styles={{ input: { fontWeight: 500 } }}
+            />
+          ) : (
+            <Select
+              label="Block type"
+              data={EXTRACT_BLOCK_TYPES.map((value) => ({
+                value,
+                label: blockTypeLabel(value),
+              }))}
+              value={blockType}
+              onChange={(value) => {
+                if (value) setBlockType(value as ExtractBlockType);
+              }}
+              allowDeselect={false}
             />
           )}
 
@@ -386,7 +417,7 @@ export function ExtractTextDialog({
                 if (!cleaned) return;
                 onSubmit({
                   text: cleaned,
-                  blockType,
+                  blockType: effectiveBlockType,
                   statement:
                     enableSemanticAuthoring && semanticEnabled
                       ? draftSemantic.statement
@@ -400,7 +431,7 @@ export function ExtractTextDialog({
               disabled={
                 !text.trim() ||
                 !paragraphFileName.trim() ||
-                (showSymbolNameField && !symbolName.trim())
+                ((showSymbolNameField || createSymbolFlow) && !symbolName.trim())
               }
               leftSection={<IconFileText size={16} />}
             >

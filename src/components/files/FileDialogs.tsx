@@ -91,6 +91,7 @@ export type ExtractionDialogProps = {
   textPlaceholder?: string;
   submitLabel?: string;
   hideSymbolNameField?: boolean;
+  createSymbolFlow?: boolean;
   enableSemanticAuthoring?: boolean;
   semanticEnabled?: boolean;
   setSemanticEnabled?: Dispatch<SetStateAction<boolean>>;
@@ -275,6 +276,7 @@ export function FileDialogs({
         textPlaceholder={extraction.textPlaceholder}
         submitLabel={extraction.submitLabel}
         hideSymbolNameField={extraction.hideSymbolNameField}
+        createSymbolFlow={extraction.createSymbolFlow}
         enableSemanticAuthoring={extraction.enableSemanticAuthoring}
         semanticEnabled={extraction.semanticEnabled}
         setSemanticEnabled={extraction.setSemanticEnabled}

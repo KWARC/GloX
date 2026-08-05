@@ -576,6 +576,9 @@ function RouteComponent() {
             ? "Add Content"
             : undefined,
           hideSymbolNameField: extractionFlow.isMarkReferenceDefinitionFlow,
+          createSymbolFlow:
+            extractionFlow.extractDialogMode === "symbol-target" &&
+            !extractionFlow.isMarkReferenceDefinitionFlow,
           enableSemanticAuthoring: true,
           semanticEnabled: extractionFlow.semanticEnabled,
           setSemanticEnabled: extractionFlow.setSemanticEnabled,

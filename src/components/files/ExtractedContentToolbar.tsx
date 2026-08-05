@@ -7,11 +7,13 @@ export function ExtractedContentToolbar({
   onOpenLatexConfig,
   onCreateDefinition,
   showLatexButton = true,
+  showCreateButton = true,
 }: {
   extractCount: number;
   onOpenLatexConfig: () => void;
   onCreateDefinition: () => void;
   showLatexButton?: boolean;
+  showCreateButton?: boolean;
 }) {
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -53,6 +55,7 @@ export function ExtractedContentToolbar({
           variant="subtle"
           color="teal"
           onClick={onCreateDefinition}
+          style={{ display: showCreateButton ? undefined : "none" }}
         >
           <IconPlus size={isMobile ? 18 : 16} />
         </ActionIcon>

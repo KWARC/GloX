@@ -366,8 +366,7 @@ export function ModuleStatementSection({
         blockType={blockType}
         mode="symbol-target"
         symbolName={symbolName}
-        symbolNameDisabled
-        hideSymbolNameField
+        createSymbolFlow
         filePath={`${exportIdentity.futureRepo}/ ${exportIdentity.defsFilePath}/ ${exportIdentity.language}`}
         setParagraphFileName={setParagraphFileName}
         setBlockType={setBlockType}

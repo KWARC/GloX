@@ -75,6 +75,7 @@ export type StexCurationDialogsProps = {
     filePath: string;
     onClose: () => void;
     onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
+    createSymbolFlow?: boolean;
   };
   createdSymbolDefiniendum: {
     opened: boolean;
@@ -152,6 +153,7 @@ export function StexCurationDialogs({
         blockType={extraction.blockType}
         mode="symbol-target"
         symbolName={extraction.symbolName}
+        createSymbolFlow={extraction.createSymbolFlow}
         setParagraphFileName={extraction.setParagraphFileName}
         setBlockType={extraction.setBlockType}
         setSymbolName={extraction.setSymbolName}

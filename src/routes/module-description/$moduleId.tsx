@@ -1,5 +1,5 @@
-import { FtmlPreview } from "@/components/FtmlPreview";
 import { IndexStatusMenu } from "@/components/IndexStatusMenu";
+import { ModuleDefinitionsSection } from "@/components/module-descriptions/ModuleDefinitionsSection";
 import { ModuleDescriptionLatexModal } from "@/components/module-descriptions/ModuleDescriptionLatexModal";
 import { ModuleStatementSection } from "@/components/module-descriptions/ModuleStatementSection";
 import { generateModuleDescriptionTexPreview } from "@/lib/moduleDescriptionTex";
@@ -11,13 +11,13 @@ import {
   resetModuleSemantics,
   updateModuleDescriptionIndexStatus,
 } from "@/serverFns/moduleDescription.server";
-import { assertFloDownStatement } from "@/types/floDown.types";
 import { INDEX_STATUS_CONFIG, IndexStatus } from "@/types/indexStatus";
 import {
   Alert,
   Badge,
   Box,
   Button,
+  Flex,
   Group,
   Loader,
   Modal,
@@ -27,6 +27,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { currentUser } from "@/server/auth/currentUser";
@@ -49,6 +50,7 @@ export const Route = createFileRoute("/module-description/$moduleId")({
 
 function ModuleDescriptionDetailPage() {
   const { moduleId } = Route.useParams();
+  const isTablet = useMediaQuery("(max-width: 768px)");
   const queryClient = useQueryClient();
   const { data: auth } = useQuery({
     queryKey: ["currentUser"],
@@ -179,27 +181,87 @@ function ModuleDescriptionDetailPage() {
   const mod = data.moduleDescription;
 
   return (
-    <Stack p="md" gap="md" maw={1000} mx="auto" w="100%">
-      <Group justify="space-between" align="flex-start">
-        <Box>
-          <Button component={Link} to="/module-descriptions" variant="subtle" size="compact-sm" mb="xs">
+    <Box
+      p="md"
+      h="100%"
+      w="100%"
+      style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}
+    >
+      <Box mb="md" style={{ flexShrink: 0 }}>
+        <Group gap="sm" align="center" wrap="wrap">
+          <Title order={2}>{title}</Title>
+          <Badge variant="light">{moduleId}</Badge>
+        </Group>
+
+        {mod ? (
+          <Group justify="space-between" align="center" wrap="wrap" mt="md">
+            <Group gap="sm">
+              <Button component={Link} to="/module-descriptions" variant="subtle" size="compact-sm">
+                ← Back to search
+              </Button>
+              <Button variant="light" color="orange" onClick={() => setResetOpen(true)}>
+                Reset semantics
+              </Button>
+              <Button variant="light" color="red" onClick={() => setDeleteOpen(true)}>
+                Delete
+              </Button>
+              {canPreviewTex && (
+                <Button
+                  variant="light"
+                  onClick={() => latexMutation.mutate(mod)}
+                  loading={latexMutation.isPending}
+                >
+                  Preview LaTeX
+                </Button>
+              )}
+            </Group>
+            {canEditStatus ? (
+              <IndexStatusMenu
+                status={mod.indexStatus}
+                disabled={statusMutation.isPending}
+                onStatusChange={(indexStatus: IndexStatus) =>
+                  statusMutation.mutate({
+                    moduleDescriptionId: mod.id,
+                    indexStatus,
+                  })
+                }
+              />
+            ) : (
+              <Badge
+                variant="light"
+                color={INDEX_STATUS_CONFIG[mod.indexStatus].color}
+              >
+                {INDEX_STATUS_CONFIG[mod.indexStatus].label}
+              </Badge>
+            )}
+          </Group>
+        ) : (
+          <Button
+            component={Link}
+            to="/module-descriptions"
+            variant="subtle"
+            size="compact-sm"
+            mt="md"
+          >
             ← Back to search
           </Button>
-          <Title order={2}>{title}</Title>
-          <Group gap="xs" mt="xs">
-            <Badge variant="light">{moduleId}</Badge>
-          </Group>
-        </Box>
-      </Group>
+        )}
+
+        {mod && latexError && (
+          <Alert color="red" title="LaTeX preview failed" mt="md">
+            {latexError}
+          </Alert>
+        )}
+      </Box>
 
       {data.catalogError && (
-        <Alert color="yellow" title="Catalog JSON unavailable">
+        <Alert color="yellow" title="Catalog JSON unavailable" mb="md">
           {data.catalogError}
         </Alert>
       )}
 
       {!mod ? (
-        <Stack gap="md">
+        <Stack gap="md" maw={1000} mx="auto" w="100%" style={{ overflow: "auto" }}>
           <Paper withBorder p="md" radius="md">
             <Title order={4} mb="sm">
               Catalog content
@@ -266,127 +328,75 @@ function ModuleDescriptionDetailPage() {
           </Paper>
         </Stack>
       ) : (
-        <Stack gap="md">
-          <Paper withBorder p="md" radius="md">
-            <Group justify="space-between" align="center">
-              <Text size="sm" fw={600}>
-                Curation status
-              </Text>
-              {canEditStatus ? (
-                <IndexStatusMenu
-                  status={mod.indexStatus}
-                  disabled={statusMutation.isPending}
-                  onStatusChange={(indexStatus) =>
-                    statusMutation.mutate({
-                      moduleDescriptionId: mod.id,
-                      indexStatus,
-                    })
-                  }
+        <Flex
+          gap={isTablet ? "md" : "lg"}
+          style={{ flex: 1, minHeight: 0, overflow: "hidden" }}
+          direction={isTablet ? "column" : "row"}
+        >
+          <Paper
+            flex={isTablet ? undefined : 1}
+            shadow="xs"
+            withBorder
+            radius="md"
+            style={{
+              minHeight: isTablet ? "50%" : undefined,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+              <Stack gap="md" p="md">
+                <ModuleStatementSection
+                  label="Title"
+                  field="titleStatement"
+                  moduleDescriptionId={mod.id}
+                  statement={mod.titleStatement}
+                  exportIdentity={{
+                    futureRepo: mod.futureRepo,
+                    defsFilePath: mod.defsFilePath,
+                    language: mod.language,
+                  }}
+                  editable
+                  onUpdated={() => void refetch()}
                 />
-              ) : (
-                <Badge
-                  variant="light"
-                  color={INDEX_STATUS_CONFIG[mod.indexStatus].color}
-                >
-                  {INDEX_STATUS_CONFIG[mod.indexStatus].label}
-                </Badge>
-              )}
-            </Group>
-          </Paper>
-
-          <Group>
-            <Button variant="light" color="orange" onClick={() => setResetOpen(true)}>
-              Reset semantics
-            </Button>
-            <Button variant="light" color="red" onClick={() => setDeleteOpen(true)}>
-              Delete
-            </Button>
-            {canPreviewTex && (
-              <Button
-                variant="light"
-                onClick={() => mod && latexMutation.mutate(mod)}
-                loading={latexMutation.isPending}
-              >
-                Preview LaTeX
-              </Button>
-            )}
-          </Group>
-
-          {latexError && (
-            <Alert color="red" title="LaTeX preview failed">
-              {latexError}
-            </Alert>
-          )}
-
-          <ModuleStatementSection
-            label="Title"
-            field="titleStatement"
-            moduleDescriptionId={mod.id}
-            statement={mod.titleStatement}
-            exportIdentity={{
-              futureRepo: mod.futureRepo,
-              defsFilePath: mod.defsFilePath,
-              language: mod.language,
-            }}
-            editable
-            onUpdated={() => void refetch()}
-          />
-          <ModuleStatementSection
-            label="Inhalt"
-            field="inhaltStatement"
-            moduleDescriptionId={mod.id}
-            statement={mod.inhaltStatement}
-            exportIdentity={{
-              futureRepo: mod.futureRepo,
-              defsFilePath: mod.defsFilePath,
-              language: mod.language,
-            }}
-            editable
-            onUpdated={() => void refetch()}
-          />
-          <ModuleStatementSection
-            label="Lernziele und Kompetenzen"
-            field="lernzieleStatement"
-            moduleDescriptionId={mod.id}
-            statement={mod.lernzieleStatement}
-            exportIdentity={{
-              futureRepo: mod.futureRepo,
-              defsFilePath: mod.defsFilePath,
-              language: mod.language,
-            }}
-            editable
-            onUpdated={() => void refetch()}
-          />
-
-          <Paper withBorder p="md" radius="md">
-            <Title order={4} mb="sm">
-              Definitions
-            </Title>
-            {mod.definitionBlocks.length === 0 ? (
-              <Text size="sm" c="dimmed">
-                No definitions yet. Add one via Symbolic Ref → Create new symbol.
-              </Text>
-            ) : (
-              <Stack gap="md">
-                {mod.definitionBlocks.map((block) => (
-                  <Paper key={block.id} withBorder p="sm" radius="sm">
-                    <Group gap="xs" mb="xs">
-                      <Badge size="sm">{block.fileName}</Badge>
-                      <Badge size="sm" variant="light">
-                        {block.declaredSymbols.join(", ") || "no symbols"}
-                      </Badge>
-                    </Group>
-                    <FtmlPreview
-                      ftmlAst={assertFloDownStatement(block.statement)}
-                      docId={block.id}
-                      declaredSymbols={block.declaredSymbols}
-                    />
-                  </Paper>
-                ))}
+                <ModuleStatementSection
+                  label="Inhalt"
+                  field="inhaltStatement"
+                  moduleDescriptionId={mod.id}
+                  statement={mod.inhaltStatement}
+                  exportIdentity={{
+                    futureRepo: mod.futureRepo,
+                    defsFilePath: mod.defsFilePath,
+                    language: mod.language,
+                  }}
+                  editable
+                  onUpdated={() => void refetch()}
+                />
+                <ModuleStatementSection
+                  label="Lernziele und Kompetenzen"
+                  field="lernzieleStatement"
+                  moduleDescriptionId={mod.id}
+                  statement={mod.lernzieleStatement}
+                  exportIdentity={{
+                    futureRepo: mod.futureRepo,
+                    defsFilePath: mod.defsFilePath,
+                    language: mod.language,
+                  }}
+                  editable
+                  onUpdated={() => void refetch()}
+                />
               </Stack>
-            )}
+            </Box>
           </Paper>
-        </Stack>
+
+          <ModuleDefinitionsSection
+            moduleId={moduleId}
+            moduleDescriptionId={mod.id}
+            definitionBlocks={mod.definitionBlocks}
+            canPreviewLatex={canPreviewTex}
+          />
+        </Flex>
       )}
 
       <Modal opened={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete module description?">
@@ -433,6 +443,6 @@ function ModuleDescriptionDetailPage() {
           onClose={() => setLatexOpen(false)}
         />
       )}
-    </Stack>
+    </Box>
   );
 }
