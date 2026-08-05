@@ -21,7 +21,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
-import { FtmlPreview } from "./FtmlPreview";
+import { FtmlPreview, type FloDownSymbolContext } from "./FtmlPreview";
 
 interface ExtractedTextPanelProps {
   isLocked?: boolean;
@@ -50,6 +50,7 @@ interface ExtractedTextPanelProps {
   onGoToSourcePage?: (pageNumber: number) => void;
   itemLabels?: Record<string, string>;
   fillHeight?: boolean;
+  symbolContext?: FloDownSymbolContext;
 }
 
 export function ExtractedTextPanel({
@@ -74,6 +75,7 @@ export function ExtractedTextPanel({
   compact = false,
   itemLabels,
   fillHeight = !compact,
+  symbolContext,
 }: ExtractedTextPanelProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [jsonDrafts, setJsonDrafts] = useState<Record<string, string>>({});
@@ -271,6 +273,7 @@ export function ExtractedTextPanel({
                         docId={item.id}
                         ftmlAst={item.statement}
                         declaredSymbols={item.declaredSymbols}
+                        symbolContext={symbolContext}
                       />
 
                       {/* <SuggestedDefinienda item={item} /> */}

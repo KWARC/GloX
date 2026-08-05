@@ -356,6 +356,7 @@ function ModuleDescriptionDetailPage() {
                   modulesFilePath={mod.modulesFilePath}
                   defsFilePath={mod.defsFilePath}
                   language={mod.language}
+                  definitionBlocks={mod.definitionBlocks}
                 />
               </Box>
             </Box>

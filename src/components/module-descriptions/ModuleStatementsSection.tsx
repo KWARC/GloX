@@ -14,8 +14,10 @@ import {
   useModuleStatementSniffyFlow,
 } from "@/hooks/module-descriptions/useModuleStatementSemantics";
 import {
+  collectModuleRegisteredSymbols,
   moduleStatementsToExtractedItems,
   moduleStatementExtractId,
+  type ModuleDefinitionSymbolSource,
   type ModuleStatementField,
 } from "@/lib/moduleStatementExtracts";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
@@ -30,6 +32,7 @@ import { FloDownStatement } from "@/types/floDown.types";
 import { ExtractBlockType } from "@/types/blockType";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
+import type { FloDownSymbolContext } from "@/components/FtmlPreview";
 
 const STATEMENT_LABELS: Record<ModuleStatementField, string> = {
   titleStatement: "Title",
@@ -58,6 +61,7 @@ type ModuleStatementsSectionProps = {
   modulesFilePath: string;
   defsFilePath: string;
   language: string;
+  definitionBlocks: ModuleDefinitionSymbolSource[];
 };
 
 function toCreatedSymbolTarget(
@@ -94,6 +98,7 @@ export function ModuleStatementsSection({
   modulesFilePath,
   defsFilePath,
   language,
+  definitionBlocks,
 }: ModuleStatementsSectionProps) {
   const queryClient = useQueryClient();
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
@@ -132,6 +137,16 @@ export function ModuleStatementsSection({
     () => buildStatementItemLabels(moduleDescriptionId),
     [moduleDescriptionId],
   );
+
+  const symbolContext = useMemo((): FloDownSymbolContext => {
+    return {
+      futureRepo,
+      filePath: modulesFilePath,
+      fileName: moduleId,
+      language,
+      registeredSymbols: collectModuleRegisteredSymbols(definitionBlocks),
+    };
+  }, [definitionBlocks, futureRepo, language, moduleId, modulesFilePath]);
 
   const semanticFlow = useModuleStatementSemantics({
     moduleId,
@@ -297,6 +312,7 @@ export function ModuleStatementsSection({
         extracts={extracts}
         itemLabels={itemLabels}
         fillHeight={false}
+        symbolContext={symbolContext}
         editingId={semanticFlow.editingId}
         selectedId={semanticFlow.lockedByExtractId}
         onToggleEdit={semanticFlow.handleToggleEdit}

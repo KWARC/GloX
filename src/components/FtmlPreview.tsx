@@ -15,10 +15,30 @@ import { useEffect, useRef } from "react";
 
 const EMPTY_DECLARED_SYMBOLS: string[] = [];
 
+export type FloDownSymbolContext = {
+  futureRepo: string;
+  filePath: string;
+  fileName: string;
+  language: string;
+  registeredSymbols: readonly string[];
+};
+
+function symbolContextDep(context: FloDownSymbolContext | undefined): string {
+  if (!context) return "";
+  return [
+    context.futureRepo,
+    context.filePath,
+    context.fileName,
+    context.language,
+    context.registeredSymbols.join("\0"),
+  ].join("\0");
+}
+
 interface FtmlPreviewProps {
   ftmlAst: FloDownStatement;
   docId: string;
   declaredSymbols?: string[];
+  symbolContext?: FloDownSymbolContext;
 }
 
 type FloDownWasmBlock = {
@@ -40,6 +60,7 @@ export function FtmlPreview({
   ftmlAst,
   docId,
   declaredSymbols = EMPTY_DECLARED_SYMBOLS,
+  symbolContext,
 }: FtmlPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
@@ -60,20 +81,33 @@ export function FtmlPreview({
 
       floDown.setBackendUrl("https://mathhub.info");
 
-      const fdHidden = floDown.FloDown.fromUri(
-        `http://temp-hidden?a=temp&d=${docId}&l=en`,
-      );
+      const visibleDocUri = symbolContext
+        ? `http://${symbolContext.futureRepo}?a=${symbolContext.filePath}&d=${symbolContext.fileName}&l=${symbolContext.language}`
+        : `http://temp-visible?a=temp&d=${docId}&l=en`;
+      const hiddenDocUri = symbolContext
+        ? `http://hidden?a=temp&d=${symbolContext.fileName}&l=${symbolContext.language}`
+        : `http://temp-hidden?a=temp&d=${docId}&l=en`;
+
+      const fdHidden = floDown.FloDown.fromUri(hiddenDocUri);
       hiddenEl.innerHTML = "";
       fdHidden.mountTo(hiddenEl);
       hiddenEl.style.display = "none";
 
-      const fdVisible = floDown.FloDown.fromUri(
-        `http://temp-visible?a=temp&d=${docId}&l=en`,
-      );
+      const fdVisible = floDown.FloDown.fromUri(visibleDocUri);
       fdHiddenRef.current = fdHidden;
       fdVisibleRef.current = fdVisible;
       containerEl.innerHTML = "";
       fdVisible.mountTo(containerEl);
+
+      if (symbolContext) {
+        for (const symbol of symbolContext.registeredSymbols) {
+          if (symbol.startsWith("http://") || symbol.startsWith("https://")) {
+            continue;
+          }
+          fdHidden.addSymbolDeclaration(symbol);
+          fdVisible.addSymbolDeclaration(symbol);
+        }
+      }
 
       const root = normalizeToRoot(ftmlAst);
       const declaredOnThisRow = new Set(declaredSymbols);
@@ -87,7 +121,21 @@ export function FtmlPreview({
         }
 
         if (block.type === "paragraph") {
-          fdVisible.addElement(block);
+          if (symbolContext) {
+            fdVisible.addElement(
+              toExportBlock(
+                block,
+                new Map(),
+                symbolContext.futureRepo,
+                symbolContext.filePath,
+                symbolContext.fileName,
+                block,
+                [],
+              ),
+            );
+          } else {
+            fdVisible.addElement(block);
+          }
           continue;
         }
 
@@ -174,7 +222,7 @@ export function FtmlPreview({
       if (containerEl) containerEl.innerHTML = "";
       if (hiddenEl) hiddenEl.innerHTML = "";
     };
-  }, [ftmlAst, docId, declaredSymbols]);
+  }, [ftmlAst, docId, declaredSymbols, symbolContextDep(symbolContext)]);
 
   return (
     <>

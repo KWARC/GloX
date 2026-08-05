@@ -1,4 +1,4 @@
-import { extractPlainText } from "@/server/ftml/statementContent";
+import { collectDefiniendumUris, extractPlainText } from "@/server/ftml/statementContent";
 import type { ExtractedItem } from "@/server/text-selection";
 import type { FloDownStatement } from "@/types/floDown.types";
 
@@ -68,6 +68,32 @@ export function moduleStatementToExtractedItem({
     fileName: moduleId,
     language: exportIdentity.language,
   };
+}
+
+export type ModuleDefinitionSymbolSource = {
+  declaredSymbols: readonly string[];
+  statement: FloDownStatement;
+};
+
+/** Symbols from module definition blocks that statement symrefs may reference. */
+export function collectModuleRegisteredSymbols(
+  definitionBlocks: readonly ModuleDefinitionSymbolSource[],
+): string[] {
+  const symbols = new Set<string>();
+
+  for (const block of definitionBlocks) {
+    for (const symbol of block.declaredSymbols) {
+      if (symbol.trim()) symbols.add(symbol.trim());
+    }
+
+    for (const uri of collectDefiniendumUris(block.statement)) {
+      if (!uri.startsWith("http://") && !uri.startsWith("https://")) {
+        symbols.add(uri);
+      }
+    }
+  }
+
+  return [...symbols];
 }
 
 export function moduleStatementsToExtractedItems({
