@@ -14,8 +14,8 @@ import {
   useModuleStatementSniffyFlow,
 } from "@/hooks/module-descriptions/useModuleStatementSemantics";
 import {
-  moduleStatementExtractId,
   moduleStatementsToExtractedItems,
+  moduleStatementExtractId,
   type ModuleStatementField,
 } from "@/lib/moduleStatementExtracts";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
@@ -28,7 +28,6 @@ import { createModuleDefinitionBlock } from "@/serverFns/moduleDescription.serve
 import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { FloDownStatement } from "@/types/floDown.types";
 import { ExtractBlockType } from "@/types/blockType";
-import { Stack, Title } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 
@@ -37,6 +36,17 @@ const STATEMENT_LABELS: Record<ModuleStatementField, string> = {
   inhaltStatement: "Inhalt",
   lernzieleStatement: "Lernziele und Kompetenzen",
 };
+
+function buildStatementItemLabels(
+  moduleDescriptionId: string,
+): Record<string, string> {
+  return Object.fromEntries(
+    (Object.keys(STATEMENT_LABELS) as ModuleStatementField[]).map((field) => [
+      moduleStatementExtractId(moduleDescriptionId, field),
+      STATEMENT_LABELS[field],
+    ]),
+  );
+}
 
 type ModuleStatementsSectionProps = {
   moduleId: string;
@@ -116,6 +126,11 @@ export function ModuleStatementsSection({
       lernzieleStatement,
       exportIdentity,
     ],
+  );
+
+  const itemLabels = useMemo(
+    () => buildStatementItemLabels(moduleDescriptionId),
+    [moduleDescriptionId],
   );
 
   const semanticFlow = useModuleStatementSemantics({
@@ -276,43 +291,25 @@ export function ModuleStatementsSection({
     reopenSymbolicRefDialog();
   }
 
-  function renderStatementPanel(field: ModuleStatementField) {
-    const item = extracts.find(
-      (extract) =>
-        extract.id === moduleStatementExtractId(moduleDescriptionId, field),
-    );
-    if (!item) return null;
-
-    return (
-      <Stack key={field} gap="xs">
-        <Title order={4}>{STATEMENT_LABELS[field]}</Title>
-        <ExtractedTextPanel
-          compact
-          extracts={[item]}
-          editingId={semanticFlow.editingId}
-          selectedId={semanticFlow.lockedByExtractId}
-          onToggleEdit={semanticFlow.handleToggleEdit}
-          onUpdate={semanticFlow.handleUpdateExtract}
-          onDelete={() => undefined}
-          onSelection={semanticFlow.handleRightSelection}
-          onOpenSemanticPanel={semanticFlow.handleOpenSemanticPanel}
-          onRecomputeReferences={sniffyFlow.handleRecomputeReferences}
-          showPageNumber={false}
-          showFloDownBlockMeta={false}
-          showDelete={false}
-          showJsonEdit
-        />
-      </Stack>
-    );
-  }
-
   return (
     <>
-      <Stack gap="md">
-        {renderStatementPanel("titleStatement")}
-        {renderStatementPanel("inhaltStatement")}
-        {renderStatementPanel("lernzieleStatement")}
-      </Stack>
+      <ExtractedTextPanel
+        extracts={extracts}
+        itemLabels={itemLabels}
+        fillHeight={false}
+        editingId={semanticFlow.editingId}
+        selectedId={semanticFlow.lockedByExtractId}
+        onToggleEdit={semanticFlow.handleToggleEdit}
+        onUpdate={semanticFlow.handleUpdateExtract}
+        onDelete={() => undefined}
+        onSelection={semanticFlow.handleRightSelection}
+        onOpenSemanticPanel={semanticFlow.handleOpenSemanticPanel}
+        onRecomputeReferences={sniffyFlow.handleRecomputeReferences}
+        showPageNumber={false}
+        showFloDownBlockMeta={false}
+        showDelete={false}
+        showJsonEdit
+      />
 
       {popup && (
         <SelectionPopup

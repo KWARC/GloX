@@ -48,6 +48,8 @@ interface ExtractedTextPanelProps {
   showActions?: boolean;
   showDelete?: boolean;
   onGoToSourcePage?: (pageNumber: number) => void;
+  itemLabels?: Record<string, string>;
+  fillHeight?: boolean;
 }
 
 export function ExtractedTextPanel({
@@ -70,6 +72,8 @@ export function ExtractedTextPanel({
   onEditFloDownBlockMeta,
   isLocked = false,
   compact = false,
+  itemLabels,
+  fillHeight = !compact,
 }: ExtractedTextPanelProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [jsonDrafts, setJsonDrafts] = useState<Record<string, string>>({});
@@ -106,11 +110,11 @@ export function ExtractedTextPanel({
     <Paper
       withBorder={!compact}
       p={compact ? 0 : "md"}
-      h={compact ? "auto" : "100%"}
+      h={fillHeight ? "100%" : "auto"}
       radius="md"
       bg={compact ? "transparent" : "blue.0"}
     >
-      <ScrollArea h={compact ? "auto" : "100%"}>
+      <ScrollArea h={fillHeight ? "100%" : "auto"}>
         <Stack gap={compact ? "xs" : "sm"}>
           {!extracts.length ? (
             <Text size={isMobile ? "md" : "sm"} c="dark" ta="center">
@@ -143,6 +147,10 @@ export function ExtractedTextPanel({
                         {item.pageNumber === null
                           ? `New · ${blockTypeLabel(getTopLevelBlockType(item.statement))}`
                           : `Page ${item.pageNumber} · ${blockTypeLabel(getTopLevelBlockType(item.statement))}`}
+                      </Text>
+                    ) : itemLabels?.[item.id] ? (
+                      <Text size="sm" fw={600}>
+                        {itemLabels[item.id]}
                       </Text>
                     ) : (
                       <div />

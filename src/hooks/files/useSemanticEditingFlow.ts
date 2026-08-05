@@ -4,6 +4,7 @@ import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
 import {
   ExtractedItem,
   TextSelection,
+  TextSelectionOptions,
   useExtractionActions,
   useValidation,
 } from "@/server/text-selection";
@@ -39,10 +40,7 @@ export function useSemanticEditingFlow({
   selection: TextSelection | null;
   handleSelection: (
     source: "left" | "right",
-    options?: {
-      extractId?: string;
-      onLeftSelection?: (text: string) => void;
-    },
+    options?: TextSelectionOptions,
   ) => void;
   clearPopupOnly: () => void;
   clearAll: () => void;
@@ -152,10 +150,12 @@ export function useSemanticEditingFlow({
     setFileName(extract.fileName);
     setLanguage(extract.language);
 
-    setLockedByExtractId(extractId);
     clearError("fileName");
 
-    handleSelection("right", { extractId });
+    handleSelection("right", {
+      extractId,
+      afterCommit: () => setLockedByExtractId(extractId),
+    });
   }
 
   async function handleDefiniendumSubmit(params: DefiniendumSubmitParams) {

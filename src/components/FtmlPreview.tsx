@@ -13,6 +13,8 @@ import {
 } from "@/types/floDown.types";
 import { useEffect, useRef } from "react";
 
+const EMPTY_DECLARED_SYMBOLS: string[] = [];
+
 interface FtmlPreviewProps {
   ftmlAst: FloDownStatement;
   docId: string;
@@ -37,7 +39,7 @@ type FloDownLib = {
 export function FtmlPreview({
   ftmlAst,
   docId,
-  declaredSymbols = [],
+  declaredSymbols = EMPTY_DECLARED_SYMBOLS,
 }: FtmlPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);

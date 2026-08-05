@@ -23,6 +23,12 @@ export type TextSelection = {
   endOffset: number;
 };
 
+export type TextSelectionOptions = {
+  extractId?: string;
+  onLeftSelection?: (text: string) => void;
+  afterCommit?: () => void;
+};
+
 export type ExtractedItem = {
   id: string;
   documentId: string;
@@ -65,15 +71,10 @@ export function useTextSelection() {
 
   function handleSelection(
     source: "left" | "right",
-    options?: {
-      extractId?: string;
-      onLeftSelection?: (text: string) => void;
-    },
+    options?: TextSelectionOptions,
   ) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
-
-    const rect = sel.getRangeAt(0).getBoundingClientRect();
 
     const range = sel.getRangeAt(0);
     const text = sel.toString();
@@ -86,6 +87,7 @@ export function useTextSelection() {
       return;
     }
 
+    const rect = range.getBoundingClientRect();
     const startOffset = range.startOffset;
     const endOffset = range.endOffset;
 
@@ -101,6 +103,8 @@ export function useTextSelection() {
       y: rect.top - 4,
       source,
     });
+
+    options?.afterCommit?.();
 
     if (source === "left" && options?.onLeftSelection) {
       options.onLeftSelection(text);
