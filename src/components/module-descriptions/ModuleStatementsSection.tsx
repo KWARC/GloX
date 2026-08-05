@@ -19,6 +19,7 @@ import {
   moduleStatementExtractId,
   type ModuleStatementField,
 } from "@/lib/moduleStatementExtracts";
+import { buildModuleLocalSymbolUriMap } from "@/lib/moduleLocalSymbols";
 import type { ModuleDefinitionBlock } from "@/lib/moduleDefinitionExtracts";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
 import { useTextSelection } from "@/server/text-selection";
@@ -145,6 +146,15 @@ export function ModuleStatementsSection({
       fileName: moduleId,
       language,
       registeredSymbols: collectModuleRegisteredSymbols(definitionBlocks),
+      localSymbolUriMap: buildModuleLocalSymbolUriMap(definitionBlocks),
+      hoverDefinitions: definitionBlocks.map((block) => ({
+        cacheKey: block.id,
+        statement: block.statement,
+        declaredSymbols: block.declaredSymbols,
+        futureRepo: block.futureRepo,
+        filePath: block.filePath,
+        fileName: block.fileName,
+      })),
     };
   }, [definitionBlocks, futureRepo, language, moduleId, modulesFilePath]);
 

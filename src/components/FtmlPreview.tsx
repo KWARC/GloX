@@ -1,4 +1,8 @@
 import { initFloDown } from "@/lib/flodownClient";
+import {
+  collectDeclaredSymbolsForDefinitionBlock,
+  type ModuleLocalSymbolSource,
+} from "@/lib/moduleLocalSymbols";
 import { toExportBlock } from "@/server/ftml/generateStexFromFtml";
 import {
   collectExternalSymbols,
@@ -15,12 +19,18 @@ import { useEffect, useRef } from "react";
 
 const EMPTY_DECLARED_SYMBOLS: string[] = [];
 
+export type FloDownHoverDefinition = ModuleLocalSymbolSource & {
+  cacheKey: string;
+};
+
 export type FloDownSymbolContext = {
   futureRepo: string;
   filePath: string;
   fileName: string;
   language: string;
   registeredSymbols: readonly string[];
+  localSymbolUriMap: ReadonlyMap<string, string>;
+  hoverDefinitions: readonly FloDownHoverDefinition[];
 };
 
 function symbolContextDep(context: FloDownSymbolContext | undefined): string {
@@ -31,6 +41,15 @@ function symbolContextDep(context: FloDownSymbolContext | undefined): string {
     context.fileName,
     context.language,
     context.registeredSymbols.join("\0"),
+    [...context.localSymbolUriMap.entries()]
+      .map(([label, uri]) => `${label}\0${uri}`)
+      .join("\0"),
+    context.hoverDefinitions
+      .map(
+        (definition) =>
+          `${definition.cacheKey}\0${definition.futureRepo}\0${definition.filePath}\0${definition.fileName}\0${definition.declaredSymbols.join(",")}\0${JSON.stringify(definition.statement)}`,
+      )
+      .join("\0"),
   ].join("\0");
 }
 
@@ -55,6 +74,83 @@ type FloDownLib = {
   setBackendUrl: (url: string) => void;
   FloDown: { fromUri: (uri: string) => FloDownWasmBlock };
 };
+
+async function mountHoverDefinitionInHidden(
+  fdHidden: FloDownWasmBlock,
+  defBlock: FloDownHoverDefinition,
+): Promise<Map<string, string>> {
+  const resolvedUris = new Map<string, string>();
+  const root = normalizeToRoot(defBlock.statement);
+  const declaredOnThisRow = new Set(
+    collectDeclaredSymbolsForDefinitionBlock(defBlock),
+  );
+
+  for (const block of root.content) {
+    if (!isDefinitionNode(block)) continue;
+
+    const def = block as DefinitionNode;
+    const external = collectExternalSymbols(def, declaredOnThisRow);
+
+    const deps =
+      external.length > 0
+        ? await getDefiningDefinitions({
+            data: { labels: external },
+          })
+        : {};
+
+    const hiddenUriMap = new Map<string, string>();
+
+    for (const dep of Object.values(deps)) {
+      for (const label of dep.declaredSymbols) {
+        if (!hiddenUriMap.has(label)) {
+          const hiddenUri = fdHidden.addSymbolDeclaration(label);
+          if (hiddenUri) {
+            hiddenUriMap.set(label, hiddenUri);
+            resolvedUris.set(label, hiddenUri);
+          }
+        }
+      }
+
+      fdHidden.addElement(
+        toExportBlock(
+          dep.definition,
+          hiddenUriMap,
+          defBlock.futureRepo,
+          defBlock.filePath,
+          defBlock.fileName,
+          dep.definition,
+          dep.declaredSymbols,
+        ) as DefinitionNode,
+      );
+    }
+
+    for (const symbol of declaredOnThisRow) {
+      if (!symbol.startsWith("http") && !hiddenUriMap.has(symbol)) {
+        const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
+        if (hiddenUri) {
+          hiddenUriMap.set(symbol, hiddenUri);
+          resolvedUris.set(symbol, hiddenUri);
+        }
+      } else if (hiddenUriMap.has(symbol)) {
+        resolvedUris.set(symbol, hiddenUriMap.get(symbol)!);
+      }
+    }
+
+    fdHidden.addElement(
+      toExportBlock(
+        def,
+        hiddenUriMap,
+        defBlock.futureRepo,
+        defBlock.filePath,
+        defBlock.fileName,
+        def,
+        Array.from(declaredOnThisRow),
+      ) as DefinitionNode,
+    );
+  }
+
+  return resolvedUris;
+}
 
 export function FtmlPreview({
   ftmlAst,
@@ -99,13 +195,20 @@ export function FtmlPreview({
       containerEl.innerHTML = "";
       fdVisible.mountTo(containerEl);
 
+      const statementSymbolUriMap = symbolContext
+        ? new Map(symbolContext.localSymbolUriMap)
+        : null;
+
       if (symbolContext) {
-        for (const symbol of symbolContext.registeredSymbols) {
-          if (symbol.startsWith("http://") || symbol.startsWith("https://")) {
-            continue;
+        for (const defBlock of symbolContext.hoverDefinitions) {
+          const resolvedUris = await mountHoverDefinitionInHidden(
+            fdHidden,
+            defBlock,
+          );
+          if (disposed) return;
+          for (const [label, uri] of resolvedUris) {
+            statementSymbolUriMap!.set(label, uri);
           }
-          fdHidden.addSymbolDeclaration(symbol);
-          fdVisible.addSymbolDeclaration(symbol);
         }
       }
 
@@ -121,11 +224,11 @@ export function FtmlPreview({
         }
 
         if (block.type === "paragraph") {
-          if (symbolContext) {
+          if (symbolContext && statementSymbolUriMap) {
             fdVisible.addElement(
               toExportBlock(
                 block,
-                new Map(),
+                statementSymbolUriMap,
                 symbolContext.futureRepo,
                 symbolContext.filePath,
                 symbolContext.fileName,

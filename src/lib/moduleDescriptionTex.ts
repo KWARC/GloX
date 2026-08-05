@@ -1,9 +1,7 @@
 import { initFloDown } from "@/lib/flodownClient";
+import { buildModuleLocalSymbolUriMap } from "@/lib/moduleLocalSymbols";
 import { toExportBlock } from "@/server/ftml/generateStexFromFtml";
-import {
-  collectDefiniendumUris,
-  collectExternalSymbols,
-} from "@/server/ftml/statementContent";
+import { collectExternalSymbols } from "@/server/ftml/statementContent";
 import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefinitionNode,
@@ -98,58 +96,6 @@ function buildDocumentUri(
   language: string,
 ): string {
   return `http://${futureRepo}?a=${archive}&d=${documentId}&l=${language}`;
-}
-
-function buildLocalSymbolUri(
-  futureRepo: string,
-  filePath: string,
-  fileName: string,
-  symbolName: string,
-): string {
-  return `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${symbolName}`;
-}
-
-function buildModuleLocalSymbolUriMap(
-  definitionBlocks: DefinitionBlockInput[],
-): Map<string, string> {
-  const uriMap = new Map<string, string>();
-
-  for (const block of definitionBlocks) {
-    for (const symbol of block.declaredSymbols) {
-      const label = symbol.trim();
-      if (!label || uriMap.has(label)) continue;
-      uriMap.set(
-        label,
-        buildLocalSymbolUri(
-          block.futureRepo,
-          block.filePath,
-          block.fileName,
-          label,
-        ),
-      );
-    }
-
-    for (const uri of collectDefiniendumUris(block.statement)) {
-      if (
-        uri.startsWith("http://") ||
-        uri.startsWith("https://") ||
-        uriMap.has(uri)
-      ) {
-        continue;
-      }
-      uriMap.set(
-        uri,
-        buildLocalSymbolUri(
-          block.futureRepo,
-          block.filePath,
-          block.fileName,
-          uri,
-        ),
-      );
-    }
-  }
-
-  return uriMap;
 }
 
 async function mountDefinitionDeps(
