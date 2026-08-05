@@ -1,7 +1,7 @@
 import { IndexStatusMenu } from "@/components/IndexStatusMenu";
 import { ModuleDefinitionsSection } from "@/components/module-descriptions/ModuleDefinitionsSection";
 import { ModuleDescriptionLatexModal } from "@/components/module-descriptions/ModuleDescriptionLatexModal";
-import { ModuleStatementSection } from "@/components/module-descriptions/ModuleStatementSection";
+import { ModuleStatementsSection } from "@/components/module-descriptions/ModuleStatementsSection";
 import { generateModuleDescriptionTexPreview } from "@/lib/moduleDescriptionTex";
 import type { TexFilePreview } from "@/lib/moduleDescriptionTex";
 import {
@@ -75,7 +75,7 @@ function ModuleDescriptionDetailPage() {
   } | null>(null);
   const [latexError, setLatexError] = useState<string | null>(null);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["module-description", moduleId],
     queryFn: () => getModuleDescriptionPage({ data: { moduleId } }),
   });
@@ -182,19 +182,18 @@ function ModuleDescriptionDetailPage() {
 
   return (
     <Box
-      p="md"
       h="100%"
       w="100%"
       style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}
     >
       <Box mb="md" style={{ flexShrink: 0 }}>
-        <Group gap="sm" align="center" wrap="wrap">
+        <Group gap="sm" m="xs" align="center" wrap="wrap">
           <Title order={2}>{title}</Title>
           <Badge variant="light">{moduleId}</Badge>
         </Group>
 
         {mod ? (
-          <Group justify="space-between" align="center" wrap="wrap" mt="md">
+          <Group justify="space-between" align="center" wrap="wrap" mt="md" mx="xs">
             <Group gap="sm">
               <Button component={Link} to="/module-descriptions" variant="subtle" size="compact-sm">
                 ← Back to search
@@ -346,47 +345,19 @@ function ModuleDescriptionDetailPage() {
             }}
           >
             <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-              <Stack gap="md" p="md">
-                <ModuleStatementSection
-                  label="Title"
-                  field="titleStatement"
+              <Box p="md">
+                <ModuleStatementsSection
+                  moduleId={moduleId}
                   moduleDescriptionId={mod.id}
-                  statement={mod.titleStatement}
-                  exportIdentity={{
-                    futureRepo: mod.futureRepo,
-                    defsFilePath: mod.defsFilePath,
-                    language: mod.language,
-                  }}
-                  editable
-                  onUpdated={() => void refetch()}
+                  titleStatement={mod.titleStatement}
+                  inhaltStatement={mod.inhaltStatement}
+                  lernzieleStatement={mod.lernzieleStatement}
+                  futureRepo={mod.futureRepo}
+                  modulesFilePath={mod.modulesFilePath}
+                  defsFilePath={mod.defsFilePath}
+                  language={mod.language}
                 />
-                <ModuleStatementSection
-                  label="Inhalt"
-                  field="inhaltStatement"
-                  moduleDescriptionId={mod.id}
-                  statement={mod.inhaltStatement}
-                  exportIdentity={{
-                    futureRepo: mod.futureRepo,
-                    defsFilePath: mod.defsFilePath,
-                    language: mod.language,
-                  }}
-                  editable
-                  onUpdated={() => void refetch()}
-                />
-                <ModuleStatementSection
-                  label="Lernziele und Kompetenzen"
-                  field="lernzieleStatement"
-                  moduleDescriptionId={mod.id}
-                  statement={mod.lernzieleStatement}
-                  exportIdentity={{
-                    futureRepo: mod.futureRepo,
-                    defsFilePath: mod.defsFilePath,
-                    language: mod.language,
-                  }}
-                  editable
-                  onUpdated={() => void refetch()}
-                />
-              </Stack>
+              </Box>
             </Box>
           </Paper>
 

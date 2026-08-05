@@ -22,6 +22,11 @@ type UseSniffyReferenceSuggestionsParams = {
   retryCatalog?: () => Promise<void>;
   invalidate: () => Promise<unknown>;
   refetchFloDownBlocks: () => Promise<ExtractedItem[]>;
+  applySymbolicRef?: (params: {
+    extractId: string;
+    selection: { text: string; startOffset: number; endOffset: number };
+    symRef: UnifiedSymbolicReference;
+  }) => Promise<void>;
 };
 
 export function useSniffyReferenceSuggestions({
@@ -32,6 +37,7 @@ export function useSniffyReferenceSuggestions({
   retryCatalog,
   invalidate,
   refetchFloDownBlocks,
+  applySymbolicRef,
 }: UseSniffyReferenceSuggestionsParams) {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestLoading, setSuggestLoading] = useState(false);
@@ -142,17 +148,29 @@ export function useSniffyReferenceSuggestions({
       suggestCandidateSymRefs[getSuggestedReferenceCandidateKey(candidate)];
     if (!symRef) return;
 
-    await symbolicRef({
-      data: {
-        floDownBlockId: activeFloDownBlockId,
+    if (applySymbolicRef) {
+      await applySymbolicRef({
+        extractId: activeFloDownBlockId,
         selection: {
           text: s.text,
           startOffset: s.localStartOffset,
           endOffset: s.localEndOffset,
         },
         symRef,
-      },
-    });
+      });
+    } else {
+      await symbolicRef({
+        data: {
+          floDownBlockId: activeFloDownBlockId,
+          selection: {
+            text: s.text,
+            startOffset: s.localStartOffset,
+            endOffset: s.localEndOffset,
+          },
+          symRef,
+        },
+      });
+    }
 
     setSuggestLoading(true);
     try {

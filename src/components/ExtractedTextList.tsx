@@ -46,6 +46,7 @@ interface ExtractedTextPanelProps {
   showFloDownBlockMetaIconOnly?: boolean;
   showJsonEdit?: boolean;
   showActions?: boolean;
+  showDelete?: boolean;
   onGoToSourcePage?: (pageNumber: number) => void;
 }
 
@@ -64,6 +65,7 @@ export function ExtractedTextPanel({
   showFloDownBlockMetaIconOnly = false,
   showJsonEdit = true,
   showActions = true,
+  showDelete = true,
   onGoToSourcePage,
   onEditFloDownBlockMeta,
   isLocked = false,
@@ -160,16 +162,18 @@ export function ExtractedTextPanel({
                             </ActionIcon>
                           </Tooltip>
                         )}
-                        <Tooltip label="Delete content" withArrow>
-                          <ActionIcon
-                            size={compact ? 22 : isMobile ? "md" : "sm"}
-                            color="red"
-                            disabled={isLocked}
-                            onClick={() => onDelete(item.id)}
-                          >
-                            <IconTrash size={14} />
-                          </ActionIcon>
-                        </Tooltip>
+                        {showDelete && (
+                          <Tooltip label="Delete content" withArrow>
+                            <ActionIcon
+                              size={compact ? 22 : isMobile ? "md" : "sm"}
+                              color="red"
+                              disabled={isLocked}
+                              onClick={() => onDelete(item.id)}
+                            >
+                              <IconTrash size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
 
                         {showJsonEdit && (
                           <Tooltip
