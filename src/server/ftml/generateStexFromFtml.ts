@@ -39,6 +39,9 @@ function rewriteInlineUris(
 
     if (isDefiniendumNode(item)) {
       const n = item as DefiniendumNode;
+      if (n.uri && uriMap.has(n.uri)) {
+        return { ...n, uri: uriMap.get(n.uri)! };
+      }
       if (n.uri && !isHttp(n.uri) && !uriMap.has(n.uri)) {
         return {
           ...n,
@@ -50,6 +53,9 @@ function rewriteInlineUris(
 
     if (item.type === "symref") {
       const u = item.uri;
+      if (u && uriMap.has(u)) {
+        return { ...item, uri: uriMap.get(u)! };
+      }
       if (u && !isMathHubUri(u)) {
         return {
           ...item,

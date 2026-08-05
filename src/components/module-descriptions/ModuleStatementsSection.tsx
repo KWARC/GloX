@@ -17,9 +17,9 @@ import {
   collectModuleRegisteredSymbols,
   moduleStatementsToExtractedItems,
   moduleStatementExtractId,
-  type ModuleDefinitionSymbolSource,
   type ModuleStatementField,
 } from "@/lib/moduleStatementExtracts";
+import type { ModuleDefinitionBlock } from "@/lib/moduleDefinitionExtracts";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
 import { useTextSelection } from "@/server/text-selection";
 import {
@@ -61,7 +61,7 @@ type ModuleStatementsSectionProps = {
   modulesFilePath: string;
   defsFilePath: string;
   language: string;
-  definitionBlocks: ModuleDefinitionSymbolSource[];
+  definitionBlocks: ModuleDefinitionBlock[];
 };
 
 function toCreatedSymbolTarget(

@@ -153,22 +153,22 @@ export function FtmlPreview({
 
         if (disposed) return;
 
-        const hiddenUriMap = new Map<string, string>();
-        const visibleUriMap = new Map<string, string>();
+        const defHiddenUriMap = new Map<string, string>();
+        const defVisibleUriMap = new Map<string, string>();
 
         for (const dep of Object.values(deps)) {
           for (const label of dep.declaredSymbols) {
-            if (!hiddenUriMap.has(label)) {
+            if (!defHiddenUriMap.has(label)) {
               const hiddenUri = fdHidden.addSymbolDeclaration(label);
-              hiddenUriMap.set(label, hiddenUri);
-              visibleUriMap.set(label, hiddenUri);
+              defHiddenUriMap.set(label, hiddenUri);
+              defVisibleUriMap.set(label, hiddenUri);
             }
           }
 
           fdHidden.addElement(
             toExportBlock(
               dep.definition,
-              hiddenUriMap,
+              defHiddenUriMap,
               "temp",
               "temp",
               docId,
@@ -179,19 +179,19 @@ export function FtmlPreview({
         }
 
         for (const symbol of declaredOnThisRow) {
-          if (!symbol.startsWith("http") && !visibleUriMap.has(symbol)) {
+          if (!symbol.startsWith("http") && !defVisibleUriMap.has(symbol)) {
             const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
             const visibleUri = fdVisible.addSymbolDeclaration(symbol);
 
-            hiddenUriMap.set(symbol, hiddenUri);
-            visibleUriMap.set(symbol, visibleUri);
+            defHiddenUriMap.set(symbol, hiddenUri);
+            defVisibleUriMap.set(symbol, visibleUri);
           }
         }
 
         fdVisible.addElement(
           toExportBlock(
             def,
-            visibleUriMap,
+            defVisibleUriMap,
             "temp",
             "temp",
             docId,

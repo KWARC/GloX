@@ -1,6 +1,9 @@
 import { initFloDown } from "@/lib/flodownClient";
 import { toExportBlock } from "@/server/ftml/generateStexFromFtml";
-import { collectExternalSymbols } from "@/server/ftml/statementContent";
+import {
+  collectDefiniendumUris,
+  collectExternalSymbols,
+} from "@/server/ftml/statementContent";
 import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefinitionNode,
@@ -97,6 +100,58 @@ function buildDocumentUri(
   return `http://${futureRepo}?a=${archive}&d=${documentId}&l=${language}`;
 }
 
+function buildLocalSymbolUri(
+  futureRepo: string,
+  filePath: string,
+  fileName: string,
+  symbolName: string,
+): string {
+  return `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${symbolName}`;
+}
+
+function buildModuleLocalSymbolUriMap(
+  definitionBlocks: DefinitionBlockInput[],
+): Map<string, string> {
+  const uriMap = new Map<string, string>();
+
+  for (const block of definitionBlocks) {
+    for (const symbol of block.declaredSymbols) {
+      const label = symbol.trim();
+      if (!label || uriMap.has(label)) continue;
+      uriMap.set(
+        label,
+        buildLocalSymbolUri(
+          block.futureRepo,
+          block.filePath,
+          block.fileName,
+          label,
+        ),
+      );
+    }
+
+    for (const uri of collectDefiniendumUris(block.statement)) {
+      if (
+        uri.startsWith("http://") ||
+        uri.startsWith("https://") ||
+        uriMap.has(uri)
+      ) {
+        continue;
+      }
+      uriMap.set(
+        uri,
+        buildLocalSymbolUri(
+          block.futureRepo,
+          block.filePath,
+          block.fileName,
+          uri,
+        ),
+      );
+    }
+  }
+
+  return uriMap;
+}
+
 async function mountDefinitionDeps(
   fdHidden: FloDownWasmBlock,
   fdVisible: FloDownWasmBlock,
@@ -161,6 +216,7 @@ async function addModulePreviewBlock(
   fdVisible: FloDownWasmBlock,
   block: ModulePreviewBlock,
   identity: { futureRepo: string; filePath: string; fileName: string },
+  localSymbolUriMap: Map<string, string>,
 ) {
   if (isHeadingNode(block)) {
     fdVisible.addElement(block);
@@ -172,7 +228,7 @@ async function addModulePreviewBlock(
   fdVisible.addElement(
     toExportBlock(
       block,
-      new Map(),
+      localSymbolUriMap,
       identity.futureRepo,
       identity.filePath,
       identity.fileName,
@@ -202,18 +258,14 @@ export async function generateModuleDescriptionModuleTex(
   const floDown = (await initFloDown()) as FloDownLib;
   floDown.setBackendUrl(FLODOWN_BACKEND_URL);
 
-  const { fdHidden, fdVisible } = await initFloDownBlocks(
-    floDown,
+  const fdVisible = floDown.FloDown.fromUri(
     buildDocumentUri(
       input.futureRepo,
       input.modulesFilePath,
       input.moduleId,
       input.language,
     ),
-    buildDocumentUri("hidden", "temp", input.moduleId, input.language),
   );
-
-  const alive: FloDownWasmBlock[] = [fdHidden, fdVisible];
 
   const moduleIdentity = {
     futureRepo: input.futureRepo,
@@ -221,22 +273,22 @@ export async function generateModuleDescriptionModuleTex(
     fileName: input.moduleId,
   };
 
-  // Register symbols from definition files so symrefs in module fields resolve,
-  // but do not embed definition content in the module .tex file.
-  for (const defBlock of input.definitionBlocks) {
-    for (const sym of defBlock.declaredSymbols) {
-      fdHidden.addSymbolDeclaration(sym);
-      fdVisible.addSymbolDeclaration(sym);
-    }
-  }
+  const localSymbolUriMap = buildModuleLocalSymbolUriMap(
+    input.definitionBlocks,
+  );
 
   const moduleStatement = buildModuleDescriptionStatement(input);
   const previewBlocks = normalizeToRoot(moduleStatement).content as ModulePreviewBlock[];
   for (const block of previewBlocks) {
-    await addModulePreviewBlock(fdVisible, block, moduleIdentity);
+    await addModulePreviewBlock(
+      fdVisible,
+      block,
+      moduleIdentity,
+      localSymbolUriMap,
+    );
   }
 
-  return alive[1].getStex().trimEnd();
+  return fdVisible.getStex().trimEnd();
 }
 
 export async function generateModuleDescriptionDefinitionTex(
