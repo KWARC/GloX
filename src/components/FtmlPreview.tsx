@@ -71,7 +71,6 @@ type FloDownWasmBlock = {
 };
 
 type FloDownLib = {
-  setBackendUrl: (url: string) => void;
   FloDown: { fromUri: (uri: string) => FloDownWasmBlock };
 };
 
@@ -174,8 +173,6 @@ export function FtmlPreview({
     (async () => {
       const floDown = (await initFloDown()) as FloDownLib;
       if (disposed) return;
-
-      floDown.setBackendUrl("https://mathhub.info");
 
       const visibleDocUri = symbolContext
         ? `http://${symbolContext.futureRepo}?a=${symbolContext.filePath}&d=${symbolContext.fileName}&l=${symbolContext.language}`

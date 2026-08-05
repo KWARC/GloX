@@ -13,8 +13,6 @@ import {
   PersistedBlock,
 } from "@/types/floDown.types";
 
-const FLODOWN_BACKEND_URL = "https://mmt.beta.vollki.kwarc.info";
-
 export type DefinitionBlockInput = {
   id: string;
   statement: FloDownStatement;
@@ -53,7 +51,6 @@ type FloDownWasmBlock = {
 };
 
 type FloDownLib = {
-  setBackendUrl: (url: string) => void;
   FloDown: { fromUri: (uri: string) => FloDownWasmBlock };
 };
 
@@ -202,7 +199,6 @@ export async function generateModuleDescriptionModuleTex(
   }
 
   const floDown = (await initFloDown()) as FloDownLib;
-  floDown.setBackendUrl(FLODOWN_BACKEND_URL);
 
   const fdVisible = floDown.FloDown.fromUri(
     buildDocumentUri(
@@ -246,7 +242,6 @@ export async function generateModuleDescriptionDefinitionTex(
   }
 
   const floDown = (await initFloDown()) as FloDownLib;
-  floDown.setBackendUrl(FLODOWN_BACKEND_URL);
 
   const { fdHidden, fdVisible } = await initFloDownBlocks(
     floDown,

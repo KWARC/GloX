@@ -30,7 +30,6 @@ type FloDownBlock = {
 };
 
 type FloDownLib = {
-  setBackendUrl: (url: string) => void;
   FloDown: { fromUri: (uri: string) => FloDownBlock };
 };
 
@@ -106,7 +105,6 @@ export async function buildMarkReferenceLatex(
   if (typeof window === "undefined") return "";
 
   const floDown = (await initFloDown()) as FloDownLib;
-  floDown.setBackendUrl("https://mathhub.info");
 
   const fdVisible = floDown.FloDown.fromUri(
     `http://${identity.futureRepo}?a=${identity.filePath}&d=${identity.fileName}&l=${identity.language}`,

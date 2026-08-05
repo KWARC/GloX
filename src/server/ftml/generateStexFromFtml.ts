@@ -102,7 +102,6 @@ export async function generateStexFromFloDown(
   declaredSymbolsPerBlock: readonly (readonly string[])[] = [],
 ): Promise<string> {
   const floDown = await initFloDown();
-  floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
   const fdHidden = floDown.FloDown.fromUri(
     `http://hidden?a=temp&d=${fileName}&l=en`,
