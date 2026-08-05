@@ -60,6 +60,7 @@ function ModuleDescriptionDetailPage() {
   const role = auth?.user?.role;
   const canPreviewTex = role === "ADMIN" || role === "CURATOR";
   const canEditStatus = role === "ADMIN" || role === "CURATOR";
+  const canEditExportIdentityPaths = role === "ADMIN" || role === "CURATOR";
 
   const [futureRepo, setFutureRepo] = useState("courses/FAU/module-descriptions");
   const [modulesFilePath, setModulesFilePath] = useState("modules");
@@ -311,10 +312,14 @@ function ModuleDescriptionDetailPage() {
               Export identity
             </Title>
             <Stack gap="sm">
-              <TextInput label="futureRepo" value={futureRepo} onChange={(e) => setFutureRepo(e.currentTarget.value)} />
-              <TextInput label="modules path" value={modulesFilePath} onChange={(e) => setModulesFilePath(e.currentTarget.value)} />
-              <TextInput label="defs path" value={defsFilePath} onChange={(e) => setDefsFilePath(e.currentTarget.value)} />
-              <TextInput label="language" value={language} onChange={(e) => setLanguage(e.currentTarget.value)} />
+              {canEditExportIdentityPaths && (
+                <>
+                  <TextInput label="futureRepo" value={futureRepo} onChange={(e) => setFutureRepo(e.currentTarget.value)} />
+                  <TextInput label="modules path" value={modulesFilePath} onChange={(e) => setModulesFilePath(e.currentTarget.value)} />
+                  <TextInput label="defs path" value={defsFilePath} onChange={(e) => setDefsFilePath(e.currentTarget.value)} />
+                </>
+              )}
+              <TextInput label="language (de/en)" value={language} onChange={(e) => setLanguage(e.currentTarget.value)} />
             </Stack>
             <Button
               mt="md"
