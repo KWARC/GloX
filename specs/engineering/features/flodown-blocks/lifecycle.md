@@ -20,10 +20,42 @@ code:
 Owns creation, versioning, cascade deletion of symrefs, status management, and export identity for
 FloDown blocks — the curated FTML content unit.
 
+**Sources of truth:** `prisma/schema.prisma` (persistence); FTML inline semantics on
+`FloDownBlock.statement` (not legacy `SymbolicReference` / `DefinitionSymbolicRef` tables).
+
 Out of scope (sibling specs):
 
 - Symbol registry and propagation — `symbols-semantics` PRD (no SDD yet)
 - sTeX export pipeline — `curation-export` PRD (no SDD yet)
+- FTML statement shapes — [`ftml.md`](../../external-deps/libraries/ftml.md)
+
+### Naming layers
+
+Do not conflate these vocabularies:
+
+| Layer | Examples | Meaning |
+| --- | --- | --- |
+| **FloDown runtime** | `addElement`, `addSymbolDeclaration`, `{ type: "definition" }` | WASM API and FTML block shapes |
+| **Prisma / DB** | `FloDownBlock`, `FloDownBlockVersion`, `FloDownBlockStatus` | Persisted curation rows |
+| **App code** | `floDownBlock`, `ExtractedItem`, `FtmlBlock`, `ExtractBlockType` | API, UI, and server functions |
+
+Page text highlights use **extract** (curated block text) vs **mark reference** (index mention) —
+see [`documents-extraction`](../../../prds/domains/documents-extraction.md).
+
+### Entity relationships
+
+```mermaid
+erDiagram
+  User ||--o{ Document : owns
+  Document ||--o{ DocumentPage : has
+  Document ||--o{ FloDownBlock : contains
+  DocumentPage ||--o{ FloDownBlock : anchors
+  FloDownBlock ||--o{ FloDownBlockVersion : versions
+  FloDownBlock }o..o| Symbol : "FTML declare or reference"
+```
+
+**Sibling entities** (other PRDs): `MarkReference` and `LatexTable` on `Document`;
+`LlmSuggestion` artifacts are advisory — accepted output is written to `statement`.
 
 ## Architecture boundaries
 
@@ -48,7 +80,18 @@ Out of scope (sibling specs):
 | `statement` | JSON (FTML) | `definition` or `paragraph` per `statement.type` |
 | `declaredSymbols` | `string[]` | Symbol names introduced via symdecl definienda |
 | `currentVersion` | int | Incremented on each edit |
-| Export identity | `futureRepo`, `filePath`, `fileName`, `language` | Defaults: `smglom/Glox`, `mod`, `Glox`, `en` |
+| Export identity | `futureRepo`, `filePath`, `fileName`, `language` | Set at creation from Document or module context |
+
+`Document` stores `futureRepo`, `filePath`, and `language` only (no `fileName`). Rows sharing the
+same four-field identity on FloDown blocks export as one sTeX module.
+
+### App DTOs (not DB)
+
+| Type | Role |
+| --- | --- |
+| `ExtractedItem` | List/edit flows — see `src/server/text-selection.ts` |
+| `FloDownBlockSemantic` | Semantic panel — `id`, `statement` — see `src/types/Semantic.types.ts` |
+| `UnifiedSymbolicReference` | Symref picker value before URI is written to FTML — see `SymbolicRef.types.ts` |
 
 ## Business rules
 
@@ -88,6 +131,12 @@ that identity have a different status, the system MUST abort and return a confli
 
 **Upstream:** R-FDB-06
 
+**S-FDB-06a (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST update
+`futureRepo`, `filePath`, and `language` on FloDown blocks for that Document and MUST leave each
+block's `statement` JSON unchanged.
+
+**Upstream:** R-DOC-09, R-DOC-10
+
 ### Access control
 
 **S-FDB-07 (Ubiquitous):** All FloDown block mutations MUST require an authenticated session.
@@ -109,6 +158,7 @@ that Document or holds Admin role before proceeding.
 | S-FDB-04 | R-FDB-04 | Gap |
 | S-FDB-05 | R-FDB-05 | Gap |
 | S-FDB-06 | R-FDB-06 | Gap |
+| S-FDB-06a | R-DOC-09, R-DOC-10 | Gap |
 | S-FDB-07 | R-FDB-07 | Gap |
 | S-FDB-08 | R-FDB-08 | Gap |
 
@@ -121,4 +171,6 @@ that Document or holds Admin role before proceeding.
 ## Related docs
 
 - [`flodown-blocks.md`](../../../prds/domains/flodown-blocks.md)
+- [`../../external-deps/libraries/ftml.md`](../../external-deps/libraries/ftml.md)
 - [`../auth/auth-sessions.md`](../auth/auth-sessions.md)
+- [`../documents-extraction/upload-and-ownership.md`](../documents-extraction/upload-and-ownership.md) — Document entity, location moves

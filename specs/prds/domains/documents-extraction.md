@@ -36,6 +36,14 @@ file path, language) for MathHub export.
 **R-DOC-06 (Event-Driven):** WHEN an authenticated user requests LLM definition suggestions for their
 Document, the system MUST return cached suggestions when the document content hash is unchanged.
 
+**R-DOC-09 (Event-Driven):** WHEN a Document owner or Admin moves a Document's export identity, the
+system MUST update `futureRepo`, `filePath`, and `language` on the Document, its FloDown blocks,
+its `LatexTable` rows, and declaring `Symbol` rows in one transaction.
+
+**R-DOC-10 (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST leave
+FloDown block `statement` JSON unchanged (local symref and definiendum `uri` values keep their
+`symbolName` strings).
+
 ### Binding operator / compliance promises
 
 **R-DOC-07 (Ubiquitous):** The system MUST NOT allow unauthenticated users to upload, list, or delete
@@ -67,6 +75,8 @@ user's Document.
 | R-DOC-06 | Gap |
 | R-DOC-07 | `upload-and-ownership.md` S-DOC-07 |
 | R-DOC-08 | `upload-and-ownership.md` S-DOC-08 |
+| R-DOC-09 | `upload-and-ownership.md` S-DOC-09 |
+| R-DOC-10 | `upload-and-ownership.md` S-DOC-09 |
 
 ## Related docs
 

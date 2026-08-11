@@ -40,10 +40,15 @@ Out of scope:
 | Enum | Values |
 | --- | --- |
 | `DocumentStatus` | `UPLOADED`, `TEXT_EXTRACTED`, `FAILED` |
+| `IndexStatus` (optional on Document) | `EXTRACTED`, `FINALIZED`, `SUBMITTED_TO_MATHHUB` — `null` until first mark reference |
 
 | Constraint | Rule |
 | --- | --- |
 | Unique per user | `@@unique([fileHash, userId])` on Document |
+| Export identity on Document | `futureRepo`, `filePath`, `language` — no `fileName` (per-block on FloDown blocks) |
+
+`DocumentPage` rows anchor FloDown blocks and mark references. `indexStatus` on a Document tracks the
+mark-reference export workflow and is set to `EXTRACTED` when the first mark reference is created.
 
 ## Business rules
 
@@ -81,6 +86,16 @@ session check.
 
 **Upstream:** R-DOC-08
 
+**S-DOC-09 (Event-Driven):** WHEN `moveDocumentLocation` succeeds, the system MUST update
+`futureRepo`, `filePath`, and `language` on the Document, its FloDown blocks, `LatexTable` rows, and
+declaring `Symbol` rows in one transaction, and MUST leave FloDown block `statement` JSON unchanged
+(local inline `uri` values remain the `symbolName` string).
+
+**Upstream:** R-DOC-09, R-DOC-10
+
+**Implementation:** `src/serverFns/documentLocation.server.ts`. FloDown block slice: `lifecycle.md`
+S-FDB-06a.
+
 ## Test mapping
 
 | SDD rule | PRD rule | Test |
@@ -92,6 +107,7 @@ session check.
 | S-DOC-05 | R-DOC-05 | Gap |
 | S-DOC-07 | R-DOC-07 | Gap |
 | S-DOC-08 | R-DOC-08 | Gap |
+| S-DOC-09 | R-DOC-09, R-DOC-10 | Gap |
 
 ## Related docs
 

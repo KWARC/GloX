@@ -33,7 +33,7 @@ Inventory of the `/specs` documentation harness for the GloX repository.
 | `engineering/features/*/` | SDDs for critical areas |
 | `engineering/decisions/jwt-session-fingerprint.md` | Auth session decision |
 | `engineering/external-deps/` | OpenAI, MathHub, FloDown, FTML vendor facts |
-| `ENTITIES.md` | Entity ↔ FloDown mapping |
+| `meta/domain-dictionary.yaml` + `engineering/features/flodown-blocks/lifecycle.md` + `engineering/external-deps/libraries/ftml.md` | Entity ↔ FloDown/FTML mapping (formerly `ENTITIES.md`) |
 
 ## Optional / not yet implemented
 

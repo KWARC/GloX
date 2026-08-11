@@ -71,5 +71,5 @@ pipelines.
 ## Related docs
 
 - [`flodown-blocks.md`](./flodown-blocks.md)
-- [`symbols-semantics.md`](./symbols-semantics.md)
 - [`../../engineering/external-deps/vendors/flodown.md`](../../engineering/external-deps/vendors/flodown.md)
+- [`../../engineering/features/flodown-blocks/lifecycle.md`](../../engineering/features/flodown-blocks/lifecycle.md) — `LatexTable` storage

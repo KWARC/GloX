@@ -119,7 +119,7 @@ terms:
   future_repo:
     preferred: Future repository
     definition: >
-      MathHub archive path prefix where exported content will live (e.g. smglom/Glox,
+      MathHub archive path prefix where exported content will live (e.g. smglom/softeng,
       courses/FAU/module-descriptions).
     technical_anchors:
       - prisma/schema.prisma Document.futureRepo
@@ -152,9 +152,12 @@ terms:
   index_status:
     preferred: Index status
     definition: >
-      Document- or module-level export tracking — EXTRACTED, FINALIZED, or SUBMITTED_TO_MATHHUB.
+      Export workflow state — EXTRACTED, FINALIZED, or SUBMITTED_TO_MATHHUB. On Documents, set when
+      the first mark reference is created (null until then). On ModuleDescription rows, tracks module
+      export progress (defaults to EXTRACTED).
     technical_anchors:
       - prisma/schema.prisma IndexStatus
+      - src/serverFns/markReference.server.ts
 
   mark_reference:
     preferred: Mark reference
@@ -189,3 +192,76 @@ terms:
     technical_anchors:
       - "@flexiformal/ftml"
       - specs/engineering/external-deps/libraries/ftml.md
+
+  extract_block_type:
+    preferred: Extract block type
+    definition: >
+      UI-only choice when creating a FloDown block — definition (definiendum editing) or paragraph
+      (symref only). Maps to statement.type in FTML.
+    technical_anchors:
+      - src/types/blockType.ts
+
+  ftml_block:
+    preferred: FTML block
+    definition: >
+      TypeScript shape for one top-level block in a FloDown block statement — definition or paragraph.
+    technical_anchors:
+      - src/types/floDown.types.ts
+
+  symdecl:
+    preferred: symdecl
+    definition: >
+      GloX-only flag on a definiendum inline node — true declares a local Symbol; false references only.
+    technical_anchors:
+      - src/types/floDown.types.ts
+
+  for_symbols:
+    preferred: for_symbols
+    definition: >
+      FTML field on a definition block listing declared symbol URIs introduced by that definition.
+    technical_anchors:
+      - src/types/floDown.types.ts
+
+  extract:
+    preferred: Extract
+    definition: >
+      Page-text highlight for curated FloDown block content (contrasts with mark reference for index
+      mentions).
+    technical_anchors:
+      - src/server/text-selection.ts
+
+  sniffy:
+    preferred: Sniffy
+    definition: >
+      Automatic symref suggestion tool in the extraction and curation UI.
+    technical_anchors:
+      - src/hooks/files/useSniffyFlow.ts
+
+  unified_symbolic_reference:
+    preferred: Unified symbolic reference
+    definition: >
+      In-memory symref picker value — either a MathHub URI or a local Symbol keyed by export identity.
+      Only the resolved URI is written into FTML.
+    technical_anchors:
+      - src/server/document/SymbolicRef.types.ts
+
+  document_page:
+    preferred: Document page
+    definition: >
+      One page of extracted text from an uploaded Document; anchors FloDown blocks and mark references.
+    technical_anchors:
+      - prisma/schema.prisma DocumentPage
+
+  latex_table:
+    preferred: LaTeX table
+    definition: >
+      Generated sTeX and version history for a Document, keyed by export identity.
+    technical_anchors:
+      - prisma/schema.prisma LatexTable
+
+  flo_down_block_version:
+    preferred: FloDown block version
+    definition: >
+      Snapshot of statement and originalText after each FloDown block edit.
+    technical_anchors:
+      - prisma/schema.prisma FloDownBlockVersion

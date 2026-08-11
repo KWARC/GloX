@@ -39,15 +39,15 @@ Follow [Kent C. Dodds' Testing Trophy](https://kentcdodds.com/blog/the-testing-t
 as stated in REVIEW_GUIDE §2:
 
 ```
-        ╱╲
-       ╱E2E╲          Thin — browser journeys (when Playwright is added)
+        ╱ ╲
+       ╱E2E ╲          Thin — browser journeys (when Playwright is added)
       ╱──────╲
      ╱ Integr.╲       Bulk — server functions, domain helpers, real Postgres
     ╱──────────╲
-   ╱    Unit    ╲     Narrow — pure transforms (FTML URI rewrite, text offsets)
+    ╲   Unit   ╱     Narrow — pure transforms (FTML URI rewrite, text offsets)
+    ╱──────────╲
+   ╱   Static   ╲  Always — `pnpm typecheck`, lint when added
   ╱──────────────╲
- ╱ Static analysis ╲  Always — `pnpm typecheck`, lint when added
-╱────────────────────╲
 ```
 
 ### 1.1 Coverage goal

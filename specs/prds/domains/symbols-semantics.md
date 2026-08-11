@@ -4,7 +4,8 @@ featured: false
 upstream:
   - glox
 compliance: []
-code: []
+code:
+  - specs/engineering/features/symbols-semantics/registry.md
 ---
 
 # PRD: Symbols & semantics
@@ -33,6 +34,10 @@ the Symbol's confirmed flag and MUST record the confirming user.
 **R-SYM-05 (Event-Driven):** WHEN a user searches the symbolic catalog, the system MUST return
 stemmed matches for the query language (English, German, or French).
 
+**R-SYM-08 (Event-Driven):** WHEN a Curator or Admin attempts to delete a Symbol, IF any non-discarded
+FloDown block declares that symbol (matching export identity and `symbolName`), the system MUST reject
+the deletion.
+
 ### Binding operator / compliance promises
 
 **R-SYM-06 (Ubiquitous):** The system MUST NOT allow Extractor-role users to delete unassociated
@@ -50,7 +55,8 @@ Symbols or symrefs.
 
 - FloDown block version lifecycle — see `flodown-blocks.md`
 - MathHub backend behavior — see `external-deps/vendors/mathhub.md`
-- Mark references (page-level mentions) — lightweight feature; no separate SDD yet
+- Mark references (page-level mentions) — lightweight feature; no separate SDD yet. Distinct from
+  FTML `symref`; see [`domain-dictionary.yaml`](../../meta/domain-dictionary.yaml) `mark_reference`.
 
 ## Traceability
 
@@ -63,8 +69,10 @@ Symbols or symrefs.
 | R-SYM-05 | Gap |
 | R-SYM-06 | Gap |
 | R-SYM-07 | Gap |
+| R-SYM-08 | `registry.md` S-SYM-08 |
 
 ## Related docs
 
+- [`registry.md`](../../engineering/features/symbols-semantics/registry.md)
 - [`flodown-blocks.md`](./flodown-blocks.md)
 - [`curation-export.md`](./curation-export.md)
