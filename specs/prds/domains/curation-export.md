@@ -27,7 +27,7 @@ the system MUST persist the new FloDown block status.
 final LaTeX with version history keyed by export identity.
 
 **R-CUR-04 (Event-Driven):** WHEN the system generates sTeX from finalized FloDown blocks, the system
-MUST rewrite local Symbol URIs to MathHub-style HTTP URIs before FloDown serialization.
+MUST resolve local symbol references to MathHub-canonical form for export.
 
 **R-CUR-05 (Event-Driven):** WHEN the system exports sTeX, the system MUST inject provenance metadata
 for each contributing FloDown block.
@@ -42,8 +42,8 @@ queue or change FloDown block status on behalf of the curation workflow.
 **Rationale:** Curation is a quality gate before MathHub publication — premature status changes
 publish unreviewed definitions.
 
-**R-CUR-08 (Ubiquitous):** The system MUST NOT generate sTeX with unresolved local symbol URIs when
-a defining definition exists in the export scope.
+**R-CUR-08 (Ubiquitous):** The system MUST NOT generate sTeX with unresolved local symbol references
+when a defining definition exists in the export scope.
 
 **Rationale:** Broken symrefs in exported sTeX corrupt the MathHub archive and downstream assessment
 pipelines.

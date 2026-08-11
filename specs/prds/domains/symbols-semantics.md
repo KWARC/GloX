@@ -25,18 +25,17 @@ system MUST create or associate a Symbol with the block's export identity.
 file path, file name, language) tuple.
 
 **R-SYM-03 (Event-Driven):** WHEN a Curator or Admin applies symbol propagation, the system MUST
-replace matching symref URIs across all affected FloDown block statements and MUST record version
-history for each changed block.
+replace matching local symbol references across all affected FloDown block statements and MUST record
+version history for each changed block.
 
 **R-SYM-04 (Event-Driven):** WHEN a Curator confirms a Symbol is not a duplicate, the system MUST set
 the Symbol's confirmed flag and MUST record the confirming user.
 
-**R-SYM-05 (Event-Driven):** WHEN a user searches the symbolic catalog, the system MUST return
-stemmed matches for the query language (English, German, or French).
+**R-SYM-05 (Event-Driven):** WHEN a user searches the symbolic catalog, the system MUST support
+search in English, German, and French.
 
 **R-SYM-08 (Event-Driven):** WHEN a Curator or Admin attempts to delete a Symbol, IF any non-discarded
-FloDown block declares that symbol (matching export identity and `symbolName`), the system MUST reject
-the deletion.
+FloDown block declares that symbol at the same export identity, the system MUST reject the deletion.
 
 ### Binding operator / compliance promises
 

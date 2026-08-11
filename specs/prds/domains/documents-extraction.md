@@ -37,12 +37,11 @@ file path, language) for MathHub export.
 Document, the system MUST return cached suggestions when the document content hash is unchanged.
 
 **R-DOC-09 (Event-Driven):** WHEN a Document owner or Admin moves a Document's export identity, the
-system MUST update `futureRepo`, `filePath`, and `language` on the Document, its FloDown blocks,
-its `LatexTable` rows, and declaring `Symbol` rows in one transaction.
+system MUST update the Document and all dependent curated content (FloDown blocks, symbols, and
+export artifacts) in one transaction.
 
 **R-DOC-10 (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST leave
-FloDown block `statement` JSON unchanged (local symref and definiendum `uri` values keep their
-`symbolName` strings).
+existing inline symbol references in block content unchanged.
 
 ### Binding operator / compliance promises
 

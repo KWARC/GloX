@@ -18,4 +18,8 @@ Copy [`_TEMPLATE/index.md`](./_TEMPLATE/index.md). Rules: [spec-authoring §5.1]
 
 | Area | Location |
 | --- | --- |
-| *(add topic folders as you backfill)* | `engineering/features/<domain>/` |
+| Auth | `engineering/features/auth/` |
+| Documents & extraction | `engineering/features/documents-extraction/` |
+| FloDown blocks | `engineering/features/flodown-blocks/` |
+| Symbols | `engineering/features/symbols-semantics/` |
+| Module descriptions | `engineering/features/module-descriptions/` |

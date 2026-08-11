@@ -72,7 +72,7 @@ cookies with `passwordFingerprint` derived from HMAC-SHA256 of the password hash
 **S-AUTH-08 (Ubiquitous):** WHEN `JWT_SECRET` is unset, auth handlers MUST throw server
 misconfiguration rather than issuing or accepting tokens.
 
-**Upstream:** R-AUTH-08
+**Upstream:** D-AUTH-03 (`jwt-session-fingerprint.md`)
 
 ### Password reset
 
@@ -95,7 +95,7 @@ via `validatePassword`.
 
 **S-AUTH-10 (Ubiquitous):** Passwords MUST be hashed with bcrypt (10 salt rounds) before storage.
 
-**Upstream:** R-AUTH-10
+**Upstream:** R-AUTH-08, D-AUTH-04
 
 ### Admin & roles
 
@@ -120,9 +120,9 @@ reject with an error.
 | S-AUTH-05 | R-AUTH-05 | Gap |
 | S-AUTH-06 | R-AUTH-06 | Gap |
 | S-AUTH-07 | R-AUTH-07 | Gap |
-| S-AUTH-08 | R-AUTH-08 | Gap |
+| S-AUTH-08 | D-AUTH-03 | Gap |
 | S-AUTH-09 | R-AUTH-09 | Gap |
-| S-AUTH-10 | R-AUTH-10 | Gap |
+| S-AUTH-10 | R-AUTH-08, D-AUTH-04 | Gap |
 
 ## Implementation bugs
 
@@ -133,4 +133,5 @@ reject with an error.
 ## Related docs
 
 - [`auth.md`](../../../prds/domains/auth.md)
-- [`../decisions/jwt-session-fingerprint.md`](../decisions/jwt-session-fingerprint.md)
+- [`../../decisions/jwt-session-fingerprint.md`](../../decisions/jwt-session-fingerprint.md)
+- [`../../decisions/password-storage.md`](../../decisions/password-storage.md)

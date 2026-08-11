@@ -41,22 +41,16 @@ the change.
 
 ### Binding operator / compliance promises
 
-**R-AUTH-08 (Ubiquitous):** The system MUST NOT accept authentication requests when the server JWT
-secret is not configured.
+**R-AUTH-08 (Ubiquitous):** The system MUST NOT store user passwords in plaintext or reversibly
+encrypted form.
 
-**Rationale:** Missing secret allows misconfigured deployments to silently weaken or break session
-integrity — session forgery or total auth outage.
+**Rationale:** Database breach exposes credentials if passwords are not stored using one-way hashing.
 
 **R-AUTH-09 (Ubiquitous):** Passwords MUST require at least eight characters including uppercase,
 lowercase, and a digit.
 
 **Rationale:** Weak passwords increase account takeover risk for documents containing unpublished
 course materials.
-
-**R-AUTH-10 (Ubiquitous):** The system MUST store password hashes using bcrypt; it MUST NOT store
-plaintext passwords.
-
-**Rationale:** Database breach exposes credentials if hashes are absent or reversible.
 
 ## Out of scope
 
@@ -76,11 +70,12 @@ plaintext passwords.
 | R-AUTH-05 | `auth-sessions.md` S-AUTH-05 |
 | R-AUTH-06 | `auth-sessions.md` S-AUTH-06 |
 | R-AUTH-07 | `auth-sessions.md` S-AUTH-07 |
-| R-AUTH-08 | `auth-sessions.md` S-AUTH-08 |
+| R-AUTH-08 | `auth-sessions.md` S-AUTH-10 |
 | R-AUTH-09 | `auth-sessions.md` S-AUTH-09 |
-| R-AUTH-10 | `auth-sessions.md` S-AUTH-10 |
 
 ## Related docs
 
 - [`auth-sessions.md`](../../engineering/features/auth/auth-sessions.md)
+- [`jwt-session-fingerprint.md`](../../engineering/decisions/jwt-session-fingerprint.md)
+- [`password-storage.md`](../../engineering/decisions/password-storage.md)
 - [`glox.md`](../../product/glox.md)

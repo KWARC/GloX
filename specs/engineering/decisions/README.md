@@ -31,7 +31,8 @@ wiring detail (SDD `S-*`), **not** vendor/world facts (`E-*`).
 
 | File | Decision atoms | Status |
 | --- | --- | --- |
-| *(add rows as you accept decisions)* | | |
+| [`jwt-session-fingerprint.md`](./jwt-session-fingerprint.md) | D-AUTH-01…03 | Accepted |
+| [`password-storage.md`](./password-storage.md) | D-AUTH-04 | Accepted |
 
 ## When to write
 
