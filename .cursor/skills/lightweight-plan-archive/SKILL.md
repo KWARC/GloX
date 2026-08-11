@@ -27,11 +27,11 @@ description: >-
 
 ### After plan approval — before code
 
-When touching `apps/next-js-app/`:
+When touching application code (`src/`):
 
-1. Load [`apps/next-js-app/AGENTS.md`](../../../apps/next-js-app/AGENTS.md).
+1. Load [`AGENTS.md`](../../../AGENTS.md).
 2. Read [frontend-skill](../frontend-skill/SKILL.md) and/or [backend-skill](../backend-skill/SKILL.md) for the
-   layers in the approved plan (UI vs API/DB).
+   layers in the approved plan (UI vs server functions / Prisma).
 
 ### After code + review
 

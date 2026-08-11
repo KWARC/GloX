@@ -53,7 +53,7 @@ lightweight/low-stakes work, plain declarative bullets are fine.
 | **Ubiquitous** | The system MUST `<response>` | "The system MUST hash passwords using bcrypt before saving." |
 | **Event-Driven** | WHEN `<trigger>`, the system MUST `<response>` | "WHEN a user switches teams, the system MUST revoke legacy chat access." |
 | **State-Driven** | WHILE `<precondition>`, the system MUST `<response>` | "WHILE `subscription_tier` is 'PRO', the system MUST enforce E2E encryption." |
-| **Optional** | WHERE `<feature active>`, the system MUST `<response>` | "WHERE LaunchDarkly flag `new-checkout` is true, the system MUST route to Stripe Elements." |
+| **Optional** | WHERE `<feature active>`, the system MUST `<response>` | "WHERE `OPENAI_API_KEY` is set, the system MUST offer LLM definition suggestions." |
 
 Use **MUST NOT** for negative guardrails — targets for negative tests
 ([review guide §2](../review/REVIEW_GUIDE.md), [architecture §3](../ai-native-development-architecture.md#specification-gaming-who-tests-the-tests)).
@@ -65,10 +65,9 @@ requirement grammars.
 
 EARS structures the **expectation** only. Capture **why** in a **Rationale** line beneath (omit when obvious):
 
-> **R-ONB-07 (Event-Driven):** WHEN tenant is partner and the user has no partner subscription, the
-> system MUST block product access.
-> **Rationale:** Partner tenants do not use Wald-direct Stripe checkout; access requires a partner
-> entitlement row.
+> **R-AUTH-03 (Event-Driven):** WHEN a user attempts login and email verification is incomplete, the
+> system MUST reject the session.
+> **Rationale:** Unverified accounts must not access document or FloDown data.
 
 ### 2.2 Rule identifiers
 
@@ -76,8 +75,8 @@ Binding specs use **four prefixes** by node kind so IDs never collide:
 
 | Doc type | Prefix | Example |
 | --- | --- | --- |
-| **PRD** (`specs/prds/`) | `R-<AREA>-<NN>` | `R-ONB-01` |
-| **SDD** (`specs/engineering/features/`) | `S-<AREA>-<NN>` | `S-TEAM-14` |
+| **PRD** (`specs/prds/`) | `R-<AREA>-<NN>` | `R-DOC-01` |
+| **SDD** (`specs/engineering/features/`) | `S-<AREA>-<NN>` | `S-FLO-14` |
 | **Decision** (`specs/engineering/decisions/`) | `D-<AREA>-<NN>` | `D-ROUTE-02` |
 | **External fact** (`specs/engineering/external-deps/`) | `E-<AREA>-<NN>` | `E-OPENAI-01`, `E-LIBSODIUM-01` |
 
@@ -89,7 +88,7 @@ Binding specs use **four prefixes** by node kind so IDs never collide:
 **PRD format:**
 
 ```markdown
-**R-ONB-07 (Event-Driven):** WHEN …, the system MUST …
+**R-DOC-07 (Event-Driven):** WHEN …, the system MUST …
 
 **Rationale:** … (optional)
 ```
@@ -97,9 +96,9 @@ Binding specs use **four prefixes** by node kind so IDs never collide:
 **SDD format:**
 
 ```markdown
-**S-TEAM-07 (Event-Driven):** WHEN …, the system MUST …
+**S-FLO-07 (Event-Driven):** WHEN …, the system MUST …
 
-**Upstream:** R-ONB-04 (omit when obvious).
+**Upstream:** R-DOC-04 (omit when obvious).
 ```
 
 See [§3.2.2](#sdd-upstream) for when to use `**Upstream:**` vs omit.
@@ -107,11 +106,11 @@ See [§3.2.2](#sdd-upstream) for when to use `**Upstream:**` vs omit.
 | Do | Do not |
 | --- | --- |
 | `**S-OPEN-03 (Event-Driven):** WHEN …` in SDDs | `**R-…` EARS rule headers in SDDs |
-| `**R-ONB-03 (Event-Driven):** WHEN …` in PRDs | `**S-…` EARS rule headers in PRDs |
-| Cite PRD rules from SDD prose as `PRD R-ONB-04` or `R-ONB-14 does not apply` | Reuse the same ID in PRD and SDD for different rules |
+| `**R-DOC-03 (Event-Driven):** WHEN …` in PRDs | `**S-…` EARS rule headers in PRDs |
+| Cite PRD rules from SDD prose as `PRD R-DOC-04` or `R-DOC-14 does not apply` | Reuse the same ID in PRD and SDD for different rules |
 | Cite decisions and external facts as `D-ROUTE-02`, `E-OPENAI-01` | Cite decision file paths instead of `D-*` atoms |
-| Contiguous IDs per file | Nested prefixes (`S-ONB-AUTO-01`, `S-AUTH-REDIR-01`) |
-| Link PRD ↔ SDD in [traceability](#traceability-prd--sdd) tables | Inline PRD→SDD arrows in rule bodies (`→ S-TEAM-09`) |
+| Contiguous IDs per file | Nested prefixes (`S-FLO-AUTO-01`, `S-AUTH-REDIR-01`) |
+| Link PRD ↔ SDD in [traceability](#traceability-prd--sdd) tables | Inline PRD→SDD arrows in rule bodies (`→ S-FLO-09`) |
 | SDD `**Upstream:**` atoms (`R-*` / `D-*` / `E-*`) | SDD prose `**Rationale:**` that re-teaches the PRD |
 
 #### Rule area registry
@@ -120,41 +119,20 @@ Register new areas in this table when adding a PRD/SDD file. One primary `AREA` 
 
 | Area | Doc | File | Notes |
 | --- | --- | --- | --- |
-| `ONB` | PRD | `prds/domains/onboarding.md` | Platform onboarding outcomes |
-| `ENT` | PRD | `prds/commercial/pricing_and_entitlements.md` | Plan-tier gates |
-| `COM` | PRD | `prds/commercial/pricing_and_entitlements.md` | Commercial storefront alignment (`R-COM-*`) |
-| `USE` | PRD | `prds/commercial/premium_engine_usage_limits.md` | Premium engine monthly usage pool |
-| `COMP` | PRD | `prds/compliance/data_privacy_llm_routing.md` (`R-COMP-01`–`03`, `R-COMP-08`) + `customer_data_handling.md` (`R-COMP-04`–`07`) | Shared `COMP` area; IDs contiguous across both files |
-| `MEM` | PRD | `prds/domains/memory.md` | Memory product outcomes |
-| `TEAM` | SDD | `onboarding/team-assignment.md` | `/onboarding` team assignment |
-| `WALD` | SDD | `onboarding/wald-direct-provisioning.md` | Wald CreateTeamFlow + email access gate |
-| `PART` | SDD | `onboarding/partner-activation.md` | Partner P-1/P-2 onboarding |
-| `FIRST` | SDD | `onboarding/first-run-gates.md` | Post-`/chat` PIN, terms, blocks |
-| `GMP` | SDD | `onboarding/gmp-provisioning.md` | GCP Marketplace signup and entitlement wait |
-| `OPEN` | SDD | `onboarding/open-invitation-link-share.md` | Open invitation links |
-| `REDIR` | SDD | `onboarding/auth-entry.md` | Post-auth redirect slice |
-| `AUTH` | SDD | `auth-tenancy/workos-and-isolation.md` | WorkOS session, roles |
-| `PARTNER` | SDD | `billing/partner-entitlement.md` | Partner subscription-server |
-| `STRIPE` | SDD | `billing/wald-stripe.md` | Wald-direct Stripe webhooks |
-| `METER` | SDD | `metering/premium-engine-usage-limits.md` | Usage rollup and pooled limit enforcement |
-| `ROUTE` | SDD | `llm-routing/engine-routing.md` | Engine selection and fallback |
-| `CTX` | PRD | `prds/domains/chat-context-budget.md` | Chat context budget outcomes (`R-CTX-*`) |
-| `CTX` | SDD | `llm-routing/context-budget-enforcement.md` | Synchronous context budget (`S-CTX-*`) |
-| `COMP` | SDD | `llm-routing/context-compaction.md` | Async compaction (`S-COMP-*`) — distinct from PRD `COMP` compliance |
-| `SAN` | SDD | `sanitization/pre-llm-sanitization.md` | Pre-LLM PII redaction |
-| `ENC` | PRD | `prds/compliance/encryption_and_privacy.md` | E2EE Product + Binding outcomes |
-| `ENC` | SDD | `encryption/privacy-and-retention.md` | Key hierarchy, PIN unlock, plan custody, client decrypt |
-| `AREC` | SDD | `encryption/admin-pin-recovery.md` | Admin recovery, PIN reset, audit decrypt |
-| `SENC` | SDD | `encryption/server-chat-encryption.md` | Request-scoped server chat ciphertext persistence |
-| `MEMORY` | SDD | `memory/memory.md` | mem0 integration, enablement, chat hooks |
-| `ROUTE` | Decision | `decisions/engine-routing.md` | Typed engine switches + eligibility (`D-ROUTE-02`, `D-COMP-01`) |
-| `BILL` | Decision | `decisions/billing.md` | Wald Stripe vs partner subscription-server (`D-BILL-*`) |
-| `ENC` | Decision | `decisions/encryption.md` | Doc-store key exposure (`D-ENC-01`); recovery-key plaintext fallback (`D-ENC-02`) |
-| `OPENAI` | External | `external-deps/vendors/openai.md` | OpenAI ZDR/training/residency facts (`E-OPENAI-*`) |
-| `VERTEX` | External | `external-deps/vendors/vertex-ai.md` | Vertex/Gemini contractual facts (`E-VERTEX-*`) |
-| `GROK` | External | `external-deps/vendors/grok.md` | xAI/Grok contractual facts (`E-GROK-*`) |
-| `DEEPSEEK` | External | `external-deps/vendors/deepseek.md` | DeepSeek contractual facts (`E-DEEPSEEK-*`) |
-| `LIBSODIUM` | External | `external-deps/libraries/libsodium.md` | libsodium HKDF/context constraints (`E-LIBSODIUM-*`) |
+| `AUTH` | PRD | `prds/domains/auth.md` | Signup, login, roles, email verification |
+| `DOC` | PRD | `prds/domains/documents-extraction.md` | Upload, ownership, PDF extraction |
+| `FLO` | PRD | `prds/domains/flodown-blocks.md` | FloDown block outcomes |
+| `SYM` | PRD | `prds/domains/symbols-semantics.md` | Symbols, symrefs, propagation |
+| `MOD` | PRD | `prds/domains/module-descriptions.md` | FAU module catalog processing |
+| `CUR` | PRD | `prds/domains/curation-export.md` | Curation, sTeX/MathHub export |
+| `AUTH` | SDD | `features/auth/auth-sessions.md` | JWT sessions, password fingerprint |
+| `DOC` | SDD | `features/documents-extraction/upload-and-ownership.md` | Upload + ownership enforcement |
+| `FLO` | SDD | `features/flodown-blocks/lifecycle.md` | Block CRUD, cascade, version history |
+| `SESS` | Decision | `decisions/jwt-session-fingerprint.md` | Session invalidation on password change (`D-SESS-*`) |
+| `OPENAI` | External | `external-deps/vendors/openai.md` | OpenAI usage constraints (`E-OPENAI-*`) |
+| `MATH` | External | `external-deps/vendors/mathhub.md` | MathHub backend facts (`E-MATH-*`) |
+| `FLOD` | External | `external-deps/vendors/flodown.md` | FloDown WASM / URI facts (`E-FLOD-*`) |
+| `FTML` | External | `external-deps/libraries/ftml.md` | FTML library constraints (`E-FTML-*`) |
 
 ### 2.3 Forbidden language in binding specs
 
@@ -164,10 +142,10 @@ Binding PRDs and SDDs (`/specs/prds/`, `/specs/engineering/features/`) MUST NOT 
 | --- | --- |
 | Process labels (`pilot`, `Phase C`, `draft`, `WIP`) | Nothing — process lives in PR / plan / topic `index.md` |
 | Provenance tags (`[CODE-VERIFIED]`, `[BUG?]`) in rule text | Promote verified behavior into EARS rules; file confirmed defects under `## Implementation bugs` ([§2.5](#open-questions-gaps-and-ownership)) |
-| Inline PRD→SDD arrows in rule bodies (`→ R-ONB-09`) | [Traceability](#traceability-prd--sdd) table |
-| Vague exception prose (`except when partner subscription rules require…`) | `except when R-<AREA>-<NN> applies` — closed rule IDs only |
+| Inline PRD→SDD arrows in rule bodies (`→ R-DOC-09`) | [Traceability](#traceability-prd--sdd) table |
+| Vague exception prose (`except when ownership rules require…`) | `except when R-<AREA>-<NN> applies` — closed rule IDs only |
 | Priority / ordering jargon in PRDs (`higher-priority`, `default path`, `branching logic`) | Name outcomes and rule IDs; put order in SDD precedence table |
-| `block` / `deny` without user-visible next step | State what the user sees and can do (e.g. purchase-required screen with partner link) |
+| `block` / `deny` without user-visible next step | State what the user sees and can do (e.g. email-verification-required screen with resend link) |
 | Open-ended qualifiers (`as appropriate`, `as needed`, `etc.`) | Enumerate explicitly or split into separate rules |
 | Telegraphic shorthand in SDD **Architecture boundaries** (`GMP inactive`, comma-fragment lists, `Surface \| Role` headers) | **Layer \| Responsibility** table; one full sentence per row ([§3.2.1](#321-sdd-prose)) |
 | Index path IDs in binding SDDs (`W-1`, `W-2`, `P-2` from topic `index.md`) | Plain outcome names in Domain context and rules; path IDs stay in non-binding indexes only ([§5.1](#topic-indexes), [§3.4](#agent-review-gate)) |
@@ -187,10 +165,10 @@ bucket** and name the **owner**.
 
 | Bucket | When to use | Owner | Example |
 | --- | --- | --- | --- |
-| **EARS rule** | Behavior is decided and binding | Product + engineering | `S-SAN-06` — `hglatam` skips sanitization |
-| **`## Implementation bugs`** | Spec is right; code is wrong | Engineering | Constant omits live tenant from array |
+| **EARS rule** | Behavior is decided and binding | Product + engineering | `S-FLO-06` — cascade delete rewrites symrefs |
+| **`## Implementation bugs`** | Spec is right; code is wrong | Engineering | Role gate omitted on curator-only server function |
 | **`## Open documentation gaps`** (SDD optional) | True in code; not yet written up | Engineering | Auto Router precedence, perf budgets |
-| **`## Open questions (CEO / finance)`** (PRD/commercial) | Pricing, GTM, rev-share | CEO / finance | Stripe price IDs, partner rev-share |
+| **`## Open questions (product / research)`** (PRD) | Scope, FAUstairs integration priorities | Product lead | MathHub export format commitments |
 | **`pending legal`** (vendor docs) | Contractual fact not yet linked | CEO + legal | ZDR agreement on file |
 | **Topic `index.md` open questions** | Temporary during spec backfill only | Engineering | Delete when promoted to PRD/SDD |
 
@@ -217,7 +195,7 @@ Link them in a **Traceability** section — not inline in rule text. **Test mapp
 
 | PRD rule | SDD rule(s) |
 | --- | --- |
-| R-ONB-01 | `team-assignment.md` S-TEAM-14 |
+| R-DOC-01 | `upload-and-ownership.md` S-DOC-14 |
 ```
 
 **SDD** — required section before Related docs:
@@ -227,7 +205,7 @@ Link them in a **Traceability** section — not inline in rule text. **Test mapp
 
 | SDD rule | PRD rule | Test |
 | --- | --- | --- |
-| S-TEAM-14 | R-ONB-01 | Gap |
+| S-DOC-14 | R-DOC-01 | Gap |
 ```
 
 Use `Gap` in the SDD Test mapping when no automated test exists yet. Every `MUST NOT` MUST have a row
@@ -267,9 +245,9 @@ A PRD **Product** rule MUST be understandable **without reading the SDD** — re
 | Requirement | Example |
 | --- | --- |
 | **Observable state** in WHEN/WHILE | `has pending email invitations` — not `on the default path` |
-| **Exceptions cite rule IDs** | `except when R-ONB-14 applies` — not `except when partner rules require…` |
-| **Blocks include user-visible outcome** | `show purchase-required screen… control to open the partner purchase page` — not `block access` alone |
-| **One testable obligation per rule** | Split invite-offer vs purchaser-skip into R-ONB-02 and R-ONB-14 |
+| **Exceptions cite rule IDs** | `except when R-AUTH-14 applies` — not `except when admin rules require…` |
+| **Blocks include user-visible outcome** | `show email-verification-required screen with resend control` — not `block access` alone |
+| **One testable obligation per rule** | Split upload vs ownership into R-DOC-02 and R-DOC-14 |
 | **Dictionary labels** | `partner subscription`, `business email domain` — not undefined shorthand |
 
 **Authoring workflow (PRD / PRD delta):**
@@ -353,8 +331,8 @@ prose: a reviewer who has not read the code should understand what each layer do
 
 | Do | Do not |
 | --- | --- |
-| `Validates the WorkOS session, loads partner subscription, then auto-provisions or returns client props.` | `Auth cookie, user upsert, subscription lookup, redirect` |
-| `Blocks chat when marketplace entitlement is inactive.` | `GMP inactive` |
+| `Validates JWT session and password fingerprint, then loads the user record.` | `Auth cookie, user upsert, subscription lookup, redirect` |
+| `Blocks export when document ownership check fails.` | `GMP inactive` |
 | `Redirects users without a team to /onboarding.` | `no-team redirect` |
 | Column headers **Layer** \| **Responsibility** | `Surface \| Role`, `Route \| Role` |
 
@@ -439,7 +417,7 @@ is green.
 | --- | --- | --- | --- |
 | 1 | **Telegraphic Domain context** — colon labels and parenthetical lists (`W-2: CreateTeamFlow (payment, PIN…)`) | Pasting from a flow matrix or code skim | Rewrite as 1–3 full sentences ([§3.2.1](#321-sdd-prose)); read aloud — if it sounds like a Jira title, reject |
 | 2 | **Index path IDs in binding SDDs** — `W-1`, `W-2`, `P-2`, etc. | Treating topic `index.md` flow matrix labels as rule IDs | Path IDs live in non-binding indexes only ([§5.1](#topic-indexes)); binding specs use `R-<AREA>-<NN>` (PRD) and `S-<AREA>-<NN>` (SDD) |
-| 3 | **Mixed ID namespaces** — citing `W-*` / `P-*` as if they were `R-ONB-*` or `S-TEAM-*` | Same as #2; shorthand from backfill indexes | From SDDs, cite PRD outcomes as `PRD R-ONB-04`; do not invent parallel path-ID rule schemes |
+| 3 | **Mixed ID namespaces** — citing backfill path IDs as if they were `R-DOC-*` or `S-FLO-*` | Same as #2; shorthand from topic indexes | From SDDs, cite PRD outcomes as `PRD R-DOC-04`; use only registered `R-*` / `S-*` IDs in binding specs |
 | 4 | **Architecture boundaries fragments** — comma lists, `Surface \| Role`, `GMP inactive` | Code audit pasted into Responsibility cells | One or more complete sentences per row; `specs:check-sdd-prose` helps but is not sufficient |
 | 5 | **Open questions left as gaps** — settled product decisions or confirmed code bugs not promoted | Avoiding a call; conflating spec–code drift with policy gaps | Settled product → EARS rules; confirmed code defect → `## Implementation bugs`; delete stale open items ([§2.5](#open-questions-gaps-and-ownership)) |
 | 6 | **Code changed to match stale spec** without owner sign-off | Backfill bias toward “make repo match the new doc” | Confirm product truth first; when spec is right and code is wrong, file **Implementation bugs** — do not silently “fix” code in the same spec PR unless asked |
@@ -474,52 +452,52 @@ Stay DRY across domains:
 
 - **External facts** in `/specs/engineering/external-deps/` (vendors: ZDR, residency; libraries: missable quirks — not API shapes).
 - **Feature tech specs** reference limits as hard constraints:
-  `Grok MUST NOT be routed for Privacy Pro Users (no ZDR — @grok.md).`
+  `OpenAI suggestions MUST NOT be written to FloDown block statement without user confirmation (E-OPENAI-03).`
 
 Vendor API shapes: fetch via MCP — see [architecture §9](../ai-native-development-architecture.md#9-external-services--mcp).
 
-### 4.3 Multi-tenant and multi-channel domains
+### 4.3 Roles and document-scoped access
 
 <a id="multi-tenant-and-multi-channel-domains"></a>
+<a id="roles-and-document-scoped-access"></a>
 
-Wald SaaS has **one product** with multiple **tenant deployments** (Wald direct, partner brands) — not
-separate products per tenant. Organize specs as follows.
+GloX is a **single deployment** academic tool with **role-based capabilities** (EXTRACTOR, CURATOR,
+ADMIN) — not multi-tenant SaaS. Organize specs as follows.
 
-#### PRD — one domain file, tenant-qualified rules
-
-| Do | Do not |
-| --- | --- |
-| One PRD per domain (`onboarding.md`, `pricing_and_entitlements.md`) | Separate PRDs per tenant (`onboarding-bluehost.md`) unless the product promise truly differs |
-| Shared outcomes in a neutral subsection | Duplicate invitation/join rules across tenant PRDs |
-| Variant rules with EARS qualifiers (`WHEN tenant is partner…`, `WHILE on Wald direct…`) | Implementation priority order ("higher-priority branch") in PRD prose |
-| Closed exception lists (`R-ONB-02 through R-ONB-04 do not apply`) | Undefined jargon (`higher-priority`, `block`) without pointing at rule IDs |
-| Per-partner commercial facts in commercial or entitlement PRDs | Per-partner one-offs copied into every domain PRD |
-
-**Default-outcome rules** (e.g. auto-provision when nothing else applies) MUST enumerate which other
-rules prevent the default — by rule ID, not by SDD evaluation order.
-
-**Evaluation order** (which branch runs first) belongs in the **SDD** only — e.g. a precedence table in
-`team-assignment.md`, not in the PRD.
-
-#### SDD — split by user journey or capability
+#### PRD — one domain file, role-qualified rules when needed
 
 | Do | Do not |
 | --- | --- |
-| Topic SDDs (`team-assignment`, `wald-direct-provisioning`, `partner-activation`) | One SDD per tenant mirroring the same flows |
-| Tenant branches via `getTenantConfig()` documented in Architecture boundaries or a **Tenant variants** table | Hard-coded brand strings in rules |
-| Per-tenant rollout exceptions in entitlement or commercial SDDs with rationale | Silent tenant assumptions in shared SDD rules |
+| One PRD per domain (`documents-extraction.md`, `flodown-blocks.md`) | Separate PRDs per role unless the product promise truly differs |
+| Shared outcomes in a neutral subsection | Duplicate ownership rules across role-specific PRDs |
+| Variant rules with EARS qualifiers (`WHEN user role is EXTRACTOR…`, `WHILE acting as CURATOR…`) | Implementation priority order in PRD prose |
+| Closed exception lists (`R-DOC-02 through R-DOC-04 do not apply`) | Undefined jargon (`block`) without pointing at rule IDs |
+| Admin-only outcomes in auth PRD or domain PRD with explicit role gate | Scattered role checks without rule IDs |
+
+**Default-outcome rules** MUST enumerate which other rules prevent the default — by rule ID, not by SDD
+evaluation order.
+
+**Evaluation order** (which check runs first) belongs in the **SDD** only — e.g. a precedence table in
+`auth-sessions.md`, not in the PRD.
+
+#### SDD — split by capability, not by role
+
+| Do | Do not |
+| --- | --- |
+| Topic SDDs (`upload-and-ownership`, `lifecycle`, `auth-sessions`) | One SDD per role mirroring the same flows |
+| Role branches documented in Architecture boundaries | Hard-coded role strings without dictionary terms |
+| Document ownership checks in every mutation SDD | Silent assumptions that “users only see their data” |
 
 #### When to add a new file
 
 | Trigger | Action |
 | --- | --- |
-| Same outcome, different stack path per tenant | One PRD rule + WHERE; SDD names modules and config keys |
-| Different channel UX (Wald wizard vs partner block) | Sibling SDD under the same domain folder |
-| One partner temporarily exceptional | Exception rule in `partner-entitlement.md` (or commercial PRD) + rationale |
-| File exceeds ~3 pages or review is painful | Split SDD by journey, not by tenant |
+| Same outcome, different code path per role | One PRD rule + WHEN role qualifier; SDD names modules |
+| Different UX for extractor vs curator | Sibling SDD under the same domain folder |
+| File exceeds ~3 pages or review is painful | Split SDD by capability (upload vs export), not by role |
 
-**Featured example:** [`prds/domains/onboarding.md`](../prds/domains/onboarding.md) (tenant sections +
-explicit exceptions) and [`team-assignment.md`](./features/onboarding/team-assignment.md) (precedence table).
+**Featured example:** [`prds/domains/documents-extraction.md`](../prds/domains/documents-extraction.md) and
+[`upload-and-ownership.md`](./features/documents-extraction/upload-and-ownership.md).
 
 ---
 
@@ -654,9 +632,9 @@ Full rationale (alternatives, rule-by-rule why, one-sentence external answer):
 
 | Example | Layer |
 | --- | --- |
-| Secure users must set a custom PIN before chat unlocks | PRD — Product |
-| Wald must not retain server-side ability to decrypt stored Secure chat after a request completes | PRD — Binding (incident: operator can read DAR) |
-| Derive `chatKey` via HKDF over `chatId[:8]` and `userSymmetricKey` | SDD |
+| Curators must confirm LLM suggestions before they become FloDown statements | PRD — Product |
+| Operators must not read another user's document content without authorization | PRD — Binding (incident: cross-user data exposure) |
+| Rewrite local symref URIs before FloDown export | SDD |
 | Long threads MUST remain usable (no overflow failure); early turns MAY be dropped | PRD — Product (optional honest limit) |
 | Truncate when conversation tokens exceed 200k; drop-oldest then tail-trim | SDD — not PRD |
 | Default model thinking effort to `low` for cost/latency | SDD or code — not PRD; not Binding |
@@ -673,7 +651,7 @@ latency, or quality tuning.
 | Capacity limits with side effects | context truncate ~200k | **SDD** for how; thin **Product** only if you bind “must not crash / may drop early turns” |
 | Hidden ranking maps | Auto Router category → model | **SDD**; Product only if you promise “Auto picks a suitable model” |
 | Security opacity users should know | what admins cannot see in incognito | **PRD — Product** + SDD for how |
-| Deceptive opacity | Standard marketed as Privacy+ E2EE | **PRD — Product** — must not stay opaque |
+| Deceptive opacity | UI implies LLM output is already saved when it is only a suggestion | **PRD — Product** — must not stay opaque |
 
 **Rule of thumb:** hide the dial in the SDD; put the promise (or honest limit) in the PRD only when
 breaking it would be a wrong **product story**, not merely a wrong constant. If product refuses to
@@ -770,8 +748,8 @@ There is **one** ubiquitous language (DDD). PRDs and SDDs do not define terms in
 | `deprecated_synonyms` | **Accidental** drift — do not use in binding specs (`/specs/prds/`, `/specs/engineering/features/`). Omit when none. |
 | `see_also` | Narrative docs — not duplicate definitions. Omit when none. |
 
-**Example:** `secure_partner_plan` preferred in PRDs; **Privacy+** is an `allowed_alias` on partner
-storefronts, not a second term.
+**Example:** `flo_down_block` preferred in PRDs; **definition block** is an `allowed_alias` in UI copy,
+not a second term.
 
 ### 8.2 When to add or change a term
 

@@ -1,15 +1,17 @@
 ---
 name: frontend-skill
-description: Use when working on React components, pages, UI styling, state management, or any frontend code in next-js-app.
+description: >-
+  Use when working on React components, TanStack Router pages, Mantine UI,
+  client state, or any frontend code under src/routes/ or src/components/.
 see_also:
-  - apps/next-js-app/AGENTS.md
+  - AGENTS.md
   - .cursor/skills/backend-skill/SKILL.md
 ---
 
-# Frontend skill — `next-js-app`
+# Frontend skill — GloX
 
-Load [`apps/next-js-app/AGENTS.md`](../../../apps/next-js-app/AGENTS.md) for tenant rules and critical-area paths.
-Conventions here do not override PRDs, SDDs, or ADRs.
+Load [`AGENTS.md`](../../../AGENTS.md) for critical-area guardrails. Conventions here do not
+override PRDs, SDDs, or ADRs.
 
 # General guidelines
 
@@ -20,17 +22,11 @@ Keep functions focused on one responsibility. Extract helpers when logic grows o
 ## Prefer stateless functions
 
 Prioritize functions **outside** components over handlers inside components that only wrap state.
-Lift data fetching into TanStack Query hooks or `interfaces/spec` helpers where possible.
+Lift data fetching into TanStack Query hooks or server-function callers where possible.
 
 ## Use constants
 
-Use descriptive names for constants instead of magic numbers:
-
-```typescript
-const SEC_PER_HOUR = 3600;
-const WAIT_DURATION_HRS = 14;
-const endTimestampSec = startTimestampSec + WAIT_DURATION_HRS * SEC_PER_HOUR;
-```
+Use descriptive names for constants instead of magic numbers.
 
 ## Document regex expressions
 
@@ -38,131 +34,85 @@ Whenever a regular expression is used, add a one-line comment explaining what it
 
 ## Function parameters
 
-Use a single object parameter instead of many positional args (see § Function Parameters below).
+Use a single object parameter instead of many positional args when there are three or more parameters.
 
-# Monorepo Structure
+# Repository layout
 
 ```
-apps/
-├── next-js-app/        # Main Next.js application (Pages Router + App Router)
-│   └── e2e/            # Playwright E2E tests
-
-libs/
-├── prisma/             # Database schema + migrations
-├── shared/             # Shared utilities (Firebase, email)
-├── shared-server/      # Server-only utilities (Slack)
-└── utils/              # Common utilities (Prisma client, helpers, GCS, Stripe)
-
-one-off-scripts/        # Standalone scripts for migrations, data fixes, etc.
+src/
+├── routes/           # TanStack Router file-based routes
+├── components/       # React components (feature folders)
+├── hooks/            # Custom hooks
+├── serverFns/        # TanStack Start server functions (callable from UI)
+├── server/           # Server-only modules (not imported from client bundles)
+├── lib/              # Shared utilities (flodownClient, prisma client wrapper)
+├── types/            # Shared TypeScript types (ftml.types.ts, floDown.types.ts)
+└── queries/          # TanStack Query option factories
 ```
 
-# Nx Commands
+# Commands
 
-- `nx dev next-js-app` – Start dev server
-- `nx build next-js-app` – Production build
-- `nx lint next-js-app` – Lint the app
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Vite dev server (port 3000) |
+| `pnpm build` | Typecheck + production build |
+| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm test` | Vitest (unit/integration) |
 
-# Core Tech Stack
+# Core tech stack
 
-- **Next.js (Pages Router)**: Primary routing in `apps/next-js-app/pages/`, API routes in `pages/api/`
-- **Next.js (App Router)**: AI/streaming endpoints in `apps/next-js-app/app/api/`
-- **React + TypeScript**: Component-driven UI with typed props/state
-- **TanStack Query (React Query)**: Server state management, provider in `apps/next-js-app/utils/query-client-provider.tsx`
-- **Material UI (MUI)**: Layout/components + theme in `apps/next-js-app/config/theme/`
-- **Prisma**: DB schema in `libs/prisma/schema.prisma`, client in `libs/utils/src/lib/prisma.ts`
-- **Redis**: Caching layer in `apps/next-js-app/redis/`
-- **LaunchDarkly**: Feature flags in `apps/next-js-app/launchdarkly/`
-- **Firebase**: Auth utilities in `libs/shared/`
-- **Stripe**: Payment utilities in `libs/utils/`
+- **TanStack Start + Router**: File routes in `src/routes/`; SSR via Nitro
+- **React 19 + TypeScript**: Component-driven UI
+- **TanStack Query**: Server state; `src/queryClient.ts`
+- **Mantine 8**: UI components (`@mantine/core`, `@mantine/hooks`)
+- **Tailwind CSS v4**: Utility classes alongside Mantine
+- **FloDown / FTML**: Browser preview via `src/lib/flodownClient.ts`, `src/components/FtmlPreview.tsx`
+- **Flexiformal FTML libs**: `@flexiformal/ftml`, `@flexiformal/ftml-react`
 
-# Key Directories in `next-js-app`
+# Key directories
 
-| Path               | Purpose                                        |
-| ------------------ | ---------------------------------------------- |
-| `pages/`           | Page routes (Pages Router)                     |
-| `pages/api/`       | API endpoints (Pages Router)                   |
-| `app/api/`         | Streaming/AI endpoints (App Router)            |
-| `components/`      | React components                               |
-| `interfaces/spec/` | API types + axios wrapper functions            |
-| `contexts/`        | React contexts (app state, chat, theme)        |
-| `config/`          | App configuration (theme, etc.)                |
-| `utils/`           | App utilities (includes query-client-provider) |
-| `middleware.ts`    | Next.js middleware                             |
+| Path | Purpose |
+| --- | --- |
+| `src/routes/` | Page routes (`files/$documentId.tsx`, `module-descriptions/`, etc.) |
+| `src/components/` | UI components (stex-curation, semantic-panel, module-descriptions, …) |
+| `src/hooks/` | Feature hooks (extraction flows, semantics, upload) |
+| `src/types/ftml.types.ts` | GloX FTML AST subset |
+| `src/types/floDown.types.ts` | FloDown block / statement types |
+| `public/flodown/` | FloDown WASM bundle (`flodown.js`, `flodown_bg.wasm`) |
 
-# Shared Libraries
+# Data fetching
 
-| Library                       | Import Path           | Purpose                             |
-| ----------------------------- | --------------------- | ----------------------------------- |
-| `@wald-nx-next/utils`         | `libs/utils/`         | Prisma client, helpers, GCS, Stripe |
-| `@wald-nx-next/shared`        | `libs/shared/`        | Firebase, email utilities           |
-| `@wald-nx-next/shared-server` | `libs/shared-server/` | Slack utilities (server-only)       |
-
-# API client usage
-
-Server route conventions (auth, status codes, Prisma): [backend-skill](../backend-skill/SKILL.md).
-
-## Types and wrapper functions
-
-1. Define request/response types in `interfaces/spec/*`
-2. Export typed wrapper functions from the same module
-3. Use those wrappers from components and TanStack Query hooks — not inline `axios.get('/api/...')`
-
-## Error handling (UI)
-
-- **Components/pages**: Handle user-facing errors (snackbar/toast, inline error state)
-- Map API failures to clear copy; do not expose raw stack traces or internal field names
-
-# TanStack Query (Data Fetching)
-
-Use TanStack Query for all client-side data fetching. The provider is configured in `utils/query-client-provider.tsx`.
-
-# CSS Guidelines
-
-Use **MUI's `sx` prop system**. Keep styles local to component.
-
-## Prefer MUI numbers over 'rem' and 'px'
-
-```diff
-- <Box sx={{ px: "4px" }}></Box>
-+ <Box sx={{ px: 0.5 }}></Box>
-```
-
-## Style Object Structure
-
-Define styles at **bottom of file**:
-
-```tsx
-const componentSx: Record<"root" | "header" | "content", SxProps<Theme>> = {
-  root: {
-    /* styles */
-  },
-  header: {
-    /* styles */
-  },
-  content: {
-    /* styles */
-  },
-};
-```
-
-## Function Parameters
-
-Use object with fields instead of multiple params:
+Call server functions from components or hooks — not raw `fetch` to invented API paths:
 
 ```typescript
-export async function sendEmail({
-  to,
-  subject,
-  html,
-  cc = [],
-  attachments,
-}: {
-  to: string;
-  subject: string;
-  html: string;
-  cc?: string[];
-  attachments?: { filename: string; path: string }[];
-}) {
-  // ...
-}
+import { myDocuments } from "@/serverFns/myDocuments.server";
+
+// In a loader or useQuery:
+const docs = await myDocuments();
 ```
+
+Server function conventions: [backend-skill](../backend-skill/SKILL.md).
+
+# FloDown preview
+
+- Initialize once per session: `initFloDown()` from `src/lib/flodownClient.ts` (sets MathHub backend URL).
+- Render curated FTML: `FtmlPreview` component — dual hidden/visible block pattern for symbol deps.
+- Do not call `floDown.setBackendUrl` again after `initFloDown()` unless you have a documented reason.
+
+See [`public/flodown/README.md`](../../../public/flodown/README.md) for FloDown API details.
+
+# Styling
+
+- Prefer **Mantine** components and props for layout and typography.
+- Use **Tailwind** utilities for fine-grained spacing/layout where Mantine is heavy.
+- Keep styles colocated with components; avoid global CSS except theme entry.
+
+# Role-aware UI
+
+Respect EXTRACTOR vs CURATOR vs ADMIN capabilities in curation and symbol management UI. When adding
+controls, check existing patterns in `src/components/stex-curation/` and auth helpers on the server.
+
+# Tests
+
+- `pnpm test` — Vitest; no E2E suite yet.
+- Prefer testing hooks and pure helpers; integration tests for critical flows per TESTING_GUIDE.

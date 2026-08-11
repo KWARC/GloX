@@ -18,7 +18,7 @@ see_also:
   - /specs/engineering/external-deps/README.md
   - /specs/engineering/deployment/README.md
   - /specs/organization/organization.md
-  - /apps/next-js-app/AGENTS.md
+  - /AGENTS.md
   - /.cursor/skills/frontend-skill/SKILL.md
   - /.cursor/skills/backend-skill/SKILL.md
 ---
@@ -27,7 +27,7 @@ see_also:
 
 > **Status: canonical companion** to
 > [ai-native-development-architecture.md](./ai-native-development-architecture.md). Names **node kinds**
-> and **edges** in Wald’s organizational knowledge graph. Does **not** supersede architecture for
+> and **edges** in GloX's organizational knowledge graph. Does **not** supersede architecture for
 > workflow, layers, or git policy. Does **not** create binding product or compliance contracts —
 > those remain PRDs and SDDs.
 
@@ -84,9 +84,9 @@ hallucinate, or silently choose defaults. Those choices are *real knowledge* —
 | Kind | Location (typical) | What it captures | If missing… |
 | --- | --- | --- | --- |
 | **Engagement signals** | metrics, support, [`product/feedback.md`](./product/feedback.md) | What users/partners did and said | Product invents pain from anecdotes only |
-| **Strategy / vision** | Product briefs (`wald-saas.md` Vision), board/CEO narrative | Where we choose to play | Roadmap becomes a ticket dump |
+| **Strategy / vision** | Product briefs (`glox.md` Vision), FAUstairs / research narrative | Where we choose to play | Roadmap becomes a ticket dump |
 | **Founder / CEO / PM intent** | Meetings, Clarify, org accountability | Non-negotiable bets not yet in metrics | Agents optimize local engagement against strategy |
-| **Partner / GTM motion** | Commercial PRD, partner storefront facts, sales | How distribution works (Newfold vs Wald-direct) | Product assumes Stripe-only world |
+| **Research / academic context** | FAU module catalog, MathHub integration goals | How extraction feeds assessment | Product assumes PDF-only world |
 | **Competitive / market intel** | Occasional product notes; mostly tribal | Alternatives users compare us to | Build features already table-stakes elsewhere |
 | **Capacity & portfolio constraints** | Org, hiring, “two products” boundary | What we can staff this quarter | Infinite roadmap |
 | **Finance / unit-economics goals** | Clarify Accepted tradeoffs; CEO locks | COGS, margin, rev-share targets | Cost dials with no owner |
@@ -121,7 +121,7 @@ hallucinate, or silently choose defaults. Those choices are *real knowledge* —
 
 | Kind | Location (typical) | What it captures | If missing… |
 | --- | --- | --- | --- |
-| **Application platform architecture** | `AGENTS.md`, Nx, `package.json` | Next/Prisma/Postgres/MUI/tenant-per-DB | Wrong stack assumptions in SDD |
+| **Application platform architecture** | `AGENTS.md`, Nx, `package.json` | TanStack Start/Prisma/Postgres/MUI/tenant-per-DB | Wrong stack assumptions in SDD |
 | **Data model / schema standards** | `schema.prisma`, [`database-standards.md`](./engineering/database-standards.md) | Tables, indexes, tenancy | SDD invents fields that can’t exist |
 | **Sibling systems** | ml-backend, subscription-server | Cross-repo contracts | SDD assumes all logic is in-app |
 | **Prior SDDs / topic indexes** | `features/**`, `index.md` | Precedence, ownership splits | Overlap and path-ID confusion |
@@ -406,7 +406,7 @@ link from Binding **Rationale**, `D-*` context, and Clarify upstream audits. See
 | PRD/SDD boundary rationale | [other_docs/prd-sdd-boundary-rationale.md](../other_docs/prd-sdd-boundary-rationale.md) |
 | Org / accountability | [organization/organization.md](./organization/organization.md) |
 | Incidents / postmortems | [organization/incidents/README.md](./organization/incidents/README.md) |
-| App platform | [apps/next-js-app/AGENTS.md](../apps/next-js-app/AGENTS.md) |
+| App platform | [AGENTS.md](../AGENTS.md) |
 | Style | [frontend-skill](../.cursor/skills/frontend-skill/SKILL.md), [backend-skill](../.cursor/skills/backend-skill/SKILL.md) |
 | DB standards | [engineering/database-standards.md](./engineering/database-standards.md) |
 | Tests | [TESTING_GUIDE.md](./review/TESTING_GUIDE.md) |

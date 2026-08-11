@@ -1,15 +1,19 @@
 ---
 name: backend-skill
-description: Use when working on API routes, database queries, authentication, or any server-side code in pages/api or app/api.
+description: >-
+  Use when working on TanStack Start server functions, Prisma queries,
+  authentication, FTML/FloDown server logic, or any code under src/serverFns/
+  or src/server/.
 see_also:
-  - apps/next-js-app/AGENTS.md
+  - AGENTS.md
   - .cursor/skills/frontend-skill/SKILL.md
 ---
 
-# Backend skill — `next-js-app`
+# Backend skill — GloX
 
-Load [`apps/next-js-app/AGENTS.md`](../../../apps/next-js-app/AGENTS.md) for tenant rules and critical-area paths.
-Conventions here do not override PRDs, SDDs, or ADRs.
+Load [`AGENTS.md`](../../../AGENTS.md) for critical-area guardrails (auth, document ownership,
+FloDown lifecycle, symbol propagation, FTML export). Conventions here do not override PRDs, SDDs,
+or ADRs.
 
 # 1. General guidelines
 
@@ -19,130 +23,119 @@ Keep functions focused on one responsibility. Extract helpers when logic grows o
 
 ## 1.2. Prefer stateless functions
 
-Prioritize functions **outside** components over those inside components that use component state.
-On the server, prefer pure helpers and thin route handlers that delegate to `lib/` modules.
+On the server, prefer pure helpers in `src/server/` and thin `createServerFn` handlers that delegate
+to service modules (e.g. `src/server/document/document.service.ts`).
 
 ## 1.3. Use constants
 
-Use descriptive names for constants instead of magic numbers:
-
-```typescript
-const SEC_PER_HOUR = 3600;
-const WAIT_DURATION_HRS = 14;
-const endTimestampSec = startTimestampSec + WAIT_DURATION_HRS * SEC_PER_HOUR;
-```
+Use descriptive names for constants instead of magic numbers.
 
 ## 1.4. Document regex expressions
 
-Whenever a regular expression is used, add a one-line comment explaining what it matches — regex
-patterns are hard to read and maintain.
-
-```typescript
-// Matches a UUID v4 in lowercase hex
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-```
+Whenever a regular expression is used, add a one-line comment explaining what it matches.
 
 ## 1.5. Types
 
 Don't overspecify types when they're obvious from context (literals, inference, or narrow guards).
 
-# 2. Writing APIs
+# 2. Server functions (API layer)
 
-Applies to `pages/api/**` and `app/api/**` unless a streaming/App Router pattern requires otherwise.
+GloX uses **TanStack Start** `createServerFn` for server endpoints.
 
-## 2.1. Use only HTTP GET and POST methods
-
-Avoid DELETE, PATCH, PUT, etc. — they are limiting and easy to misuse. Use descriptive route names
-instead of relying on HTTP verbs.
-
-Use **GET** only when **both** are true:
-
-1. The API does not require a body
-2. The API is purely for reading and does not update any resources
-
-## 2.2. Prefer query parameters or HTTP body over dynamic segments
-
-Next.js supports dynamic routes, but query parameters or POST bodies keep a flatter, more readable
-directory structure.
-
-## 2.3. Organize your APIs
-
-Group APIs related to a resource or feature in a single directory (e.g. `pages/api/memory/`,
-`pages/api/admin/`).
-
-## 2.4. Authentication and authorization
-
-### 2.4.1. Authentication
-
-Derive user IDs and emails from authentication tokens (or load the user from the DB using a
-token-derived ID). **Never** trust IDs or emails from the request body or query params.
-
-Re-validate auth inside each API route and server action — do not rely on middleware alone.
-
-### 2.4.2. Authorization
-
-Implement explicit authorization for each API (team membership, admin role, tenant gate, plan tier).
-A valid session alone is not sufficient.
-
-## 2.5. Returning errors
-
-Return appropriate status codes with simple, helpful messages for debugging.
-
-### 2.5.1. Error codes
-
-| Error type | Code |
+| Pattern | Location |
 | --- | --- |
-| Invalid params (query, body, or path segment) | 422 |
-| Couldn't find or decode user token | 401 |
-| Unauthorized access | 403 |
-| Already exists | 409 |
-| Unknown | 500 |
+| Callable from UI | `src/serverFns/*.server.ts` |
+| Shared server logic | `src/server/**/*.ts` |
+| Auth helpers | `src/server/auth/` |
+| Prisma client | `src/lib/prisma.ts` |
 
-Validate inputs early in the handler; return clear status + message.
+## 2.1. Server function shape
 
-### 2.5.2. Avoid sending JSON responses with errors
+```typescript
+import { createServerFn } from "@tanstack/react-start";
+import { requireUserId } from "@/server/auth/requireUser";
 
-Prefer plain-text error bodies via `res.status(code).send("message")` for errors. Reserve
-`res.status(200).json(...)` (or structured JSON) for successful responses.
+export const myAction = createServerFn({ method: "POST" })
+  .inputValidator((data: MyInput) => data)
+  .handler(async ({ data }) => {
+    const userId = await requireUserId();
+    // delegate to src/server/...
+  });
+```
 
-Legacy routes may still use `.json({ message })` on errors — match the surrounding file when editing,
-but use `.send()` for new error paths.
+Use **GET** only for read-only handlers with no side effects. Prefer **POST** for mutations.
 
-### 2.5.3. Provide informative error messages
+## 2.2. Authentication and authorization
 
-Avoid messages that only restate the status code (e.g. `"Unauthorized"` with no context when the
-failure mode is ambiguous). Name the missing or invalid field when safe to do so.
+### 2.2.1. Authentication
 
-## 2.6. Database interactions
+- Derive `userId` from the JWT cookie via `requireUserId()` or `requireUser()` — never trust IDs from
+  the request body or query params.
+- **MUST** reject when `JWT_SECRET` is missing (server misconfiguration).
+- **MUST** validate password fingerprint on every authenticated request
+  (`src/server/auth/requireUser.ts`).
+- **MUST NOT** allow login before email verification completes.
 
-Prisma schema and migration discipline: [`specs/engineering/database-standards.md`](../../../specs/engineering/database-standards.md).
+Re-validate auth inside every server function that reads or mutates user data.
 
-### 2.6.1. Never use `SELECT *`
+### 2.2.2. Authorization
 
-Specify required fields in Prisma `select` / `include` (or explicit SQL column lists). This optimizes
-queries and avoids accidentally exposing sensitive columns.
+- **MUST** verify document ownership (or Admin role) before FloDown block, mark-reference, or LaTeX
+  mutations tied to a document.
+- Use `src/server/auth/isAdmin.server.ts` for admin-only operations.
+- Role gates: EXTRACTOR vs CURATOR vs ADMIN — see auth PRD/SDD under `specs/prds/domains/auth.md`.
 
-### 2.6.2. Minimize database requests
+A valid session alone is not sufficient for document-scoped mutations.
 
-Use joins, `include`, or batched queries instead of N+1 loops. Prefer `findUnique` over `findFirst`
-when the lookup key is unique.
+## 2.3. Returning errors
 
-### 2.6.3. Use transactions when appropriate
+Throw `Error` with clear messages from handlers; TanStack Start surfaces them to the client. Validate
+inputs early.
 
-Use `prisma.$transaction` (or equivalent) for related writes that must succeed or fail together
-(e.g. accept-invitation flows that create membership and update invitation state).
+| Failure | Typical handling |
+| --- | --- |
+| Not authenticated | `throw new Error("Not authenticated")` |
+| Invalid session / fingerprint | `throw new Error("Invalid or expired session")` |
+| Missing ownership | `throw new Error("Forbidden")` or domain-specific message |
+| Invalid input | `throw new Error("…")` naming the field when safe |
+| Server misconfiguration | `throw new Error("Server misconfiguration")` |
 
-# 3. API specifications
+## 2.4. Database interactions
 
-Document API contracts so the frontend can call routes safely. Shared home: `interfaces/spec/*`.
+Prisma schema: `prisma/schema.prisma`.
 
-## 3.1. Define types for request body and response
+### 2.4.1. Never use `SELECT *`
 
-Add request/response types in `apps/next-js-app/interfaces/spec/*` and use them in the route handler.
+Specify required fields in Prisma `select` / `include`. Avoid exposing sensitive columns.
 
-## 3.2. Create wrapper functions for API calls
+### 2.4.2. Minimize database requests
 
-Export typed client helpers from `interfaces/spec/*` that hide URL, method, and axios details. Call
-those helpers from components and hooks — not inline `axios.get('/api/...')`.
+Use `include` or batched queries instead of N+1 loops. Prefer `findUnique` when the key is unique.
 
-See [frontend-skill](../frontend-skill/SKILL.md) § API client usage.
+### 2.4.3. Use transactions when appropriate
+
+Use `prisma.$transaction` for related writes that must succeed or fail together (e.g. FloDown block
+cascade updates, symbol propagation).
+
+# 3. Critical server domains
+
+| Domain | Key paths |
+| --- | --- |
+| Auth & sessions | `src/server/auth/`, `src/serverFns/login.server.ts`, `verify.server.ts` |
+| Documents & upload | `src/server/document/`, `src/serverFns/upload.server.ts` |
+| FloDown blocks | `src/server/floDownBlockDeletion.ts`, `src/serverFns/updateFloDownBlock.server.ts` |
+| FTML / sTeX export | `src/server/ftml/`, `src/serverFns/latex.server.ts` |
+| Symbol propagation | `src/serverFns/SymbolPropagation.server.ts` |
+| Module descriptions | `src/server/modules/`, `src/serverFns/moduleDescription.server.ts` |
+| LLM suggestions (optional) | `src/server/llm.ts`, `src/serverFns/llmSuggestion.server.ts` |
+
+Vendor constraints for OpenAI: [`specs/engineering/external-deps/vendors/openai.md`](../../../specs/engineering/external-deps/vendors/openai.md).
+
+# 4. Tests
+
+- Runner: `pnpm test` (Vitest).
+- No Playwright E2E configured yet — prefer integration tests on server functions and `src/server/`
+  modules per [`specs/review/TESTING_GUIDE.md`](../../../specs/review/TESTING_GUIDE.md).
+- Priority seams: login, document ownership, FloDown cascade delete.
+
+See [frontend-skill](../frontend-skill/SKILL.md) for UI conventions.

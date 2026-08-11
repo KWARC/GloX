@@ -252,8 +252,8 @@ per PR.
 
 | Doc               | Example                                                                     | Update trigger                                     |
 | ----------------- | --------------------------------------------------------------------------- | -------------------------------------------------- |
-| Product brief     | `wald-saas.md` — vision, roadmap Now/Next/Later, metric *definitions*, gaps | Priority shift, quarterly review                   |
-| Feature inventory | `wald-saas-features.md` — shipped behavior in product language              | After Archive (audit task) or `Last verified` pass |
+| Product brief     | `glox.md` — vision, roadmap, stakeholder use cases | Priority shift, quarterly review                   |
+| Feature inventory | `glox-features.md` — shipped behavior in product language              | After Archive (audit task) or `Last verified` pass |
 | Feedback streams  | `feedback.md`                                                               | Process change                                     |
 
 
@@ -275,7 +275,7 @@ Atomic update with code.
 **Product doc vs PRD vs tech spec — same feature:**
 
 
-| Product (`wald-saas-features.md`)          | PRD / tech spec                                                               |
+| Product (`glox-features.md`)          | PRD / tech spec                                                               |
 | ------------------------------------------ | ----------------------------------------------------------------------------- |
 | "Pre-LLM redaction before external models" | `WHEN sanitization fails… MUST NOT send original prompt to non-secure engine` |
 | Describes shipped UX                       | Defines testable behavior                                                     |
@@ -358,10 +358,10 @@ cost/quality tuning.
 
 | Kind | Example | Typical home |
 | --- | --- | --- |
-| User-facing functional | PIN unlock before Secure chat | PRD — Product |
-| User-facing non-functional (sold) | Privacy+ E2EE / “Wald can’t read chats” | PRD — Product (and Binding for silent operator side) |
-| Business non-functional (not user-facing) | Control LLM COGS via truncation / thinking=`low` | **Goal** in Clarify / SDD rationale; **mechanisms** in SDD; thin Product only for honest side effects; Binding only if finance locks a named unit-economics MUST |
-| Security non-functional (silent) | No retained server decrypt after request | PRD — Binding |
+| User-facing functional | Curator confirms LLM suggestion before it becomes a FloDown statement | PRD — Product |
+| User-facing non-functional (sold) | Exported sTeX matches FloDown preview for symbol URIs | PRD — Product |
+| Business non-functional (not user-facing) | Batch module-description processing throughput | **Goal** in Clarify / SDD rationale; **mechanisms** in SDD |
+| Security non-functional (silent) | Cross-user document access without authorization | PRD — Binding |
 
 **Wording constraint (magic-black-box style):** Imagine all infrastructure were a magic black box.
 Would this *wording* still be stated the same way?
@@ -380,14 +380,14 @@ Would this *wording* still be stated the same way?
 
 | Rule                                                                                             | Layer         |
 | ------------------------------------------------------------------------------------------------ | ------------- |
-| Secure users must set a custom PIN before chat unlocks                                           | PRD — Product |
-| Wald must not retain server-side ability to decrypt stored Secure chat after a request completes | PRD — Binding |
-| Derive `chatKey` via HKDF over `chatId[:8]` and `userSymmetricKey`                               | SDD           |
-| Long threads MUST remain usable (no overflow failure); early turns MAY be dropped                | PRD — Product (optional honest limit) |
-| Truncate when conversation tokens exceed 200k; drop-oldest then tail-trim                        | SDD (not PRD) |
-| Default model thinking effort to `low` for cost/latency                                          | SDD or code (not PRD; not Binding) |
-| Control per-seat LLM COGS (business goal; not shown in UI)                                       | Clarify / SDD rationale — not Product; Binding only if CEO/finance locks a named MUST |
-| Summarize or truncate history to meet that COGS goal                                             | SDD (mechanism) |
+| Curators must confirm LLM suggestions before persistence | PRD — Product |
+| Operators must not read another user's document without authorization | PRD — Binding |
+| Rewrite local symref URIs to document URIs before FloDown export | SDD |
+| Large PDFs MUST remain processable without server crash | PRD — Product (optional honest limit) |
+| Truncate extraction pages when memory exceeds configured cap | SDD (not PRD) |
+| Cache LLM suggestions keyed by document content hash | SDD or code (not PRD) |
+| Control OpenAI API cost for extraction assistance | Clarify / SDD rationale — not Product unless binding a named limit |
+| Invalidate suggestion cache when document text changes | SDD (mechanism) |
 
 
 ---
@@ -411,10 +411,10 @@ Never duplicate rules across layers. Use **transclusion by reference**.
 
 ```yaml
 ---
-id: feature-sanitization-secure-tier
-upstream: [pricing_and_entitlements, compliance-data-privacy]
-compliance: [SOC2-CC6.3]
-code: [apps/next-js-app/pages/api/chat/]
+id: feature-documents-extraction
+upstream: [documents-extraction, auth]
+compliance: []
+code: [src/serverFns/upload.server.ts, src/server/document/]
 ---
 ```
 

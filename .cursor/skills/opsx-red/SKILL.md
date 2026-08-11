@@ -18,7 +18,8 @@ description: >-
 
 1. Read `design.md` test mapping and every `MUST NOT` in proposal/design deltas.
 2. Draft integration tests (Testing Trophy bulk) per TESTING_GUIDE; one negative test per `MUST NOT`.
-   API-route tests: follow [backend-skill](../backend-skill/SKILL.md) (auth from token, status codes).
+   Server-function tests: follow [backend-skill](../backend-skill/SKILL.md) (auth from JWT cookie,
+   document ownership, role gates).
 3. Run tests — they **must fail** before any implementation (Red phase).
 4. Report failure output; confirm failures are missing implementation, not syntax errors.
 5. Human audits assertions ([REVIEW_GUIDE §2.2](../../../specs/review/REVIEW_GUIDE.md#22-validating-ai-written-tests) delete-the-implementation heuristic).

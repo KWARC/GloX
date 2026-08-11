@@ -21,7 +21,7 @@ One sentence: what this topic folder covers and where code lives.
 
 Domain PRD: [`<domain-prd>.md`](../../../prds/domains/<domain-prd>.md).
 
-**Code anchors:** `apps/next-js-app/...`, `libs/...` (optional).
+**Code anchors:** `src/serverFns/...`, `src/server/...` (optional).
 
 ## Flow matrix (optional — spec backfill only)
 

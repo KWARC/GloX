@@ -20,7 +20,7 @@ description: >-
 2. **Do NOT draft proposal.md, design.md, or tasks.md yet.**
 3. In `clarify.md`:
    - Restate the ask; list material gaps only.
-   - Fill upstream audit (specs, ADRs, compliance, blast radius). HALT on compliance contradiction per [accountability_tree.yaml](../../../specs/organization/accountability_tree.yaml).
+   - Fill upstream audit (specs, ADRs, compliance, blast radius). HALT on compliance contradiction per [organization.md](../../../specs/organization/organization.md).
    - Where tradeoffs exist, add options with product impact, effort, and risk; otherwise state one recommendation (P0 — no Clarify theater).
    - Split v1 / v2 only if scope warrants it; record non-goals and v2.
    - Flag creep when the FR implies more than agreed v1.

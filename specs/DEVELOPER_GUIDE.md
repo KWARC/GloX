@@ -66,7 +66,7 @@ Before any work, decide **lightweight** vs **full SDD**. Full detail: [architect
 | Spec craft (EARS)?                         | [spec-authoring.md](./engineering/spec-authoring.md)                                                   |
 | Review gates?                              | [REVIEW_GUIDE.md](./review/REVIEW_GUIDE.md)                                                            |
 | How to generate tests?                     | [TESTING_GUIDE.md](./review/TESTING_GUIDE.md)                                                          |
-| `next-js-app` coding conventions?          | [frontend-skill](../.cursor/skills/frontend-skill/SKILL.md), [backend-skill](../.cursor/skills/backend-skill/SKILL.md) |
+| GloX coding conventions (UI / server)?     | [frontend-skill](../.cursor/skills/frontend-skill/SKILL.md), [backend-skill](../.cursor/skills/backend-skill/SKILL.md) |
 
 
 **Layer rule:** PRDs state *what* must be true — product outcomes and thin binding incident-risk
@@ -219,10 +219,10 @@ Agent **execution** lives in [`.cursor/skills/`](../.cursor/skills/) (validated 
 
 | When | Skill | Mode |
 | --- | --- | --- |
-| UI / components / client state in `next-js-app` | [`frontend-skill`](../.cursor/skills/frontend-skill/SKILL.md) | Both |
-| API routes / Prisma / auth in `next-js-app` | [`backend-skill`](../.cursor/skills/backend-skill/SKILL.md) | Both |
+| UI / routes / components in `src/` | [`frontend-skill`](../.cursor/skills/frontend-skill/SKILL.md) | Both |
+| Server functions / Prisma / auth in `src/` | [`backend-skill`](../.cursor/skills/backend-skill/SKILL.md) | Both |
 
-Also load [`apps/next-js-app/AGENTS.md`](../apps/next-js-app/AGENTS.md) for tenant rules and critical-area entry points.
+Also load [`AGENTS.md`](../AGENTS.md) for critical-area guardrails and code anchors.
 
 Manifest: [`.cursor/skills/opsx/_manifest.yaml`](../.cursor/skills/opsx/_manifest.yaml) (OPSX process skills only).
 

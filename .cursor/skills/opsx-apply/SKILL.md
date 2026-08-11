@@ -15,14 +15,14 @@ description: >-
 - Red-phase tests drafted and failing; human assertion audit done.
 - No-code rule satisfied — deltas committed and reviewed.
 
-## Implementation conventions (`next-js-app`)
+## Implementation conventions (GloX)
 
-Before editing code under `apps/next-js-app/`:
+Before editing application code:
 
-1. Load [`apps/next-js-app/AGENTS.md`](../../../apps/next-js-app/AGENTS.md) (tenant rules, critical-area paths).
+1. Load [`AGENTS.md`](../../../AGENTS.md) (auth, document ownership, FloDown lifecycle, export).
 2. Read the craft skill for what you touch:
-   - UI / components / client state → [frontend-skill](../frontend-skill/SKILL.md)
-   - API routes / Prisma / auth → [backend-skill](../backend-skill/SKILL.md)
+   - UI / routes / components → [frontend-skill](../frontend-skill/SKILL.md)
+   - Server functions / Prisma / auth / FTML → [backend-skill](../backend-skill/SKILL.md)
 
 Craft skills apply at **implementation** only — they do not override signed deltas, PRDs, SDDs, or ADRs.
 

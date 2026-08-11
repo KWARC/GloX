@@ -39,11 +39,10 @@
 
 <!-- Partner SKUs and billing mechanics → pricing_and_entitlements.md. No prices in this brief. -->
 
-## Tenants & packaging
+## Roles & access
 
-<!-- Commercial model: e.g. Wald-direct = single Secure-tier offering; partners = Standard + Secure plans.
-     Per-tenant branding (product name, engine display name, plan labels) → pricing_and_entitlements.md § Tenant branding.
-     No prices here. -->
+<!-- GloX roles: EXTRACTOR, CURATOR, ADMIN. Document ownership is per-user.
+     No commercial SKUs — academic research tool. See auth PRD for binding rules. -->
 
 ## Features
 
@@ -58,25 +57,18 @@
      - Code/DB identifiers (enums, table fields, component names) → add to domain-dictionary.yaml; link from here, don't inline.
      - Term flow: org → product → engineering (see product/README.md).
      - No Sources, no marketing copy in feature entries.
-     - Wald-direct: always Secure-tier; plan subsections apply to partner tenants only.
-     - Default tenant wording: Wald-direct vs partner tenants; name individual partners only when behavior diverges.
-     - Branding strings → pricing_and_entitlements.md § Tenant branding. -->
+     - Role variations: use EXTRACTOR / CURATOR / ADMIN only when behavior intentionally differs.
+     - Link dictionary terms; do not inline code identifiers. -->
 
-### All tiers
+### All roles
 
 - **Feature title** — One-line summary.
   - **What it does:** …
-  - **Variations:** *(omit if universal; Plan = partner only; Tenant = Wald-direct vs partner tenants)*
+  - **Variations:** *(omit if universal; Role = EXTRACTOR / CURATOR / ADMIN when intentional)*
 
-### Secure tier only
+### Curator only
 
-<!-- Wald-direct always; partner Secure / Privacy+ plan -->
-
-### Partner Standard only
-
-### Wald-direct only
-
-## Known gaps & non-goals
+### Admin only
 
 
 

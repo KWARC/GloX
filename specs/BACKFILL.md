@@ -74,19 +74,15 @@ Add a short constitution that points agents at `/specs`. Minimum content:
 - Optional: per-app `AGENTS.md` under `apps/<name>/` for stack-specific conventions only — not
   duplicate of the global workflow.
 
-### 2.3 Replace Wald paths in copied docs (grep pass)
+### 2.3 Replace stale paths in copied docs (grep pass)
 
-Search your installed `/specs` for paths that do not exist in your repo and fix or delete:
+Search `/specs` for paths that do not exist in this repo and fix or delete:
 
 | Pattern | Action |
 | --- | --- |
-| `apps/next-js-app/`, `libs/` | Replace with your app/lib paths in templates and new specs |
-| `pnpm run specs:check-*` | Remove from checklists until you add scripts (§6) or replace with your linter |
-| `.cursor/skills/opsx-*` | Point to your skills or remove skill links (§7) |
-| `wald`, `bluehost`, partner tenants | Replace with your product/tenant model in **your** new docs only |
-
-Do **not** strip Wald examples from `spec-authoring.md` unless they confuse your team — they illustrate
-the scheme.
+| `libs/`, legacy monorepo app roots | Replace with `src/` (see DEVELOPER_GUIDE §7) |
+| `pnpm run specs:check-*` | Remove from checklists until you add scripts (§6) |
+| `.cursor/skills/opsx-*` | Skills live at repo root `.cursor/skills/` (§7) |
 
 ---
 
@@ -101,7 +97,7 @@ the scheme.
 2. Add terms for **your** product: plans, roles, core entities, deployment names. Rules:
    [spec-authoring §8](./engineering/spec-authoring.md#8-domain-dictionary--glossary).
 
-3. Delete or rewrite the commented Wald placeholder entries in the template.
+3. Delete or rewrite placeholder entries in the template that do not apply to GloX.
 
 4. Reference dictionary terms in all new PRDs/SDDs by **preferred label**; never redefine terms inline.
 
@@ -211,10 +207,10 @@ See [DEVELOPER_GUIDE §3](./DEVELOPER_GUIDE.md#3-lightweight-path-default).
 
 ## 6. Optional — spec CI linters
 
-Wald runs `pnpm run specs:check-*` (link check, rule IDs, vague PRD phrases, SDD table prose). To
+GloX may add `pnpm run specs:check-*` (link check, rule IDs, vague PRD phrases, SDD table prose). To
 adopt:
 
-1. Copy or reimplement scripts from Wald's `package.json` / `tools/specs-*` (not in this archive).
+1. Implement scripts under `scripts/specs-*` or add npm scripts to `package.json`.
 2. Add a CI job that runs on PRs touching `specs/**`.
 3. Update checklist lines in `REVIEW_GUIDE.md` that reference `pnpm run specs:check-prd-prose`.
 
@@ -224,7 +220,7 @@ Until then, rely on human upstream review.
 
 ## 7. Optional — Cursor OPSX skills
 
-Wald agents use `.cursor/skills/opsx-*` and `lightweight-plan-archive` to execute procedure. Options:
+GloX agents use `.cursor/skills/opsx-*` and `lightweight-plan-archive` to execute procedure. Options:
 
 | Approach | Effort | Benefit |
 | --- | --- | --- |

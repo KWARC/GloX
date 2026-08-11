@@ -386,7 +386,7 @@ When the team is ready, consider promoting informal habits into repo tooling:
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
 | **PR template**                | Checklist for mode, tier, upstream/code sign-off, Tier 0 discussion link                                                  |
 | **GitHub labels**              | `review-tier-0` … `review-tier-5`, `critical-area`, `needs-upstream-review`, `upstream-approved`, `needs-second-reviewer` |
-| `CODEOWNERS`                   | Auto-request review on `schema.prisma`, migrations, `pages/api/`, compliance specs                                        |
+| `CODEOWNERS`                   | Auto-request review on `schema.prisma`, migrations, `src/serverFns/`, `src/server/`, compliance specs                   |
 | **Branch protection**          | 2 approvals for tier-0 PRs; dismiss stale approvals on Tier 0 pushes                                                      |
 | **PR title prefixes**          | `[critical]`, `[tier-0]`, `[spec-only]` for a scannable queue                                                             |
 | **Break-glass label**          | `hotfix-exempt` with post-merge spec debt ticket                                                                          |
