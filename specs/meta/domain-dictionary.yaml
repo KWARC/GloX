@@ -1,0 +1,191 @@
+# Canonical domain dictionary — GloX (FAUstairs glossary extraction & curation).
+# Rules: /specs/engineering/spec-authoring.md §8
+
+schema_version: 1
+
+terms:
+  critical_area:
+    preferred: Critical area
+    definition: >
+      Part of the system where errors cause security incidents, data exposure, semantic corruption
+      of the domain model, or major regressions in extraction/curation/export flows.
+    technical_anchors:
+      - AGENTS.md § Critical areas
+
+  glox:
+    preferred: GloX
+    definition: >
+      The FAUstairs Glossary Extractors and Curator — web tool for glossary extraction and domain
+      model curation toward MathHub.
+    technical_anchors:
+      - specs/product/glox.md
+    see_also:
+      - ../product/glox.md
+
+  faustairs:
+    preferred: FAUstairs
+    definition: >
+      FAU research project on formative assessment; GloX supports its domain model development.
+    see_also:
+      - ../product/glox.md
+
+  gloxer:
+    preferred: GloXer
+    definition: >
+      Knowledge-representation and domain specialist who performs glossary extraction and curation
+      in the FAUstairs workflow.
+    see_also:
+      - ../product/glox.md
+
+  extractor:
+    preferred: Extractor
+    definition: >
+      User role (EXTRACTOR) that uploads materials, extracts definitions, and works on module
+      descriptions. Default role for new signups.
+    technical_anchors:
+      - prisma/schema.prisma UserRole
+    allowed_aliases:
+      - label: EXTRACTOR
+        context: database enum
+
+  curator:
+    preferred: Curator
+    definition: >
+      User role (CURATOR) with privileges for curation queues, symbol management, and privileged
+      file controls beyond Extractor capabilities.
+    technical_anchors:
+      - prisma/schema.prisma UserRole
+
+  admin:
+    preferred: Admin
+    definition: >
+      User role (ADMIN) with full document visibility and user role management.
+    technical_anchors:
+      - prisma/schema.prisma UserRole
+
+  document:
+    preferred: Document
+    definition: >
+      An uploaded source file (typically PDF) owned by a user, with extracted page text, export
+      identity metadata, and associated FloDown blocks.
+    technical_anchors:
+      - prisma/schema.prisma Document
+      - src/server/document/
+
+  flo_down_block:
+    preferred: FloDown block
+    definition: >
+      The unit of curated glossary content — an FTML statement (definition or paragraph) with
+      provenance, declared symbols, status, and version history.
+    technical_anchors:
+      - prisma/schema.prisma FloDownBlock
+      - src/types/floDown.types.ts
+    allowed_aliases:
+      - label: FloDownBlock
+        context: database model
+
+  statement:
+    preferred: Statement
+    definition: >
+      Authoritative FTML JSON shape stored on a FloDown block; type is definition or paragraph.
+    technical_anchors:
+      - prisma/schema.prisma FloDownBlock.statement
+      - src/types/floDown.types.ts
+
+  definiendum:
+    preferred: Definiendum
+    definition: >
+      A symbol declaration inline in a definition statement — the concept being defined, marked with
+      symdecl in FTML.
+    technical_anchors:
+      - src/serverFns/symbol.server.ts
+      - src/types/floDown.types.ts
+
+  symref:
+    preferred: Symref
+    definition: >
+      An inline term reference in FTML content pointing to a local Symbol or external MathHub URI.
+    technical_anchors:
+      - src/serverFns/symbolicRef.server.ts
+
+  symbol:
+    preferred: Symbol
+    definition: >
+      A named concept in the local symbolic catalog, uniquely identified by symbol name plus export
+      identity (futureRepo, filePath, fileName, language).
+    technical_anchors:
+      - prisma/schema.prisma Symbol
+
+  future_repo:
+    preferred: Future repository
+    definition: >
+      MathHub archive path prefix where exported content will live (e.g. smglom/Glox,
+      courses/FAU/module-descriptions).
+    technical_anchors:
+      - prisma/schema.prisma Document.futureRepo
+      - prisma/schema.prisma FloDownBlock.futureRepo
+
+  export_identity:
+    preferred: Export identity
+    definition: >
+      The tuple (future repository, file path, file name, language) that locates content in the
+      MathHub archive namespace.
+    technical_anchors:
+      - prisma/schema.prisma FloDownBlock
+
+  module_description:
+    preferred: Module description
+    definition: >
+      A FAU course module record (from the modules catalog) with seeded title/inhalt/lernziele
+      statements and associated definition blocks.
+    technical_anchors:
+      - prisma/schema.prisma ModuleDescription
+      - src/server/modules/moduleCatalog.ts
+
+  flo_down_block_status:
+    preferred: FloDown block status
+    definition: >
+      Curation lifecycle state — DISCARDED, EXTRACTED, FINALIZED_IN_FILE, or SUBMITTED_TO_MATHHUB.
+    technical_anchors:
+      - prisma/schema.prisma FloDownBlockStatus
+
+  index_status:
+    preferred: Index status
+    definition: >
+      Document- or module-level export tracking — EXTRACTED, FINALIZED, or SUBMITTED_TO_MATHHUB.
+    technical_anchors:
+      - prisma/schema.prisma IndexStatus
+
+  mark_reference:
+    preferred: Mark reference
+    definition: >
+      A lightweight symbol mention on a document page (verbalization) used for LaTeX index export.
+    technical_anchors:
+      - prisma/schema.prisma MarkReference
+
+  mathhub:
+    preferred: MathHub
+    definition: >
+      External semantic content server (mathhub.info) providing FTML backend, symbol resolution,
+      and archive hosting for exported glossaries.
+    technical_anchors:
+      - src/lib/ftmlClient.ts
+      - specs/engineering/external-deps/vendors/mathhub.md
+
+  flodown:
+    preferred: FloDown
+    definition: >
+      Browser-side WASM library for authoring, rendering, and serializing FTML/sTeX; used for
+      preview and export in GloX.
+    technical_anchors:
+      - public/flodown/
+      - src/lib/flodownClient.ts
+      - specs/engineering/external-deps/vendors/flodown.md
+
+  ftml:
+    preferred: FTML
+    definition: >
+      Flexible TeX/Math Language — JSON-based semantic markup for definitions, symbols, and math.
+    technical_anchors:
+      - "@flexiformal/ftml"
+      - specs/engineering/external-deps/libraries/ftml.md
