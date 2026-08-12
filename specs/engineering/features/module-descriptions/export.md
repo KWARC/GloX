@@ -75,8 +75,8 @@ users; only Curator and Admin may invoke export.
 
 - Export is client-only (browser WASM); there is no server-side TeX persistence for modules comparable
   to Document `LatexTable`.
-- Exact sTeX macros and URI rewrite details for local symbols at export time belong with
-  `curation-export` / `ftml.md` when that SDD is written.
+- Exact sTeX macros and URI rewrite details for local symbols at export time are owned by
+  [`stex-export.md`](../curation-export/stex-export.md) and [`ftml.md`](../../external-deps/libraries/ftml.md).
 
 ## Related docs
 

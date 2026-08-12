@@ -63,6 +63,48 @@ terms:
     technical_anchors:
       - prisma/schema.prisma UserRole
 
+  email_verification:
+    preferred: Email verification
+    definition: >
+      Gate that marks a user's email as verified; login MUST NOT succeed until verification
+      completes after signup.
+    technical_anchors:
+      - prisma/schema.prisma User.emailVerified
+      - src/serverFns/verify.server.ts
+      - specs/engineering/features/auth/auth-sessions.md
+
+  authenticated_session:
+    preferred: Authenticated session
+    definition: >
+      Logged-in user session established after verified credentials; lasts up to seven days and is
+      invalidated when the user sets a new password.
+    technical_anchors:
+      - src/server/auth/requireUser.ts
+      - specs/engineering/features/auth/auth-sessions.md
+      - access_token HttpOnly cookie
+      - is_logged_in marker cookie
+    allowed_aliases:
+      - label: session
+        context: shorthand in specs
+
+  password_reset:
+    preferred: Password reset
+    definition: >
+      Flow that emails a time-limited reset link for a registered address and, on success, sets a
+      new password and invalidates existing authenticated sessions.
+    technical_anchors:
+      - src/serverFns/resetPassword.server.ts
+      - specs/engineering/features/auth/auth-sessions.md
+
+  password_fingerprint:
+    preferred: Password fingerprint
+    definition: >
+      Value derived from the password hash and embedded in session JWTs so that a password change
+      invalidates all existing authenticated sessions.
+    technical_anchors:
+      - specs/engineering/decisions/jwt-session-fingerprint.md
+      - src/server/auth/requireUser.ts
+
   document:
     preferred: Document
     definition: >
@@ -71,6 +113,47 @@ terms:
     technical_anchors:
       - prisma/schema.prisma Document
       - src/server/document/
+
+  document_status:
+    preferred: Document status
+    definition: >
+      Upload/extraction lifecycle for a Document — UPLOADED, TEXT_EXTRACTED, or FAILED.
+    technical_anchors:
+      - prisma/schema.prisma DocumentStatus
+      - prisma/schema.prisma Document.status
+
+  content_hash:
+    preferred: Content hash
+    definition: >
+      Hash of uploaded Document file bytes (`fileHash`) used for per-user upload deduplication.
+      Distinct from full-text hash used by the LLM suggestion cache.
+    technical_anchors:
+      - prisma/schema.prisma Document.fileHash
+    allowed_aliases:
+      - label: fileHash
+        context: database column
+
+  full_text_hash:
+    preferred: Full-text hash
+    definition: >
+      SHA-256 of concatenated Document page text used to decide whether cached LLM suggestions are
+      still valid. Distinct from content hash (file bytes).
+    technical_anchors:
+      - src/server/llm.ts
+      - prisma/schema.prisma LlmSuggestion.customPrompt
+      - specs/engineering/features/documents-extraction/llm-suggestion-cache.md
+
+  llm_suggestion:
+    preferred: LLM suggestion
+    definition: >
+      Cached LLM-assisted definition discovery result for a Document, reused when the full-text hash
+      is unchanged.
+    technical_anchors:
+      - prisma/schema.prisma LlmSuggestion
+      - specs/engineering/features/documents-extraction/llm-suggestion-cache.md
+    allowed_aliases:
+      - label: LLM definition suggestions
+        context: PRD / UI
 
   flo_down_block:
     preferred: FloDown block
@@ -83,6 +166,10 @@ terms:
     allowed_aliases:
       - label: FloDownBlock
         context: database model
+      - label: definition
+        context: PRD/UI for a definition-type FloDown block
+      - label: definition block
+        context: UI copy
 
   statement:
     preferred: Statement
@@ -112,9 +199,89 @@ terms:
     preferred: Symbol
     definition: >
       A named concept in the local symbolic catalog, uniquely identified by symbol name plus export
-      identity (futureRepo, filePath, fileName, language).
+      identity (futureRepo, filePath, fileName, language). A Symbol is associated when a
+      non-discarded FloDown block at the same export identity declares that symbol name.
     technical_anchors:
       - prisma/schema.prisma Symbol
+      - src/serverFns/symbol.server.ts
+
+  symbolic_catalog:
+    preferred: Symbolic catalog
+    definition: >
+      Searchable sources for Symbols and suggestions when authoring definienda and symrefs: the local
+      DB Symbol table, the static client catalog served for suggestions, and MathHub FTML search.
+      Automatic suggestion matching stems English, German, and French; manual picker search is
+      language-agnostic substring match on symbol name.
+    technical_anchors:
+      - prisma/schema.prisma Symbol
+      - src/serverFns/symbolicCatalog.server.ts
+      - src/server/symbolic-suggestions/
+      - specs/engineering/features/symbols-semantics/search.md
+      - specs/engineering/features/symbols-semantics/registry.md
+    allowed_aliases:
+      - label: Symbol registry
+        context: PRD OOS / informal wording
+      - label: local catalog
+        context: PRD intro shorthand
+      - label: static symbolic catalog
+        context: client catalog.json / symbolicCatalog.server.ts
+
+  symbol_propagation:
+    preferred: Symbol propagation
+    definition: >
+      Curator/Admin operation that replaces matching local symbol references (or MathHub URIs) across
+      FloDown block statements and records version history for each changed block.
+    technical_anchors:
+      - specs/engineering/features/symbols-semantics/propagation.md
+      - src/serverFns/SymbolPropagation.server.ts
+      - src/server/ftml/convertLocalSymbolToMathHub.ts
+    allowed_aliases:
+      - label: MathHub replacement
+        context: applyMathHubReplacement path
+
+  symbol_confirmation:
+    preferred: Symbol confirmation
+    definition: >
+      Curator/Admin mark that a Symbol is not a duplicate (`hasConfirmed`), recording the confirming
+      user; Extractors MUST NOT confirm deduplication.
+    technical_anchors:
+      - prisma/schema.prisma Symbol.hasConfirmed
+      - prisma/schema.prisma Symbol.confirmedById
+    allowed_aliases:
+      - label: deduplication
+        context: PRD wording for confirm-not-duplicate workflow
+      - label: confirmed flag
+        context: database / SDD
+
+  declared_symbols:
+    preferred: Declared symbols
+    definition: >
+      Local symbol names a FloDown block introduces; deleting such a block removes symrefs to those
+      symbols from other blocks.
+    technical_anchors:
+      - prisma/schema.prisma FloDownBlock.declaredSymbols
+      - src/server/floDownBlockDeclaredSymbols.ts
+
+  original_text:
+    preferred: Original text
+    definition: >
+      Source text captured when a FloDown block is created from a selection; preserved alongside the
+      FTML statement and version history.
+    technical_anchors:
+      - prisma/schema.prisma FloDownBlock.originalText
+    allowed_aliases:
+      - label: selected source text
+        context: PRD creation wording
+
+  provenance:
+    preferred: Provenance
+    definition: >
+      Origin metadata for curated content (document, page, timestamps, and related context) stored
+      with FloDown blocks and injected into exported sTeX.
+    technical_anchors:
+      - src/serverFns/floDownBlockProvenance.server.ts
+      - src/server/ftml/addProvenanceData.ts
+      - specs/engineering/features/curation-export/stex-export.md
 
   future_repo:
     preferred: Future repository
@@ -128,19 +295,94 @@ terms:
   export_identity:
     preferred: Export identity
     definition: >
-      The tuple (future repository, file path, file name, language) that locates content in the
-      MathHub archive namespace.
+      The tuple that locates content in the MathHub archive namespace. For Documents: (future
+      repository, file path, language). For FloDown blocks and Symbols: (future repository, file
+      path, file name, language). For Module descriptions: (future repository, modules path,
+      definitions path, language). The four-field FloDown tuple is also the file identity used to
+      group blocks in the curation queue.
     technical_anchors:
       - prisma/schema.prisma FloDownBlock
+      - prisma/schema.prisma Document
+      - prisma/schema.prisma ModuleDescription
+      - prisma/schema.prisma ModuleDescription.modulesFilePath
+      - prisma/schema.prisma ModuleDescription.defsFilePath
+    allowed_aliases:
+      - label: File identity
+        context: curation queue grouping of FloDown blocks by four-field export identity
+
+  modules_catalog:
+    preferred: FAU modules catalog
+    definition: >
+      Configured, file-based catalog of FAU course modules used to search modules and seed
+      Module description title, Inhalt, and Lernziele statements. Not a live Campo/StudOn API.
+    technical_anchors:
+      - src/server/modules/moduleCatalog.ts
+    allowed_aliases:
+      - label: module catalog
+        context: shorthand in specs and UI
+
+  module_title:
+    preferred: Title
+    definition: >
+      The module-description title statement seeded from the FAU modules catalog
+      (ModuleDescription.titleStatement). Distinct from Document display names.
+    technical_anchors:
+      - prisma/schema.prisma ModuleDescription.titleStatement
+
+  inhalt:
+    preferred: Inhalt
+    definition: >
+      FAU module-description section for course content; seeded as a statement on Module description
+      (ModuleDescription.inhaltStatement) and exported under an Inhalt section.
+    technical_anchors:
+      - prisma/schema.prisma ModuleDescription.inhaltStatement
+
+  lernziele:
+    preferred: Lernziele
+    definition: >
+      FAU module-description section for learning objectives; seeded as a statement on Module
+      description (ModuleDescription.lernzieleStatement) and exported as Lernziele und Kompetenzen.
+    technical_anchors:
+      - prisma/schema.prisma ModuleDescription.lernzieleStatement
+    allowed_aliases:
+      - label: Lernziele und Kompetenzen
+        context: module TeX export section heading
+
+  stex:
+    preferred: sTeX
+    definition: >
+      Semantic TeX markup used for MathHub archive exports (module TeX, definition TeX, and sTeX
+      generated from finalized FloDown blocks).
+    technical_anchors:
+      - public/flodown/
+      - specs/engineering/features/module-descriptions/export.md
+      - specs/engineering/features/curation-export/stex-export.md
+    see_also:
+      - ../engineering/external-deps/vendors/flodown.md
+
+  curation_queue:
+    preferred: Curation queue
+    definition: >
+      Curator/Admin review list of FloDown blocks filtered by FloDown block status; Extractors MUST
+      NOT access it or change status via the curation workflow.
+    technical_anchors:
+      - specs/engineering/features/curation-export/queue.md
+      - src/routes/curation.tsx
+    allowed_aliases:
+      - label: curation review queue
+        context: PRD wording
 
   module_description:
     preferred: Module description
     definition: >
-      A FAU course module record (from the modules catalog) with seeded title/inhalt/lernziele
-      statements and associated definition blocks.
+      A FAU course module record created from the FAU modules catalog, with seeded Title, Inhalt,
+      and Lernziele statements and associated definition FloDown blocks.
     technical_anchors:
       - prisma/schema.prisma ModuleDescription
       - src/server/modules/moduleCatalog.ts
+    allowed_aliases:
+      - label: ModuleDescription
+        context: database model
 
   flo_down_block_status:
     preferred: FloDown block status
@@ -255,9 +497,15 @@ terms:
   latex_table:
     preferred: LaTeX table
     definition: >
-      Generated sTeX and version history for a Document, keyed by export identity.
+      Generated LaTeX/sTeX and version history for a Document, keyed by export identity (draft or
+      final).
     technical_anchors:
       - prisma/schema.prisma LatexTable
+      - specs/engineering/features/curation-export/latex-versioning.md
+    allowed_aliases:
+      - label: LaTeX versioning
+        context: PRD / feature name
+
 
   flo_down_block_version:
     preferred: FloDown block version

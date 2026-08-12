@@ -43,6 +43,7 @@ Out of scope:
 | Local URI rewrite | Short `symbolName` → `http://{futureRepo}?a={filePath}&m={fileName}&s={uri}` (or `uriMap` override) |
 | MathHub URI | `http(s)://mathhub.info?...` left unchanged |
 | Provenance | `%%%` comment lines from `injectProvenance` |
+| Export dependency scope | The exporting file identity plus definitions reachable via `uriMap` / defining FloDown blocks for referenced local symbols (see `getSymbolUriMap`) |
 
 ## Business rules
 

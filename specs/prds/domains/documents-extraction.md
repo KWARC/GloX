@@ -35,24 +35,24 @@ the Document and its associated pages, FloDown blocks, and uploaded files.
 file path, language) for MathHub export.
 
 **R-DOC-06 (Event-Driven):** WHEN an authenticated user requests LLM definition suggestions for their
-Document, the system MUST return cached suggestions when the document content hash is unchanged.
+Document, the system MUST return cached suggestions when the document full-text hash is unchanged.
 
-**R-DOC-09 (Event-Driven):** WHEN a Document owner or Admin moves a Document's export identity, the
+**R-DOC-07 (Event-Driven):** WHEN a Document owner or Admin moves a Document's export identity, the
 system MUST update the Document and all dependent curated content (FloDown blocks, symbols, and
 export artifacts) in one transaction.
 
-**R-DOC-10 (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST leave
+**R-DOC-08 (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST leave
 existing inline symbol references in block content unchanged.
 
 ### Binding operator / compliance promises
 
-**R-DOC-07 (Ubiquitous):** The system MUST NOT allow unauthenticated users to upload, list, or delete
+**R-DOC-09 (Ubiquitous):** The system MUST NOT allow unauthenticated users to upload, list, or delete
 Documents.
 
 **Rationale:** Uploaded PDFs may contain unpublished course materials — unauthorized upload or read is
 a data exposure incident.
 
-**R-DOC-08 (Ubiquitous):** The system MUST NOT allow a non-owner non-Admin user to delete another
+**R-DOC-10 (Ubiquitous):** The system MUST NOT allow a non-owner non-Admin user to delete another
 user's Document.
 
 **Rationale:** Unauthorized deletion causes irreversible data loss of curated glossary work.
@@ -76,7 +76,7 @@ user's Document.
 | R-DOC-07 | `upload-and-ownership.md` S-DOC-07 |
 | R-DOC-08 | `upload-and-ownership.md` S-DOC-08 |
 | R-DOC-09 | `upload-and-ownership.md` S-DOC-09 |
-| R-DOC-10 | `upload-and-ownership.md` S-DOC-09 |
+| R-DOC-10 | `upload-and-ownership.md` S-DOC-10 |
 
 ## Related docs
 

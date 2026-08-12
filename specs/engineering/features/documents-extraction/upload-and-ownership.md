@@ -77,24 +77,28 @@ Document (defaults from schema: `smglom/softeng`, `mod`, `en`).
 
 **Upstream:** R-DOC-05
 
-**S-DOC-07 (Ubiquitous):** Upload, list, and delete handlers MUST call `requireUserId` or equivalent
-session check.
+**S-DOC-07 (Event-Driven):** WHEN `moveDocumentLocation` succeeds, the system MUST update
+`futureRepo`, `filePath`, and `language` on the Document, its FloDown blocks, `LatexTable` rows, and
+declaring `Symbol` rows in one transaction.
 
 **Upstream:** R-DOC-07
 
-**S-DOC-08 (Ubiquitous):** Delete MUST allow only the Document owner or Admin.
+**S-DOC-08 (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST leave
+FloDown block `statement` JSON unchanged (local inline `uri` values remain the `symbolName` string).
 
 **Upstream:** R-DOC-08
 
-**S-DOC-09 (Event-Driven):** WHEN `moveDocumentLocation` succeeds, the system MUST update
-`futureRepo`, `filePath`, and `language` on the Document, its FloDown blocks, `LatexTable` rows, and
-declaring `Symbol` rows in one transaction, and MUST leave FloDown block `statement` JSON unchanged
-(local inline `uri` values remain the `symbolName` string).
-
-**Upstream:** R-DOC-09, R-DOC-10
-
 **Implementation:** `src/serverFns/documentLocation.server.ts`. FloDown block slice: `lifecycle.md`
 S-FDB-06a.
+
+**S-DOC-09 (Ubiquitous):** Upload, list, and delete handlers MUST call `requireUserId` or equivalent
+session check.
+
+**Upstream:** R-DOC-09
+
+**S-DOC-10 (Ubiquitous):** Delete MUST allow only the Document owner or Admin.
+
+**Upstream:** R-DOC-10
 
 ## Test mapping
 
@@ -107,7 +111,8 @@ S-FDB-06a.
 | S-DOC-05 | R-DOC-05 | Gap |
 | S-DOC-07 | R-DOC-07 | Gap |
 | S-DOC-08 | R-DOC-08 | Gap |
-| S-DOC-09 | R-DOC-09, R-DOC-10 | Gap |
+| S-DOC-09 | R-DOC-09 | Gap |
+| S-DOC-10 | R-DOC-10 | Gap |
 
 ## Related docs
 

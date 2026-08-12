@@ -117,7 +117,7 @@ transaction as the delete.
 
 ### Status & export identity
 
-**S-FDB-04 (State-Driven):** WHILE status is `DISCARDED`, curation list queries SHOULD filter
+**S-FDB-04 (State-Driven):** WHILE status is `DISCARDED`, curation list queries MUST filter
 discarded blocks unless explicitly including them.
 
 **Upstream:** R-FDB-04
@@ -135,7 +135,7 @@ that identity have a different status, the system MUST abort and return a confli
 `futureRepo`, `filePath`, and `language` on FloDown blocks for that Document and MUST leave each
 block's `statement` JSON unchanged.
 
-**Upstream:** R-DOC-09, R-DOC-10
+**Upstream:** R-DOC-07, R-DOC-08
 
 ### Access control
 
@@ -158,7 +158,7 @@ that Document or holds Admin role before proceeding.
 | S-FDB-04 | R-FDB-04 | Gap |
 | S-FDB-05 | R-FDB-05 | Gap |
 | S-FDB-06 | R-FDB-06 | Gap |
-| S-FDB-06a | R-DOC-09, R-DOC-10 | Gap |
+| S-FDB-06a | R-DOC-07, R-DOC-08 | Gap |
 | S-FDB-07 | R-FDB-07 | Gap |
 | S-FDB-08 | R-FDB-08 | Gap |
 

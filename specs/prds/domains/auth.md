@@ -70,7 +70,7 @@ course materials.
 | R-AUTH-05 | `auth-sessions.md` S-AUTH-05 |
 | R-AUTH-06 | `auth-sessions.md` S-AUTH-06 |
 | R-AUTH-07 | `auth-sessions.md` S-AUTH-07 |
-| R-AUTH-08 | `auth-sessions.md` S-AUTH-10 |
+| R-AUTH-08 | `auth-sessions.md` S-AUTH-08 |
 | R-AUTH-09 | `auth-sessions.md` S-AUTH-09 |
 
 ## Related docs

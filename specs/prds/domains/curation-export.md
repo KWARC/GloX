@@ -46,7 +46,7 @@ queue or change FloDown block status on behalf of the curation workflow.
 publish unreviewed definitions.
 
 **R-CUR-08 (Ubiquitous):** The system MUST NOT generate sTeX with unresolved local symbol references
-when a defining definition exists in the export scope.
+when a defining definition exists in the export dependency scope.
 
 **Rationale:** Broken symrefs in exported sTeX corrupt the MathHub archive and downstream assessment
 pipelines.

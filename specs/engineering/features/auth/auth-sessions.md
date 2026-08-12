@@ -69,11 +69,6 @@ cookies with `passwordFingerprint` derived from HMAC-SHA256 of the password hash
 
 **Upstream:** R-AUTH-02
 
-**S-AUTH-08 (Ubiquitous):** WHEN `JWT_SECRET` is unset, auth handlers MUST throw server
-misconfiguration rather than issuing or accepting tokens.
-
-**Upstream:** D-AUTH-03 (`jwt-session-fingerprint.md`)
-
 ### Password reset
 
 **S-AUTH-03 (Event-Driven):** WHEN password reset is requested, the handler MUST return the same
@@ -86,16 +81,16 @@ fingerprints to fail verification in `requireUserId`.
 
 **Upstream:** R-AUTH-04
 
-### Password policy
+### Password policy & storage
+
+**S-AUTH-08 (Ubiquitous):** Passwords MUST be hashed with bcrypt (10 salt rounds) before storage.
+
+**Upstream:** R-AUTH-08, D-AUTH-04
 
 **S-AUTH-09 (Ubiquitous):** Password validation MUST enforce ≥8 chars, uppercase, lowercase, and digit
 via `validatePassword`.
 
 **Upstream:** R-AUTH-09
-
-**S-AUTH-10 (Ubiquitous):** Passwords MUST be hashed with bcrypt (10 salt rounds) before storage.
-
-**Upstream:** R-AUTH-08, D-AUTH-04
 
 ### Admin & roles
 
@@ -109,6 +104,13 @@ reject with an error.
 
 **Upstream:** R-AUTH-07
 
+### Server misconfiguration
+
+**S-AUTH-10 (Ubiquitous):** WHEN `JWT_SECRET` is unset, auth handlers MUST throw server
+misconfiguration rather than issuing or accepting tokens.
+
+**Upstream:** D-AUTH-03 (`jwt-session-fingerprint.md`)
+
 ## Test mapping
 
 | SDD rule | PRD rule | Test |
@@ -120,9 +122,9 @@ reject with an error.
 | S-AUTH-05 | R-AUTH-05 | Gap |
 | S-AUTH-06 | R-AUTH-06 | Gap |
 | S-AUTH-07 | R-AUTH-07 | Gap |
-| S-AUTH-08 | D-AUTH-03 | Gap |
+| S-AUTH-08 | R-AUTH-08, D-AUTH-04 | Gap |
 | S-AUTH-09 | R-AUTH-09 | Gap |
-| S-AUTH-10 | R-AUTH-08, D-AUTH-04 | Gap |
+| S-AUTH-10 | D-AUTH-03 | Gap |
 
 ## Implementation bugs
 
