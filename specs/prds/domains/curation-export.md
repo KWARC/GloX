@@ -1,10 +1,13 @@
 ---
 id: curation-export
-featured: false
+featured: true
 upstream:
   - glox
 compliance: []
-code: []
+code:
+  - specs/engineering/features/curation-export/queue.md
+  - specs/engineering/features/curation-export/latex-versioning.md
+  - specs/engineering/features/curation-export/stex-export.md
 ---
 
 # PRD: Curation & export
@@ -59,17 +62,20 @@ pipelines.
 
 | PRD rule | SDD rule(s) |
 | --- | --- |
-| R-CUR-01 | Gap |
-| R-CUR-02 | Gap |
-| R-CUR-03 | Gap |
-| R-CUR-04 | Gap |
-| R-CUR-05 | Gap |
-| R-CUR-06 | Gap |
-| R-CUR-07 | Gap |
-| R-CUR-08 | Gap |
+| R-CUR-01 | `queue.md` S-CUR-01 |
+| R-CUR-02 | `queue.md` S-CUR-02 |
+| R-CUR-03 | `latex-versioning.md` S-CUR-03 |
+| R-CUR-04 | `stex-export.md` S-CUR-04 |
+| R-CUR-05 | `stex-export.md` S-CUR-05 |
+| R-CUR-06 | `stex-export.md` S-CUR-06 |
+| R-CUR-07 | `queue.md` S-CUR-07 — **Gap (BUG-004)** |
+| R-CUR-08 | `stex-export.md` S-CUR-08 |
 
 ## Related docs
 
+- [`queue.md`](../../engineering/features/curation-export/queue.md)
+- [`latex-versioning.md`](../../engineering/features/curation-export/latex-versioning.md)
+- [`stex-export.md`](../../engineering/features/curation-export/stex-export.md)
 - [`flodown-blocks.md`](./flodown-blocks.md)
+- [`symbols-semantics.md`](./symbols-semantics.md)
 - [`../../engineering/external-deps/vendors/flodown.md`](../../engineering/external-deps/vendors/flodown.md)
-- [`../../engineering/features/flodown-blocks/lifecycle.md`](../../engineering/features/flodown-blocks/lifecycle.md) — `LatexTable` storage

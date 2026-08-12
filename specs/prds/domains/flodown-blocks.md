@@ -1,6 +1,6 @@
 ---
 id: flodown-blocks
-featured: false
+featured: true
 upstream:
   - glox
 compliance: []

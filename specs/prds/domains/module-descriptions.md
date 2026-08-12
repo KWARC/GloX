@@ -1,6 +1,6 @@
 ---
 id: module-descriptions
-featured: false
+featured: true
 upstream:
   - glox
 compliance: []

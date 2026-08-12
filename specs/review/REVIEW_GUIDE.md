@@ -81,7 +81,7 @@ Reviewer signs off only when **all** items pass:
 - [ ] **Tasks:** Each step in `tasks.md` is atomic, ordered, and checkable one at a time.
 - [ ] **Test mapping:** Each EARS rule traces to a test (integration preferred) or a documented gap with an owner.
 - [ ] **Structure:** The document matches `[prds/_TEMPLATE/](../prds/_TEMPLATE/)` or `[features/_TEMPLATE/](../engineering/features/_TEMPLATE/)` section order. When a featured
-      example exists for that doc type, it mirrors the [`feature.md`](../engineering/feature.md) layout: rule IDs,
+      example exists for that doc type, it mirrors the [`featured.md`](../engineering/featured.md) layout: rule IDs,
       Traceability and Test mapping tables, and no forbidden language per [spec-authoring §2.3](../engineering/spec-authoring.md#23-forbidden-language-in-binding-specs).
 - [ ] **Teach-back:** The reviewer can paraphrase each rule and its rationale to the author without notes.
 

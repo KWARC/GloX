@@ -10,6 +10,6 @@ How we implement PRDs with the **current** stack (vendors, code paths, data cont
 | Deployment | [deployment/](./deployment/) — feature flags, secrets, release runbook |
 | Glossary | [domain-dictionary.yaml](../meta/domain-dictionary.yaml) — [`glossary.md`](./glossary.md) redirects here |
 | **How to write specs** | [spec-authoring.md](./spec-authoring.md) — EARS, templates (canonical) |
-| Gold-standard examples | [feature.md](./feature.md) — featured PRDs/SDDs to mirror |
+| Gold-standard examples | [featured.md](./featured.md) — featured PRDs/SDDs to mirror |
 
 Upstream PRDs: [`/specs/prds/`](../prds/). Product orientation: [`/specs/product/`](../product/).

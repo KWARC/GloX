@@ -16,7 +16,7 @@ Inventory of the `/specs` documentation harness for the GloX repository.
 | `engineering/glossary.md` | Redirect to domain dictionary |
 | `engineering/decisions/_TEMPLATE.md` | Decision atom template |
 | `engineering/features/_TEMPLATE/` | SDD + topic index templates |
-| `engineering/feature.md` | Gold-standard examples index |
+| `engineering/featured.md` | Gold-standard examples index |
 | `prds/_TEMPLATE/prd.md` | PRD template |
 | `product/_TEMPLATE.md` | Product brief template |
 | `meta/domain-dictionary.yaml` | Ubiquitous language |
@@ -30,10 +30,11 @@ Inventory of the `/specs` documentation harness for the GloX repository.
 | `product/glox.md` | Product brief |
 | `product/glox-features.md` | Shipped feature inventory |
 | `prds/domains/*.md` | Domain PRDs (auth, documents, FloDown, …) |
-| `engineering/features/*/` | SDDs for critical areas |
-| `engineering/decisions/jwt-session-fingerprint.md` | Auth session decision |
+| `engineering/features/*/` | SDDs for critical areas (auth, documents, FloDown, symbols, modules, curation) |
+| `engineering/decisions/` | JWT fingerprint, password storage |
 | `engineering/external-deps/` | OpenAI, MathHub, FloDown, FTML vendor facts |
-| `meta/domain-dictionary.yaml` + `engineering/features/flodown-blocks/lifecycle.md` + `engineering/external-deps/libraries/ftml.md` | Entity ↔ FloDown/FTML mapping (formerly `ENTITIES.md`) |
+| `engineering/featured.md` | Featured PRD/SDD gold-standard index |
+| `meta/domain-dictionary.yaml` + FloDown/FTML SDDs | Entity ↔ FloDown/FTML mapping |
 
 ## Optional / not yet implemented
 

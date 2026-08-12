@@ -1,11 +1,12 @@
 ---
 id: documents-extraction
-featured: false
+featured: true
 upstream:
   - glox
 compliance: []
 code:
   - specs/engineering/features/documents-extraction/upload-and-ownership.md
+  - specs/engineering/features/documents-extraction/llm-suggestion-cache.md
 ---
 
 # PRD: Documents & extraction
@@ -71,7 +72,7 @@ user's Document.
 | R-DOC-03 | `upload-and-ownership.md` S-DOC-03 |
 | R-DOC-04 | `upload-and-ownership.md` S-DOC-04 |
 | R-DOC-05 | `upload-and-ownership.md` S-DOC-05 |
-| R-DOC-06 | Gap |
+| R-DOC-06 | `llm-suggestion-cache.md` S-DOC-06 |
 | R-DOC-07 | `upload-and-ownership.md` S-DOC-07 |
 | R-DOC-08 | `upload-and-ownership.md` S-DOC-08 |
 | R-DOC-09 | `upload-and-ownership.md` S-DOC-09 |
@@ -80,4 +81,5 @@ user's Document.
 ## Related docs
 
 - [`upload-and-ownership.md`](../../engineering/features/documents-extraction/upload-and-ownership.md)
+- [`llm-suggestion-cache.md`](../../engineering/features/documents-extraction/llm-suggestion-cache.md)
 - [`flodown-blocks.md`](./flodown-blocks.md)

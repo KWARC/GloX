@@ -259,7 +259,7 @@ Code audit (topic index.md)
    `features/<domain>/index.md` (non-binding — [spec-authoring §5.1](./engineering/spec-authoring.md#topic-indexes);
    copy [`features/_TEMPLATE/index.md`](./engineering/features/_TEMPLATE/index.md)).
 2. **SDDs first.** Write engineering specs from code; use [`features/_TEMPLATE/`](./engineering/features/_TEMPLATE/) and
-   [featured examples](./engineering/feature.md) for structure.
+   [featured examples](./engineering/featured.md) for structure.
 3. **PRD distill.** Extract product outcomes and thin binding incident-risk rules (two-filter);
    link SDDs via Traceability tables only. Split Business rules into Product vs Binding headings.
    Add dictionary terms for any new reused domain phrases ([spec-authoring §8.2](./engineering/spec-authoring.md#82-when-to-add-or-change-a-term)).

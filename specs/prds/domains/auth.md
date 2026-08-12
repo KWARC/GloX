@@ -1,6 +1,6 @@
 ---
 id: auth
-featured: false
+featured: true
 upstream:
   - glox
 compliance: []

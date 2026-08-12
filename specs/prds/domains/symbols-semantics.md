@@ -1,11 +1,13 @@
 ---
 id: symbols-semantics
-featured: false
+featured: true
 upstream:
   - glox
 compliance: []
 code:
   - specs/engineering/features/symbols-semantics/registry.md
+  - specs/engineering/features/symbols-semantics/propagation.md
+  - specs/engineering/features/symbols-semantics/search.md
 ---
 
 # PRD: Symbols & semantics
@@ -18,8 +20,8 @@ deduplication.
 
 ### Product outcomes
 
-**R-SYM-01 (Event-Driven):** WHEN a Curator or Admin marks a definiendum in a FloDown block, the
-system MUST create or associate a Symbol with the block's export identity.
+**R-SYM-01 (Event-Driven):** WHEN an Extractor, Curator, or Admin marks a definiendum in a FloDown
+block, the system MUST create or associate a Symbol with the block's export identity.
 
 **R-SYM-02 (Ubiquitous):** The system MUST enforce unique Symbols per (symbol name, future repository,
 file path, file name, language) tuple.
@@ -61,17 +63,19 @@ Symbols or symrefs.
 
 | PRD rule | SDD rule(s) |
 | --- | --- |
-| R-SYM-01 | Gap |
-| R-SYM-02 | Gap |
-| R-SYM-03 | Gap |
-| R-SYM-04 | Gap |
-| R-SYM-05 | Gap |
-| R-SYM-06 | Gap |
-| R-SYM-07 | Gap |
+| R-SYM-01 | `registry.md` S-SYM-01 |
+| R-SYM-02 | `registry.md` S-SYM-02 |
+| R-SYM-03 | `propagation.md` S-SYM-03, S-SYM-03a |
+| R-SYM-04 | `registry.md` S-SYM-04 |
+| R-SYM-05 | `search.md` S-SYM-05 |
+| R-SYM-06 | `registry.md` S-SYM-06; `propagation.md` S-SYM-06a — **Gap (BUG-003)** |
+| R-SYM-07 | `registry.md` S-SYM-07 — **Gap (BUG-003)** |
 | R-SYM-08 | `registry.md` S-SYM-08 |
 
 ## Related docs
 
 - [`registry.md`](../../engineering/features/symbols-semantics/registry.md)
+- [`propagation.md`](../../engineering/features/symbols-semantics/propagation.md)
+- [`search.md`](../../engineering/features/symbols-semantics/search.md)
 - [`flodown-blocks.md`](./flodown-blocks.md)
 - [`curation-export.md`](./curation-export.md)

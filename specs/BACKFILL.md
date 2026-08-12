@@ -179,7 +179,7 @@ Classifier: [external-deps/README.md](./engineering/external-deps/README.md).
 When a PRD/SDD pair is reviewed and worth mirroring:
 
 1. Set `featured: true` in frontmatter.
-2. Add rows to [engineering/feature.md](./engineering/feature.md).
+2. Add rows to [engineering/featured.md](./engineering/featured.md).
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 id: auth-sessions
-featured: false
+featured: true
 upstream:
   - auth
 compliance: []

@@ -1,6 +1,6 @@
 ---
 id: module-description-workspace
-featured: false
+featured: true
 upstream:
   - module-descriptions
 compliance: []

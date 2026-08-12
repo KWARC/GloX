@@ -1,6 +1,6 @@
 ---
 id: flodown-block-lifecycle
-featured: false
+featured: true
 upstream:
   - flodown-blocks
 compliance: []
@@ -25,8 +25,8 @@ FloDown blocks — the curated FTML content unit.
 
 Out of scope (sibling specs):
 
-- Symbol registry and propagation — `symbols-semantics` PRD (no SDD yet)
-- sTeX export pipeline — `curation-export` PRD (no SDD yet)
+- Symbol registry and propagation — `symbols-semantics/` SDDs
+- sTeX export pipeline — `curation-export/stex-export.md`
 - FTML statement shapes — [`ftml.md`](../../external-deps/libraries/ftml.md)
 
 ### Naming layers

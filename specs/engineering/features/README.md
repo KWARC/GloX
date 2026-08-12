@@ -23,3 +23,4 @@ Copy [`_TEMPLATE/index.md`](./_TEMPLATE/index.md). Rules: [spec-authoring §5.1]
 | FloDown blocks | `engineering/features/flodown-blocks/` |
 | Symbols | `engineering/features/symbols-semantics/` |
 | Module descriptions | `engineering/features/module-descriptions/` |
+| Curation & export | `engineering/features/curation-export/` |

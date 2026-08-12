@@ -25,7 +25,7 @@ and cross-domain DRY patterns.
 | Product brief authoring | [product/README.md](../product/README.md) |
 | OPSX delta templates | [changes/_TEMPLATE/](../changes/_TEMPLATE/) |
 | PRD / SDD skeletons | [prds/_TEMPLATE/](../prds/_TEMPLATE/), [features/_TEMPLATE/](./features/_TEMPLATE/) |
-| Gold-standard examples | [feature.md](./feature.md) |
+| Gold-standard examples | [featured.md](./featured.md) |
 | Clarify → Propose | [changes/CLARIFY_AND_PROPOSE.md](../changes/CLARIFY_AND_PROPOSE.md) |
 | Where do open questions go? | [§2.5 Open questions, gaps, and ownership](#open-questions-gaps-and-ownership) |
 | Why this PRD/SDD boundary? | [§7 Why this boundary](#why-this-boundary); full write-up [other_docs/prd-sdd-boundary-rationale.md](../../other_docs/prd-sdd-boundary-rationale.md) |
@@ -217,7 +217,7 @@ there (test or `Gap`).
 
 Copy from templates: [`prds/_TEMPLATE/prd.md`](../prds/_TEMPLATE/prd.md),
 [`features/_TEMPLATE/sdd.md`](./features/_TEMPLATE/sdd.md).
-Gold-standard examples: [`feature.md`](./feature.md).
+Gold-standard examples: [`featured.md`](./featured.md).
 
 ### 3.1 PRD (domain/compliance/commercial)
 
@@ -392,7 +392,7 @@ they do not re-explain incidents in prose.
 Before opening a PR for a new or updated binding spec, the author (human or agent) MUST:
 
 1. Read [`spec-authoring.md`](./spec-authoring.md) and the matching `_TEMPLATE` for that doc type.
-2. Read the [`feature.md`](./feature.md) index for a featured example for that doc type (if one exists).
+2. Read the [`featured.md`](./featured.md) index for a featured example for that doc type (if one exists).
 3. List outcomes in a bullet inventory before writing EARS.
 4. **Dictionary:** For every reused domain phrase, use the dictionary `preferred` label; add or update
    the term in [`domain-dictionary.yaml`](../meta/domain-dictionary.yaml) in the **same commit** if missing
@@ -507,7 +507,7 @@ evaluation order.
 - **Topic folders:** e.g. `/specs/engineering/features/billing/` with sub-files.
 - **Dependency linking:** frontmatter `upstream` / `compliance` / `code` on PRDs and critical-area tech specs — [architecture §5](../ai-native-development-architecture.md#5-dependency-architecture-keeping-it-dry).
 - **Templates:** [`prds/_TEMPLATE/`](../prds/_TEMPLATE/), [`features/_TEMPLATE/`](./features/_TEMPLATE/) — required section order for new PRDs/SDDs and topic `index.md` files.
-- **Featured examples:** [`feature.md`](./feature.md) — copy structure from these when authoring.
+- **Featured examples:** [`featured.md`](./featured.md) — copy structure from these when authoring.
 - **CI:** `pnpm run specs:check` runs all linters. Individual scripts: `specs:check-links` (broken `@` refs and frontmatter); `specs:check-terms` (`deprecated_synonyms` in binding specs); `specs:check-rule-ids` (PRDs must not use `**S-…` rule headers; SDDs must not use `**R-…`); `specs:check-prd-prose` (vague PRD EARS phrases); `specs:check-sdd-prose` (telegraphic Architecture boundaries tables). PRD stack-noun layering is a human guideline ([§3.1.1](#prd-layering)), not a CI script.
 
 **Glossary:** use preferred terms from [`domain-dictionary.yaml`](../meta/domain-dictionary.yaml).
@@ -790,7 +790,7 @@ the term is added or the prose is rewritten to use an existing `preferred` label
 | [`prds/_TEMPLATE/prd.md`](../prds/_TEMPLATE/prd.md) | Skeleton for domain/compliance/commercial PRDs |
 | [`features/_TEMPLATE/sdd.md`](./features/_TEMPLATE/sdd.md) | Skeleton for engineering SDDs |
 | [`features/_TEMPLATE/index.md`](./features/_TEMPLATE/index.md) | Skeleton for topic `index.md` files (non-binding) |
-| [`feature.md`](./feature.md) | Index of gold-standard specs agents MUST mirror |
+| [`featured.md`](./featured.md) | Index of gold-standard specs agents MUST mirror |
 
 Mark a polished spec with `featured: true` in frontmatter only after it passes review against this
 guide. Do not mark work-in-progress specs as featured.

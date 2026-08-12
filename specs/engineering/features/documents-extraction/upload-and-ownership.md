@@ -1,6 +1,6 @@
 ---
 id: document-upload-ownership
-featured: false
+featured: true
 upstream:
   - documents-extraction
 compliance: []
@@ -22,7 +22,7 @@ deletion, and export identity capture.
 Out of scope:
 
 - FloDown blocks within documents — `flodown-blocks/lifecycle.md`
-- LLM suggestion caching — R-DOC-06 traced as Gap pending SDD slice
+- LLM suggestion caching — [`llm-suggestion-cache.md`](./llm-suggestion-cache.md)
 
 ## Architecture boundaries
 
