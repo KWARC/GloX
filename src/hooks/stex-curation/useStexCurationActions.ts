@@ -1,58 +1,58 @@
 import { queryClient } from "@/queryClient";
 import { injectProvenance } from "@/server/ftml/addProvenanceData";
-import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
+import { generateStexFromFloDown } from "@/server/ftml/generateStexFromFtml";
 import { ExtractedItem } from "@/server/text-selection";
-import { getCombinedDefinitionFtml } from "@/serverFns/definitionAggregate.server";
-import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
-import { updateDefinitionsStatusByIdentity } from "@/serverFns/definitionStatus.server";
+import { getCombinedFloDownStatement } from "@/serverFns/floDownBlockAggregate.server";
+import { getFloDownBlockProvenance } from "@/serverFns/floDownBlockProvenance.server";
+import { updateFloDownBlocksStatusByIdentity } from "@/serverFns/floDownBlockStatus.server";
 import {
-  deleteDefinition,
-  updateDefinition,
-} from "@/serverFns/extractDefinition.server";
+  deleteFloDownBlock,
+  updateFloDownBlock,
+} from "@/serverFns/extractFloDownBlock.server";
 import {
   FileIdentity,
   saveLatexDraft,
   saveLatexFinal,
 } from "@/serverFns/latex.server";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { useState } from "react";
 
-type DefinitionProvenance = Awaited<ReturnType<typeof getDefinitionProvenance>>;
+type FloDownBlockProvenance = Awaited<ReturnType<typeof getFloDownBlockProvenance>>;
 
 export function useStexCurationActions(
   identity: FileIdentity,
-  definitionIds: string[],
-  provenance: DefinitionProvenance | undefined,
+  floDownBlockIds: string[],
+  provenance: FloDownBlockProvenance | undefined,
 ) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [definitionMetaEditOpen, setDefinitionMetaEditOpen] = useState(false);
+  const [floDownBlockMetaEditOpen, setFloDownBlockMetaEditOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discardReason, setDiscardReason] = useState("");
-  const [definitionMetaTarget, setDefinitionMetaTarget] =
+  const [floDownBlockMetaTarget, setFloDownBlockMetaTarget] =
     useState<ExtractedItem | null>(null);
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexCode, setLatexCode] = useState("");
 
-  function handleEditDefinitionMeta(item: ExtractedItem) {
-    setDefinitionMetaTarget(item);
-    setDefinitionMetaEditOpen(true);
+  function handleEditFloDownBlockMeta(item: ExtractedItem) {
+    setFloDownBlockMetaTarget(item);
+    setFloDownBlockMetaEditOpen(true);
   }
 
   function handleOpenMetadataForIdentity() {
-    setDefinitionMetaTarget(null);
-    setDefinitionMetaEditOpen(true);
+    setFloDownBlockMetaTarget(null);
+    setFloDownBlockMetaEditOpen(true);
   }
 
-  function handleCloseDefinitionMeta() {
-    setDefinitionMetaEditOpen(false);
-    setDefinitionMetaTarget(null);
+  function handleCloseFloDownBlockMeta() {
+    setFloDownBlockMetaEditOpen(false);
+    setFloDownBlockMetaTarget(null);
   }
 
   async function handleDownload() {
     try {
-      const ftmlAst = await getCombinedDefinitionFtml({
+      const combined = await getCombinedFloDownStatement({
         data: {
-          definitionIds,
+          floDownBlockIds,
           documentId: identity.documentId,
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
@@ -61,16 +61,17 @@ export function useStexCurationActions(
         },
       });
 
-      if (!ftmlAst) {
-        alert("No FTML found.");
+      if (!combined?.statement) {
+        alert("No FloDown statement found.");
         return;
       }
 
-      let stex = await generateStexFromFtml(
-        ftmlAst,
+      let stex = await generateStexFromFloDown(
+        combined.statement,
         identity.futureRepo,
         identity.filePath,
         identity.fileName,
+        combined.declaredSymbolsPerBlock,
       );
       stex = injectProvenance(stex ?? "", provenance);
 
@@ -100,30 +101,30 @@ export function useStexCurationActions(
   }
 
   async function handleDelete(id: string) {
-    await deleteDefinition({ data: { id } });
-    queryClient.setQueryData<{ definitions: ExtractedItem[] }>(
-      ["definitionsByIdentity", identity],
+    await deleteFloDownBlock({ data: { id } });
+    queryClient.setQueryData<{ floDownBlocks: ExtractedItem[] }>(
+      ["floDownBlocksByIdentity", identity],
       (current) =>
         current
           ? {
               ...current,
-              definitions: current.definitions.filter(
+              floDownBlocks: current.floDownBlocks.filter(
                 (definition) => definition.id !== id,
               ),
             }
           : current,
     );
     await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity"],
+      queryKey: ["floDownBlocksByIdentity"],
     });
     await queryClient.invalidateQueries({ queryKey: ["fileIdentities"] });
   }
 
-  async function handleUpdate(id: string, statement: FtmlStatement) {
-    await updateDefinition({ data: { id, statement } });
+  async function handleUpdate(id: string, statement: FloDownStatement) {
+    await updateFloDownBlock({ data: { id, statement } });
     setEditingId(null);
     await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
+      queryKey: ["floDownBlocksByIdentity", identity],
     });
   }
 
@@ -133,9 +134,9 @@ export function useStexCurationActions(
 
   async function handleOpenLatexPreview() {
     try {
-      const ftmlAst = await getCombinedDefinitionFtml({
+      const combined = await getCombinedFloDownStatement({
         data: {
-          definitionIds,
+          floDownBlockIds,
           documentId: identity.documentId,
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
@@ -144,16 +145,17 @@ export function useStexCurationActions(
         },
       });
 
-      if (!ftmlAst) {
-        alert("No FTML found");
+      if (!combined?.statement) {
+        alert("No FloDown statement found");
         return;
       }
 
-      let stex = await generateStexFromFtml(
-        ftmlAst,
+      let stex = await generateStexFromFloDown(
+        combined.statement,
         identity.futureRepo,
         identity.filePath,
         identity.fileName,
+        combined.declaredSymbolsPerBlock,
       );
       stex = injectProvenance(stex ?? "", provenance);
 
@@ -169,17 +171,12 @@ export function useStexCurationActions(
     await saveLatexDraft({
       data: {
         latex: latexCode,
-        definitionIds,
         documentId: identity.documentId,
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
         fileName: identity.fileName,
         language: identity.language,
       },
-    });
-
-    await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
     });
 
     setLatexOpen(false);
@@ -189,7 +186,6 @@ export function useStexCurationActions(
     await saveLatexFinal({
       data: {
         latex: latexCode,
-        definitionIds,
         documentId: identity.documentId,
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
@@ -198,28 +194,13 @@ export function useStexCurationActions(
       },
     });
 
-    await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
-    });
-
-    await queryClient.invalidateQueries({
-      queryKey: [
-        "definition-status",
-        identity.documentId,
-        identity.futureRepo,
-        identity.filePath,
-        identity.fileName,
-        identity.language,
-      ],
-    });
-
     setLatexOpen(false);
   }
 
   async function handleStatusChange(
     status: "EXTRACTED" | "FINALIZED_IN_FILE" | "SUBMITTED_TO_MATHHUB",
   ) {
-    await updateDefinitionsStatusByIdentity({
+    await updateFloDownBlocksStatusByIdentity({
       data: {
         identity,
         status,
@@ -228,7 +209,7 @@ export function useStexCurationActions(
 
     await queryClient.invalidateQueries({
       queryKey: [
-        "definition-status",
+        "logical-paragraph-status",
         identity.documentId,
         identity.futureRepo,
         identity.filePath,
@@ -239,7 +220,7 @@ export function useStexCurationActions(
   }
 
   async function handleConfirmDiscard() {
-    await updateDefinitionsStatusByIdentity({
+    await updateFloDownBlocksStatusByIdentity({
       data: {
         identity,
         status: "DISCARDED",
@@ -249,7 +230,7 @@ export function useStexCurationActions(
 
     await queryClient.invalidateQueries({
       queryKey: [
-        "definition-status",
+        "logical-paragraph-status",
         identity.documentId,
         identity.futureRepo,
         identity.filePath,
@@ -263,19 +244,19 @@ export function useStexCurationActions(
 
   return {
     editingId,
-    definitionMetaEditOpen,
+    floDownBlockMetaEditOpen,
     discardOpen,
     discardReason,
     setDiscardOpen,
     setDiscardReason,
-    definitionMetaTarget,
+    floDownBlockMetaTarget,
     latexOpen,
     latexCode,
     setLatexOpen,
     setLatexCode,
-    handleEditDefinitionMeta,
+    handleEditFloDownBlockMeta,
     handleOpenMetadataForIdentity,
-    handleCloseDefinitionMeta,
+    handleCloseFloDownBlockMeta,
     handleDownload,
     handleDelete,
     handleUpdate,

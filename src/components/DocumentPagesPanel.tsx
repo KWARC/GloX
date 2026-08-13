@@ -1,6 +1,7 @@
 import { PageTextHighlights } from "@/components/PageTextHighlights";
 import { PageTextHighlightMatch } from "@/hooks/files/pageTextHighlights";
 import { ExtractedItem } from "@/server/text-selection";
+import { blockTypeLabel, getTopLevelBlockType } from "@/types/blockType";
 import { LlmSuggestion } from "@/types/llm.types";
 import {
   Box,
@@ -11,7 +12,6 @@ import {
   ScrollArea,
   Stack,
   Text,
-  Tooltip,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { DocumentPage } from "generated/prisma/browser";
@@ -98,8 +98,8 @@ export function DocumentPagesPanel({
                 ? [
               ...pageExtracts.map((extract) => ({
                 text: extract.originalText,
-                source: "definition" as const,
-                label: extract.kind,
+                source: "extract" as const,
+                label: blockTypeLabel(getTopLevelBlockType(extract.statement)),
               })),
               ...pageMarkReferences.map((reference) => ({
                 text: reference.verbalization,

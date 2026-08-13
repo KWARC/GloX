@@ -1,11 +1,11 @@
 import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
 import { ExtractedItem, PopupState } from "@/server/text-selection";
-import type { CreatedSymbolTarget } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
+import type { CreatedSymbolTarget } from "@/serverFns/createFloDownBlockWithDeclaredSymbol.server";
 import { FileIdentity } from "@/serverFns/latex.server";
 import { ComponentProps, Dispatch, SetStateAction } from "react";
 import { CreateSymbolDefiniendumDialog } from "../CreateSymbolDefiniendumDialog";
 import { DefiniendumDialog } from "../DefiniendumDialog";
-import { DefinitionIdentityDialog } from "../DefinitionFilePathDialog";
+import { FloDownBlockIdentityDialog } from "../FloDownBlockFilePathDialog";
 import { ExtractTextDialog } from "../ExtractTextDialog";
 import { ReferenceSuggestionDialog } from "../ReferenceSuggestionDialog";
 import { SelectionPopup } from "../SelectionPopup";
@@ -15,17 +15,17 @@ export type StexCurationDialogsProps = {
   identity: FileIdentity;
   metadata: {
     opened: boolean;
-    definition: ExtractedItem | null;
+    floDownBlock: ExtractedItem | null;
     onClose: () => void;
   };
   sniffy: {
     opened: boolean;
     onClose: () => void;
-    activeDefId: string | null;
-    activeDefStatement: ComponentProps<
+    activeFloDownBlockId: string | null;
+    activeFloDownBlockStatement: ComponentProps<
       typeof ReferenceSuggestionDialog
-    >["definitionStatement"];
-    activeDefText: string;
+    >["floDownBlockStatement"];
+    activeFloDownBlockText: string;
     suggestions: ComponentProps<
       typeof ReferenceSuggestionDialog
     >["suggestions"];
@@ -45,7 +45,7 @@ export type StexCurationDialogsProps = {
   semantic: {
     opened: boolean;
     onClose: () => void;
-    definition: ComponentProps<typeof SemanticPanel>["definition"];
+    floDownBlock: ComponentProps<typeof SemanticPanel>["floDownBlock"];
     onReplaceNode: ComponentProps<typeof SemanticPanel>["onReplaceNode"];
     onDeleteNode: ComponentProps<typeof SemanticPanel>["onDeleteNode"];
   };
@@ -66,15 +66,16 @@ export type StexCurationDialogsProps = {
   extraction: {
     opened: boolean;
     initialText: string;
-    definitionName: string;
-    kind: ComponentProps<typeof ExtractTextDialog>["kind"];
+    paragraphFileName: string;
+    blockType: ComponentProps<typeof ExtractTextDialog>["blockType"];
     symbolName: string;
-    setDefinitionName: (value: string) => void;
-    setKind: ComponentProps<typeof ExtractTextDialog>["setKind"];
+    setParagraphFileName: (value: string) => void;
+    setBlockType: ComponentProps<typeof ExtractTextDialog>["setBlockType"];
     setSymbolName: Dispatch<SetStateAction<string>>;
     filePath: string;
     onClose: () => void;
     onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
+    createSymbolFlow?: boolean;
   };
   createdSymbolDefiniendum: {
     opened: boolean;
@@ -99,19 +100,19 @@ export function StexCurationDialogs({
 }: StexCurationDialogsProps) {
   return (
     <>
-      <DefinitionIdentityDialog
+      <FloDownBlockIdentityDialog
         opened={metadata.opened}
         onClose={metadata.onClose}
-        definition={metadata.definition}
-        multipleDefinitions={!metadata.definition ? identity : undefined}
-        invalidateKey={["definitionsByIdentity", identity]}
+        floDownBlock={metadata.floDownBlock}
+        multipleDefinitions={!metadata.floDownBlock ? identity : undefined}
+        invalidateKey={["floDownBlocksByIdentity", identity]}
       />
       <ReferenceSuggestionDialog
         opened={sniffy.opened}
         onClose={sniffy.onClose}
-        definitionId={sniffy.activeDefId ?? ""}
-        definitionStatement={sniffy.activeDefStatement}
-        definitionText={sniffy.activeDefText}
+        floDownBlockId={sniffy.activeFloDownBlockId ?? ""}
+        floDownBlockStatement={sniffy.activeFloDownBlockStatement}
+        originalText={sniffy.activeFloDownBlockText}
         suggestions={sniffy.suggestions}
         catalog={sniffy.catalog}
         loading={sniffy.loading}
@@ -133,7 +134,7 @@ export function StexCurationDialogs({
         <SemanticPanel
           opened={semantic.opened}
           onClose={semantic.onClose}
-          definition={semantic.definition}
+          floDownBlock={semantic.floDownBlock}
           onReplaceNode={semantic.onReplaceNode}
           onDeleteNode={semantic.onDeleteNode}
         />
@@ -148,12 +149,13 @@ export function StexCurationDialogs({
       <ExtractTextDialog
         opened={extraction.opened}
         initialText={extraction.initialText}
-        definitionName={extraction.definitionName}
-        kind={extraction.kind}
+        paragraphFileName={extraction.paragraphFileName}
+        blockType={extraction.blockType}
         mode="symbol-target"
         symbolName={extraction.symbolName}
-        setDefinitionName={extraction.setDefinitionName}
-        setKind={extraction.setKind}
+        createSymbolFlow={extraction.createSymbolFlow}
+        setParagraphFileName={extraction.setParagraphFileName}
+        setBlockType={extraction.setBlockType}
         setSymbolName={extraction.setSymbolName}
         filePath={extraction.filePath}
         onClose={extraction.onClose}

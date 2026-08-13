@@ -1,11 +1,16 @@
 import { ExtractedItem } from "@/server/text-selection";
 import {
   CatalogEntry,
-  DefinitionCatalogSource,
+  FloDownBlockCatalogSource,
   SymbolicIndex,
   SymbolicOccurrence,
 } from "@/types/symbolic.types";
-import { FtmlContent, FtmlNode, normalizeToRoot } from "@/types/ftml.types";
+import {
+  extractTextContent,
+  getInlineContent,
+  walkInlines,
+} from "@/server/ftml/statementContent";
+import { normalizeToRoot } from "@/types/floDown.types";
 
 type PageText = {
   id: string;
@@ -24,63 +29,48 @@ function normalizeSurface(value: string): string {
   return value.toLowerCase().trim();
 }
 
-function collectInlineText(content: FtmlContent[] | undefined): string {
-  if (!content) return "";
-
-  return content
-    .map((item) => {
-      if (typeof item === "string") return item;
-      return collectInlineText(item.content);
-    })
-    .join("");
+function collectInlineText(content: Parameters<typeof extractTextContent>[0]): string {
+  return extractTextContent(content);
 }
 
-function walkNodes(node: FtmlNode, visit: (node: FtmlNode) => void) {
-  visit(node);
+function getFloDownBlockTerms(floDownBlock: ExtractedItem): string[] {
+  const root = normalizeToRoot(floDownBlock.statement);
+  const terms: string[] = [];
 
-  for (const child of node.content ?? []) {
-    if (typeof child !== "string") walkNodes(child, visit);
+  for (const block of root.content) {
+    if (block.type === "definition") {
+      terms.push(...(floDownBlock.declaredSymbols ?? []));
+    }
+
+    walkInlines(getInlineContent(block), (current) => {
+      if (typeof current === "string" || current.type !== "definiendum") return;
+
+      if (current.uri) terms.push(current.uri);
+
+      const label = collectInlineText(current.content ?? []);
+      if (label) terms.push(label);
+    });
   }
+
+  if (floDownBlock.fileName) terms.push(floDownBlock.fileName);
+
+  return uniqueTerms(terms);
 }
 
 function uniqueTerms(values: string[]): string[] {
   return [...new Set(values.map(normalizeSurface).filter(Boolean))];
 }
 
-function getDefinitionTerms(definition: ExtractedItem): string[] {
-  const root = normalizeToRoot(definition.statement);
-  const terms: string[] = [];
-
-  for (const node of root.content) {
-    if (node.type === "definition") {
-      terms.push(...(node.for_symbols ?? []));
-    }
-
-    walkNodes(node, (current) => {
-      if (current.type !== "definiendum") return;
-
-      if (current.uri) terms.push(current.uri);
-
-      const label = collectInlineText(current.content);
-      if (label) terms.push(label);
-    });
-  }
-
-  if (definition.fileName) terms.push(definition.fileName);
-
-  return uniqueTerms(terms);
-}
-
-export function buildDefinitionCatalog(
-  definitions: ExtractedItem[],
-): DefinitionCatalogSource[] {
-  return definitions.map((definition) => {
-    const terms = getDefinitionTerms(definition);
-    const firstTerm = terms[0] ?? definition.fileName ?? definition.id;
+export function buildFloDownBlockCatalog(
+  floDownBlocks: ExtractedItem[],
+): FloDownBlockCatalogSource[] {
+  return floDownBlocks.map((floDownBlock) => {
+    const terms = getFloDownBlockTerms(floDownBlock);
+    const firstTerm = terms[0] ?? floDownBlock.fileName ?? floDownBlock.id;
     const symbolicUri = firstTerm;
 
     return {
-      id: definition.id,
+      id: floDownBlock.id,
       name: firstTerm,
       canonicalForm: normalizeTerm(firstTerm),
       aliases: terms.filter((term) => term !== firstTerm),
@@ -90,15 +80,15 @@ export function buildDefinitionCatalog(
 }
 
 export function buildCatalogEntries(
-  catalog: DefinitionCatalogSource[],
+  catalog: FloDownBlockCatalogSource[],
 ): CatalogEntry[] {
-  return catalog.map((definition) => ({
-    definitionId: definition.id,
+  return catalog.map((floDownBlock) => ({
+    floDownBlockId: floDownBlock.id,
     terms: uniqueTerms([
-      definition.canonicalForm,
-      definition.name,
-      definition.symbolicUri,
-      ...definition.aliases,
+      floDownBlock.canonicalForm,
+      floDownBlock.name,
+      floDownBlock.symbolicUri,
+      ...floDownBlock.aliases,
     ]),
   }));
 }
@@ -118,7 +108,7 @@ export function findMatches(
 
     while ((index = normalizedText.indexOf(normalizedTerm, index)) !== -1) {
       matches.push({
-        definitionId: entry.definitionId,
+        floDownBlockId: entry.floDownBlockId,
         pageId,
         startOffset: index,
         endOffset: index + normalizedTerm.length,

@@ -1,11 +1,11 @@
-import { useDefinitionBySymbol } from "@/serverFns/definitionbysymbol.server";
-import { assertFtmlStatement } from "@/types/ftml.types";
+import { useFloDownBlockBySymbol } from "@/serverFns/floDownBlockBySymbol.server";
+import { assertFloDownStatement } from "@/types/floDown.types";
 import {
   DbSymbolResult,
   DefiniendumNode,
   OnReplaceNode,
   SelectedNode,
-  SemanticDefinition,
+  FloDownBlockSemantic,
   SymrefNode,
 } from "@/types/Semantic.types";
 import { Box, Loader, Paper, Text } from "@mantine/core";
@@ -14,7 +14,7 @@ import { FtmlPreview } from "./FtmlPreview";
 
 type BaseProps = {
   r: DbSymbolResult;
-  definition: SemanticDefinition;
+  floDownBlock: FloDownBlockSemantic;
   onReplaceNode: OnReplaceNode;
   setSelectedNode: React.Dispatch<React.SetStateAction<SelectedNode>>;
 };
@@ -33,7 +33,7 @@ export type DbResultItemProps = DefiniendumProps | SymrefProps;
 
 export function DbResultItem(props: DbResultItemProps) {
   const { r } = props;
-  const { data: def, isLoading } = useDefinitionBySymbol(r.symbolName);
+  const { data: def, isLoading } = useFloDownBlockBySymbol(r.symbolName);
 
   const isHighlighted =
     props.mode.type === "definiendum" &&
@@ -66,7 +66,7 @@ export function DbResultItem(props: DbResultItemProps) {
       {def && (
         <Box mt="xs" h={120}>
           <FtmlPreview
-            ftmlAst={assertFtmlStatement(def.statement)}
+            ftmlAst={assertFloDownStatement(def.statement)}
             docId={def.id}
           />
         </Box>

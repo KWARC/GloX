@@ -1,12 +1,16 @@
 import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import {
+  hasInlineChildren,
   isDefiniendumNode,
+  isPersistedBlock,
   type DefiniendumNode,
-  type DefinitionNode,
-  type FtmlContent,
-  type FtmlNode,
-  type FtmlRoot,
-} from "@/types/ftml.types";
+  type FloDownContent,
+  type FloDownStatement,
+  type Inline,
+  type InlineInDefinition,
+  type PersistedBlock,
+  type RootNode,
+} from "@/types/floDown.types";
 
 type RemoveSemanticOperation = {
   kind: "removeSemantic";
@@ -23,7 +27,18 @@ export type SemanticOperation =
   | RemoveSemanticOperation
   | ReplaceSemanticOperation;
 
-type FtmlTree = FtmlRoot | FtmlNode | FtmlContent | FtmlContent[];
+type FloDownTree = FloDownStatement | FloDownContent | FloDownContent[];
+
+function isPersistedBlockArray(
+  node: readonly unknown[],
+): node is PersistedBlock[] {
+  const first = node[0];
+  return (
+    typeof first === "object" &&
+    first !== null &&
+    isPersistedBlock(first as PersistedBlock)
+  );
+}
 
 export type ParsedMathHubUri = {
   archive: string;
@@ -37,14 +52,14 @@ export type ParsedMathHubUri = {
 export type ReplaceDefiniendumPayload = {
   type: "definiendum";
   uri: string;
-  content?: FtmlContent[];
+  content?: FloDownContent[];
   symdecl: boolean;
 };
 
 export type ReplaceSymrefPayload = {
   type: "symref";
   uri: string;
-  content?: FtmlContent[];
+  content?: FloDownContent[];
 };
 
 export type ReplacePayload = ReplaceDefiniendumPayload | ReplaceSymrefPayload;
@@ -73,8 +88,8 @@ export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
   return { uri: `${symRef.symbolName}`, text: symRef.symbolName };
 }
 
-function normalizeContent(content: FtmlContent[]): FtmlContent[] {
-  const result: FtmlContent[] = [];
+function normalizeContent(content: FloDownContent[]): FloDownContent[] {
+  const result: FloDownContent[] = [];
 
   for (const item of content) {
     if (typeof item === "string") {
@@ -95,7 +110,7 @@ function normalizeContent(content: FtmlContent[]): FtmlContent[] {
   return result;
 }
 
-export function findDefiniendum(content: FtmlContent[], symbolName: string): boolean {
+export function findDefiniendum(content: FloDownContent[], symbolName: string): boolean {
   const normalize = (u: string) => {
     if (!u) return u;
 
@@ -121,7 +136,7 @@ export function findDefiniendum(content: FtmlContent[], symbolName: string): boo
       }
     }
 
-    if (c.content && findDefiniendum(c.content, symbolName)) {
+    if (hasInlineChildren(c) && findDefiniendum(c.content, symbolName)) {
       return true;
     }
   }
@@ -129,7 +144,7 @@ export function findDefiniendum(content: FtmlContent[], symbolName: string): boo
   return false;
 }
 
-export function transform(ast: FtmlTree, operation: SemanticOperation): FtmlTree {
+export function transform(ast: FloDownTree, operation: SemanticOperation): FloDownTree {
   if (operation.kind === "removeSemantic") {
     return removeSemanticNodeWithIndex(ast, operation.target);
   }
@@ -139,68 +154,104 @@ export function transform(ast: FtmlTree, operation: SemanticOperation): FtmlTree
   return ast;
 }
 
-function removeSemanticNode(
-  node: FtmlTree,
+function removeSemanticFromInlines(
+  content: FloDownContent[],
   target: { type: "definiendum" | "symref"; uri: string },
-): FtmlTree {
-  if (Array.isArray(node)) {
-    const result: FtmlContent[] = [];
+): FloDownContent[] {
+  const result: FloDownContent[] = [];
 
-    for (const child of node) {
-      if (
-        typeof child === "object" &&
-        child &&
-        (child as FtmlNode).type === target.type &&
-        (child as FtmlNode).uri === target.uri
-      ) {
-        const childNode = child as FtmlNode;
-
-        if (childNode.content) {
-          for (const c of childNode.content as FtmlContent[]) {
-            result.push(c);
-          }
-        }
-      } else {
-        const transformed = removeSemanticNode(child as FtmlTree, target);
-
-        if (Array.isArray(transformed)) {
-          result.push(...transformed);
-        } else {
-          result.push(transformed as FtmlContent);
+  for (const child of content) {
+    if (
+      typeof child === "object" &&
+      child.type === target.type &&
+      child.uri === target.uri
+    ) {
+      if (hasInlineChildren(child)) {
+        for (const c of child.content) {
+          result.push(c);
         }
       }
+      continue;
     }
 
-    return normalizeContent(result);
+    if (typeof child === "string") {
+      result.push(child);
+      continue;
+    }
+
+    if (hasInlineChildren(child)) {
+      result.push({
+        ...child,
+        content: removeSemanticFromInlines(child.content, target),
+      } as FloDownContent);
+      continue;
+    }
+
+    result.push(child);
   }
+
+  return normalizeContent(result);
+}
+
+function removeSemanticNode(
+  node: FloDownTree,
+  target: { type: "definiendum" | "symref"; uri: string },
+): FloDownTree {
+  if (Array.isArray(node)) {
+    if (isPersistedBlockArray(node)) {
+      return node.map((block) =>
+        removeSemanticNode(block, target) as PersistedBlock,
+      );
+    }
+    return removeSemanticFromInlines(node as FloDownContent[], target);
+  }
+
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return node;
 
-  const copy: FtmlNode = { ...(node as FtmlNode) };
-  if (copy.content) {
-    copy.content = normalizeContent(
-      removeSemanticNode(copy.content as FtmlContent[], target) as FtmlContent[],
-    );
-  }
-  return copy;
-}
-function removeSemanticNodeWithIndex(
-  node: FtmlTree,
-  target: { type: "definiendum" | "symref"; uri: string },
-): FtmlTree {
-  if (!node || typeof node !== "object") return node;
-
-  if ((node as FtmlNode).type === "definition") {
-    const definitionNode = node as DefinitionNode;
+  if (node.type === "root") {
+    const root = node as RootNode;
     return {
-      ...definitionNode,
-      for_symbols: Array.isArray(definitionNode.for_symbols)
-        ? definitionNode.for_symbols.filter((s: string) => s !== target.uri)
-        : definitionNode.for_symbols,
-      content: removeSemanticNode(definitionNode.content as FtmlContent[], target) as FtmlContent[],
+      ...root,
+      content: root.content.map(
+        (block) => removeSemanticNode(block, target) as PersistedBlock,
+      ),
     };
   }
 
+  if (isPersistedBlock(node)) {
+    if (node.type === "definition") {
+      return {
+        ...node,
+        content: node.content.map((inner) => {
+          if (inner.type !== "paragraph") return inner;
+          return {
+            ...inner,
+            content: removeSemanticFromInlines(
+              inner.content,
+              target,
+            ) as InlineInDefinition[],
+          };
+        }),
+      };
+    }
+
+    return {
+      ...node,
+      content: removeSemanticFromInlines(
+        node.content,
+        target,
+      ) as Inline[],
+    };
+  }
+
+  return node;
+}
+
+function removeSemanticNodeWithIndex(
+  node: FloDownTree,
+  target: { type: "definiendum" | "symref"; uri: string },
+): FloDownTree {
   return removeSemanticNode(node, target);
 }
 
@@ -218,83 +269,104 @@ function normalizeUri(u: string | undefined): string | undefined {
   return u;
 }
 
-function replaceSemanticNode(
-  node: FtmlTree,
+function replaceSemanticInInlines(
+  content: FloDownContent[],
   target: { type: "definiendum" | "symref"; uri: string },
   payload: ReplacePayload,
-): FtmlTree {
+): FloDownContent[] {
+  return content.map((item) => {
+    if (typeof item === "string") return item;
+
+    const currentUri = normalizeUri("uri" in item ? item.uri : undefined);
+    const targetUri = normalizeUri(target.uri);
+
+    if (
+      (item.type === "definiendum" || item.type === "symref") &&
+      currentUri === targetUri
+    ) {
+      if (item.type === "definiendum" && payload.type === "definiendum") {
+        return {
+          ...(item as DefiniendumNode),
+          uri: payload.uri,
+          content: payload.content ?? item.content,
+          symdecl: payload.symdecl,
+        } as FloDownContent;
+      }
+
+      if (item.type === "symref" && payload.type === "symref") {
+        return {
+          ...item,
+          uri: payload.uri,
+          content: payload.content ?? item.content,
+        } as FloDownContent;
+      }
+    }
+
+    if (hasInlineChildren(item)) {
+      return {
+        ...item,
+        content: replaceSemanticInInlines(item.content, target, payload),
+      } as FloDownContent;
+    }
+
+    return item;
+  });
+}
+
+function replaceSemanticNode(
+  node: FloDownTree,
+  target: { type: "definiendum" | "symref"; uri: string },
+  payload: ReplacePayload,
+): FloDownTree {
   if (Array.isArray(node)) {
-    return node.map((child) =>
-      replaceSemanticNode(child as FtmlTree, target, payload),
-    ) as typeof node;
+    if (isPersistedBlockArray(node)) {
+      return node.map((block) =>
+        replaceSemanticNode(block, target, payload) as PersistedBlock,
+      );
+    }
+    return replaceSemanticInInlines(node as FloDownContent[], target, payload);
   }
 
   if (typeof node === "string") return node;
   if (!node || typeof node !== "object") return node;
 
-  const current = node as FtmlNode;
-
-  if (current.type === "definition") {
-    const def = current as DefinitionNode;
-
-    const updatedContent = replaceSemanticNode(
-      def.content as FtmlContent[],
-      target,
-      payload,
-    ) as FtmlContent[];
-
-    const targetUriNorm = normalizeUri(target.uri);
-    let symbols = Array.isArray(def.for_symbols)
-      ? def.for_symbols.filter((s) => normalizeUri(s) !== targetUriNorm)
-      : [];
-
-    if (payload.type === "definiendum" && payload.uri && !payload.uri.startsWith("http")) {
-      symbols.push(payload.uri);
-    }
-
-    symbols = Array.from(new Set(symbols));
-
+  if (node.type === "root") {
+    const root = node as RootNode;
     return {
-      ...def,
-      content: updatedContent,
-      for_symbols: symbols,
+      ...root,
+      content: root.content.map(
+        (block) => replaceSemanticNode(block, target, payload) as PersistedBlock,
+      ),
     };
   }
 
-  const currentUri = normalizeUri(current.uri);
-  const targetUri = normalizeUri(target.uri);
-
-  const isSemanticNode =
-    current.type === "definiendum" || current.type === "symref";
-
-  if (isSemanticNode && currentUri === targetUri) {
-    if (current.type === "definiendum" && payload.type === "definiendum") {
+  if (isPersistedBlock(node)) {
+    if (node.type === "definition") {
       return {
-        ...(current as DefiniendumNode),
-        uri: payload.uri,
-        content: payload.content ?? current.content,
-        symdecl: payload.symdecl,
-      } as DefiniendumNode;
-    }
-
-    if (current.type === "symref" && payload.type === "symref") {
-      return {
-        ...current,
-        uri: payload.uri,
-        content: payload.content ?? current.content,
+        ...node,
+        content: node.content.map((inner) => {
+          if (inner.type !== "paragraph") return inner;
+          return {
+            ...inner,
+            content: replaceSemanticInInlines(
+              inner.content,
+              target,
+              payload,
+            ) as InlineInDefinition[],
+          };
+        }),
       };
     }
+
+    return {
+      ...node,
+      content: replaceSemanticInInlines(
+        node.content,
+        target,
+        payload,
+      ) as Inline[],
+    };
   }
 
-  const copy: FtmlNode = { ...current };
-
-  if (copy.content) {
-    copy.content = replaceSemanticNode(
-      copy.content as FtmlContent[],
-      target,
-      payload,
-    ) as FtmlContent[];
-  }
-
-  return copy;
+  return node;
 }

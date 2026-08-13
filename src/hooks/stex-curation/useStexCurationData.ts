@@ -1,20 +1,14 @@
 import { queryClient } from "@/queryClient";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
+import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import { ExtractedItem } from "@/server/text-selection";
-import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
-import { getDefinitionFileStatus } from "@/serverFns/definitionStatus.server";
+import { getFloDownBlockProvenance } from "@/serverFns/floDownBlockProvenance.server";
+import { getFloDownBlockFileStatus } from "@/serverFns/floDownBlockStatus.server";
 import {
   FileIdentity,
-  getDefinitionsByIdentity,
+  getFloDownBlocksByIdentity,
 } from "@/serverFns/latex.server";
 import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
-import {
-  FtmlNode,
-  FtmlRoot,
-  isDefiniendumNode,
-  isNode,
-  normalizeToRoot,
-} from "@/types/ftml.types";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
@@ -44,29 +38,29 @@ export const STATUS_CONFIG = {
 } as const;
 
 export type StexStatus = keyof typeof STATUS_CONFIG;
-export type DefinitionSymbolSummary = {
-  definitionId: string;
+export type FloDownBlockSymbolSummary = {
+  floDownBlockId: string;
   symbols: string[];
 };
 
 export function useStexCurationData(identity: FileIdentity) {
   const { data, isLoading } = useQuery({
-    queryKey: ["definitionsByIdentity", identity],
+    queryKey: ["floDownBlocksByIdentity", identity],
     queryFn: () =>
-      getDefinitionsByIdentity({
+      getFloDownBlocksByIdentity({
         data: identity,
       }),
   });
 
-  const definitions = data?.definitions ?? [];
-  const definitionIds = definitions.map((d) => d.id);
+  const floDownBlocks = data?.floDownBlocks ?? [];
+  const floDownBlockIds = floDownBlocks.map((d) => d.id);
 
   const { data: provenance } = useQuery({
-    queryKey: ["definition-provenance", definitionIds],
+    queryKey: ["logical-paragraph-provenance", floDownBlockIds],
     queryFn: () =>
-      getDefinitionProvenance({
+      getFloDownBlockProvenance({
         data: {
-          definitionIds,
+          floDownBlockIds,
           documentId: identity.documentId,
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
@@ -74,12 +68,12 @@ export function useStexCurationData(identity: FileIdentity) {
           language: identity.language,
         },
       }),
-    enabled: definitionIds.length > 0,
+    enabled: floDownBlockIds.length > 0,
   });
 
-  const { data: definitionStatus } = useQuery({
+  const { data: floDownBlockStatus } = useQuery({
     queryKey: [
-      "definition-status",
+      "logical-paragraph-status",
       identity.documentId,
       identity.futureRepo,
       identity.filePath,
@@ -87,7 +81,7 @@ export function useStexCurationData(identity: FileIdentity) {
       identity.language,
     ],
     queryFn: () =>
-      getDefinitionFileStatus({
+      getFloDownBlockFileStatus({
         data: identity,
       }),
   });
@@ -117,30 +111,32 @@ export function useStexCurationData(identity: FileIdentity) {
     [staticCatalog],
   );
 
-  const definitionSymbolSummaries = buildDefinitionSymbolSummaries(definitions);
+  const floDownBlockSymbolSummaries = buildFloDownBlockSymbolSummaries(floDownBlocks);
 
   const actualSymbols = Array.from(
     new Set(
-      definitions.flatMap((def) => extractSymbolsFromStatement(def.statement)),
+      floDownBlocks.flatMap((def) =>
+        resolveDeclaredSymbolNames(def.statement, def.declaredSymbols),
+      ),
     ),
   );
 
-  const status = (definitionStatus?.status ?? "EXTRACTED") as StexStatus;
+  const status = (floDownBlockStatus?.status ?? "EXTRACTED") as StexStatus;
   const statusConf = STATUS_CONFIG[status] ?? STATUS_CONFIG.EXTRACTED;
-  const discardReasonFromServer = definitionStatus?.discardedReason ?? null;
+  const discardReasonFromServer = floDownBlockStatus?.discardedReason ?? null;
 
   return {
     data,
-    definitions,
+    floDownBlocks,
     isLoading,
-    definitionIds,
+    floDownBlockIds,
     provenance,
-    definitionStatus,
+    floDownBlockStatus,
     sniffyCatalog,
     staticCatalogLoading,
     staticCatalogError,
     retryStaticCatalog,
-    definitionSymbolSummaries,
+    floDownBlockSymbolSummaries,
     actualSymbols,
     status,
     statusConf,
@@ -148,55 +144,25 @@ export function useStexCurationData(identity: FileIdentity) {
   };
 }
 
-export async function refetchDefinitionsByIdentity(identity: FileIdentity) {
+export async function refetchFloDownBlocksByIdentity(identity: FileIdentity) {
   const updatedData = await queryClient.fetchQuery({
-    queryKey: ["definitionsByIdentity", identity],
+    queryKey: ["floDownBlocksByIdentity", identity],
     queryFn: () =>
-      getDefinitionsByIdentity({
+      getFloDownBlocksByIdentity({
         data: identity,
       }),
   });
-  return updatedData.definitions;
+  return updatedData.floDownBlocks;
 }
 
-export function extractSymbolsFromStatement(statement: FtmlRoot): string[] {
-  const root = normalizeToRoot(statement);
-  const symbols: string[] = [];
-  const seen = new Set<string>();
-
-  function walk(node: FtmlNode) {
-    if (isDefiniendumNode(node) && node.symdecl === true) {
-      const label = (node.content ?? [])
-        .filter((c): c is string => typeof c === "string")
-        .join("");
-
-      if (label && !seen.has(label)) {
-        seen.add(label);
-        symbols.push(label);
-      }
-    }
-
-    if (node.content) {
-      for (const child of node.content) {
-        if (isNode(child)) {
-          walk(child);
-        }
-      }
-    }
-  }
-
-  for (const node of root.content) {
-    walk(node);
-  }
-
-  return symbols;
-}
-
-export function buildDefinitionSymbolSummaries(
-  definitions: ExtractedItem[],
-): DefinitionSymbolSummary[] {
-  return definitions.map((definition) => ({
-    definitionId: definition.id,
-    symbols: extractSymbolsFromStatement(definition.statement),
+export function buildFloDownBlockSymbolSummaries(
+  floDownBlocks: ExtractedItem[],
+): FloDownBlockSymbolSummary[] {
+  return floDownBlocks.map((floDownBlock) => ({
+    floDownBlockId: floDownBlock.id,
+    symbols: resolveDeclaredSymbolNames(
+      floDownBlock.statement,
+      floDownBlock.declaredSymbols,
+    ),
   }));
 }

@@ -1,4 +1,4 @@
-export type PageTextHighlightSource = "definition" | "reference";
+export type PageTextHighlightSource = "extract" | "reference";
 
 export type PageTextHighlightMatch = {
   text: string | null | undefined;
@@ -8,9 +8,9 @@ export type PageTextHighlightMatch = {
 
 export type PageTextHighlightSegment = {
   content: string;
-  definition: boolean;
+  extract: boolean;
   reference: boolean;
-  definitionLabel?: string;
+  extractLabel?: string;
   referenceLabel?: string;
 };
 
@@ -48,7 +48,7 @@ export function getPageTextHighlightSegments(
     return [
       {
         content: pageText,
-        definition: false,
+        extract: false,
         reference: false,
       },
     ];
@@ -67,7 +67,7 @@ export function getPageTextHighlightSegments(
     if (cursor < start) {
       segments.push({
         content: pageText.slice(cursor, start),
-        definition: false,
+        extract: false,
         reference: false,
       });
     }
@@ -75,9 +75,9 @@ export function getPageTextHighlightSegments(
     const active = ranges.filter((range) => range.start < end && range.end > start);
     segments.push({
       content: pageText.slice(start, end),
-      definition: active.some((range) => range.source === "definition"),
+      extract: active.some((range) => range.source === "extract"),
       reference: active.some((range) => range.source === "reference"),
-      definitionLabel: active.find((range) => range.source === "definition")
+      extractLabel: active.find((range) => range.source === "extract")
         ?.label,
       referenceLabel: active.find((range) => range.source === "reference")?.label,
     });
@@ -87,7 +87,7 @@ export function getPageTextHighlightSegments(
   if (cursor < pageText.length) {
     segments.push({
       content: pageText.slice(cursor),
-      definition: false,
+      extract: false,
       reference: false,
     });
   }

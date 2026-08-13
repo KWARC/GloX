@@ -1,4 +1,4 @@
-import { SemanticDefinition } from "@/types/Semantic.types";
+import { FloDownBlockSemantic } from "@/types/Semantic.types";
 import { Box, Button, Group, Paper } from "@mantine/core";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
@@ -6,19 +6,19 @@ import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 export type PendingPropagation = {
   localSymbolUri: string;
   mathHubUri: string;
-  primaryDefinitionId: string;
+  primaryFloDownBlockId: string;
 };
 
 type MathHubSearchResultProps = {
   safeUri: string;
-  definition: SemanticDefinition;
+  floDownBlock: FloDownBlockSemantic;
   selectedDefiniendum: { uri: string } | null;
   setPendingPropagation: (data: PendingPropagation) => void;
 };
 
 export function MathHubSearchResult({
   safeUri,
-  definition,
+  floDownBlock,
   selectedDefiniendum,
   setPendingPropagation,
 }: MathHubSearchResultProps) {
@@ -39,7 +39,7 @@ export function MathHubSearchResult({
             setPendingPropagation({
               localSymbolUri: selectedDefiniendum.uri,
               mathHubUri: safeUri,
-              primaryDefinitionId: definition.id,
+              primaryFloDownBlockId: floDownBlock.id,
             });
           }}
         >

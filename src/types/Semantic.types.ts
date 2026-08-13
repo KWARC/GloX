@@ -1,18 +1,17 @@
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { ReplacePayload } from "@/server/parseUri";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
-import { getDefinitionBySymbol } from "@/serverFns/symbol.server";
-import { UpdateDefinitionAstResult } from "@/serverFns/updateDefinition.server";
-import { FtmlStatement } from "@/types/ftml.types";
-import { ParagraphKind } from "@/types/paragraphKind";
+import { getFloDownBlockBySymbol } from "@/serverFns/symbol.server";
+import { UpdateFloDownBlockAstResult } from "@/serverFns/updateFloDownBlock.server";
+import { FloDownStatement } from "@/types/floDown.types";
 
 type SemanticIndex = ReturnType<typeof extractSemanticIndex>;
 
 export type DefiniendumNode = SemanticIndex["definienda"][number];
 export type SymrefNode = SemanticIndex["symbolicRefs"][number];
 
-export type Definition = NonNullable<
-  Awaited<ReturnType<typeof getDefinitionBySymbol>>
+export type FloDownBlockBySymbol = NonNullable<
+  Awaited<ReturnType<typeof getFloDownBlockBySymbol>>
 >;
 
 export type DbSymbolResult = Extract<SymbolSearchResult, { source: "DB" }>;
@@ -23,22 +22,19 @@ export type SelectedNode =
   | { type: "symref"; uri: string }
   | null;
 
-export type SemanticDefinition = {
+export type FloDownBlockSemantic = {
   id: string;
-  kind: ParagraphKind;
-  statement: FtmlStatement;
-  symbolicRefs?: {
-    symbolicReference: { id: string; conceptUri: string };
-  }[];
+  statement: FloDownStatement;
+  declaredSymbols?: string[];
 };
 
 export type OnReplaceNode = (
-  definitionId: string,
+  floDownBlockId: string,
   target: { type: "definiendum" | "symref"; uri: string },
   payload: ReplacePayload,
-) => Promise<UpdateDefinitionAstResult>;
+) => Promise<UpdateFloDownBlockAstResult>;
 
 export type OnDeleteNode = (
-  definitionId: string,
+  floDownBlockId: string,
   target: { type: "definiendum" | "symref"; uri: string },
 ) => void;

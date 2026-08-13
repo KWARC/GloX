@@ -261,8 +261,8 @@ export const getLlmSuggestions = createServerFn({
           try {
             const res = await getLlmDefiniendaSuggestions({
               data: {
-                definitionText: suggestion.text.join(" "),
-                definitionId: llmSuggestion.id,
+                originalText: suggestion.text.join(" "),
+                floDownBlockId: llmSuggestion.id,
                 documentPageId: page.pageId,
                 pageNumber: page.pageNumber,
               },

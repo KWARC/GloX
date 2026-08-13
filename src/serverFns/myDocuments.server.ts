@@ -31,7 +31,6 @@ export const getMyDocuments = createServerFn({ method: "GET" }).handler(
         futureRepo: true,
         filePath: true,
         language: true,
-        moduleDescription: true,
         indexStatus: true,
         userId: true,
         user: {
@@ -46,7 +45,7 @@ export const getMyDocuments = createServerFn({ method: "GET" }).handler(
         updatedAt: true,
         _count: {
           select: {
-            definitions: true,
+            floDownBlocks: true,
             markReferences: true,
             pages: true,
           },
@@ -58,7 +57,7 @@ export const getMyDocuments = createServerFn({ method: "GET" }).handler(
       success: true,
       documents: docs.map((doc) => ({
         ...doc,
-        definitionCount: doc._count.definitions,
+        floDownBlockCount: doc._count.floDownBlocks,
         markReferenceCount: doc._count.markReferences,
         pageCount: doc._count.pages,
       })),

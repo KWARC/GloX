@@ -1,6 +1,6 @@
 import { parseUri } from "@/server/parseUri";
 import { isHttp } from "@/server/ftml/generateStexFromFtml";
-import type { FtmlStatement } from "@/types/ftml.types";
+import type { FloDownStatement } from "@/types/floDown.types";
 import { Box } from "@mantine/core";
 import { FtmlPreview } from "./FtmlPreview";
 
@@ -25,7 +25,7 @@ export function SymbolicLinkPreview({
     }
   })();
 
-  const statement: FtmlStatement = isHttp(uri)
+  const statement: FloDownStatement = (isHttp(uri)
     ? {
         type: "paragraph",
         content: [
@@ -51,7 +51,7 @@ export function SymbolicLinkPreview({
             ],
           },
         ],
-      };
+      }) as FloDownStatement;
 
   return (
     <Box

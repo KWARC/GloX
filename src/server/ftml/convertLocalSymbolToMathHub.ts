@@ -1,141 +1,63 @@
 import {
-  DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlRoot,
+  FloDownContent,
+  FloDownStatement,
   isDefiniendumNode,
   isDefinitionNode,
-} from "@/types/ftml.types";
-
-export function assertFtmlRoot(value: unknown): asserts value is FtmlRoot {
-  if (!value || typeof value !== "object") {
-    throw new Error("Invalid FTML AST");
-  }
-}
-
-function hasLocalDefiniendum(node: DefinitionNode, symbolUri: string): boolean {
-  function scan(content: FtmlContent[]): boolean {
-    for (const item of content) {
-      if (typeof item === "string") continue;
-      if (
-        isDefiniendumNode(item) &&
-        item.symdecl === true &&
-        item.uri === symbolUri
-      )
-        return true;
-      if (item.content && scan(item.content)) return true;
-    }
-    return false;
-  }
-  return scan(node.content);
-}
+  normalizeToRoot,
+  PersistedBlock,
+} from "@/types/floDown.types";
+import { mapInlineContent, mapInlines } from "@/server/ftml/statementContent";
 
 function replaceUriInContent(
-  content: FtmlContent[],
+  content: FloDownContent[],
   localUri: string,
   mathHubUri: string,
-): FtmlContent[] {
-  return content.map((item): FtmlContent => {
+): FloDownContent[] {
+  return mapInlines(content, (item) => {
     if (typeof item === "string") return item;
 
     if (
       (item.type === "definiendum" || item.type === "symref") &&
       item.uri === localUri
     ) {
-      const replaced: FtmlNode = { ...item, uri: mathHubUri };
-      if (typeof item !== "string" && item.content)
-        replaced.content = replaceUriInContent(
-          item.content,
-          localUri,
-          mathHubUri,
-        );
-      return replaced;
+      return { ...item, uri: mathHubUri };
     }
 
-    if (typeof item !== "string" && item.content) {
-      return {
-        ...item,
-        content: replaceUriInContent(item.content, localUri, mathHubUri),
-      } as FtmlNode;
-    }
     return item;
   });
 }
 
-function propagateUriInNode(
-  node: FtmlNode,
+function propagateUriInBlock(
+  block: PersistedBlock,
   localUri: string,
   mathHubUri: string,
-): FtmlNode {
-  if (isDefinitionNode(node)) {
-    const updatedContent = replaceUriInContent(
-      node.content,
-      localUri,
-      mathHubUri,
-    );
-    const updatedDef: DefinitionNode = { ...node, content: updatedContent };
-
-    if (
-      updatedDef.for_symbols.includes(localUri) &&
-      !hasLocalDefiniendum(updatedDef, localUri)
-    ) {
-      updatedDef.for_symbols = updatedDef.for_symbols.filter(
-        (s) => s !== localUri,
-      );
-    }
-    return updatedDef;
-  }
-
-  if (
-    (node.type === "definiendum" || node.type === "symref") &&
-    node.uri === localUri
-  ) {
-    const replaced: FtmlNode = { ...node, uri: mathHubUri };
-    if (node.content)
-      replaced.content = replaceUriInContent(
-        node.content,
-        localUri,
-        mathHubUri,
-      );
-    return replaced;
-  }
-
-  if (node.content) {
-    return {
-      ...node,
-      content: replaceUriInContent(node.content, localUri, mathHubUri),
-    };
-  }
-  return node;
+): PersistedBlock {
+  return mapInlineContent(block, (content) =>
+    replaceUriInContent(content, localUri, mathHubUri),
+  );
 }
 
 export function propagateUriInAst(
-  ast: FtmlRoot,
+  ast: FloDownStatement,
   localUri: string,
   mathHubUri: string,
-): FtmlRoot {
+): FloDownStatement {
   if (Array.isArray(ast)) {
-    return ast.map((node) =>
-      typeof node === "string"
-        ? node
-        : propagateUriInNode(node, localUri, mathHubUri),
-    );
+    return ast.map((block) => propagateUriInBlock(block, localUri, mathHubUri));
   }
   if (ast.type === "root") {
     return {
       ...ast,
-      content: (ast.content ?? []).map((node) =>
-        typeof node === "string"
-          ? node
-          : propagateUriInNode(node, localUri, mathHubUri),
+      content: ast.content.map((block) =>
+        propagateUriInBlock(block, localUri, mathHubUri),
       ),
     };
   }
-  return propagateUriInNode(ast, localUri, mathHubUri);
+  return propagateUriInBlock(ast, localUri, mathHubUri);
 }
 
-export function astReferencesUri(ast: FtmlRoot, localUri: string): boolean {
-  function scanContent(content: FtmlContent[]): boolean {
+export function astReferencesUri(ast: FloDownStatement, localUri: string): boolean {
+  function scanContent(content: FloDownContent[]): boolean {
     for (const item of content) {
       if (typeof item === "string") continue;
 
@@ -146,74 +68,45 @@ export function astReferencesUri(ast: FtmlRoot, localUri: string): boolean {
         return true;
       }
 
-      if (item.content && scanContent(item.content)) {
+      if ("content" in item && item.content && scanContent(item.content)) {
         return true;
       }
     }
     return false;
   }
 
-  if (Array.isArray(ast)) {
-    return ast.some(
-      (n) => typeof n !== "string" && n.content && scanContent(n.content),
-    );
-  }
-
-  if (ast.type === "root" && ast.content) {
-    return (
-      ast.content?.some(
-        (n) => typeof n !== "string" && n.content && scanContent(n.content),
-      ) ?? false
-    );
-  }
-
-  return (
-    typeof ast !== "string" &&
-    ast.content !== undefined &&
-    scanContent(ast.content)
-  );
+  const root = normalizeToRoot(ast);
+  return root.content.some((block) => {
+    if (isDefinitionNode(block)) {
+      return block.content.some(
+        (inner) => inner.type === "paragraph" && scanContent(inner.content),
+      );
+    }
+    if (block.type === "paragraph") {
+      return scanContent(block.content);
+    }
+    return false;
+  });
 }
 
 export function definitionContainsLocalSymbol(
-  statements: FtmlRoot[],
+  statements: FloDownStatement[],
   symbolUri: string,
 ): boolean {
-  function checkContent(content: FtmlContent[]): boolean {
-    for (const item of content) {
-      if (typeof item === "string") continue;
-
-      if (
-        isDefiniendumNode(item) &&
-        item.symdecl === true &&
-        item.uri === symbolUri
-      ) {
-        return true;
-      }
-
-      if (item.content && checkContent(item.content)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   return statements.some((ast) => {
-    if (Array.isArray(ast)) {
-      return ast.some(
-        (n) => typeof n !== "string" && n.content && checkContent(n.content),
+    const root = normalizeToRoot(ast);
+    return root.content.some((block) => {
+      if (!isDefinitionNode(block)) return false;
+      return block.content.some(
+        (inner) =>
+          inner.type === "paragraph" &&
+          inner.content.some(
+            (item) =>
+              isDefiniendumNode(item) &&
+              item.symdecl === true &&
+              item.uri === symbolUri,
+          ),
       );
-    }
-
-    if (ast.type === "root") {
-      return (ast.content ?? []).some(
-        (n) => typeof n !== "string" && n.content && checkContent(n.content),
-      );
-    }
-
-    return (
-      typeof ast !== "string" &&
-      ast.content !== undefined &&
-      checkContent(ast.content)
-    );
+    });
   });
 }

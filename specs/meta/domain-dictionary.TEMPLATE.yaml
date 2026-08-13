@@ -1,0 +1,38 @@
+# Canonical domain dictionary (ubiquitous language).
+# Copy to domain-dictionary.yaml and extend for your project.
+# Rules: /specs/engineering/spec-authoring.md §8
+
+schema_version: 1
+
+terms:
+  # --- Process & specs (starter — keep and extend) ---
+
+  critical_area:
+    preferred: Critical area
+    definition: >
+      Part of the system where errors cause security/compliance incidents, billing or entitlement
+      mistakes, data exposure, broken signup/activation, or major user regressions in complex flows.
+    technical_anchors:
+      - AGENTS.md § Critical areas
+
+  blast_radius:
+    preferred: Blast radius
+    definition: >
+      Specs, contracts, and code paths affected by a change. Assess via frontmatter upstream/code
+      links and markdown cross-refs — not by guessing.
+    technical_anchors:
+      - specs frontmatter upstream / code
+
+  # --- Your product (add below) ---
+  #
+  # example_entity:
+  #   preferred: Example entity
+  #   definition: One sentence definition.
+  #   technical_anchors:
+  #     - src/models/example.ts
+  #   allowed_aliases:
+  #     - label: Example
+  #       context: UI
+  #   deprecated_synonyms: [old name]
+  #   see_also:
+  #     - ../product/your-product.md

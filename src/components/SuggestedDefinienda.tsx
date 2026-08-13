@@ -56,8 +56,8 @@ export function SuggestedDefinienda({ item }: SuggestedDefiniendaProps) {
     try {
       const res = await getLlmDefiniendaSuggestions({
         data: {
-          definitionText: JSON.stringify(item.statement),
-          definitionId: item.id,
+          originalText: JSON.stringify(item.statement),
+          floDownBlockId: item.id,
           documentPageId: item.id,
           pageNumber: item.pageNumber,
         },

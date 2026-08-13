@@ -1,4 +1,5 @@
 import { ExtractedItem } from "@/server/text-selection";
+import { blockTypeLabel, getTopLevelBlockType } from "@/types/blockType";
 import {
   ActionIcon,
   Group,
@@ -20,7 +21,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
-import { FtmlPreview } from "./FtmlPreview";
+import { FtmlPreview, type FloDownSymbolContext } from "./FtmlPreview";
 
 interface ExtractedTextPanelProps {
   isLocked?: boolean;
@@ -36,16 +37,20 @@ interface ExtractedTextPanelProps {
   onDownload?: (item: ExtractedItem) => void;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
-  onOpenSemanticPanel: (definitionId: string) => void;
-  onRecomputeReferences?: (definitionId: string) => void;
+  onOpenSemanticPanel: (floDownBlockId: string) => void;
+  onRecomputeReferences?: (floDownBlockId: string) => void;
   onOpenLatexPreview?: (item: ExtractedItem) => void;
   showPageNumber?: boolean;
-  showDefinitionMeta?: boolean;
-  onEditDefinitionMeta?: (item: ExtractedItem) => void;
-  showDefinitionMetaIconOnly?: boolean;
+  showFloDownBlockMeta?: boolean;
+  onEditFloDownBlockMeta?: (item: ExtractedItem) => void;
+  showFloDownBlockMetaIconOnly?: boolean;
   showJsonEdit?: boolean;
   showActions?: boolean;
+  showDelete?: boolean;
   onGoToSourcePage?: (pageNumber: number) => void;
+  itemLabels?: Record<string, string>;
+  fillHeight?: boolean;
+  symbolContext?: FloDownSymbolContext;
 }
 
 export function ExtractedTextPanel({
@@ -59,14 +64,18 @@ export function ExtractedTextPanel({
   onOpenSemanticPanel,
   onRecomputeReferences,
   showPageNumber = true,
-  showDefinitionMeta = true,
-  showDefinitionMetaIconOnly = false,
+  showFloDownBlockMeta = true,
+  showFloDownBlockMetaIconOnly = false,
   showJsonEdit = true,
   showActions = true,
+  showDelete = true,
   onGoToSourcePage,
-  onEditDefinitionMeta,
+  onEditFloDownBlockMeta,
   isLocked = false,
   compact = false,
+  itemLabels,
+  fillHeight = !compact,
+  symbolContext,
 }: ExtractedTextPanelProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [jsonDrafts, setJsonDrafts] = useState<Record<string, string>>({});
@@ -103,11 +112,11 @@ export function ExtractedTextPanel({
     <Paper
       withBorder={!compact}
       p={compact ? 0 : "md"}
-      h={compact ? "auto" : "100%"}
+      h={fillHeight ? "100%" : "auto"}
       radius="md"
       bg={compact ? "transparent" : "blue.0"}
     >
-      <ScrollArea h={compact ? "auto" : "100%"}>
+      <ScrollArea h={fillHeight ? "100%" : "auto"}>
         <Stack gap={compact ? "xs" : "sm"}>
           {!extracts.length ? (
             <Text size={isMobile ? "md" : "sm"} c="dark" ta="center">
@@ -138,8 +147,12 @@ export function ExtractedTextPanel({
                     {showPageNumber ? (
                       <Text size={isMobile ? "sm" : "xs"}>
                         {item.pageNumber === null
-                          ? `New · ${item.kind}`
-                          : `Page ${item.pageNumber} · ${item.kind}`}
+                          ? `New · ${blockTypeLabel(getTopLevelBlockType(item.statement))}`
+                          : `Page ${item.pageNumber} · ${blockTypeLabel(getTopLevelBlockType(item.statement))}`}
+                      </Text>
+                    ) : itemLabels?.[item.id] ? (
+                      <Text size="sm" fw={600}>
+                        {itemLabels[item.id]}
                       </Text>
                     ) : (
                       <div />
@@ -159,16 +172,18 @@ export function ExtractedTextPanel({
                             </ActionIcon>
                           </Tooltip>
                         )}
-                        <Tooltip label="Delete content" withArrow>
-                          <ActionIcon
-                            size={compact ? 22 : isMobile ? "md" : "sm"}
-                            color="red"
-                            disabled={isLocked}
-                            onClick={() => onDelete(item.id)}
-                          >
-                            <IconTrash size={14} />
-                          </ActionIcon>
-                        </Tooltip>
+                        {showDelete && (
+                          <Tooltip label="Delete content" withArrow>
+                            <ActionIcon
+                              size={compact ? 22 : isMobile ? "md" : "sm"}
+                              color="red"
+                              disabled={isLocked}
+                              onClick={() => onDelete(item.id)}
+                            >
+                              <IconTrash size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
 
                         {showJsonEdit && (
                           <Tooltip
@@ -257,25 +272,27 @@ export function ExtractedTextPanel({
                         key={item.id}
                         docId={item.id}
                         ftmlAst={item.statement}
+                        declaredSymbols={item.declaredSymbols}
+                        symbolContext={symbolContext}
                       />
 
                       {/* <SuggestedDefinienda item={item} /> */}
                     </div>
                   )}
 
-                  {showDefinitionMeta && (
+                  {showFloDownBlockMeta && (
                     <Tooltip label="Move file path" withArrow>
                       <Group
                         gap={compact ? 4 : 6}
                         mt={compact ? 3 : 6}
                         title={`Archive: ${item.futureRepo} | Module Path: ${item.filePath} | Module: ${item.fileName} | Lang: ${item.language}`}
                         style={{
-                          cursor: onEditDefinitionMeta ? "pointer" : "default",
+                          cursor: onEditFloDownBlockMeta ? "pointer" : "default",
                         }}
-                        onClick={() => onEditDefinitionMeta?.(item)}
+                        onClick={() => onEditFloDownBlockMeta?.(item)}
                       >
                         <FolderSymlink size={14} />
-                        {!showDefinitionMetaIconOnly && (
+                        {!showFloDownBlockMetaIconOnly && (
                           <Text size={isMobile ? "xs" : "10px"} c="dimmed" ff="monospace">
                             [{item.futureRepo}] [{item.filePath}] [{item.fileName}
                             ] [{item.language}]

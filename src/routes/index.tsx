@@ -1,7 +1,7 @@
 import { DocumentsTable } from "@/components/DocumentsTable";
 import { DocumentUploadPanel } from "@/components/DocumentUploadPanel";
 import { currentUser } from "@/server/auth/currentUser";
-import { Button, Stack, Text, Title } from "@mantine/core";
+import { Button, Group, Stack, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
@@ -36,6 +36,11 @@ function App() {
 
       {isLoggedIn ? (
         <>
+          <Group justify="center">
+            <Button component={Link} to="/module-descriptions" variant="light">
+              Module descriptions
+            </Button>
+          </Group>
           <DocumentUploadPanel />
           <DocumentsTable />
         </>

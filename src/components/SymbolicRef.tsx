@@ -11,7 +11,7 @@ import {
   Text,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { RenderDbSymbol, RenderSymbolicUri } from "./RenderUri";
 import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 import { SymbolResult } from "./SymbolResult";
@@ -60,20 +60,6 @@ export function SymbolicRef({
     }
   };
 
-  useEffect(() => {
-    const stop = (e: Event) => e.stopPropagation();
-
-    window.addEventListener("wheel", stop, true);
-    window.addEventListener("mousedown", stop, true);
-    window.addEventListener("mouseup", stop, true);
-
-    return () => {
-      window.removeEventListener("wheel", stop, true);
-      window.removeEventListener("mousedown", stop, true);
-      window.removeEventListener("mouseup", stop, true);
-    };
-  }, []);
-
   return (
     <Portal>
       <Paper
@@ -81,6 +67,9 @@ export function SymbolicRef({
         shadow="xl"
         p="lg"
         radius="md"
+        onWheel={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
         style={{
           position: "fixed",
           right: SEARCH_MODAL_RIGHT_OFFSET,
@@ -123,6 +112,17 @@ export function SymbolicRef({
             onSelectSymbol={setSelectedSymbol}
             onCreateSymbol={onCreateSymbol}
           />
+
+          {onCreateSymbol && (
+            <Stack gap={4} align="center">
+              <Text size="xs" c="dimmed">
+                Cannot find the symbol?
+              </Text>
+              <Button variant="subtle" size="xs" onClick={onCreateSymbol}>
+                Create New Symbol
+              </Button>
+            </Stack>
+          )}
 
           {selectedSymbol?.source === "MATHHUB" && (
             <Paper withBorder p="sm" bg="green.0" radius="md">

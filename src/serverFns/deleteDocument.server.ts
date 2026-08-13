@@ -23,7 +23,7 @@ export const deleteDocument = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-export const checkDocumentDefinitions = createServerFn({ method: "POST" })
+export const checkDocumentFloDownBlocks = createServerFn({ method: "POST" })
   .inputValidator((data: { documentId: string }) => data)
   .handler(async ({ data }) => {
     const auth = await currentUser();
@@ -33,7 +33,7 @@ export const checkDocumentDefinitions = createServerFn({ method: "POST" })
       select: {
         id: true,
         userId: true,
-        definitions: {
+        floDownBlocks: {
           select: { id: true },
         },
         markReferences: {
@@ -47,7 +47,7 @@ export const checkDocumentDefinitions = createServerFn({ method: "POST" })
     const isAdmin = auth.user.role === "ADMIN";
     if (!isOwner && !isAdmin) throw new Error("Forbidden");
     return {
-      definitionCount: doc.definitions.length,
+      floDownBlockCount: doc.floDownBlocks.length,
       markReferenceCount: doc.markReferences.length,
     };
   });

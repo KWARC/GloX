@@ -1,42 +1,24 @@
 import { initFloDown } from "@/lib/flodownClient";
+import { buildForSymbols } from "@/server/ftml/declaredSymbols";
+import {
+  collectExternalSymbols,
+  isHttp,
+  mapInlineContent,
+  mapInlines,
+} from "@/server/ftml/statementContent";
 import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefiniendumNode,
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlStatement,
+  FloDownContent,
+  FloDownStatement,
   isDefiniendumNode,
   normalizeToRoot,
-} from "@/types/ftml.types";
+  PersistedBlock,
+  toExportDefinition,
+} from "@/types/floDown.types";
 
-export function isHttp(uri: string) {
-  return uri.startsWith("http://") || uri.startsWith("https://");
-}
-
-export function collectExternalSymbols(
-  node: FtmlNode | FtmlContent,
-  acc: Set<string>,
-): void {
-  if (typeof node === "string") return;
-
-  if (node.type === "symref" && node.uri && !isHttp(node.uri)) {
-    acc.add(node.uri);
-  }
-
-  if (
-    isDefiniendumNode(node) &&
-    node.symdecl === false &&
-    node.uri &&
-    !isHttp(node.uri)
-  ) {
-    acc.add(node.uri);
-  }
-
-  if (node.content) {
-    node.content.forEach((c) => collectExternalSymbols(c, acc));
-  }
-}
+export { isHttp };
 
 function isMathHubUri(uri: string): boolean {
   return (
@@ -45,131 +27,81 @@ function isMathHubUri(uri: string): boolean {
   );
 }
 
-function collectDeclaredLabels(
-  node: FtmlNode | FtmlContent,
-  acc: Set<string>,
-): void {
-  if (typeof node === "string") return;
-
-  if (isDefiniendumNode(node) && node.symdecl === true && node.uri) {
-    acc.add(node.uri);
-  }
-
-  if (node.content) {
-    for (const child of node.content) {
-      collectDeclaredLabels(child, acc);
-    }
-  }
-}
-
-function finalFTML(
-  node: FtmlNode,
+function rewriteInlineUris(
+  content: FloDownContent[],
   uriMap: Map<string, string>,
   futureRepo: string,
   filePath: string,
   fileName: string,
-): FtmlNode {
-  if (node.type === "definition") {
-    const def = node as DefinitionNode;
-    return {
-      ...def,
-      for_symbols: def.for_symbols.map((s) => uriMap.get(s) ?? s),
-      content: rewrite(
-        node.content ?? [],
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-      ),
-    };
-  }
+): FloDownContent[] {
+  return mapInlines(content, (item) => {
+    if (typeof item === "string") return item;
 
-  if (node.type === "definiendum") {
-    const n = node as DefiniendumNode;
-
-    if (!n.symdecl && n.uri && !isHttp(n.uri)) {
-      return {
-        ...n,
-        uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${n.uri}`,
-        content: rewrite(
-          n.content ?? [],
-          uriMap,
-          futureRepo,
-          filePath,
-          fileName,
-        ),
-      };
+    if (isDefiniendumNode(item)) {
+      const n = item as DefiniendumNode;
+      if (n.uri && uriMap.has(n.uri)) {
+        return { ...n, uri: uriMap.get(n.uri)! };
+      }
+      if (n.uri && !isHttp(n.uri) && !uriMap.has(n.uri)) {
+        return {
+          ...n,
+          uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${n.uri}`,
+        };
+      }
+      return { ...n, uri: uriMap.get(n.uri) ?? n.uri };
     }
 
-    return {
-      ...n,
-      uri: uriMap.get(n.uri!) ?? n.uri,
-      content: rewrite(n.content ?? [], uriMap, futureRepo, filePath, fileName),
-    };
-  }
-
-  if (node.type === "symref") {
-    const u = node.uri;
-
-    if (u && !isMathHubUri(u)) {
-      return {
-        ...node,
-        uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${u}`,
-        content: rewrite(
-          node.content ?? [],
-          uriMap,
-          futureRepo,
-          filePath,
-          fileName,
-        ),
-      };
+    if (item.type === "symref") {
+      const u = item.uri;
+      if (u && uriMap.has(u)) {
+        return { ...item, uri: uriMap.get(u)! };
+      }
+      if (u && !isMathHubUri(u)) {
+        return {
+          ...item,
+          uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${u}`,
+        };
+      }
+      return { ...item, uri: uriMap.get(item.uri) ?? item.uri };
     }
 
-    return {
-      ...node,
-      uri: uriMap.get(node.uri!) ?? node.uri,
-      content: rewrite(
-        node.content ?? [],
-        uriMap,
-        futureRepo,
-        filePath,
-        fileName,
-      ),
-    };
-  }
-
-  if (node.content) {
-    return {
-      ...node,
-      content: rewrite(node.content, uriMap, futureRepo, filePath, fileName),
-    };
-  }
-
-  return node;
+    return item;
+  });
 }
 
-function rewrite(
-  content: FtmlContent[],
+export function toExportBlock(
+  block: PersistedBlock,
   uriMap: Map<string, string>,
   futureRepo: string,
   filePath: string,
   fileName: string,
-): FtmlContent[] {
-  return content.map((c) =>
-    typeof c === "string"
-      ? c
-      : finalFTML(c, uriMap, futureRepo, filePath, fileName),
+  blockStatement: FloDownStatement,
+  declaredSymbols: readonly string[],
+): PersistedBlock | DefinitionNode {
+  if (block.type === "paragraph") {
+    return mapInlineContent(block, (content) =>
+      rewriteInlineUris(content, uriMap, futureRepo, filePath, fileName),
+    );
+  }
+
+  const rewritten = mapInlineContent(block as DefinitionNode, (content) =>
+    rewriteInlineUris(content, uriMap, futureRepo, filePath, fileName),
+  ) as DefinitionNode;
+
+  return toExportDefinition(
+    rewritten,
+    buildForSymbols(blockStatement, uriMap, declaredSymbols),
   );
 }
 
-export async function generateStexFromFtml(
-  ftmlAst: FtmlStatement,
+export async function generateStexFromFloDown(
+  statement: FloDownStatement,
   futureRepo: string,
   filePath: string,
   fileName: string,
+  declaredSymbolsPerBlock: readonly (readonly string[])[] = [],
 ): Promise<string> {
   const floDown = await initFloDown();
-  floDown.setBackendUrl("https://mmt.beta.vollki.kwarc.info");
 
   const fdHidden = floDown.FloDown.fromUri(
     `http://hidden?a=temp&d=${fileName}&l=en`,
@@ -179,60 +111,69 @@ export async function generateStexFromFtml(
     `http://${futureRepo}?a=${filePath}&d=${fileName}&l=en`,
   );
 
-  const root = normalizeToRoot(ftmlAst);
+  const root = normalizeToRoot(statement);
 
-  for (const block of root.content) {
+  for (let blockIndex = 0; blockIndex < root.content.length; blockIndex += 1) {
+    const block = root.content[blockIndex];
+
     if (block.type === "paragraph") {
-      fdVisible.addElement(block);
+      fdVisible.addElement(
+        toExportBlock(
+          block,
+          new Map(),
+          futureRepo,
+          filePath,
+          fileName,
+          block,
+          [],
+        ) as PersistedBlock,
+      );
       continue;
     }
 
     if (block.type !== "definition") continue;
 
     const def = block as DefinitionNode;
+    const declaredOnThisRow = new Set(
+      declaredSymbolsPerBlock[blockIndex] ?? [],
+    );
 
-    const external = new Set<string>();
-    collectExternalSymbols(def, external);
+    const external = collectExternalSymbols(def, declaredOnThisRow);
 
     const deps =
-      external.size > 0
+      external.length > 0
         ? await getDefiningDefinitions({
-            data: { labels: Array.from(external) },
+            data: { labels: external },
           })
         : {};
 
     const hiddenUriMap = new Map<string, string>();
     const visibleUriMap = new Map<string, string>();
-    const uniqueDeps = new Set<DefinitionNode>();
-    for (const depDef of Object.values(deps)) {
-      uniqueDeps.add(depDef);
-    }
+    const uniqueDeps = new Map(Object.entries(deps));
 
-    for (const depDef of uniqueDeps) {
-      const labels = new Set<string>();
-      collectDeclaredLabels(depDef, labels);
-
-      for (const label of labels) {
+    for (const dep of uniqueDeps.values()) {
+      for (const label of dep.declaredSymbols) {
         if (!hiddenUriMap.has(label)) {
           const hiddenUri = fdHidden.addSymbolDeclaration(label);
-
           hiddenUriMap.set(label, hiddenUri);
-          visibleUriMap.set(label, hiddenUri); 
+          visibleUriMap.set(label, hiddenUri);
         }
       }
 
-      const rewritten = finalFTML(
-        depDef,
-        hiddenUriMap,
-        futureRepo,
-        filePath,
-        fileName,
+      fdHidden.addElement(
+        toExportBlock(
+          dep.definition,
+          hiddenUriMap,
+          futureRepo,
+          filePath,
+          fileName,
+          dep.definition,
+          dep.declaredSymbols,
+        ) as DefinitionNode,
       );
-
-      fdHidden.addElement(rewritten);
     }
 
-    for (const symbol of def.for_symbols) {
+    for (const symbol of declaredOnThisRow) {
       if (!symbol.startsWith("http") && !visibleUriMap.has(symbol)) {
         const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
         const visibleUri = fdVisible.addSymbolDeclaration(symbol);
@@ -242,15 +183,18 @@ export async function generateStexFromFtml(
       }
     }
 
-    const rewritten = finalFTML(
-      def,
-      visibleUriMap,
-      futureRepo,
-      filePath,
-      fileName,
+    const declaredOnThisRowList = declaredSymbolsPerBlock[blockIndex] ?? [];
+    fdVisible.addElement(
+      toExportBlock(
+        def,
+        visibleUriMap,
+        futureRepo,
+        filePath,
+        fileName,
+        def,
+        declaredOnThisRowList,
+      ) as DefinitionNode,
     );
-
-    fdVisible.addElement(rewritten);
   }
 
   return fdVisible.getStex();

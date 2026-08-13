@@ -1,10 +1,7 @@
 import { CurationMarkReferenceBox } from "@/components/CurationMarkReferenceBox";
 import { CurationPageSkeleton } from "@/components/PageSkeletons";
 import { StexCuration } from "@/components/stex-curation/StexCuration";
-import {
-  DefinitionStatus,
-  ModuleDescriptionVisibility,
-} from "@/routes/curation";
+import { FloDownBlockCurationStatus } from "@/routes/curation";
 import { getFileIdentities } from "@/serverFns/latex.server";
 import {
   deleteMarkReference,
@@ -23,17 +20,13 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 type Props = {
-  curationLevel: DefinitionStatus | null;
-  setCurationLevel: (value: DefinitionStatus | null) => void;
-  moduleDescriptionVisibility: ModuleDescriptionVisibility;
-  setModuleDescriptionVisibility: (value: ModuleDescriptionVisibility) => void;
+  curationLevel: FloDownBlockCurationStatus | null;
+  setCurationLevel: (value: FloDownBlockCurationStatus | null) => void;
 };
 
 export function CurationSection({
   curationLevel,
   setCurationLevel,
-  moduleDescriptionVisibility,
-  setModuleDescriptionVisibility,
 }: Props) {
   const queryClient = useQueryClient();
   const { data: fileGroups = [], isLoading } = useQuery({
@@ -47,13 +40,8 @@ export function CurationSection({
   });
   const { data: markReferenceFiles = [], isLoading: markReferencesLoading } =
     useQuery({
-      queryKey: ["curation-mark-reference-files", moduleDescriptionVisibility],
-      queryFn: () =>
-        listMarkReferenceFiles({
-          data: {
-            moduleDescriptionVisibility,
-          },
-        }),
+      queryKey: ["curation-mark-reference-files"],
+      queryFn: () => listMarkReferenceFiles({ data: {} }),
     });
   const {
     mutateAsync: removeMarkReference,
@@ -85,52 +73,29 @@ export function CurationSection({
             </Text>
           </Stack>
 
-          <Group gap="sm" align="flex-end">
-            <Select
-              label="Filter by Content status"
-              placeholder="All statuses"
-              value={curationLevel}
-              onChange={(value) =>
-                setCurationLevel(value as DefinitionStatus | null)
-              }
-              clearable
-              data={[
-                { value: "EXTRACTED", label: "Extracted" },
-                { value: "FINALIZED_IN_FILE", label: " Finalized " },
-                {
-                  value: "SUBMITTED_TO_MATHHUB",
-                  label: "Submitted to MathHub",
-                },
-                { value: "DISCARDED", label: "Discard" },
-              ]}
-              w={220}
-              size="sm"
-              styles={{
-                label: { fontWeight: 500, marginBottom: 4 },
-              }}
-            />
-
-            <Select
-              label="Module Descriptions"
-              value={moduleDescriptionVisibility}
-              onChange={(value) =>
-                setModuleDescriptionVisibility(
-                  (value as ModuleDescriptionVisibility) ?? "all",
-                )
-              }
-              data={[
-                { value: "all", label: "Show All" },
-                { value: "only", label: "Show Module Descriptions" },
-                { value: "exclude", label: "Hide Module Descriptions" },
-              ]}
-              allowDeselect={false}
-              w={240}
-              size="sm"
-              styles={{
-                label: { fontWeight: 500, marginBottom: 4 },
-              }}
-            />
-          </Group>
+          <Select
+            label="Filter by Content status"
+            placeholder="All statuses"
+            value={curationLevel}
+            onChange={(value) =>
+              setCurationLevel(value as FloDownBlockCurationStatus | null)
+            }
+            clearable
+            data={[
+              { value: "EXTRACTED", label: "Extracted" },
+              { value: "FINALIZED_IN_FILE", label: " Finalized " },
+              {
+                value: "SUBMITTED_TO_MATHHUB",
+                label: "Submitted to MathHub",
+              },
+              { value: "DISCARDED", label: "Discard" },
+            ]}
+            w={220}
+            size="sm"
+            styles={{
+              label: { fontWeight: 500, marginBottom: 4 },
+            }}
+          />
         </Group>
         <Divider />
       </Box>

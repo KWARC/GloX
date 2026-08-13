@@ -1,10 +1,11 @@
-import { extractTextContent } from "@/server/ftml/astOperations";
 import {
-  FtmlNode,
-  FtmlRoot,
-  isDefiniendumNode,
+  FloDownStatement,
   normalizeToRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
+import {
+  collectDefinienda,
+  collectSymrefs,
+} from "@/server/ftml/statementContent";
 
 export type DefiniendumInfo = {
   uri: string;
@@ -16,84 +17,21 @@ export type DefiniendumInfo = {
 export type SymbolicRefInfo = {
   uri: string;
   text: string;
-  symbolicRefId: string;
 };
 
-function walk(
-  node: FtmlNode | FtmlNode[],
-  acc: {
-    definienda: { uri: string; text: string; symdecl: boolean }[];
-    symrefs: { uri: string; text: string }[];
-  },
-): void {
-  if (Array.isArray(node)) {
-    node.forEach((n) => walk(n, acc));
-    return;
-  }
-  if (isDefiniendumNode(node)) {
-    acc.definienda.push({
-      uri: node.uri!,
-      text: extractTextContent(node.content ?? []),
-      symdecl: !!node.symdecl,
-    });
-  }
-
-  if (node.type === "symref") {
-    acc.symrefs.push({
-      uri: node.uri!,
-      text: extractTextContent(node.content ?? []),
-    });
-  }
-
-  if (node.content) {
-    node.content.forEach((c) => {
-      if (typeof c !== "string") {
-        walk(c, acc);
-      }
-    });
-  }
-}
-
 export function extractSemanticIndex(
-  statement: FtmlRoot,
-  definition: {
-    symbolicRefs?: {
-      symbolicReference: { id: string; conceptUri: string };
-    }[];
-  },
+  statement: FloDownStatement,
+  declaredSymbols: readonly string[] = [],
 ) {
-  const root = normalizeToRoot(statement);
+  normalizeToRoot(statement);
 
-  const collected = {
-    definienda: [] as { uri: string; text: string; symdecl: boolean }[],
-    symrefs: [] as { uri: string; text: string }[],
-  };
-
-  walk(root.content, collected);
-
-  const definienda = collected.definienda.map((d) => ({
+  const definienda = collectDefinienda(statement).map((d) => ({
     ...d,
     symbolId: d.uri,
-    symdecl: d.symdecl,
+    symdecl: declaredSymbols.includes(d.uri),
   }));
 
-  const symbolicRefs = collected.symrefs.map((r) => {
-    const match = definition.symbolicRefs?.find(
-      (x) => x.symbolicReference.conceptUri === r.uri,
-    );
-
-    if (!match) {
-      return {
-        ...r,
-        symbolicRefId: null,
-        unlinked: true,
-      };
-    }
-    return {
-      ...r,
-      symbolicRefId: match.symbolicReference.id,
-    };
-  });
+  const symbolicRefs = collectSymrefs(statement);
 
   return { definienda, symbolicRefs };
 }

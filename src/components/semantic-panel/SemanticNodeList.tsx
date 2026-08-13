@@ -1,5 +1,6 @@
 import { SelectedNode } from "@/types/Semantic.types";
-import { ParagraphKind } from "@/types/paragraphKind";
+import { blockTypeLabel, getTopLevelBlockType } from "@/types/blockType";
+import { FloDownStatement } from "@/types/floDown.types";
 import { Box, Group, Paper, Stack, Text } from "@mantine/core";
 import { SemanticPanelState } from "@/hooks/semantic-panel/useSemanticPanelState";
 
@@ -13,7 +14,7 @@ export type SemanticNodeListProps = {
     | "canEditDefinienda"
   > & {
     selectedNode: SelectedNode;
-    definitionKind: ParagraphKind;
+    statement: FloDownStatement;
   };
 };
 
@@ -25,8 +26,10 @@ export function SemanticNodeList({ state }: SemanticNodeListProps) {
     setSelectedNode,
     setSelectedUri,
     canEditDefinienda,
-    definitionKind,
+    statement,
   } = state;
+
+  const blockTypeLabelText = blockTypeLabel(getTopLevelBlockType(statement));
 
   return (
     <Box
@@ -68,7 +71,7 @@ export function SemanticNodeList({ state }: SemanticNodeListProps) {
           </Stack>
         ) : (
           <Text size="xs" c="dimmed">
-            {definitionKind} entries only allow symbolic references.
+            {blockTypeLabelText} entries only allow symbolic references.
           </Text>
         )}
 

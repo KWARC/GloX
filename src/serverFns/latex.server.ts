@@ -1,15 +1,11 @@
 import prisma from "@/lib/prisma";
-import { latexToDefinitionStatement } from "@/server/ftml/latexToFtml";
+import { documentFloDownBlockWhere } from "@/server/floDownBlockProvenance";
+import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import { ExtractedItem } from "@/server/text-selection";
 import {
-  assertFtmlStatement,
-  FtmlNode,
-  FtmlStatement,
-  isDefiniendumNode,
-  isDefinitionNode,
-  isNode,
-  isParagraphNode,
-} from "@/types/ftml.types";
+  assertFloDownStatement,
+  FloDownStatement,
+} from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export type LatexDraft = {
@@ -17,8 +13,7 @@ export type LatexDraft = {
   savedAt: string;
 };
 
-export type LatexKey = {
-  definitionIds: string[];
+export type LatexFileIdentity = {
   documentId: string;
   futureRepo: string;
   filePath: string;
@@ -54,17 +49,10 @@ function normalizeHistory(value: unknown): LatexDraft[] {
 }
 
 export const saveLatexDraft = createServerFn({ method: "POST" })
-  .inputValidator((data: LatexKey & { latex: string }) => data)
+  .inputValidator((data: LatexFileIdentity & { latex: string }) => data)
   .handler(async ({ data }) => {
-    const {
-      latex,
-      documentId,
-      definitionIds,
-      futureRepo,
-      filePath,
-      fileName,
-      language,
-    } = data;
+    const { latex, documentId, futureRepo, filePath, fileName, language } =
+      data;
 
     const existing = await prisma.latexTable.findFirst({
       where: { documentId, futureRepo, filePath, fileName, language },
@@ -98,119 +86,49 @@ export const saveLatexDraft = createServerFn({ method: "POST" })
         },
       });
     }
+  });
 
-    const defs = await prisma.definition.findMany({
-      where: { id: { in: definitionIds } },
-      orderBy: { createdAt: "asc" },
+export const saveLatexFinal = createServerFn({ method: "POST" })
+  .inputValidator((data: LatexFileIdentity & { latex: string }) => data)
+  .handler(async ({ data }) => {
+    const { latex, documentId, futureRepo, filePath, fileName, language } =
+      data;
+
+    const existing = await prisma.latexTable.findFirst({
+      where: { documentId, futureRepo, filePath, fileName, language },
     });
 
-    for (let i = 0; i < defs.length; i++) {
-      const def = defs[i];
-
-      const existingStatement = assertFtmlStatement(def.statement);
-
-      const updatedStatement = latexToDefinitionStatement(
-        latex,
-        existingStatement,
-        i,
-      );
-
-      await prisma.definition.update({
-        where: { id: def.id },
+    if (!existing) {
+      await prisma.latexTable.create({
         data: {
-          statement: JSON.parse(JSON.stringify(updatedStatement)),
-          status: "EXTRACTED",
+          documentId,
+          futureRepo,
+          filePath,
+          fileName,
+          language,
+          finalLatex: latex,
+          history: JSON.parse(JSON.stringify([] as LatexDraft[])),
+          isFinal: true,
+        },
+      });
+    } else {
+      await prisma.latexTable.update({
+        where: { id: existing.id },
+        data: {
+          finalLatex: latex,
+          isFinal: true,
         },
       });
     }
   });
 
-export const saveLatexFinal = createServerFn({ method: "POST" })
-  .inputValidator((data: LatexKey & { latex: string }) => data)
-  .handler(async ({ data }) => {
-    const {
-      latex,
-      documentId,
-      definitionIds,
-      futureRepo,
-      filePath,
-      fileName,
-      language,
-    } = data;
-
-    await prisma.$transaction(async (tx) => {
-      const existing = await tx.latexTable.findFirst({
-        where: { documentId, futureRepo, filePath, fileName, language },
-      });
-
-      if (!existing) {
-        await tx.latexTable.create({
-          data: {
-            documentId,
-            futureRepo,
-            filePath,
-            fileName,
-            language,
-            finalLatex: latex,
-            history: JSON.parse(JSON.stringify([] as LatexDraft[])),
-            isFinal: true,
-          },
-        });
-      } else {
-        await tx.latexTable.update({
-          where: { id: existing.id },
-          data: {
-            finalLatex: latex,
-            isFinal: true,
-          },
-        });
-      }
-
-      const defs = await tx.definition.findMany({
-        where: { id: { in: definitionIds } },
-        orderBy: { createdAt: "asc" }, // REQUIRED
-      });
-
-      for (let i = 0; i < defs.length; i++) {
-        const def = defs[i];
-
-        const existingStatement = assertFtmlStatement(def.statement);
-
-        const updatedStatement = latexToDefinitionStatement(
-          latex,
-          existingStatement,
-          i,
-        );
-
-        const nextVersion = def.currentVersion + 1;
-
-        await tx.definitionVersion.create({
-          data: {
-            definitionId: def.id,
-            versionNumber: nextVersion,
-            originalText: def.originalText,
-            statement: JSON.parse(JSON.stringify(updatedStatement)),
-            editedById: def.updatedById ?? def.createdById,
-          },
-        });
-
-        await tx.definition.update({
-          where: { id: def.id },
-          data: {
-            statement: JSON.parse(JSON.stringify(updatedStatement)),
-            currentVersion: nextVersion,
-            status: "FINALIZED_IN_FILE",
-          },
-        });
-      }
-    });
-  });
-
 export const getLatexHistory = createServerFn({ method: "GET" })
-  .inputValidator((data: LatexKey) => data)
+  .inputValidator((data: LatexFileIdentity) => data)
   .handler(async ({ data }) => {
+    const { documentId, futureRepo, filePath, fileName, language } = data;
+
     const record = await prisma.latexTable.findFirst({
-      where: data,
+      where: { documentId, futureRepo, filePath, fileName, language },
       orderBy: { createdAt: "desc" },
     });
 
@@ -241,8 +159,10 @@ export const getFileIdentities = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const definitions = await prisma.definition.findMany({
-      where: data.status ? { status: data.status } : {},
+    const floDownBlocks = await prisma.floDownBlock.findMany({
+      where: data.status
+        ? { ...documentFloDownBlockWhere, status: data.status }
+        : documentFloDownBlockWhere,
       distinct: ["futureRepo", "filePath", "fileName", "language"],
       select: {
         documentId: true,
@@ -259,7 +179,10 @@ export const getFileIdentities = createServerFn({ method: "POST" })
       ],
     });
 
-    return definitions;
+    return floDownBlocks.filter(
+      (row): row is typeof row & { documentId: string } =>
+        row.documentId != null,
+    );
   });
 
 export type FileIdentity = {
@@ -270,22 +193,19 @@ export type FileIdentity = {
   language: string;
 };
 
-export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
+export const getFloDownBlocksByIdentity = createServerFn({ method: "POST" })
   .inputValidator((data: FileIdentity) => data)
   .handler(async ({ data }) => {
-    const defs = await prisma.definition.findMany({
+    const defs = await prisma.floDownBlock.findMany({
       where: {
+        ...documentFloDownBlockWhere,
+        documentId: data.documentId,
         futureRepo: data.futureRepo,
         filePath: data.filePath,
         fileName: data.fileName,
         language: data.language,
       },
       include: {
-        symbolicRefs: {
-          include: {
-            symbolicReference: true,
-          },
-        },
         llmSuggestedDefiniendas: true,
         createdBy: {
           select: {
@@ -306,21 +226,22 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
     });
 
     const typedDefinitions: ExtractedItem[] = defs.map((def) => {
-      const statement = assertFtmlStatement(def.statement) as FtmlStatement;
+      const statement = assertFloDownStatement(def.statement) as FloDownStatement;
 
       return {
         id: def.id,
-        documentId: def.documentId,
+        documentId: def.documentId!,
+        documentPageId: def.documentPageId!,
         pageNumber: def.pageNumber,
-        kind: def.kind,
+        originalText: def.originalText,
         statement,
+        declaredSymbols: def.declaredSymbols,
         futureRepo: def.futureRepo,
         filePath: def.filePath,
         fileName: def.fileName,
         language: def.language,
         createdBy: def.createdBy,
         updatedBy: def.updatedBy,
-        symbolicRefs: def.symbolicRefs,
         definienda:
           def.llmSuggestedDefiniendas?.map((d) => ({
             text: d.definienda,
@@ -332,55 +253,16 @@ export const getDefinitionsByIdentity = createServerFn({ method: "POST" })
     const symbols: { id: string; label: string }[] = [];
 
     for (const def of typedDefinitions) {
-      const statement = def.statement;
-
-      const nodes: FtmlNode[] = Array.isArray(statement)
-        ? statement.filter(isNode)
-        : statement.type === "root"
-          ? (statement.content ?? []).filter(isNode)
-          : [statement];
-
-      for (const node of nodes) {
-        if (!isDefinitionNode(node)) continue;
-
-        for (const child of node.content ?? []) {
-          if (!isNode(child)) continue;
-
-          if (isDefiniendumNode(child) && child.symdecl === true) {
-            const label = (child.content ?? [])
-              .filter((c): c is string => typeof c === "string")
-              .join("");
-
-            symbols.push({
-              id: def.id,
-              label,
-            });
-
-            continue;
-          }
-
-          if (isParagraphNode(child)) {
-            for (const sub of child.content ?? []) {
-              if (!isNode(sub)) continue;
-
-              if (isDefiniendumNode(sub) && sub.symdecl === true) {
-                const label = (sub.content ?? [])
-                  .filter((c): c is string => typeof c === "string")
-                  .join("");
-
-                symbols.push({
-                  id: def.id,
-                  label,
-                });
-              }
-            }
-          }
-        }
+      for (const label of resolveDeclaredSymbolNames(
+        def.statement,
+        def.declaredSymbols,
+      )) {
+        symbols.push({ id: def.id, label });
       }
     }
 
     return {
       symbols,
-      definitions: typedDefinitions,
+      floDownBlocks: typedDefinitions,
     };
   });

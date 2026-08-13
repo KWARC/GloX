@@ -13,11 +13,47 @@ export const getDocumentById = createServerFn({ method: "POST" })
 
     const doc = await prisma.document.findUnique({
       where: { id: data.id },
+      select: {
+        id: true,
+        filename: true,
+        fileHash: true,
+        mimeType: true,
+        fileSize: true,
+        futureRepo: true,
+        filePath: true,
+        language: true,
+        indexStatus: true,
+        userId: true,
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            floDownBlocks: true,
+            markReferences: true,
+            pages: true,
+          },
+        },
+      },
     });
 
     if (!doc) {
       throw new Error("Document not found");
     }
 
-    return doc;
+    const { _count, ...document } = doc;
+
+    return {
+      ...document,
+      floDownBlockCount: _count.floDownBlocks,
+      markReferenceCount: _count.markReferences,
+      pageCount: _count.pages,
+    };
   });

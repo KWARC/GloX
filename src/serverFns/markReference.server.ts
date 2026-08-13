@@ -2,8 +2,6 @@ import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
 import { createServerFn } from "@tanstack/react-start";
 
-type ModuleDescriptionVisibility = "all" | "only" | "exclude";
-
 type CreateLocalSymbolInput = {
   symbolName: string;
   alias?: string | null;
@@ -42,10 +40,6 @@ export type CreatedLocalSymbol = {
   filePath: string;
   fileName: string;
   language: string;
-};
-
-type ListIndexDocumentsInput = {
-  moduleDescriptionVisibility?: ModuleDescriptionVisibility;
 };
 
 export const createLocalSymbol = createServerFn({ method: "POST" })
@@ -204,22 +198,14 @@ export const listMarkReferences = createServerFn({ method: "POST" })
   });
 
 export const listMarkReferenceFiles = createServerFn({ method: "POST" })
-  .inputValidator((data: ListIndexDocumentsInput) => data)
-  .handler(async ({ data }) => {
+  .inputValidator((data: Record<string, never>) => data)
+  .handler(async () => {
     const userRes = await currentUser();
     if (!userRes.loggedIn) throw new Error("Unauthorized");
-
-    const moduleDescriptionVisibility =
-      data.moduleDescriptionVisibility ?? "all";
 
     const documents = await prisma.document.findMany({
       where: {
         indexStatus: { not: null },
-        ...(moduleDescriptionVisibility === "only"
-          ? { moduleDescription: true }
-          : moduleDescriptionVisibility === "exclude"
-            ? { moduleDescription: false }
-            : {}),
       },
       select: {
         id: true,
@@ -227,7 +213,6 @@ export const listMarkReferenceFiles = createServerFn({ method: "POST" })
         futureRepo: true,
         filePath: true,
         language: true,
-        moduleDescription: true,
         indexStatus: true,
         markReferences: {
           select: {

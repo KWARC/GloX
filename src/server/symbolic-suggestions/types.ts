@@ -1,5 +1,5 @@
 import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
-import type { FtmlStatement } from "@/types/ftml.types";
+import type { FloDownStatement } from "@/types/floDown.types";
 
 export type CatalogEntry = {
   id: string;
@@ -8,8 +8,8 @@ export type CatalogEntry = {
   aliases: string[];
   symbolicUri: string;
   language?: string;
-  sourceDefinitionId?: string;
-  statement?: FtmlStatement;
+  sourceFloDownBlockId?: string;
+  statement?: FloDownStatement;
   symRef: UnifiedSymbolicReference;
 };
 
@@ -18,7 +18,7 @@ export type SuggestedReferenceCandidate = {
   label: string;
   path?: string;
   confidence: number;
-  definitionId?: string;
+  floDownBlockId?: string;
   uri?: string;
 };
 

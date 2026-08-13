@@ -1,15 +1,15 @@
 import { currentUser } from "@/server/auth/currentUser";
 import { injectProvenance } from "@/server/ftml/addProvenanceData";
-import { generateStexFromFtml } from "@/server/ftml/generateStexFromFtml";
+import { generateStexFromFloDown } from "@/server/ftml/generateStexFromFtml";
 import {
-  getCombinedDefinitionFtml,
+  getCombinedFloDownStatement,
   getFinalizedLatexById,
-} from "@/serverFns/definitionAggregate.server";
-import { getDefinitionProvenance } from "@/serverFns/definitionProvenance.server";
+} from "@/serverFns/floDownBlockAggregate.server";
+import { getFloDownBlockProvenance } from "@/serverFns/floDownBlockProvenance.server";
 import {
-  getDefinitionFileStatus,
-  updateDefinitionsStatusByIdentity,
-} from "@/serverFns/definitionStatus.server";
+  getFloDownBlockFileStatus,
+  updateFloDownBlocksStatusByIdentity,
+} from "@/serverFns/floDownBlockStatus.server";
 import {
   getLatexHistory,
   saveLatexDraft,
@@ -37,7 +37,7 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 
 type CreateLatexSearch = {
-  definitionIds: string[];
+  floDownBlockIds: string[];
   documentId: string;
   futureRepo: string;
   filePath: string;
@@ -58,7 +58,7 @@ export const Route = createFileRoute("/create-latex")({
 
   validateSearch: (search: Record<string, unknown>): CreateLatexSearch => {
     return {
-      definitionIds: search.definitionIds as string[],
+      floDownBlockIds: search.floDownBlockIds as string[],
       documentId: search.documentId as string,
       futureRepo: search.futureRepo as string,
       filePath: search.filePath as string,
@@ -73,7 +73,7 @@ export const Route = createFileRoute("/create-latex")({
 function CreateLatexPage() {
   const navigate = useNavigate();
   const {
-    definitionIds,
+    floDownBlockIds,
     documentId,
     futureRepo,
     filePath,
@@ -89,9 +89,9 @@ function CreateLatexPage() {
   const [savingFinal, setSavingFinal] = useState(false);
   const [isFromHistory, setIsFromHistory] = useState(false);
 
-  const { data: ftmlAst, isLoading: ftmlLoading } = useQuery({
+  const { data: combinedStatement, isLoading: statementLoading } = useQuery({
     queryKey: [
-      "combined-ftml",
+      "combined-statement",
       documentId,
       futureRepo,
       filePath,
@@ -99,9 +99,9 @@ function CreateLatexPage() {
       language,
     ],
     queryFn: () =>
-      getCombinedDefinitionFtml({
+      getCombinedFloDownStatement({
         data: {
-          definitionIds,
+          floDownBlockIds,
           documentId,
           futureRepo,
           filePath,
@@ -109,7 +109,7 @@ function CreateLatexPage() {
           language,
         },
       }),
-    enabled: !finalized && definitionIds.length > 0,
+    enabled: !finalized && floDownBlockIds.length > 0,
   });
 
   const { data: finalizedData, isLoading: finalizedLoading } = useQuery({
@@ -119,10 +119,16 @@ function CreateLatexPage() {
   });
 
   const { data: stex, isLoading: stexLoading } = useQuery({
-    queryKey: ["stex", ftmlAst],
+    queryKey: ["stex", combinedStatement],
     queryFn: () =>
-      generateStexFromFtml(ftmlAst!, futureRepo, filePath, fileName),
-    enabled: !finalized && !!ftmlAst,
+      generateStexFromFloDown(
+        combinedStatement!.statement,
+        futureRepo,
+        filePath,
+        fileName,
+        combinedStatement!.declaredSymbolsPerBlock,
+      ),
+    enabled: !finalized && !!combinedStatement?.statement,
     staleTime: Infinity,
   });
 
@@ -143,7 +149,6 @@ function CreateLatexPage() {
       getLatexHistory({
         data: {
           documentId,
-          definitionIds,
           futureRepo,
           filePath,
           fileName,
@@ -154,11 +159,11 @@ function CreateLatexPage() {
   });
 
   const { data: provenance } = useQuery({
-    queryKey: ["definition-provenance", documentId],
+    queryKey: ["logical-paragraph-provenance", documentId],
     queryFn: () =>
-      getDefinitionProvenance({
+      getFloDownBlockProvenance({
         data: {
-          definitionIds,
+          floDownBlockIds,
           documentId,
           futureRepo,
           filePath,
@@ -169,9 +174,9 @@ function CreateLatexPage() {
     enabled: !finalized,
   });
 
-  const { data: definitionStatus } = useQuery({
+  const { data: floDownBlockStatus } = useQuery({
     queryKey: [
-      "definition-status",
+      "logical-paragraph-status",
       documentId,
       futureRepo,
       filePath,
@@ -179,7 +184,7 @@ function CreateLatexPage() {
       language,
     ],
     queryFn: () =>
-      getDefinitionFileStatus({
+      getFloDownBlockFileStatus({
         data: {
           documentId,
           futureRepo,
@@ -190,7 +195,7 @@ function CreateLatexPage() {
       }),
   });
 
-  const status = definitionStatus?.status ?? "EXTRACTED";
+  const status = floDownBlockStatus?.status ?? "EXTRACTED";
 
   const generatedLatex =
     stex && provenance ? injectProvenance(stex, provenance) : (stex ?? "");
@@ -199,7 +204,7 @@ function CreateLatexPage() {
     ? (finalizedData?.latex ?? "")
     : (editedLatex ?? generatedLatex ?? historyData?.finalLatex ?? "");
 
-  if (!finalized && (ftmlLoading || stexLoading)) {
+  if (!finalized && (statementLoading || stexLoading)) {
     return (
       <Box p="xl" h="100dvh">
         <Stack align="center" justify="center" h="100%">
@@ -229,7 +234,6 @@ function CreateLatexPage() {
       await saveLatexDraft({
         data: {
           documentId,
-          definitionIds,
           futureRepo,
           filePath,
           fileName,
@@ -249,7 +253,6 @@ function CreateLatexPage() {
       await saveLatexFinal({
         data: {
           documentId,
-          definitionIds,
           futureRepo,
           filePath,
           fileName,
@@ -305,7 +308,7 @@ function CreateLatexPage() {
                     );
                     if (!confirmSubmit) return;
 
-                    await updateDefinitionsStatusByIdentity({
+                    await updateFloDownBlocksStatusByIdentity({
                       data: {
                         identity: {
                           documentId,

@@ -1,100 +1,107 @@
 import {
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlRoot,
+  FloDownStatement,
   isDefiniendumNode,
-  isDefinitionNode,
+  PersistedBlock,
   RootNode,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
+import {
+  attachForSymbolsToDefinition,
+  buildForSymbols,
+} from "@/server/ftml/declaredSymbols";
+import { mapInlines } from "@/server/ftml/statementContent";
 
 type FloDownInstance = {
   addSymbolDeclaration: (symbol: string) => string;
 };
 
-export function finalFloDown(ast: FtmlRoot, fd: FloDownInstance): FtmlRoot {
-  const clone: FtmlRoot = structuredClone(ast);
+function isMathHubUri(uri: string): boolean {
+  try {
+    new URL(uri);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  function transformNode(node: FtmlNode): FtmlNode {
-    if (isDefinitionNode(node)) {
-      return transformDefinition(node);
-    }
-
-    if (!node.content) return node;
-
-    return {
-      ...node,
-      content: transformContent(node.content),
-    };
+function transformBlock(
+  block: PersistedBlock,
+  symbolMap: Map<string, string>,
+  statementForSymbols: FloDownStatement,
+  declaredSymbols: readonly string[],
+): PersistedBlock {
+  if (block.type === "paragraph") {
+    return block;
   }
 
-  function transformDefinition(def: DefinitionNode): DefinitionNode {
-    const symbolMap = new Map<string, string>();
+  const def = block as DefinitionNode;
+  const withSymbols = attachForSymbolsToDefinition(
+    def,
+    statementForSymbols,
+    symbolMap,
+    declaredSymbols,
+  );
 
-    const declaredSymbols = def.for_symbols ?? [];
+  return {
+    ...withSymbols,
+    content: def.content.map((inner) => {
+      if (inner.type !== "paragraph") return inner;
+      return {
+        ...inner,
+        content: mapInlines(inner.content, (item) => {
+          if (typeof item === "string") return item;
+          if (symbolMap && isDefiniendumNode(item)) {
+            return {
+              ...item,
+              uri: symbolMap.get(item.uri) ?? item.uri,
+            };
+          }
+          return item;
+        }),
+      };
+    }),
+  };
+}
 
-    for (const symbol of declaredSymbols) {
-      if (isMathHubUri(symbol)) continue;
+export function finalFloDown(
+  ast: FloDownStatement,
+  fd: FloDownInstance,
+  declaredSymbols: readonly string[] = [],
+): FloDownStatement {
+  const clone: FloDownStatement = structuredClone(ast);
+  const statementForSymbols = clone;
+  const symbolMap = new Map<string, string>();
 
-      const runtimeUri = fd.addSymbolDeclaration(symbol);
-      symbolMap.set(symbol, runtimeUri);
-    }
-
-    return {
-      ...def,
-      for_symbols: declaredSymbols.map((s) => symbolMap.get(s) ?? s),
-      content: transformContent(def.content, symbolMap),
-    };
-  }
-
-  function transformContent(
-    content: FtmlContent[],
-    symbolMap?: Map<string, string>,
-  ): FtmlContent[] {
-    return content.map((item) => {
-      if (typeof item === "string") return item;
-
-      if (symbolMap && isDefiniendumNode(item)) {
-        return {
-          ...item,
-          uri: symbolMap.get(item.uri) ?? item.uri,
-        };
-      }
-
-      if (item.content) {
-        return {
-          ...item,
-          content: transformContent(item.content, symbolMap),
-        };
-      }
-
-      return item;
-    });
+  for (const symbol of declaredSymbols) {
+    if (isMathHubUri(symbol)) continue;
+    symbolMap.set(symbol, fd.addSymbolDeclaration(symbol));
   }
 
   function transformRoot(root: RootNode): RootNode {
     return {
       ...root,
-      content: root.content.map(transformNode),
+      content: root.content.map((block) =>
+        transformBlock(block, symbolMap, statementForSymbols, declaredSymbols),
+      ),
     };
   }
 
-  function isMathHubUri(uri: string): boolean {
-    try {
-      new URL(uri);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   if (Array.isArray(clone)) {
-    return clone.map((n) => transformNode(n));
+    return clone.map((block) =>
+      transformBlock(block, symbolMap, statementForSymbols, declaredSymbols),
+    );
   }
 
   if (clone.type === "root") {
-    return transformRoot(clone as RootNode);
+    return transformRoot(clone);
   }
 
-  return transformNode(clone);
+  return transformBlock(
+    clone,
+    symbolMap,
+    statementForSymbols,
+    declaredSymbols,
+  );
 }
+
+export { buildForSymbols };

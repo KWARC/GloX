@@ -25,25 +25,11 @@ enum DocumentStatus {
   FAILED
 }
 
-enum SymbolicRefSource {
-  MATHHUB
-  DEFINIENDUM
-}
-
-enum DefinitionStatus {
+enum FloDownBlockStatus {
   DISCARDED
   EXTRACTED
   FINALIZED_IN_FILE
   SUBMITTED_TO_MATHHUB
-}
-
-enum ParagraphKind {
-  Definition
-  Assertion
-  Paragraph
-  Proof
-  SubProof
-  Example
 }
 
 enum IndexStatus {
@@ -61,13 +47,41 @@ model User {
   emailVerified Boolean  @default(false)
   role          UserRole @default(EXTRACTOR)
 
-  createdAt             DateTime            @default(now())
-  documents             Document[]
-  DefinitionsHistory    DefinitionVersion[]
-  createdDefinitions    Definition[]        @relation("DefinitionCreatedBy")
-  updatedDefinitions    Definition[]        @relation("DefinitionUpdatedBy")
-  createdMarkReferences MarkReference[]     @relation("MarkReferenceCreatedBy")
-  confirmedSymbols      Symbol[]
+  createdAt              DateTime              @default(now())
+  documents              Document[]
+  floDownBlockVersions   FloDownBlockVersion[]
+  createdFloDownBlocks   FloDownBlock[]        @relation("FloDownBlockCreatedBy")
+  updatedFloDownBlocks   FloDownBlock[]        @relation("FloDownBlockUpdatedBy")
+  createdMarkReferences  MarkReference[]       @relation("MarkReferenceCreatedBy")
+  confirmedSymbols       Symbol[]
+  createdModuleDescriptions ModuleDescription[] @relation("ModuleDescriptionCreatedBy")
+}
+
+model ModuleDescription {
+  id       String @id @default(uuid())
+  moduleId String @unique
+
+  titleStatement     Json
+  inhaltStatement    Json
+  lernzieleStatement Json
+
+  futureRepo      String @default("courses/FAU/module-descriptions")
+  modulesFilePath String @default("modules")
+  defsFilePath    String @default("defs")
+  language        String @default("de")
+
+  createdById String
+  createdBy   User   @relation("ModuleDescriptionCreatedBy", fields: [createdById], references: [id])
+
+  indexStatus IndexStatus @default(EXTRACTED)
+
+  floDownBlocks FloDownBlock[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+  @@index([indexStatus])
 }
 
 model Document {
@@ -81,15 +95,14 @@ model Document {
   filePath   String @default("mod")
   language   String @default("en")
 
-  moduleDescription Boolean      @default(false)
-  indexStatus       IndexStatus?
+  indexStatus IndexStatus?
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
   status         DocumentStatus  @default(UPLOADED)
   pages          DocumentPage[]
-  definitions    Definition[]
+  floDownBlocks  FloDownBlock[]
   markReferences MarkReference[]
   latexTables    LatexTable[]
   llmSuggestion  LlmSuggestion[]
@@ -98,8 +111,12 @@ model Document {
   updatedAt DateTime @updatedAt
 
   @@unique([fileHash, userId])
-  @@index([moduleDescription])
   @@index([indexStatus])
+
+  /// @deprecated No longer used by application. Retained for existing data.
+  moduleDescription Boolean @default(false)
+
+  @@index([moduleDescription])
 }
 
 model DocumentPage {
@@ -110,7 +127,7 @@ model DocumentPage {
   pageNumber Int
   text       String @db.Text
 
-  definitions            Definition[]
+  floDownBlocks          FloDownBlock[]
   markReferences         MarkReference[]
   llmSuggestedDefinition LlmSuggestedDefinition[]
 
@@ -134,6 +151,7 @@ model Symbol {
   confirmedById String?
   confirmedBy   User?   @relation(fields: [confirmedById], references: [id])
 
+  /// @deprecated Legacy SymbolicReference rows only — not used by application code.
   symbolicReferences SymbolicReference[]
 
   createdAt DateTime @default(now())
@@ -144,44 +162,29 @@ model Symbol {
   @@index([confirmedById])
 }
 
-model SymbolicReference {
-  id         String @id @default(uuid())
-  name       String
-  conceptUri String
-  archive    String
-  filePath   String
-  fileName   String
-  language   String @default("en")
-
-  definiendumId String?
-  definiendum   Symbol? @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
-
-  definitions DefinitionSymbolicRef[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([definiendumId])
-  @@index([archive, filePath, fileName, conceptUri, language])
-}
-
-model Definition {
+/// Curated FloDown block — provenance + FTML `statement` JSON (`definition` or `paragraph`).
+/// Block shape is determined by `statement.type`, not a separate DB column.
+model FloDownBlock {
   id String @id @default(uuid())
 
-  documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  documentPageId String
-  documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
+  documentPageId String?
+  documentPage   DocumentPage? @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
 
-  pageNumber Int? //optional
-  kind       ParagraphKind @default(Definition)
+  moduleDescriptionId String?
+  moduleDescription   ModuleDescription? @relation(fields: [moduleDescriptionId], references: [id], onDelete: Cascade)
+
+  pageNumber Int?
 
   originalText String @db.Text
   statement    Json
 
-  symbolicRefs    DefinitionSymbolicRef[]
-  status          DefinitionStatus        @default(EXTRACTED)
+  /// Local symbol names this row introduces via addSymbolDeclaration at export.
+  declaredSymbols String[] @default([])
+
+  status          FloDownBlockStatus @default(EXTRACTED)
   discardedReason String?
 
   futureRepo String @default("smglom/Glox")
@@ -190,20 +193,24 @@ model Definition {
   language   String @default("en")
 
   createdById String
-  createdBy   User   @relation("DefinitionCreatedBy", fields: [createdById], references: [id])
+  createdBy   User   @relation("FloDownBlockCreatedBy", fields: [createdById], references: [id])
 
   updatedById String?
-  updatedBy   User?   @relation("DefinitionUpdatedBy", fields: [updatedById], references: [id])
+  updatedBy   User?  @relation("FloDownBlockUpdatedBy", fields: [updatedById], references: [id])
 
-  currentVersion Int                 @default(1)
-  versionHistory DefinitionVersion[]
+  currentVersion Int                   @default(1)
+  versionHistory FloDownBlockVersion[]
 
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   llmSuggestedDefiniendas LlmSuggestedDefinienda[]
 
+  /// @deprecated Legacy join rows only — application does not read or write these.
+  definitionSymbolicRefs DefinitionSymbolicRef[]
+
   @@index([documentPageId])
   @@index([documentId])
+  @@index([moduleDescriptionId])
   @@index([futureRepo, filePath, fileName, language])
 }
 
@@ -253,29 +260,11 @@ model LatexTable {
   @@index([documentId, futureRepo, filePath, fileName, language])
 }
 
-model DefinitionSymbolicRef {
+model FloDownBlockVersion {
   id String @id @default(uuid())
 
-  definitionId String
-  definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
-
-  symbolicReferenceId String
-  symbolicReference   SymbolicReference @relation(fields: [symbolicReferenceId], references: [id], onDelete: Cascade)
-
-  source SymbolicRefSource
-
-  createdAt DateTime @default(now())
-
-  @@unique([definitionId, symbolicReferenceId])
-  @@index([definitionId])
-  @@index([symbolicReferenceId])
-}
-
-model DefinitionVersion {
-  id String @id @default(uuid())
-
-  definitionId String
-  definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  floDownBlockId String
+  floDownBlock   FloDownBlock @relation(fields: [floDownBlockId], references: [id], onDelete: Cascade)
 
   versionNumber Int
 
@@ -287,8 +276,8 @@ model DefinitionVersion {
 
   createdAt DateTime @default(now())
 
-  @@unique([definitionId, versionNumber])
-  @@index([definitionId])
+  @@unique([floDownBlockId, versionNumber])
+  @@index([floDownBlockId])
 }
 
 model LlmSuggestion {
@@ -315,7 +304,7 @@ model LlmSuggestedDefinition {
   documentPage   DocumentPage @relation(fields: [documentPageId], references: [id], onDelete: Cascade)
   pageNumber     Int
 
-  suggestions    Json // [{ text, startOffset, endOffset, label }]
+  suggestions    Json
   definitionText String? @db.Text
 
   createdAt DateTime @default(now())
@@ -329,12 +318,62 @@ model LlmSuggestedDefinienda {
 
   definienda String[]
 
-  definitionId String
-  definition   Definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  floDownBlockId String
+  floDownBlock   FloDownBlock @relation(fields: [floDownBlockId], references: [id], onDelete: Cascade)
 
   prompt String? @db.Text
 
   createdAt DateTime @default(now())
 
-  @@index([definitionId])
+  @@index([floDownBlockId])
+}
+
+// -----------------------------------------------------------------------------
+// Deprecated — retained for existing data; not used by application code.
+// -----------------------------------------------------------------------------
+
+enum SymbolicRefSource {
+  MATHHUB
+  DEFINIENDUM
+}
+
+/// @deprecated Unused by application. Retained for existing data.
+model SymbolicReference {
+  id         String @id @default(uuid())
+  name       String
+  conceptUri String
+  archive    String
+  filePath   String
+  fileName   String
+  language   String @default("en")
+
+  definiendumId String?
+  definiendum   Symbol? @relation(fields: [definiendumId], references: [id], onDelete: Cascade)
+
+  definitionSymbolicRefs DefinitionSymbolicRef[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([definiendumId])
+  @@index([archive, filePath, fileName, conceptUri, language])
+}
+
+/// @deprecated Unused by application. Retained for existing data.
+model DefinitionSymbolicRef {
+  id String @id @default(uuid())
+
+  floDownBlockId String
+  floDownBlock   FloDownBlock @relation(fields: [floDownBlockId], references: [id], onDelete: Cascade)
+
+  symbolicReferenceId String
+  symbolicReference   SymbolicReference @relation(fields: [symbolicReferenceId], references: [id], onDelete: Cascade)
+
+  source SymbolicRefSource
+
+  createdAt DateTime @default(now())
+
+  @@unique([floDownBlockId, symbolicReferenceId])
+  @@index([floDownBlockId])
+  @@index([symbolicReferenceId])
 }

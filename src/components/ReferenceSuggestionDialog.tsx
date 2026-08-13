@@ -8,7 +8,7 @@ import {
   getSuggestedReferenceCandidateKey,
   searchReferenceCandidates,
 } from "@/server/symbolic-suggestions";
-import type { FtmlStatement } from "@/types/ftml.types";
+import type { FloDownStatement } from "@/types/floDown.types";
 import {
   Box,
   Button,
@@ -31,9 +31,9 @@ import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 type Props = {
   opened: boolean;
   onClose: () => void;
-  definitionId: string;
-  definitionStatement: FtmlStatement | null;
-  definitionText: string;
+  floDownBlockId: string;
+  floDownBlockStatement: FloDownStatement | null;
+  originalText: string;
   suggestions: SuggestedReference[];
   catalog: CatalogEntry[];
   loading?: boolean;
@@ -59,9 +59,9 @@ function getContext(text: string, s: SuggestedReference) {
 export function ReferenceSuggestionDialog({
   opened,
   onClose,
-  definitionId,
-  definitionStatement,
-  definitionText,
+  floDownBlockId,
+  floDownBlockStatement,
+  originalText,
   suggestions,
   catalog,
   loading = false,
@@ -88,7 +88,7 @@ export function ReferenceSuggestionDialog({
       setError(null);
       setSearchQuery("");
     }
-  }, [opened, definitionId]);
+  }, [opened, floDownBlockId]);
 
   useEffect(() => {
     setIndex((i) => Math.min(i, Math.max(0, suggestions.length - 1)));
@@ -114,12 +114,12 @@ export function ReferenceSuggestionDialog({
     return searchReferenceCandidates(
       debouncedSearchQuery,
       catalog,
-      definitionId,
+      floDownBlockId,
     ).filter(
       (candidate) =>
         !sniffyCandidateKeys.has(getSuggestedReferenceCandidateKey(candidate)),
     );
-  }, [catalog, debouncedSearchQuery, definitionId, sniffyCandidateKeys]);
+  }, [catalog, debouncedSearchQuery, floDownBlockId, sniffyCandidateKeys]);
 
   function resetPerSuggestionState() {
     setSelectedCandidate(null);
@@ -162,7 +162,7 @@ export function ReferenceSuggestionDialog({
     goNext();
   }
 
-  const context = current ? getContext(definitionText, current) : null;
+  const context = current ? getContext(originalText, current) : null;
   const complete = index >= suggestions.length;
   const selectedCandidateKey = selectedCandidate
     ? getSuggestedReferenceCandidateKey(selectedCandidate)
@@ -334,15 +334,15 @@ export function ReferenceSuggestionDialog({
           }}
         >
           <Stack gap="md" style={{ flex: "0 0 auto" }}>
-            {definitionStatement && (
+            {floDownBlockStatement && (
               <Paper withBorder p="sm" radius="md">
                 <Text size="xs" c="dimmed" fw={600} mb={6}>
                   Content
                 </Text>
                 <Box mah={180} style={{ overflow: "auto" }}>
                   <FtmlPreview
-                    ftmlAst={definitionStatement}
-                    docId={definitionId}
+                    ftmlAst={floDownBlockStatement}
+                    docId={floDownBlockId}
                   />
                 </Box>
               </Paper>

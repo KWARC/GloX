@@ -6,13 +6,13 @@ import { parseUri, ReplacePayload } from "@/server/parseUri";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
 import {
-  deleteDefinition,
-  updateDefinition,
-} from "@/serverFns/extractDefinition.server";
+  deleteFloDownBlock,
+  updateFloDownBlock,
+} from "@/serverFns/extractFloDownBlock.server";
 import {
   createSymbolDefiniendum,
   getAllSymbols,
-  getDefinitionBySymbol,
+  getFloDownBlockBySymbol,
 } from "@/serverFns/symbol.server";
 import {
   confirmSymbolNotDuplicate,
@@ -20,11 +20,11 @@ import {
 } from "@/serverFns/symbolDuplicate.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import {
-  updateDefinitionAst,
-  UpdateDefinitionAstResult,
-} from "@/serverFns/updateDefinition.server";
-import { assertFtmlStatement, FtmlStatement } from "@/types/ftml.types";
-import { OnReplaceNode, SemanticDefinition } from "@/types/Semantic.types";
+  updateFloDownBlockAst,
+  UpdateFloDownBlockAstResult,
+} from "@/serverFns/updateFloDownBlock.server";
+import { assertFloDownStatement, FloDownStatement } from "@/types/floDown.types";
+import { OnReplaceNode, FloDownBlockSemantic } from "@/types/Semantic.types";
 import { Box, Button, Group, Loader, Paper, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -38,13 +38,13 @@ import { SymbolicRef } from "./SymbolicRef";
 import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
 
 const handleReplaceNode: OnReplaceNode = async (
-  definitionId,
+  floDownBlockId,
   target,
   payload,
-): Promise<UpdateDefinitionAstResult> => {
-  const result = await updateDefinitionAst({
+): Promise<UpdateFloDownBlockAstResult> => {
+  const result = await updateFloDownBlockAst({
     data: {
-      definitionId,
+      floDownBlockId,
       operation: { kind: "replaceSemantic", target, payload },
     },
   });
@@ -65,9 +65,9 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
 
   const [defDialogOpen, setDefDialogOpen] = useState(false);
 
-  const [defExtractText, setDefExtractText] = useState<string | null>(null);
+  const [floDownBlockExtractText, setFloDownBlockExtractText] = useState<string | null>(null);
 
-  const [defExtractId, setDefExtractId] = useState<string | null>(null);
+  const [floDownBlockExtractId, setFloDownBlockExtractId] = useState<string | null>(null);
 
   const [mode, setMode] = useState<"SymbolicRef" | null>(null);
 
@@ -78,8 +78,8 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
   const [savedSelection, setSavedSelection] = useState<any>(null);
 
   const { data: rawDefinition, isLoading } = useQuery({
-    queryKey: ["definition-by-symbol", symbolName],
-    queryFn: () => getDefinitionBySymbol({ data: symbolName }),
+    queryKey: ["logical-paragraph-by-symbol", symbolName],
+    queryFn: () => getFloDownBlockBySymbol({ data: symbolName }),
   });
 
   const { data: symbols = [] } = useQuery({
@@ -107,13 +107,12 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     return symbol.confirmedById;
   }, [symbol]);
 
-  const definition = useMemo<SemanticDefinition | null>(() => {
+  const floDownBlock = useMemo<FloDownBlockSemantic | null>(() => {
     if (!rawDefinition?.statement) return null;
     try {
       return {
         id: rawDefinition.id,
-        kind: rawDefinition.kind,
-        statement: assertFtmlStatement(rawDefinition.statement),
+        statement: assertFloDownStatement(rawDefinition.statement),
       };
     } catch {
       return null;
@@ -125,32 +124,29 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     return [
       {
         id: rawDefinition.id,
-        documentId: "",
-        pageNumber: 0,
-        kind: rawDefinition.kind,
-        statement: assertFtmlStatement(rawDefinition.statement),
-        futureRepo: "",
-        filePath: "",
-        fileName: "",
-        language: "",
-        symbolicRefs: [],
+        documentId: rawDefinition.documentId ?? "",
+        documentPageId: rawDefinition.documentPageId ?? "",
+        pageNumber: rawDefinition.pageNumber ?? 0,
+        originalText: rawDefinition.originalText ?? "",
+        statement: assertFloDownStatement(rawDefinition.statement),
+        futureRepo: rawDefinition.futureRepo ?? "",
+        filePath: rawDefinition.filePath ?? "",
+        fileName: rawDefinition.fileName ?? "",
+        language: rawDefinition.language ?? "",
       },
     ];
   }, [rawDefinition]);
 
   const selectedDefiniendum = useMemo(() => {
-    if (!definition) return null;
-    const { definienda } = extractSemanticIndex(
-      definition.statement,
-      definition,
-    );
+    if (!floDownBlock) return null;
+    const { definienda } = extractSemanticIndex(floDownBlock.statement);
     return (
       definienda.find((d) => d.uri === symbolName) ||
       definienda.find((d) => d.text === symbolName) ||
       definienda[0] ||
       null
     );
-  }, [definition, symbolName]);
+  }, [floDownBlock, symbolName]);
 
   const searchQuery = `${symbolName} definition`;
   const { results, isLoading: isSearching } = useSymbolSearch(
@@ -162,62 +158,62 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     setEditingId((prev) => (prev === id ? null : id));
   }
 
-  async function handleUpdate(id: string, statement: FtmlStatement) {
-    await updateDefinition({ data: { id, statement } });
+  async function handleUpdate(id: string, statement: FloDownStatement) {
+    await updateFloDownBlock({ data: { id, statement } });
     setEditingId(null);
     await queryClient.invalidateQueries({
-      queryKey: ["definition-by-symbol", symbolName],
+      queryKey: ["logical-paragraph-by-symbol", symbolName],
     });
   }
 
   async function handleDelete(id: string) {
-    await deleteDefinition({ data: { id } });
+    await deleteFloDownBlock({ data: { id } });
     await queryClient.invalidateQueries({
-      queryKey: ["definition-by-symbol", symbolName],
+      queryKey: ["logical-paragraph-by-symbol", symbolName],
     });
   }
 
   async function handleReplaceNodeLocal(
-    definitionId: string,
+    floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
     payload: ReplacePayload,
-  ): Promise<UpdateDefinitionAstResult> {
-    const result = await updateDefinitionAst({
+  ): Promise<UpdateFloDownBlockAstResult> {
+    const result = await updateFloDownBlockAst({
       data: {
-        definitionId,
+        floDownBlockId,
         operation: { kind: "replaceSemantic", target, payload },
       },
     });
     await queryClient.invalidateQueries({
-      queryKey: ["definition-by-symbol", symbolName],
+      queryKey: ["logical-paragraph-by-symbol", symbolName],
     });
     return result;
   }
 
   function handleDeleteNode(
-    definitionId: string,
+    floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
   ) {
-    void updateDefinitionAst({
+    void updateFloDownBlockAst({
       data: {
-        definitionId,
+        floDownBlockId,
         operation: { kind: "removeSemantic", target },
       },
     }).then(() =>
       queryClient.invalidateQueries({
-        queryKey: ["definition-by-symbol", symbolName],
+        queryKey: ["logical-paragraph-by-symbol", symbolName],
       }),
     );
   }
 
   async function handleDefiniendumSubmit(params: any) {
-    if (!defExtractId || !defExtractText || !selection) return;
+    if (!floDownBlockExtractId || !floDownBlockExtractText || !selection) return;
 
     if (params.mode === "CREATE") {
       await createSymbolDefiniendum({
         data: {
-          definitionId: defExtractId,
-          selectedText: defExtractText,
+          floDownBlockId: floDownBlockExtractId,
+          selectedText: floDownBlockExtractText,
           startOffset: selection.startOffset,
           endOffset: selection.endOffset,
           symdecl: true,
@@ -231,8 +227,8 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     } else {
       await createSymbolDefiniendum({
         data: {
-          definitionId: defExtractId,
-          selectedText: defExtractText,
+          floDownBlockId: floDownBlockExtractId,
+          selectedText: floDownBlockExtractText,
           startOffset: selection.startOffset,
           endOffset: selection.endOffset,
           symdecl: false,
@@ -249,24 +245,24 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     }
 
     await queryClient.invalidateQueries({
-      queryKey: ["definition-by-symbol", symbolName],
+      queryKey: ["logical-paragraph-by-symbol", symbolName],
     });
 
     setDefDialogOpen(false);
-    setDefExtractId(null);
-    setDefExtractText(null);
+    setFloDownBlockExtractId(null);
+    setFloDownBlockExtractText(null);
     clearAll();
   }
 
   async function handleSaveSymbolicRef(symRef: any) {
-    if (!defExtractId || !selection) return;
+    if (!floDownBlockExtractId || !selection) return;
 
     if (editingNodeId) {
       const { uri, text } = normalizeSymRef(symRef);
 
-      await updateDefinitionAst({
+      await updateFloDownBlockAst({
         data: {
-          definitionId: defExtractId,
+          floDownBlockId: floDownBlockExtractId,
           operation: {
             kind: "replaceSemantic",
             target: { type: "symref", uri: editingNodeId },
@@ -281,7 +277,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     } else {
       await symbolicRef({
         data: {
-          definitionId: defExtractId,
+          floDownBlockId: floDownBlockExtractId,
           selection: {
             text: savedSelection.text,
             startOffset: selection.startOffset,
@@ -293,7 +289,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     }
 
     await queryClient.invalidateQueries({
-      queryKey: ["definition-by-symbol", symbolName],
+      queryKey: ["logical-paragraph-by-symbol", symbolName],
     });
 
     setMode(null);
@@ -308,7 +304,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
   if (
     !isLoading &&
     !isSearching &&
-    (!definition || mathHubResults.length === 0)
+    (!floDownBlock || mathHubResults.length === 0)
   ) {
     return null;
   }
@@ -352,7 +348,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
 
             {isLoading && <Loader size="xs" mt="sm" />}
 
-            {definition && (
+            {floDownBlock && (
               <Box mt="sm">
                 <ExtractedTextPanel
                   extracts={extractedItems}
@@ -366,7 +362,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
                   }}
                   onOpenSemanticPanel={() => setSemanticPanelOpen(true)}
                   showPageNumber={false}
-                  showDefinitionMeta={false}
+                  showFloDownBlockMeta={false}
                   isLocked={false}
                 />
               </Box>
@@ -383,7 +379,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
                 <MathHubSearchResult
                   key={safeUri}
                   safeUri={safeUri}
-                  definition={definition!}
+                  floDownBlock={floDownBlock!}
                   selectedDefiniendum={selectedDefiniendum}
                   setPendingPropagation={setPendingPropagation}
                 />
@@ -464,18 +460,18 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           opened={true}
           localSymbolUri={pendingPropagation.localSymbolUri}
           mathHubUri={pendingPropagation.mathHubUri}
-          primaryDefinitionId={pendingPropagation.primaryDefinitionId}
+          primaryFloDownBlockId={pendingPropagation.primaryFloDownBlockId}
           onReplaceNode={handleReplaceNode}
           onDone={() => setPendingPropagation(null)}
           onSkip={() => setPendingPropagation(null)}
         />
       )}
 
-      {semanticPanelOpen && definition && (
+      {semanticPanelOpen && floDownBlock && (
         <SemanticPanel
           opened={semanticPanelOpen}
           onClose={() => setSemanticPanelOpen(false)}
-          definition={definition}
+          floDownBlock={floDownBlock}
           onReplaceNode={handleReplaceNodeLocal}
           onDeleteNode={handleDeleteNode}
         />
@@ -489,15 +485,15 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
             if (!selection?.extractId || !selection.text) return;
 
             clearPopupOnly();
-            setDefExtractId(selection.extractId);
-            setDefExtractText(selection.text);
+            setFloDownBlockExtractId(selection.extractId);
+            setFloDownBlockExtractText(selection.text);
             setDefDialogOpen(true);
           }}
           onSymbolicRef={() => {
             if (!selection?.extractId || !selection.text) return;
 
             setSavedSelection(selection);
-            setDefExtractId(selection.extractId);
+            setFloDownBlockExtractId(selection.extractId);
             setConceptUri(selection.text);
             setEditingNodeId(null);
             setMode("SymbolicRef");
@@ -509,7 +505,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
 
       <DefiniendumDialog
         opened={defDialogOpen}
-        extractedText={defExtractText}
+        extractedText={floDownBlockExtractText}
         onSubmit={handleDefiniendumSubmit}
         onClose={() => setDefDialogOpen(false)}
       />

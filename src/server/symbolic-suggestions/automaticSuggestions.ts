@@ -1,10 +1,11 @@
 import type { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import type { ExtractedItem } from "@/server/text-selection";
-import { normalizeToRoot } from "@/types/ftml.types";
+import { normalizeToRoot } from "@/types/floDown.types";
 import { Catalog, Verbalization } from "../symbolic-catalog/catalogSearch";
 import { buildSuggestionCatalog } from "./catalogBuilders";
 import { candidateKey, toCandidate } from "./candidates";
-import { buildContext, extractPlainText, resolveConflicts, walkTextNodes } from "./ftmlTraversal";
+import { walkEditableTextNodes } from "@/server/ftml/statementContent";
+import { buildContext, extractPlainText, resolveConflicts } from "./floDownTraversal";
 import type {
   CatalogEntry,
   SuggestedReference,
@@ -58,18 +59,18 @@ export function findAllCatalogMatches(
 
   return matches;
 }
-export function suggestRefsForDefinition(
-  definition: ExtractedItem,
+export function suggestRefsForFloDownBlock(
+  floDownBlock: ExtractedItem,
   catalog: CatalogEntry[],
   ignoreOptions: SuggestionIgnoreOptions = {},
 ): SuggestedReferenceSession {
-  const root = normalizeToRoot(definition.statement);
-  const definitionText = extractPlainText(definition.statement);
+  const root = normalizeToRoot(floDownBlock.statement);
+  const originalText = extractPlainText(floDownBlock.statement);
   const out: SuggestedReference[] = [];
   const candidateSymRefs: Record<string, UnifiedSymbolicReference> = {};
-  const suggestionCatalog = buildSuggestionCatalog(definition, catalog);
+  const suggestionCatalog = buildSuggestionCatalog(floDownBlock, catalog);
 
-  walkTextNodes(root, (textNode, plainOffset, nodePath) => {
+  walkEditableTextNodes(root, (textNode, plainOffset, nodePath) => {
     for (const match of findAllCatalogMatches(
       suggestionCatalog,
       textNode,
@@ -89,7 +90,7 @@ export function suggestRefsForDefinition(
 
       out.push({
         text: match.text,
-        context: buildContext(definitionText, plainStartOffset, plainEndOffset),
+        context: buildContext(originalText, plainStartOffset, plainEndOffset),
         nodePath,
         localStartOffset: match.start,
         localEndOffset: match.end,

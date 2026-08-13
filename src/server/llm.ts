@@ -73,7 +73,7 @@ function toClientSuggestions(
 
       return [
         {
-          text: storedText || text,
+          text: [storedText || text],
           startOffset: s.startOffset,
           endOffset: s.endOffset,
           label: s.label,
@@ -129,7 +129,7 @@ export function resolveOffsets(
     if (!resolved) continue;
 
     results.push({
-      text: fullText.slice(resolved.startOffset, resolved.endOffset),
+      text: [fullText.slice(resolved.startOffset, resolved.endOffset)],
       startOffset: resolved.startOffset,
       endOffset: resolved.endOffset,
       label: typeof s.label === "string" ? s.label : "",
@@ -156,7 +156,7 @@ export function validateSuggestions(
 
       return [
         {
-          text: sourceText.slice(s.startOffset, s.endOffset),
+          text: [sourceText.slice(s.startOffset, s.endOffset)],
           startOffset: s.startOffset,
           endOffset: s.endOffset,
           label: typeof s.label === "string" ? s.label : "",
@@ -241,7 +241,7 @@ export function mapGlobalSuggestionsToPages(
       if (slice.length !== localEnd - localStart) continue;
 
       const pageSuggestion: StoredSuggestion = {
-        text: slice,
+        text: [slice],
         startOffset: localStart,
         endOffset: localEnd,
         label: suggestion.label,

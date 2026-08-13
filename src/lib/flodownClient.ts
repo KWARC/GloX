@@ -1,3 +1,5 @@
+export const FLODOWN_BACKEND_URL = "https://mathhub.info";
+
 let floDownPromise: Promise<any> | null = null;
 
 export function initFloDown(): Promise<any> {
@@ -9,6 +11,8 @@ export function initFloDown(): Promise<any> {
     floDownPromise = new Promise((resolve, reject) => {
       // @ts-ignore
       if (window.floDown?.FloDown) {
+        // @ts-ignore
+        window.floDown.setBackendUrl(FLODOWN_BACKEND_URL);
         // @ts-ignore
         resolve(window.floDown);
         return;
@@ -22,6 +26,8 @@ export function initFloDown(): Promise<any> {
         try {
           // @ts-ignore
           await window.floDown();
+          // @ts-ignore
+          window.floDown.setBackendUrl(FLODOWN_BACKEND_URL);
           // @ts-ignore
           resolve(window.floDown);
         } catch (e) {

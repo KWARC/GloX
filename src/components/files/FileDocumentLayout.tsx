@@ -3,7 +3,7 @@ import { ExtractedTextPanel } from "@/components/ExtractedTextList";
 import { MarkReferenceItem } from "@/components/MarkedReferenceList";
 import { MyDocument } from "@/queries/document";
 import { ExtractedItem } from "@/server/text-selection";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { LlmSuggestion } from "@/types/llm.types";
 import { Box, Flex, Paper } from "@mantine/core";
 import { DocumentPage } from "generated/prisma/browser";
@@ -34,13 +34,13 @@ export type ExtractsPanelProps = {
   extracts: ExtractedItem[];
   editingId: string | null;
   selectedId: string | null;
-  onUpdate: (id: string, statement: FtmlStatement) => Promise<void>;
+  onUpdate: (id: string, statement: FloDownStatement) => Promise<void>;
   onDelete: (id: string) => void;
   onSelection: (extractId: string) => void;
   onToggleEdit: (id: string) => void;
-  onOpenSemanticPanel: (definitionId: string) => void;
-  onRecomputeReferences: (definitionId: string) => void;
-  onEditDefinitionMeta: (item: ExtractedItem) => void;
+  onOpenSemanticPanel: (floDownBlockId: string) => void;
+  onRecomputeReferences: (floDownBlockId: string) => void;
+  onEditFloDownBlockMeta: (item: ExtractedItem) => void;
   onOpenLatexConfig: () => void;
   onCreateDefinition: () => void;
   onGoToSourcePage: (pageNumber: number) => void;
@@ -91,7 +91,7 @@ export function FileDocumentLayout({
     onToggleEdit,
     onOpenSemanticPanel,
     onRecomputeReferences,
-    onEditDefinitionMeta,
+    onEditFloDownBlockMeta,
     onOpenLatexConfig,
     onCreateDefinition,
     onGoToSourcePage,
@@ -174,7 +174,7 @@ export function FileDocumentLayout({
             onToggleEdit={onToggleEdit}
             onOpenSemanticPanel={onOpenSemanticPanel}
             onRecomputeReferences={onRecomputeReferences}
-            onEditDefinitionMeta={onEditDefinitionMeta}
+            onEditFloDownBlockMeta={onEditFloDownBlockMeta}
             onGoToSourcePage={onGoToSourcePage}
             showJsonEdit={showJsonEdit}
           />

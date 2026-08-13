@@ -5,20 +5,20 @@ import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { normalizeContentName } from "@/components/ExtractTextDialog";
 import {
   CreatedSymbolTarget,
-  createDefinitionWithDeclaredSymbol,
+  createFloDownBlockWithDeclaredSymbol,
   declareCreatedSymbolDefiniendum,
-} from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
+} from "@/serverFns/createFloDownBlockWithDeclaredSymbol.server";
 import { FileIdentity } from "@/serverFns/latex.server";
 import { createSymbolDefiniendum } from "@/serverFns/symbol.server";
 import { symbolicRef } from "@/serverFns/symbolicRef.server";
 import {
-  updateDefinitionAst,
-  UpdateDefinitionAstResult,
-} from "@/serverFns/updateDefinition.server";
-import { ParagraphKind, supportsDefinienda } from "@/types/paragraphKind";
+  updateFloDownBlockAst,
+  UpdateFloDownBlockAstResult,
+} from "@/serverFns/updateFloDownBlock.server";
+import { ExtractBlockType, supportsDefinienda } from "@/types/blockType";
 import { ComponentProps, useState } from "react";
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
-import { findDefinitionsByIdentity } from "@/serverFns/extractDefinition.server";
+import { findFloDownBlocksByIdentity } from "@/serverFns/extractFloDownBlock.server";
 
 type DefiniendumSubmitParams = Parameters<
   ComponentProps<typeof DefiniendumDialog>["onSubmit"]
@@ -26,84 +26,84 @@ type DefiniendumSubmitParams = Parameters<
 
 export function useStexSemanticFlow(
   identity: FileIdentity,
-  definitions: ExtractedItem[],
+  floDownBlocks: ExtractedItem[],
 ) {
   const { selection, popup, handleSelection, clearPopupOnly, clearAll } =
     useTextSelection();
   const [semanticPanelOpen, setSemanticPanelOpen] = useState(false);
-  const [semanticPanelDefId, setSemanticPanelDefId] = useState<string | null>(
+  const [semanticPanelFloDownBlockId, setSemanticPanelFloDownBlockId] = useState<string | null>(
     null,
   );
-  const selectedDefinition =
-    definitions.find((d) => d.id === semanticPanelDefId) ?? null;
+  const selectedFloDownBlock =
+    floDownBlocks.find((d) => d.id === semanticPanelFloDownBlockId) ?? null;
   const [defDialogOpen, setDefDialogOpen] = useState(false);
-  const [defExtractId, setDefExtractId] = useState<string | null>(null);
-  const [defExtractText, setDefExtractText] = useState<string | null>(null);
+  const [floDownBlockExtractId, setFloDownBlockExtractId] = useState<string | null>(null);
+  const [floDownBlockExtractText, setFloDownBlockExtractText] = useState<string | null>(null);
   const [mode, setMode] = useState<"SymbolicRef" | null>(null);
   const [conceptUri, setConceptUri] = useState("");
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [savedSelection, setSavedSelection] = useState<typeof selection>(null);
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
   const [pendingExtractText, setPendingExtractText] = useState("");
-  const [definitionName, setDefinitionName] = useState("");
+  const [paragraphFileName, setParagraphFileName] = useState("");
   const [symbolName, setSymbolName] = useState("");
-  const [extractKind, setExtractKind] = useState<ParagraphKind>("Definition");
+  const [extractBlockType, setExtractBlockType] = useState<ExtractBlockType>("definition");
   const [createdSymbolTarget, setCreatedSymbolTarget] =
     useState<CreatedSymbolTarget | null>(null);
-  const [duplicateDefinitions, setDuplicateDefinitions] = useState<Awaited<ReturnType<typeof findDefinitionsByIdentity>>>([]);
-  const [pendingDuplicateSubmit, setPendingDuplicateSubmit] = useState<{ text: string; kind: ParagraphKind } | null>(null);
+  const [duplicateFloDownBlocks, setDuplicateFloDownBlocks] = useState<Awaited<ReturnType<typeof findFloDownBlocksByIdentity>>>([]);
+  const [pendingDuplicateSubmit, setPendingDuplicateSubmit] = useState<{ text: string; blockType: ExtractBlockType } | null>(null);
 
-  function handleOpenSemanticPanel(definitionId: string) {
-    setSemanticPanelDefId(definitionId);
+  function handleOpenSemanticPanel(floDownBlockId: string) {
+    setSemanticPanelFloDownBlockId(floDownBlockId);
     setSemanticPanelOpen(true);
   }
 
   function handleCloseSemanticPanel() {
     setSemanticPanelOpen(false);
-    setSemanticPanelDefId(null);
+    setSemanticPanelFloDownBlockId(null);
   }
 
   function handleOpenDefiniendumDialog() {
     if (!selection?.extractId || !selection.text) return;
-    const sourceDefinition = definitions.find((d) => d.id === selection.extractId);
-    if (!sourceDefinition || !supportsDefinienda(sourceDefinition.kind)) return;
+    const sourceFloDownBlock = floDownBlocks.find((d) => d.id === selection.extractId);
+    if (!sourceFloDownBlock || !supportsDefinienda(sourceFloDownBlock.statement)) return;
 
     clearPopupOnly();
-    setDefExtractId(selection.extractId);
-    setDefExtractText(selection.text);
+    setFloDownBlockExtractId(selection.extractId);
+    setFloDownBlockExtractText(selection.text);
     setDefDialogOpen(true);
   }
 
   function handleOpenSymbolicRefDialog() {
     if (!selection?.extractId || !selection.text) return;
     setSavedSelection(selection);
-    setDefExtractId(selection.extractId);
+    setFloDownBlockExtractId(selection.extractId);
     setConceptUri(selection.text);
     setEditingNodeId(null);
     setMode("SymbolicRef");
     clearPopupOnly();
   }
 
-  function handleCreateSymbolTargetDefinition() {
+  function handleCreateSymbolTargetFloDownBlock() {
     if (!selection?.extractId || !selection.text) return;
     const normalizedName = normalizeContentName(selection.text);
 
     setPendingExtractText(selection.text);
-    setDefinitionName(normalizedName);
+    setParagraphFileName(normalizedName);
     setSymbolName(selection.text);
-    setExtractKind("Definition");
+    setExtractBlockType("definition");
     setCreatedSymbolTarget(null);
     setExtractDialogOpen(true);
   }
 
   async function handleReplaceNode(
-    definitionId: string,
+    floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
     payload: ReplacePayload,
-  ): Promise<UpdateDefinitionAstResult> {
-    const result = await updateDefinitionAst({
+  ): Promise<UpdateFloDownBlockAstResult> {
+    const result = await updateFloDownBlockAst({
       data: {
-        definitionId,
+        floDownBlockId,
         operation: {
           kind: "replaceSemantic",
           target,
@@ -113,19 +113,19 @@ export function useStexSemanticFlow(
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
+      queryKey: ["floDownBlocksByIdentity", identity],
     });
 
     return result;
   }
 
   async function handleDeleteNode(
-    definitionId: string,
+    floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
   ): Promise<void> {
-    await updateDefinitionAst({
+    await updateFloDownBlockAst({
       data: {
-        definitionId,
+        floDownBlockId,
         operation: {
           kind: "removeSemantic",
           target,
@@ -134,19 +134,19 @@ export function useStexSemanticFlow(
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
+      queryKey: ["floDownBlocksByIdentity", identity],
     });
   }
 
   async function handleSaveSymbolicRef(symRef: UnifiedSymbolicReference) {
-    if (!defExtractId) return;
+    if (!floDownBlockExtractId) return;
 
     if (editingNodeId) {
       const { uri, text } = normalizeSymRef(symRef);
 
-      await updateDefinitionAst({
+      await updateFloDownBlockAst({
         data: {
-          definitionId: defExtractId,
+          floDownBlockId: floDownBlockExtractId,
           operation: {
             kind: "replaceSemantic",
             target: {
@@ -168,7 +168,7 @@ export function useStexSemanticFlow(
 
       await symbolicRef({
         data: {
-          definitionId: defExtractId,
+          floDownBlockId: floDownBlockExtractId,
           selection: {
             text: savedSelection.text,
             startOffset: selection.startOffset,
@@ -180,7 +180,7 @@ export function useStexSemanticFlow(
     }
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
+      queryKey: ["floDownBlocksByIdentity", identity],
     });
 
     setMode(null);
@@ -188,13 +188,13 @@ export function useStexSemanticFlow(
   }
 
   async function handleDefiniendumSubmit(params: DefiniendumSubmitParams) {
-    if (!defExtractId || !defExtractText) return;
+    if (!floDownBlockExtractId || !floDownBlockExtractText) return;
 
     if (params.mode === "CREATE") {
       const result = await createSymbolDefiniendum({
         data: {
-          definitionId: defExtractId,
-          selectedText: defExtractText,
+          floDownBlockId: floDownBlockExtractId,
+          selectedText: floDownBlockExtractText,
           startOffset: selection!.startOffset,
           endOffset: selection!.endOffset,
           symdecl: true,
@@ -214,8 +214,8 @@ export function useStexSemanticFlow(
       if (params.selectedSymbol.source === "DB") {
         await createSymbolDefiniendum({
           data: {
-            definitionId: defExtractId,
-            selectedText: defExtractText,
+            floDownBlockId: floDownBlockExtractId,
+            selectedText: floDownBlockExtractText,
             startOffset: selection!.startOffset,
             endOffset: selection!.endOffset,
             symdecl: false,
@@ -233,8 +233,8 @@ export function useStexSemanticFlow(
       } else {
         await createSymbolDefiniendum({
           data: {
-            definitionId: defExtractId,
-            selectedText: defExtractText,
+            floDownBlockId: floDownBlockExtractId,
+            selectedText: floDownBlockExtractText,
             startOffset: selection!.startOffset,
             endOffset: selection!.endOffset,
             symdecl: false,
@@ -253,35 +253,35 @@ export function useStexSemanticFlow(
     }
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
+      queryKey: ["floDownBlocksByIdentity", identity],
     });
 
     setDefDialogOpen(false);
-    setDefExtractId(null);
-    setDefExtractText(null);
+    setFloDownBlockExtractId(null);
+    setFloDownBlockExtractText(null);
     clearAll();
   }
 
   async function performExtractSubmit({
     text: editedText,
-    kind,
+    blockType,
   }: {
     text: string;
-    kind: ParagraphKind;
+    blockType: ExtractBlockType;
   }) {
-    if (!defExtractId) return;
+    if (!floDownBlockExtractId) return;
 
-    const sourceDefinition = definitions.find((definition) => definition.id === defExtractId);
-    if (!sourceDefinition) return;
+    const sourceFloDownBlock = floDownBlocks.find((definition) => definition.id === floDownBlockExtractId);
+    if (!sourceFloDownBlock) return;
 
-    const created = await createDefinitionWithDeclaredSymbol({
+    const created = await createFloDownBlockWithDeclaredSymbol({
       data: {
-        documentId: sourceDefinition.documentId,
+        documentId: sourceFloDownBlock.documentId,
         documentPageId: null,
         pageNumber: null,
-        kind,
-        definitionName: definitionName.trim(),
-        definitionText: editedText,
+        blockType,
+        paragraphFileName: paragraphFileName.trim(),
+        originalText: editedText,
         symbolName: symbolName.trim(),
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
@@ -292,23 +292,23 @@ export function useStexSemanticFlow(
     setCreatedSymbolTarget(created);
     setExtractDialogOpen(false);
     setPendingExtractText("");
-    setDefinitionName("");
+    setParagraphFileName("");
     setSymbolName("");
-    setExtractKind("Definition");
+    setExtractBlockType("definition");
     setMode(null);
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
+      queryKey: ["floDownBlocksByIdentity", identity],
     });
     await queryClient.invalidateQueries({
       queryKey: ["symbol-search-db"],
     });
   }
 
-  async function handleExtractSubmit(input: { text: string; kind: ParagraphKind }) {
-    const matches = await findDefinitionsByIdentity({ data: identity });
+  async function handleExtractSubmit(input: { text: string; blockType: ExtractBlockType }) {
+    const matches = await findFloDownBlocksByIdentity({ data: identity });
     if (matches.length) {
-      setDuplicateDefinitions(matches);
+      setDuplicateFloDownBlocks(matches);
       setPendingDuplicateSubmit(input);
       return;
     }
@@ -318,7 +318,7 @@ export function useStexSemanticFlow(
   async function confirmDuplicateCreation() {
     if (!pendingDuplicateSubmit) return;
     const input = pendingDuplicateSubmit;
-    setDuplicateDefinitions([]);
+    setDuplicateFloDownBlocks([]);
     setPendingDuplicateSubmit(null);
     await performExtractSubmit(input);
   }
@@ -332,7 +332,7 @@ export function useStexSemanticFlow(
 
     await declareCreatedSymbolDefiniendum({
       data: {
-        definitionId: createdSymbolTarget.definition.id,
+        floDownBlockId: createdSymbolTarget.floDownBlock.id,
         symbolId: createdSymbolTarget.symbol.id,
         selectedText: selectionRange.selectedText,
         startOffset: selectionRange.startOffset,
@@ -341,7 +341,7 @@ export function useStexSemanticFlow(
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitionsByIdentity", identity],
+      queryKey: ["floDownBlocksByIdentity", identity],
     });
     await queryClient.invalidateQueries({
       queryKey: ["symbol-search-db"],
@@ -353,10 +353,10 @@ export function useStexSemanticFlow(
   const canOpenDefiniendumFromSelection =
     !!selection?.extractId &&
     (() => {
-      const sourceDefinition = definitions.find(
+      const sourceFloDownBlock = floDownBlocks.find(
         (definition) => definition.id === selection.extractId,
       );
-      return !!sourceDefinition && supportsDefinienda(sourceDefinition.kind);
+      return !!sourceFloDownBlock && supportsDefinienda(sourceFloDownBlock.statement);
     })();
 
   return {
@@ -365,31 +365,31 @@ export function useStexSemanticFlow(
     handleSelection,
     clearPopupOnly,
     semanticPanelOpen,
-    selectedDefinition,
+    selectedFloDownBlock,
     defDialogOpen,
-    defExtractText,
+    floDownBlockExtractText,
     mode,
     conceptUri,
     extractDialogOpen,
     pendingExtractText,
-    definitionName,
-    setDefinitionName,
+    paragraphFileName,
+    setParagraphFileName,
     symbolName,
     setSymbolName,
-    extractKind,
-    setExtractKind,
+    extractBlockType,
+    setExtractBlockType,
     createdSymbolTarget,
-    duplicateDefinitions,
+    duplicateFloDownBlocks,
     setMode,
     setDefDialogOpen,
     setExtractDialogOpen,
     setCreatedSymbolTarget,
-    setDuplicateDefinitions,
+    setDuplicateFloDownBlocks,
     handleOpenSemanticPanel,
     handleCloseSemanticPanel,
     handleOpenDefiniendumDialog,
     handleOpenSymbolicRefDialog,
-    handleCreateSymbolTargetDefinition,
+    handleCreateSymbolTargetFloDownBlock,
     handleReplaceNode,
     handleDeleteNode,
     handleSaveSymbolicRef,

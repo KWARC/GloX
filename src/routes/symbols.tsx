@@ -130,10 +130,10 @@ function SymbolsPage() {
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      {symbol.associatedDefinitions.length > 0 ? (
+                      {symbol.associatedFloDownBlocks.length > 0 ? (
                         <ExtractedTextPanel
                           compact
-                          extracts={symbol.associatedDefinitions as ExtractedItem[]}
+                          extracts={symbol.associatedFloDownBlocks as ExtractedItem[]}
                           editingId={null}
                           selectedId={null}
                           onToggleEdit={noop}
@@ -142,7 +142,7 @@ function SymbolsPage() {
                           onSelection={noop}
                           onOpenSemanticPanel={noop}
                           showPageNumber={false}
-                          showDefinitionMeta={false}
+                          showFloDownBlockMeta={false}
                           showActions={false}
                           isLocked
                         />

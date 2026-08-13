@@ -1,0 +1,88 @@
+# OPSX harness contract — skills execute procedure; /specs owns policy.
+# Validated by: pnpm run specs:check-opsx-skills
+
+phases:
+  - id: mode
+    skill: opsx-mode
+    mode: both
+    canonical:
+      - specs/DEVELOPER_GUIDE.md
+      - specs/ai-native-development-architecture.md
+    required_gate_tokens:
+      - lightweight
+      - full SDD
+
+  - id: clarify
+    skill: opsx-clarify
+    mode: full
+    canonical:
+      - specs/changes/CLARIFY_AND_PROPOSE.md
+      - specs/DEVELOPER_GUIDE.md
+      - specs/changes/_TEMPLATE/clarify.md
+    required_gate_tokens:
+      - Lock it
+      - clarify.md
+      - Do NOT draft proposal.md
+
+  - id: propose
+    skill: opsx-propose
+    mode: full
+    canonical:
+      - specs/changes/CLARIFY_AND_PROPOSE.md
+      - specs/review/REVIEW_GUIDE.md
+      - specs/changes/README.md
+    required_gate_tokens:
+      - Lock it
+      - REVIEW_GUIDE
+      - Do not start implementation
+
+  - id: red
+    skill: opsx-red
+    mode: full
+    canonical:
+      - specs/review/REVIEW_GUIDE.md
+      - specs/review/TESTING_GUIDE.md
+      - specs/DEVELOPER_GUIDE.md
+    required_gate_tokens:
+      - Red phase
+      - MUST NOT
+
+  - id: apply
+    skill: opsx-apply
+    mode: full
+    canonical:
+      - specs/DEVELOPER_GUIDE.md
+      - specs/changes/README.md
+    required_gate_tokens:
+      - tasks.md
+      - human commits
+
+  - id: verify
+    skill: opsx-verify
+    mode: full
+    canonical:
+      - specs/review/REVIEW_GUIDE.md
+    required_gate_tokens:
+      - §1.5
+      - cursory
+      - Blocks Archive
+
+  - id: archive
+    skill: opsx-archive
+    mode: full
+    canonical:
+      - specs/changes/README.md
+      - specs/DEVELOPER_GUIDE.md
+    required_gate_tokens:
+      - archive/YYYY-MM-DD
+      - Verify sign-off
+
+  - id: lightweight-plan-archive
+    skill: lightweight-plan-archive
+    mode: lightweight
+    canonical:
+      - specs/DEVELOPER_GUIDE.md
+      - specs/review/REVIEW_GUIDE.md
+    required_gate_tokens:
+      - No spec change
+      - Archive

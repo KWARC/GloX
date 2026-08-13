@@ -1,16 +1,16 @@
 import { CreateSymbolDefiniendumDialog } from "@/components/CreateSymbolDefiniendumDialog";
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
-import { DefinitionIdentityDialog } from "@/components/DefinitionFilePathDialog";
+import { FloDownBlockIdentityDialog } from "@/components/FloDownBlockFilePathDialog";
 import { ExtractTextDialog } from "@/components/ExtractTextDialog";
 import { LatexConfigModel } from "@/components/LatexConfigModel";
 import { ReferenceSuggestionDialog } from "@/components/ReferenceSuggestionDialog";
 import { SelectionPopup } from "@/components/SelectionPopup";
 import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
 import { SymbolicRef } from "@/components/SymbolicRef";
-import { DefinitionDeleteModal, DuplicateDefinitionModal } from "@/components/DefinitionReviewModals";
+import { FloDownBlockDeleteModal, DuplicateFloDownBlockModal } from "@/components/FloDownBlockReviewModals";
 import { DEFAULT_LLM_SYSTEM_PROMPT } from "@/server/prompt";
 import { ExtractedItem, PopupState } from "@/server/text-selection";
-import type { CreatedSymbolTarget } from "@/serverFns/createDefinitionWithDeclaredSymbol.server";
+import type { CreatedSymbolTarget } from "@/serverFns/createFloDownBlockWithDeclaredSymbol.server";
 import {
   Button,
   Group,
@@ -65,7 +65,7 @@ export type LatexDialogProps = {
 export type SemanticDialogProps = {
   opened: boolean;
   onClose: () => void;
-  definition: ExtractedItem | null;
+  floDownBlock: ExtractedItem | null;
   onReplaceNode: ComponentProps<typeof SemanticPanel>["onReplaceNode"];
   onDeleteNode: ComponentProps<typeof SemanticPanel>["onDeleteNode"];
 };
@@ -73,14 +73,14 @@ export type SemanticDialogProps = {
 export type ExtractionDialogProps = {
   opened: boolean;
   initialText: string;
-  definitionName: string;
-  definitionNameDisabled?: boolean;
-  kind: ComponentProps<typeof ExtractTextDialog>["kind"];
+  paragraphFileName: string;
+  paragraphFileNameDisabled?: boolean;
+  blockType: ComponentProps<typeof ExtractTextDialog>["blockType"];
   mode?: ComponentProps<typeof ExtractTextDialog>["mode"];
   symbolName?: string;
   symbolNameDisabled?: boolean;
-  setDefinitionName: Dispatch<SetStateAction<string>>;
-  setKind: ComponentProps<typeof ExtractTextDialog>["setKind"];
+  setParagraphFileName: Dispatch<SetStateAction<string>>;
+  setBlockType: ComponentProps<typeof ExtractTextDialog>["setBlockType"];
   setSymbolName?: Dispatch<SetStateAction<string>>;
   filePath: string;
   location?: ComponentProps<typeof ExtractTextDialog>["location"];
@@ -91,10 +91,11 @@ export type ExtractionDialogProps = {
   textPlaceholder?: string;
   submitLabel?: string;
   hideSymbolNameField?: boolean;
+  createSymbolFlow?: boolean;
   enableSemanticAuthoring?: boolean;
   semanticEnabled?: boolean;
   setSemanticEnabled?: Dispatch<SetStateAction<boolean>>;
-  duplicateDefinitions: Array<{ id: string; originalText: string; statement: ExtractedItem["statement"]; pageNumber: number | null; kind: ExtractedItem["kind"] }>;
+  duplicateFloDownBlocks: Array<{ id: string; originalText: string; statement: ExtractedItem["statement"]; pageNumber: number | null }>;
   onCancelDuplicate: () => void;
   onConfirmDuplicate: () => void;
 };
@@ -111,18 +112,18 @@ export type CreatedSymbolDefiniendumDialogProps = {
 export type MetadataDialogProps = {
   opened: boolean;
   onClose: () => void;
-  definition: ExtractedItem | null;
+  floDownBlock: ExtractedItem | null;
   invalidateKey: unknown[];
 };
 
 export type SniffyDialogProps = {
   opened: boolean;
   onClose: () => void;
-  activeDefId: string | null;
-  activeDefStatement: ComponentProps<
+  activeFloDownBlockId: string | null;
+  activeFloDownBlockStatement: ComponentProps<
     typeof ReferenceSuggestionDialog
-  >["definitionStatement"];
-  activeDefText: string;
+  >["floDownBlockStatement"];
+  activeFloDownBlockText: string;
   suggestions: ComponentProps<typeof ReferenceSuggestionDialog>["suggestions"];
   catalog: ComponentProps<typeof ReferenceSuggestionDialog>["catalog"];
   loading: boolean;
@@ -142,7 +143,7 @@ export type RecomputeDialogProps = {
 };
 
 export type FileDialogsProps = {
-  deletion: { definition: ExtractedItem | null; loading: boolean; onCancel: () => void; onConfirm: () => void };
+  deletion: { floDownBlock: ExtractedItem | null; loading: boolean; onCancel: () => void; onConfirm: () => void };
   selection: SelectionDialogProps;
   symbolicRef: SymbolicRefDialogProps;
   definiendum: DefiniendumDialogProps;
@@ -172,9 +173,9 @@ export function FileDialogs({
 }: FileDialogsProps) {
   return (
     <>
-      <DefinitionDeleteModal
-        opened={!!deletion.definition}
-        definition={deletion.definition}
+      <FloDownBlockDeleteModal
+        opened={!!deletion.floDownBlock}
+        floDownBlock={deletion.floDownBlock}
         loading={deletion.loading}
         onCancel={deletion.onCancel}
         onConfirm={deletion.onConfirm}
@@ -249,7 +250,7 @@ export function FileDialogs({
       <SemanticPanel
         opened={semantic.opened}
         onClose={semantic.onClose}
-        definition={semantic.definition}
+        floDownBlock={semantic.floDownBlock}
         onReplaceNode={semantic.onReplaceNode}
         onDeleteNode={semantic.onDeleteNode}
       />
@@ -257,14 +258,14 @@ export function FileDialogs({
       <ExtractTextDialog
         opened={extraction.opened}
         initialText={extraction.initialText}
-        definitionName={extraction.definitionName}
-        definitionNameDisabled={extraction.definitionNameDisabled}
-        kind={extraction.kind}
+        paragraphFileName={extraction.paragraphFileName}
+        paragraphFileNameDisabled={extraction.paragraphFileNameDisabled}
+        blockType={extraction.blockType}
         mode={extraction.mode}
         symbolName={extraction.symbolName}
         symbolNameDisabled={extraction.symbolNameDisabled}
-        setDefinitionName={extraction.setDefinitionName}
-        setKind={extraction.setKind}
+        setParagraphFileName={extraction.setParagraphFileName}
+        setBlockType={extraction.setBlockType}
         setSymbolName={extraction.setSymbolName}
         filePath={extraction.filePath}
         location={extraction.location}
@@ -275,14 +276,15 @@ export function FileDialogs({
         textPlaceholder={extraction.textPlaceholder}
         submitLabel={extraction.submitLabel}
         hideSymbolNameField={extraction.hideSymbolNameField}
+        createSymbolFlow={extraction.createSymbolFlow}
         enableSemanticAuthoring={extraction.enableSemanticAuthoring}
         semanticEnabled={extraction.semanticEnabled}
         setSemanticEnabled={extraction.setSemanticEnabled}
       />
 
-      <DuplicateDefinitionModal
-        opened={extraction.duplicateDefinitions.length > 0}
-        definitions={extraction.duplicateDefinitions}
+      <DuplicateFloDownBlockModal
+        opened={extraction.duplicateFloDownBlocks.length > 0}
+        floDownBlocks={extraction.duplicateFloDownBlocks}
         onCancel={extraction.onCancelDuplicate}
         onConfirm={extraction.onConfirmDuplicate}
       />
@@ -294,19 +296,19 @@ export function FileDialogs({
         onConfirm={createdSymbolDefiniendum.onConfirm}
       />
 
-      <DefinitionIdentityDialog
+      <FloDownBlockIdentityDialog
         opened={metadata.opened}
         onClose={metadata.onClose}
-        definition={metadata.definition}
+        floDownBlock={metadata.floDownBlock}
         invalidateKey={metadata.invalidateKey}
       />
 
       <ReferenceSuggestionDialog
         opened={sniffy.opened}
         onClose={sniffy.onClose}
-        definitionId={sniffy.activeDefId ?? ""}
-        definitionStatement={sniffy.activeDefStatement}
-        definitionText={sniffy.activeDefText}
+        floDownBlockId={sniffy.activeFloDownBlockId ?? ""}
+        floDownBlockStatement={sniffy.activeFloDownBlockStatement}
+        originalText={sniffy.activeFloDownBlockText}
         suggestions={sniffy.suggestions}
         catalog={sniffy.catalog}
         loading={sniffy.loading}

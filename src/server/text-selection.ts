@@ -1,7 +1,7 @@
 import { queryClient } from "@/queryClient";
-import { createDefinition, updateDefinition } from "@/serverFns/extractDefinition.server";
-import { FtmlStatement } from "@/types/ftml.types";
-import { ParagraphKind } from "@/types/paragraphKind";
+import { createFloDownBlock, updateFloDownBlock } from "@/serverFns/extractFloDownBlock.server";
+import { FloDownStatement } from "@/types/floDown.types";
+import { ExtractBlockType } from "@/types/blockType";
 import { useState } from "react";
 
 export interface PopupState {
@@ -23,14 +23,20 @@ export type TextSelection = {
   endOffset: number;
 };
 
+export type TextSelectionOptions = {
+  extractId?: string;
+  onLeftSelection?: (text: string) => void;
+  afterCommit?: () => void;
+};
+
 export type ExtractedItem = {
   id: string;
   documentId: string;
   documentPageId: string;
   pageNumber: number | null;
-  kind: ParagraphKind;
   originalText: string;
-  statement: FtmlStatement;
+  statement: FloDownStatement;
+  declaredSymbols?: string[];
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -52,12 +58,6 @@ export type ExtractedItem = {
     };
     isDeclared: boolean;
   }[];
-  symbolicRefs?: {
-    symbolicReference: {
-      id: string;
-      conceptUri: string;
-    };
-  }[];
 
   definienda?: {
     text: string[];
@@ -71,15 +71,10 @@ export function useTextSelection() {
 
   function handleSelection(
     source: "left" | "right",
-    options?: {
-      extractId?: string;
-      onLeftSelection?: (text: string) => void;
-    },
+    options?: TextSelectionOptions,
   ) {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
-
-    const rect = sel.getRangeAt(0).getBoundingClientRect();
 
     const range = sel.getRangeAt(0);
     const text = sel.toString();
@@ -92,6 +87,7 @@ export function useTextSelection() {
       return;
     }
 
+    const rect = range.getBoundingClientRect();
     const startOffset = range.startOffset;
     const endOffset = range.endOffset;
 
@@ -103,10 +99,12 @@ export function useTextSelection() {
     });
 
     setPopup({
-      x: rect.right + window.scrollX + 8,
-      y: rect.top + window.scrollY - 4,
+      x: rect.right + 8,
+      y: rect.top - 4,
       source,
     });
+
+    options?.afterCommit?.();
 
     if (source === "left" && options?.onLeftSelection) {
       options.onLeftSelection(text);
@@ -135,22 +133,24 @@ export function useExtractionActions(documentId: string) {
   async function extractText(params: {
     documentPageId?: string | null;
     pageNumber?: number | null;
-    kind: ParagraphKind;
+    blockType?: ExtractBlockType;
     text: string;
-    statement?: FtmlStatement;
+    statement?: FloDownStatement;
+    declaredSymbols?: string[];
     futureRepo: string;
     filePath: string;
     fileName: string;
     language: string;
   }) {
-    await createDefinition({
+    await createFloDownBlock({
       data: {
         documentId,
         documentPageId: params.documentPageId,
         pageNumber: params.pageNumber,
-        kind: params.kind,
+        blockType: params.blockType,
         originalText: params.text,
         statement: params.statement,
+        declaredSymbols: params.declaredSymbols,
         futureRepo: params.futureRepo,
         filePath: params.filePath,
         fileName: params.fileName,
@@ -159,17 +159,17 @@ export function useExtractionActions(documentId: string) {
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      queryKey: ["floDownBlocks", documentId],
     });
   }
 
-  async function updateExtract(id: string, statement: FtmlStatement) {
-    await updateDefinition({
+  async function updateExtract(id: string, statement: FloDownStatement) {
+    await updateFloDownBlock({
       data: { id, statement },
     });
 
     await queryClient.invalidateQueries({
-      queryKey: ["definitions", documentId],
+      queryKey: ["floDownBlocks", documentId],
     });
   }
 

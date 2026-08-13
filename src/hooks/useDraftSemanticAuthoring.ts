@@ -4,18 +4,19 @@ import {
   pathTraversesSemanticNode,
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
-import { normalizeSymRef, parseUri } from "@/server/parseUri";
+import { getInlineContent } from "@/server/ftml/statementContent";
+import { normalizeSymRef } from "@/server/parseUri";
 import {
   DefiniendumNode,
   DefinitionNode,
-  FtmlContent,
-  FtmlNode,
-  FtmlStatement,
+  FloDownContent,
+  FloDownStatement,
+  PersistedBlock,
   RootNode,
   SymrefNode,
   normalizeToRoot,
   unwrapRoot,
-} from "@/types/ftml.types";
+} from "@/types/floDown.types";
 import { RefObject, useEffect, useState } from "react";
 
 export type DraftSelectionRange = {
@@ -53,13 +54,7 @@ function getSelectionOffsets(
   const selectedText = selection.toString();
 
   if (!selectedText.trim()) return null;
-  if (
-    range.startContainer !== range.endContainer ||
-    range.startContainer.nodeType !== Node.TEXT_NODE ||
-    !container.contains(range.startContainer)
-  ) {
-    return null;
-  }
+  if (!container.contains(range.commonAncestorContainer)) return null;
 
   const prefixRange = range.cloneRange();
   prefixRange.selectNodeContents(container);
@@ -82,25 +77,8 @@ function findLocationByGlobalOffset(
 ) {
   let cursor = 0;
 
-  for (const [paragraphIndex, node] of root.content.entries()) {
-    let paragraphContent = [];
-
-    if (node.type === "paragraph") {
-      paragraphContent = node.content ?? [];
-    } else if (node.type === "definition") {
-      const firstChild = node.content?.[0];
-      if (
-        firstChild &&
-        typeof firstChild !== "string" &&
-        firstChild.type === "paragraph"
-      ) {
-        paragraphContent = firstChild.content ?? [];
-      } else {
-        continue;
-      }
-    } else {
-      continue;
-    }
+  for (const [paragraphIndex, block] of root.content.entries()) {
+    const paragraphContent = getInlineContent(block);
 
     for (const [contentIndex, item] of paragraphContent.entries()) {
       if (typeof item === "string") {
@@ -123,7 +101,7 @@ function findLocationByGlobalOffset(
 
         cursor += item.length;
       } else {
-        cursor += extractTextContent(item);
+        cursor += extractTextContent(item).length;
       }
     }
   }
@@ -132,7 +110,7 @@ function findLocationByGlobalOffset(
 }
 
 function insertDefiniendumNode(
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   selection: DraftSelectionRange,
   payload:
     | {
@@ -151,7 +129,7 @@ function insertDefiniendumNode(
               uri: string;
             };
       },
-): FtmlStatement {
+): FloDownStatement {
   const root = normalizeToRoot(statement);
   const location = findLocationByGlobalOffset(
     root,
@@ -168,25 +146,27 @@ function insertDefiniendumNode(
     throw new Error("Cannot insert definiendum inside existing semantic node");
   }
 
+  const verbalization = selection.selectedText;
+
   const node: DefiniendumNode =
     payload.mode === "CREATE"
       ? {
           type: "definiendum",
           uri: payload.symbolName.trim(),
-          content: [payload.symbolName.trim()],
+          content: [verbalization],
           symdecl: true,
         }
       : payload.symbol.source === "DB"
         ? {
             type: "definiendum",
             uri: payload.symbol.symbolName,
-            content: [payload.symbol.symbolName],
+            content: [verbalization],
             symdecl: false,
           }
         : {
             type: "definiendum",
             uri: payload.symbol.uri,
-            content: [parseUri(payload.symbol.uri).symbol],
+            content: [verbalization],
             symdecl: false,
           };
 
@@ -198,25 +178,14 @@ function insertDefiniendumNode(
     node,
   );
 
-  const definition = updatedRoot.content.find(
-    (item): item is DefinitionNode => item.type === "definition",
-  );
-
-  if (definition) {
-    const existingSymbols = definition.for_symbols ?? [];
-    if (!existingSymbols.includes(node.uri)) {
-      definition.for_symbols = [...existingSymbols, node.uri];
-    }
-  }
-
   return unwrapRoot(updatedRoot);
 }
 
 function insertSymrefNode(
-  statement: FtmlStatement,
+  statement: FloDownStatement,
   selection: DraftSelectionRange,
   symRef: UnifiedSymbolicReference,
-): FtmlStatement {
+): FloDownStatement {
   const root = normalizeToRoot(statement);
   const location = findLocationByGlobalOffset(
     root,
@@ -235,11 +204,11 @@ function insertSymrefNode(
     );
   }
 
-  const { uri, text } = normalizeSymRef(symRef);
+  const { uri } = normalizeSymRef(symRef);
   const node: SymrefNode = {
     type: "symref",
     uri,
-    content: [text],
+    content: [selection.selectedText],
   };
 
   const updatedRoot = replaceTextWithNode(
@@ -254,22 +223,22 @@ function insertSymrefNode(
 }
 
 export function statementHasDeclaredSymbol(
-  statement: FtmlStatement | undefined,
+  declaredSymbols: readonly string[] | undefined,
   symbolName: string,
 ): boolean {
-  if (!statement || !symbolName.trim()) return false;
-
-  const root = normalizeToRoot(statement);
-  return root.content.some((node) => {
-    if (node.type !== "definition") return false;
-    return (node.for_symbols ?? []).includes(symbolName.trim());
-  });
+  if (!declaredSymbols?.length || !symbolName.trim()) return false;
+  return declaredSymbols.includes(symbolName.trim());
 }
 
-function containsSemanticNodes(node: FtmlContent | FtmlNode): boolean {
+function containsSemanticNodes(node: FloDownContent | PersistedBlock): boolean {
   if (typeof node === "string") return false;
   if (node.type === "definiendum" || node.type === "symref") return true;
-  return (node.content ?? []).some(containsSemanticNodes);
+  if (node.type === "paragraph" || node.type === "definition") {
+    const content =
+      node.type === "paragraph" ? node.content : getInlineContent(node);
+    return content.some(containsSemanticNodes);
+  }
+  return ("content" in node ? (node.content ?? []) : []).some(containsSemanticNodes);
 }
 
 export function useDraftSemanticAuthoring(
@@ -277,14 +246,16 @@ export function useDraftSemanticAuthoring(
   enabled: boolean,
   previewRef: RefObject<HTMLDivElement | null>,
 ) {
-  const [statement, setStatement] = useState<FtmlStatement>(() =>
+  const [statement, setStatement] = useState<FloDownStatement>(() =>
     buildPlainDefinitionStatement(text),
   );
+  const [declaredSymbols, setDeclaredSymbols] = useState<string[]>([]);
   const [selection, setSelection] = useState<DraftSelectionRange | null>(null);
   const [popup, setPopup] = useState<DraftSelectionPopup | null>(null);
 
   useEffect(() => {
     setStatement(buildPlainDefinitionStatement(text));
+    setDeclaredSymbols([]);
     setSelection(null);
     setPopup(null);
   }, [text, enabled]);
@@ -307,8 +278,8 @@ export function useDraftSemanticAuthoring(
     const range = selected.getRangeAt(0);
     const rect = range.getBoundingClientRect();
     setPopup({
-      x: rect.right + window.scrollX + 8,
-      y: rect.top + window.scrollY - 4,
+      x: rect.right + 8,
+      y: rect.top - 4,
       source: "right",
     });
   }
@@ -349,6 +320,12 @@ export function useDraftSemanticAuthoring(
     }
 
     setStatement((current) => insertDefiniendumNode(current, selection, payload));
+    if (payload.mode === "CREATE") {
+      const symbolName = payload.symbolName.trim();
+      setDeclaredSymbols((current) =>
+        current.includes(symbolName) ? current : [...current, symbolName],
+      );
+    }
     clearSelection();
   }
 
@@ -363,6 +340,7 @@ export function useDraftSemanticAuthoring(
 
   return {
     statement,
+    declaredSymbols,
     selection,
     popup,
     hasSemantics,

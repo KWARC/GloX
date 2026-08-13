@@ -1,7 +1,7 @@
 import { useSniffyReferenceSuggestions as useSharedSniffyReferenceSuggestions } from "@/hooks/useSniffyReferenceSuggestions";
 import { queryClient } from "@/queryClient";
 import { ExtractedItem } from "@/server/text-selection";
-import { listDefinition } from "@/serverFns/extractDefinition.server";
+import { listFloDownBlocks } from "@/serverFns/extractFloDownBlock.server";
 
 type SniffyCatalog = Parameters<
   typeof useSharedSniffyReferenceSuggestions
@@ -23,20 +23,20 @@ export function useFileSniffyReferenceSuggestions({
   retryStaticCatalog: () => Promise<void>;
 }) {
   return useSharedSniffyReferenceSuggestions({
-    definitions: extracts,
+    floDownBlocks: extracts,
     catalog: sniffyCatalog,
     catalogLoading: staticCatalogLoading,
     catalogError: staticCatalogError,
     retryCatalog: retryStaticCatalog,
     invalidate: () =>
       queryClient.invalidateQueries({
-        queryKey: ["definitions", documentId],
+        queryKey: ["floDownBlocks", documentId],
         refetchType: "none",
       }),
-    refetchDefinitions: () =>
+    refetchFloDownBlocks: () =>
       queryClient.fetchQuery({
-        queryKey: ["definitions", documentId],
-        queryFn: () => listDefinition({ data: { documentId } }),
+        queryKey: ["floDownBlocks", documentId],
+        queryFn: () => listFloDownBlocks({ data: { documentId } }),
       }),
   });
 }

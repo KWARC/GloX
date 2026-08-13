@@ -9,8 +9,8 @@ export type LlmDefiniendum = {
 };
 
 export type LlmDefiniendumInput = {
-  definitionText: string;
-  definitionId: string;
+  originalText: string;
+  floDownBlockId: string;
   documentPageId: string;
   pageNumber: number;
 };
@@ -141,12 +141,12 @@ export const getLlmDefiniendaSuggestions = createServerFn({
   method: "POST",
 })
   .inputValidator((data: LlmDefiniendumInput) => {
-    if (!data.definitionText?.trim()) {
-      throw new Error("definitionText is required");
+    if (!data.originalText?.trim()) {
+      throw new Error("originalText is required");
     }
 
-    if (!data.definitionId) {
-      throw new Error("definitionId is required");
+    if (!data.floDownBlockId) {
+      throw new Error("floDownBlockId is required");
     }
 
     return data;
@@ -212,7 +212,7 @@ export const getLlmDefiniendaSuggestions = createServerFn({
 
         {
           role: "user",
-          content: data.definitionText,
+          content: data.originalText,
         },
       ],
     });
@@ -234,14 +234,14 @@ export const getLlmDefiniendaSuggestions = createServerFn({
 
     await prisma.llmSuggestedDefinienda.deleteMany({
       where: {
-        definitionId: data.definitionId,
+        floDownBlockId: data.floDownBlockId,
       },
     });
 
     await prisma.llmSuggestedDefinienda.createMany({
       data: definienda.map((item) => ({
         definienda: item.text,
-        definitionId: data.definitionId,
+        floDownBlockId: data.floDownBlockId,
         prompt: DEFINIENDA_PROMPT,
       })),
     });

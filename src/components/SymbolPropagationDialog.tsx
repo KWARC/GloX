@@ -1,7 +1,7 @@
 import {
   PropagationCandidate,
   applySymbolPropagation,
-  getDefinitionsReferencingSymbol,
+  getFloDownBlocksReferencingSymbol,
 } from "@/serverFns/SymbolPropagation.server";
 import { OnReplaceNode } from "@/types/Semantic.types";
 import {
@@ -22,7 +22,7 @@ interface SymbolPropagationDialogProps {
   opened: boolean;
   localSymbolUri: string;
   mathHubUri: string;
-  primaryDefinitionId: string;
+  primaryFloDownBlockId: string;
   onReplaceNode: OnReplaceNode;
   onDone: () => void;
   onSkip: () => void;
@@ -32,7 +32,7 @@ export function SymbolPropagationDialog({
   opened,
   localSymbolUri,
   mathHubUri,
-  primaryDefinitionId,
+  primaryFloDownBlockId,
   onReplaceNode,
   onDone,
   onSkip,
@@ -41,10 +41,10 @@ export function SymbolPropagationDialog({
 
   const { data: candidates = [], isLoading } = useQuery<PropagationCandidate[]>(
     {
-      queryKey: ["propagation-candidates", localSymbolUri, primaryDefinitionId],
+      queryKey: ["propagation-candidates", localSymbolUri, primaryFloDownBlockId],
       queryFn: () =>
-        getDefinitionsReferencingSymbol({
-          data: { localSymbolUri, excludeDefinitionId: primaryDefinitionId },
+        getFloDownBlocksReferencingSymbol({
+          data: { localSymbolUri, excludeFloDownBlockId: primaryFloDownBlockId },
         }),
       enabled: opened,
     },
@@ -54,7 +54,7 @@ export function SymbolPropagationDialog({
     setApplying(true);
     try {
       await onReplaceNode(
-        primaryDefinitionId,
+        primaryFloDownBlockId,
         { type: "definiendum", uri: localSymbolUri },
         {
           type: "definiendum",
@@ -65,10 +65,10 @@ export function SymbolPropagationDialog({
 
       await applySymbolPropagation({
         data: {
-          selectedDefinitionIds: candidates.map((c) => c.id),
+          selectedFloDownBlockIds: candidates.map((c) => c.id),
           localSymbolUri,
           mathHubUri,
-          primaryDefinitionId,
+          primaryFloDownBlockId,
         },
       });
 
@@ -82,7 +82,7 @@ export function SymbolPropagationDialog({
   //   setApplying(true);
   //   try {
   //     await onReplaceNode(
-  //       primaryDefinitionId,
+  //       primaryFloDownBlockId,
   //       { type: "definiendum", uri: localSymbolUri },
   //       {
   //         type: "definiendum",

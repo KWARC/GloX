@@ -1,26 +1,27 @@
 import type { ExtractedItem } from "@/server/text-selection";
-import { normalizeToRoot } from "@/types/ftml.types";
+import { normalizeToRoot } from "@/types/floDown.types";
 import { Catalog, Verbalization } from "../symbolic-catalog/catalogSearch";
 import type { StaticCatalogDef } from "../symbolic-catalog/loadCatalog";
 import { isEligibleForAutomaticSuggestion } from "./eligibility";
-import { getStringContent, isDeclaredDefiniendum, walkNodes } from "./ftmlTraversal";
+import { getStringContent, isDeclaredDefiniendum } from "./floDownTraversal";
+import { walkInlines, getInlineContent } from "@/server/ftml/statementContent";
 import type { CatalogEntry } from "./types";
 
 export function buildSuggestionCatalog(
-  definition: ExtractedItem,
+  floDownBlock: ExtractedItem,
   catalog: CatalogEntry[],
 ) {
   const suggestionCatalog = new Catalog<CatalogEntry, Verbalization>(
-    definition.language,
+    floDownBlock.language,
     (entry) => entry.id,
   );
 
   for (const entry of catalog) {
-    if (entry.sourceDefinitionId === definition.id) continue;
-    if (entry.language !== definition.language) continue;
+    if (entry.sourceFloDownBlockId === floDownBlock.id) continue;
+    if (entry.language !== floDownBlock.language) continue;
 
     for (const term of [entry.name, ...entry.aliases]) {
-      if (!isEligibleForAutomaticSuggestion(term, definition.language)) {
+      if (!isEligibleForAutomaticSuggestion(term, floDownBlock.language)) {
         continue;
       }
       suggestionCatalog.addSymbVerb(entry, new Verbalization(term));
@@ -29,38 +30,42 @@ export function buildSuggestionCatalog(
 
   return suggestionCatalog;
 }
-export function buildDefinitionCatalog(
+export function buildFloDownBlockCatalog(
   extracts: ExtractedItem[],
 ): CatalogEntry[] {
   return extracts.flatMap((extract) => {
     const root = normalizeToRoot(extract.statement);
     const entries: CatalogEntry[] = [];
 
-    walkNodes(root, (node) => {
-      if (!isDeclaredDefiniendum(node)) return;
+    for (const block of root.content) {
+      walkInlines(getInlineContent(block), (node) => {
+        if (!isDeclaredDefiniendum(node)) return;
 
-      const name = getStringContent(node.content).trim() || node.uri;
-      if (!name) return;
+        const name = getStringContent(
+          typeof node === "string" ? [node] : (node.content ?? []),
+        ).trim() || node.uri;
+        if (!name) return;
 
-      entries.push({
-        id: node.uri,
-        name,
-        canonicalForm: name.toLowerCase(),
-        aliases: node.uri === name ? [] : [node.uri],
-        symbolicUri: node.uri,
-        language: extract.language,
-        sourceDefinitionId: extract.id,
-        statement: extract.statement,
-        symRef: {
-          source: "DB",
-          symbolName: node.uri,
-          futureRepo: extract.futureRepo,
-          filePath: extract.filePath,
-          fileName: extract.fileName,
+        entries.push({
+          id: node.uri,
+          name,
+          canonicalForm: name.toLowerCase(),
+          aliases: node.uri === name ? [] : [node.uri],
+          symbolicUri: node.uri,
           language: extract.language,
-        },
+          sourceFloDownBlockId: extract.id,
+          statement: extract.statement,
+          symRef: {
+            source: "DB",
+            symbolName: node.uri,
+            futureRepo: extract.futureRepo,
+            filePath: extract.filePath,
+            fileName: extract.fileName,
+            language: extract.language,
+          },
+        });
       });
-    });
+    }
 
     return entries;
   });
@@ -70,7 +75,7 @@ export function buildFullCatalog(
   extracts: ExtractedItem[],
   staticCatalog: StaticCatalogDef[],
 ): CatalogEntry[] {
-  const dynamic = buildDefinitionCatalog(extracts);
+  const dynamic = buildFloDownBlockCatalog(extracts);
   const staticDefs = buildStaticCatalog(staticCatalog);
 
   return [...dynamic, ...staticDefs];

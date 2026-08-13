@@ -13,7 +13,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { IconFileText, IconPencil } from "@tabler/icons-react";
-import { PARAGRAPH_KINDS, ParagraphKind } from "@/types/paragraphKind";
+import { EXTRACT_BLOCK_TYPES, ExtractBlockType, blockTypeLabel } from "@/types/blockType";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 import { DefiniendumDialog } from "./DefiniendumDialog";
@@ -21,7 +21,7 @@ import { SymbolicRef } from "./SymbolicRef";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { useDraftSemanticAuthoring } from "@/hooks/useDraftSemanticAuthoring";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
-import { FtmlStatement } from "@/types/ftml.types";
+import { FloDownStatement } from "@/types/floDown.types";
 import { SelectionPopup } from "./SelectionPopup";
 
 export function normalizeContentName(value: string) {
@@ -47,9 +47,9 @@ function getFilePathSegments(filePath: string): string[] {
 interface ExtractTextDialogProps {
   opened: boolean;
   initialText: string;
-  definitionName: string;
-  definitionNameDisabled?: boolean;
-  kind: ParagraphKind;
+  paragraphFileName: string;
+  paragraphFileNameDisabled?: boolean;
+  blockType: ExtractBlockType;
   mode?: "definition" | "symbol-target";
   symbolName?: string;
   symbolNameDisabled?: boolean;
@@ -62,20 +62,23 @@ interface ExtractTextDialogProps {
     setFilePath: (value: string) => void;
     setLanguage: (value: string) => void;
   };
-  setDefinitionName: (v: string) => void;
-  setKind: Dispatch<SetStateAction<ParagraphKind>>;
+  setParagraphFileName: (v: string) => void;
+  setBlockType: Dispatch<SetStateAction<ExtractBlockType>>;
   setSymbolName?: Dispatch<SetStateAction<string>>;
   onClose: () => void;
   onSubmit: (payload: {
     text: string;
-    kind: ParagraphKind;
-    statement?: FtmlStatement;
+    blockType: ExtractBlockType;
+    statement?: FloDownStatement;
+    declaredSymbols?: string[];
   }) => void;
   title?: string;
   textLabel?: string;
   textPlaceholder?: string;
   submitLabel?: string;
   hideSymbolNameField?: boolean;
+  createSymbolFlow?: boolean;
+  symbolNameLabel?: string;
   enableSemanticAuthoring?: boolean;
   semanticEnabled?: boolean;
   setSemanticEnabled?: Dispatch<SetStateAction<boolean>>;
@@ -84,14 +87,14 @@ interface ExtractTextDialogProps {
 export function ExtractTextDialog({
   opened,
   initialText,
-  definitionName,
-  definitionNameDisabled = false,
-  kind,
+  paragraphFileName,
+  paragraphFileNameDisabled = false,
+  blockType,
   mode = "definition",
   symbolName = "",
   symbolNameDisabled = false,
-  setDefinitionName,
-  setKind,
+  setParagraphFileName,
+  setBlockType,
   setSymbolName,
   filePath,
   location,
@@ -102,6 +105,8 @@ export function ExtractTextDialog({
   textPlaceholder,
   submitLabel = "Extract",
   hideSymbolNameField = false,
+  createSymbolFlow = false,
+  symbolNameLabel,
   enableSemanticAuthoring = false,
   semanticEnabled = false,
   setSemanticEnabled,
@@ -113,7 +118,13 @@ export function ExtractTextDialog({
   const [editingLocation, setEditingLocation] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const showSymbolNameField =
-    mode === "symbol-target" && !hideSymbolNameField;
+    createSymbolFlow || (mode === "symbol-target" && !hideSymbolNameField);
+  const resolvedSymbolNameLabel =
+    symbolNameLabel ?? (createSymbolFlow ? "New symbol name" : "Symbol name");
+  const contentNameDisabled = createSymbolFlow || paragraphFileNameDisabled;
+  const effectiveBlockType: ExtractBlockType = createSymbolFlow
+    ? "definition"
+    : blockType;
   const filePathSegments = getFilePathSegments(filePath);
   const draftSemantic = useDraftSemanticAuthoring(
     text,
@@ -133,6 +144,18 @@ export function ExtractTextDialog({
       setSymbolicRefDialogOpen(false);
     }
   }, [opened]);
+
+  useEffect(() => {
+    if (!opened || !createSymbolFlow) return;
+    setParagraphFileName(normalizeContentName(symbolName));
+  }, [opened, createSymbolFlow, symbolName, setParagraphFileName]);
+
+  function handleSymbolNameChange(value: string) {
+    setSymbolName?.(value);
+    if (createSymbolFlow) {
+      setParagraphFileName(normalizeContentName(value));
+    }
+  }
 
   function handleTextChange(nextText: string) {
     setText(nextText);
@@ -253,36 +276,45 @@ export function ExtractTextDialog({
               </Stack>
             </Paper>
           )}
+          {showSymbolNameField && (
+            <TextInput
+              label={resolvedSymbolNameLabel}
+              placeholder="e.g. natural number"
+              value={symbolName}
+              disabled={symbolNameDisabled}
+              onChange={(e) => handleSymbolNameChange(e.currentTarget.value)}
+              styles={{ input: { fontWeight: 500 } }}
+            />
+          )}
           <TextInput
             label="Content Name"
             placeholder="e.g. derivative-rules"
-            value={definitionName}
-            disabled={definitionNameDisabled}
+            value={paragraphFileName}
+            disabled={contentNameDisabled}
             onChange={(e) =>
-              setDefinitionName(normalizeContentName(e.currentTarget.value))
+              setParagraphFileName(normalizeContentName(e.currentTarget.value))
             }
             styles={{ input: { fontWeight: 500 } }}
           />
-          <Select
-            label="Paragraph Kind"
-            data={PARAGRAPH_KINDS.map((value) => ({
-              value,
-              label: value,
-            }))}
-            value={kind}
-            onChange={(value) => {
-              if (value) setKind(value as ParagraphKind);
-            }}
-            allowDeselect={false}
-          />
-          {showSymbolNameField && (
+          {createSymbolFlow ? (
             <TextInput
-              label="Symbol name"
-              placeholder="e.g. derivative"
-              value={symbolName}
-              disabled={symbolNameDisabled}
-              onChange={(e) => setSymbolName?.(e.currentTarget.value)}
+              label="Block type"
+              value={blockTypeLabel("definition")}
+              disabled
               styles={{ input: { fontWeight: 500 } }}
+            />
+          ) : (
+            <Select
+              label="Block type"
+              data={EXTRACT_BLOCK_TYPES.map((value) => ({
+                value,
+                label: blockTypeLabel(value),
+              }))}
+              value={blockType}
+              onChange={(value) => {
+                if (value) setBlockType(value as ExtractBlockType);
+              }}
+              allowDeselect={false}
             />
           )}
 
@@ -362,6 +394,7 @@ export function ExtractTextDialog({
                   <FtmlPreview
                     ftmlAst={draftSemantic.statement}
                     docId="draft-definition"
+                    declaredSymbols={draftSemantic.declaredSymbols}
                   />
                 </div>
               </Paper>
@@ -384,17 +417,21 @@ export function ExtractTextDialog({
                 if (!cleaned) return;
                 onSubmit({
                   text: cleaned,
-                  kind,
+                  blockType: effectiveBlockType,
                   statement:
                     enableSemanticAuthoring && semanticEnabled
                       ? draftSemantic.statement
+                      : undefined,
+                  declaredSymbols:
+                    enableSemanticAuthoring && semanticEnabled
+                      ? draftSemantic.declaredSymbols
                       : undefined,
                 });
               }}
               disabled={
                 !text.trim() ||
-                !definitionName.trim() ||
-                (showSymbolNameField && !symbolName.trim())
+                !paragraphFileName.trim() ||
+                ((showSymbolNameField || createSymbolFlow) && !symbolName.trim())
               }
               leftSection={<IconFileText size={16} />}
             >
