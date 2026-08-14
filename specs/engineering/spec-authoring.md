@@ -130,6 +130,7 @@ Register new areas in this table when adding a PRD/SDD file. One primary `AREA` 
 | `FLO` | SDD | `features/flodown-blocks/lifecycle.md` | Block CRUD, cascade, version history |
 | `SESS` | Decision | `decisions/jwt-session-fingerprint.md` | Session invalidation on password change (`D-SESS-*`) |
 | `OPENAI` | External | `external-deps/vendors/openai.md` | OpenAI usage constraints (`E-OPENAI-*`) |
+| `WIKI` | External | `external-deps/vendors/wikipedia.md` | Wikimedia search / article framing (`E-WIKI-*`) |
 | `MATH` | External | `external-deps/vendors/mathhub.md` | MathHub backend facts (`E-MATH-*`) |
 | `FLOD` | External | `external-deps/vendors/flodown.md` | FloDown WASM / URI facts (`E-FLOD-*`) |
 | `FTML` | External | `external-deps/libraries/ftml.md` | FTML library constraints (`E-FTML-*`) |

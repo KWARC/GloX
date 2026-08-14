@@ -23,6 +23,7 @@ import { useDraftSemanticAuthoring } from "@/hooks/useDraftSemanticAuthoring";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import { FloDownStatement } from "@/types/floDown.types";
 import { SelectionPopup } from "./SelectionPopup";
+import { WikipediaDefinitionLookup } from "./WikipediaDefinitionLookup";
 
 export function normalizeContentName(value: string) {
   return value.toLowerCase().replaceAll(" ", "-");
@@ -316,6 +317,18 @@ export function ExtractTextDialog({
               }}
               allowDeselect={false}
             />
+          )}
+
+          {createSymbolFlow && (
+            <>
+              <Divider />
+              <WikipediaDefinitionLookup
+                symbolName={symbolName}
+                filePath={filePath}
+                locationLanguage={location?.language}
+                enabled={opened}
+              />
+            </>
           )}
 
           <Divider />

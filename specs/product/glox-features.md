@@ -1,6 +1,6 @@
 # GloX — shipped features
 
-> **Layer:** Product inventory — orientation only. **Last verified:** 2026-08-11.
+> **Layer:** Product inventory — orientation only. **Last verified:** 2026-08-15.
 >
 > Parent brief: [`glox.md`](./glox.md)
 
@@ -31,6 +31,7 @@
 - **Symbolic catalog search** — Stemmed search over static catalog (EN/DE/FR).
 - **Automatic reference suggestions** — Sniffy-like suggestions while editing definitions.
 - **FloDown preview** — Browser WASM rendering of FTML statements.
+- **Wikipedia lookup for new symbols** — In the create-new-symbol dialog, search Wikipedia (EN/DE/FR), open articles in an iframe, and copy text into the definition body. Authenticated only; no auto-fill.
 
 ## Module descriptions
 
