@@ -41,12 +41,16 @@ search in English, German, and French.
 FloDown block declares that symbol at the same export identity, the system MUST reject the deletion.
 
 **R-SYM-09 (Event-Driven):** WHEN an Extractor, Curator, or Admin, while creating a new Symbol in the
-extract or add-content dialog, requests a Wikipedia search for that symbol name, the system MUST
-return Wikipedia search results from the English, German, or French wiki that matches the FloDown
-block language.
+extract or add-content dialog, requests a Wikipedia search for a free-text query (often the symbol
+name), the system MUST return Wikipedia search results from the English, German, or French wiki that
+matches the FloDown block language. WHEN that dialog opens with a selected symbol name, the system
+MUST run that search once for the selected name. Further searches MUST run only on an explicit
+Search or Enter action, not on typing alone.
 
-**R-SYM-10 (Event-Driven):** WHEN the user selects a Wikipedia search result in that dialog, the
-system MUST display that article and MUST keep the article title and URL visible.
+**R-SYM-10 (Event-Driven):** WHEN Wikipedia search returns one or more results in that dialog, the
+system MUST display the first result as the selected article and MUST keep its title and URL
+visible. WHEN the user selects a Wikipedia search result, the system MUST display that article and
+MUST keep the article title and URL visible.
 
 **R-SYM-11 (Event-Driven):** WHEN the user selects a different Wikipedia search result, the system
 MUST display the newly selected article in place of the previously displayed article.

@@ -30,18 +30,19 @@ Out of scope:
 
 | Layer | Responsibility |
 | --- | --- |
-| `src/serverFns/wikipediaSearch.server.ts` | Authenticates the caller and returns ranked Wikipedia search hits for a symbol name and block language. It MUST NOT fetch or return full article HTML. |
+| `src/serverFns/wikipediaSearch.server.ts` | Authenticates the caller and returns ranked Wikipedia search hits for a search query and block language. It MUST NOT fetch or return full article HTML. |
 | `src/server/wikipedia/wikimediaSearch.ts` | Calls the Wikimedia search API on the language wiki, sends the identifying User-Agent, and maps hits to the search-result contract. |
 | `src/lib/wikipediaLanguage.ts` | Parses supported Wikipedia languages (`en`, `de`, `fr`) for client and server without importing server-only modules into the browser bundle. |
-| `src/components/WikipediaDefinitionLookup.tsx` | Owns the explicit search control, result list, live article iframe, title and URL display, and Open on Wikipedia control. |
-| `src/components/ExtractTextDialog.tsx` | When `createSymbolFlow` is true, mounts the Wikipedia lookup beside the definition textarea. Documents, module descriptions, and sTeX curation already pass `createSymbolFlow` into this dialog. |
+| `src/components/WikipediaDefinitionLookup.tsx` | Owns Wikipedia UI in create-symbol flow: a shared top row with the symbol name field (`symbolNameField`) and free-text Wikipedia search (Search / Enter + Clear), then a two-column body — left `children` (content name, block type, definition editor), right results / selected article iframe / Open on Wikipedia. On dialog open with a selected symbol name, runs one Wikipedia search for that name. |
+| `src/components/ExtractTextDialog.tsx` | When `createSymbolFlow` is true, mounts Wikipedia lookup with the shared top row and two-column body, passes the symbol name field into `symbolNameField`, and keeps Cancel / Extract in a pinned modal footer while the middle content scrolls. Documents, module descriptions, and sTeX curation already pass `createSymbolFlow` into this dialog. |
 
 ## Data contracts
 
 **Language wiki:** The block `language` value `en`, `de`, or `fr` selects
 `https://{language}.wikipedia.org`. Other language values MUST NOT be mapped to another wiki.
 
-**Search input:** `{ symbolName: string, language: string }`
+**Search input:** `{ symbolName: string, language: string }` — `symbolName` is the free-text
+Wikipedia query (often seeded from the new symbol name).
 
 **Search result item:** `{ title: string, url: string }` where `url` is the canonical article URL on
 that language wiki.
@@ -54,16 +55,17 @@ document.
 
 ## Business rules
 
-**S-SYM-09 (Event-Driven):** WHEN the Wikipedia search server function runs with a non-empty symbol
-name and a block language of `en`, `de`, or `fr`, the system MUST query that language wiki’s
-MediaWiki REST search (`GET /w/rest.php/v1/search/page` with query parameter `q` set to the symbol
-name) and MUST return the ranked hit list as `title` and `url` pairs.
+**S-SYM-09 (Event-Driven):** WHEN the Wikipedia search server function runs with a non-empty search
+query and a block language of `en`, `de`, or `fr`, the system MUST query that language wiki’s
+MediaWiki REST search (`GET /w/rest.php/v1/search/page` with query parameter `q` set to the search
+query) and MUST return the ranked hit list as `title` and `url` pairs.
 
 **Upstream:** R-SYM-09
 
-**S-SYM-10 (Event-Driven):** WHEN the user selects a search result in `ExtractTextDialog` under
-`createSymbolFlow`, the system MUST set the article iframe `src` to that result’s `url` and MUST
-show that result’s title and URL outside the iframe.
+**S-SYM-10 (Event-Driven):** WHEN Wikipedia search returns one or more results in `ExtractTextDialog`
+under `createSymbolFlow`, the system MUST select the first result, MUST set the article iframe `src`
+to that result’s `url`, and MUST show that result’s title and URL outside the iframe. WHEN the user
+selects a search result, the system MUST apply the same display behavior for that result.
 
 **Upstream:** R-SYM-10
 
@@ -95,8 +97,10 @@ and MUST NOT call Wikimedia when authentication fails.
 
 **Upstream:** R-SYM-15
 
-**S-SYM-16 (Ubiquitous):** The extract dialog MUST invoke Wikipedia search only from an explicit user
-control. Changing the symbol name field MUST NOT by itself call Wikimedia.
+**S-SYM-16 (Ubiquitous):** The extract dialog MUST invoke Wikipedia search from an explicit Search
+control or Enter submit in the Wikipedia panel, or once when create-symbol opens with a non-empty
+selected symbol name. Changing the symbol name field or the Wikipedia query field MUST NOT by itself
+call Wikimedia after that open-time search.
 
 **Upstream:** R-SYM-09
 
