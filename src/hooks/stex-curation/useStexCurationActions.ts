@@ -72,6 +72,7 @@ export function useStexCurationActions(
         identity.filePath,
         identity.fileName,
         combined.declaredSymbolsPerBlock,
+        identity.language,
       );
       stex = injectProvenance(stex ?? "", provenance);
 
@@ -156,6 +157,7 @@ export function useStexCurationActions(
         identity.filePath,
         identity.fileName,
         combined.declaredSymbolsPerBlock,
+        identity.language,
       );
       stex = injectProvenance(stex ?? "", provenance);
 

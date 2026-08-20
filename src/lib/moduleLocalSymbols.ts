@@ -1,4 +1,8 @@
 import { collectDefiniendumUris } from "@/server/ftml/statementContent";
+import {
+  symbolIdentityFromGlox,
+  symbolUri,
+} from "@/lib/flodownUris";
 import type { FloDownStatement } from "@/types/floDown.types";
 
 export type ModuleLocalSymbolSource = {
@@ -7,6 +11,7 @@ export type ModuleLocalSymbolSource = {
   futureRepo: string;
   filePath: string;
   fileName: string;
+  language?: string;
 };
 
 export function buildLocalSymbolUri(
@@ -15,7 +20,14 @@ export function buildLocalSymbolUri(
   fileName: string,
   symbolName: string,
 ): string {
-  return `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${symbolName}`;
+  return symbolUri(
+    symbolIdentityFromGlox({
+      futureRepo,
+      filePath,
+      fileName,
+      symbolName,
+    }),
+  );
 }
 
 export function collectDeclaredSymbolsForDefinitionBlock(

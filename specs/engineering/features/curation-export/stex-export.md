@@ -40,7 +40,7 @@ Out of scope:
 
 | Concern | Rule |
 | --- | --- |
-| Local URI rewrite | Short `symbolName` → `http://{futureRepo}?a={filePath}&m={fileName}&s={uri}` (or `uriMap` override) |
+| Local URI rewrite | Short `symbolName` → `http://mathhub.info?a={futureRepo}&p={filePath}&m={fileName}&s={uri}` (or `uriMap` / `addSymbolDeclaration` override) |
 | MathHub URI | `http(s)://mathhub.info?...` left unchanged |
 | Provenance | `%%%` comment lines from `injectProvenance` |
 | Export dependency scope | The exporting file identity plus definitions reachable via `uriMap` / defining FloDown blocks for referenced local symbols (see `getSymbolUriMap`) |

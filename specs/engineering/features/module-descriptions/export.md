@@ -6,6 +6,7 @@ upstream:
 compliance: []
 code:
   - src/lib/moduleDescriptionTex.ts
+  - src/lib/flodownUris.ts
   - src/components/module-descriptions/ModuleDescriptionLatexModal.tsx
   - src/routes/module-description/$moduleId.tsx
   - src/lib/moduleLocalSymbols.ts
@@ -41,8 +42,8 @@ Out of scope (sibling specs):
 | Module TeX file | `{moduleId}.{language}.tex` |
 | Definition TeX file | `{fileName}.{language}.tex` per definition FloDown block |
 | Module FTML structure | Section headings Title, Inhalt, Lernziele und Kompetenzen wrapping the three statement contents (`buildModuleDescriptionStatement`) |
-| Module FloDown document URI | `futureRepo` + `modulesFilePath` archive + `moduleId` document id + language |
-| Definition FloDown document URI | Block `futureRepo` + `filePath` (`defsFilePath`) + `fileName` + language |
+| Module FloDown document URI | `http://{futureRepo}?a={modulesFilePath}&d={moduleId}&l={language}` |
+| Definition FloDown document URI | `http://{futureRepo}?a={filePath}&d={fileName}&l={language}` |
 
 ## Business rules
 

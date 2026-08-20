@@ -1,5 +1,12 @@
 import { initFloDown } from "@/lib/flodownClient";
 import {
+  createFloDownDocument,
+  declareSymbol,
+  exportIdentityFromGlox,
+  hiddenScratchDocumentUri,
+  scratchDocumentUri,
+} from "@/lib/flodownUris";
+import {
   collectDeclaredSymbolsForDefinitionBlock,
   type ModuleLocalSymbolSource,
 } from "@/lib/moduleLocalSymbols";
@@ -10,10 +17,11 @@ import {
 import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
 import {
   DefinitionNode,
+  FloDownAstNode,
   FloDownStatement,
   isDefinitionNode,
-  isHeadingNode,
   normalizeToRoot,
+  ParagraphNode,
 } from "@/types/floDown.types";
 import { useEffect, useRef } from "react";
 
@@ -21,6 +29,7 @@ const EMPTY_DECLARED_SYMBOLS: string[] = [];
 
 export type FloDownHoverDefinition = ModuleLocalSymbolSource & {
   cacheKey: string;
+  language?: string;
 };
 
 export type FloDownSymbolContext = {
@@ -63,7 +72,7 @@ interface FtmlPreviewProps {
 type FloDownWasmBlock = {
   mountTo: (el: HTMLElement) => void;
   addElement: (node: wasm_bindgen.FloDownBlock) => void;
-  addSymbolDeclaration: (name: string) => string;
+  addSymbolDeclaration: (name: string) => string | undefined;
   getStex(): string;
   getFtml(): string;
   clear: () => void;
@@ -71,7 +80,15 @@ type FloDownWasmBlock = {
 };
 
 type FloDownLib = {
-  FloDown: { fromUri: (uri: string) => FloDownWasmBlock };
+  FloDown: {
+    fromUri: (uri: string) => FloDownWasmBlock;
+    fromPath: (
+      archive: string,
+      path: string | null | undefined,
+      name: string,
+      lang: wasm_bindgen.Language,
+    ) => FloDownWasmBlock | undefined;
+  };
 };
 
 async function mountHoverDefinitionInHidden(
@@ -83,6 +100,7 @@ async function mountHoverDefinitionInHidden(
   const declaredOnThisRow = new Set(
     collectDeclaredSymbolsForDefinitionBlock(defBlock),
   );
+  const language = defBlock.language ?? "en";
 
   for (const block of root.content) {
     if (!isDefinitionNode(block)) continue;
@@ -102,9 +120,8 @@ async function mountHoverDefinitionInHidden(
     for (const dep of Object.values(deps)) {
       for (const label of dep.declaredSymbols) {
         if (!hiddenUriMap.has(label)) {
-          const hiddenUri = fdHidden.addSymbolDeclaration(label);
+          const hiddenUri = declareSymbol(fdHidden, label, hiddenUriMap);
           if (hiddenUri) {
-            hiddenUriMap.set(label, hiddenUri);
             resolvedUris.set(label, hiddenUri);
           }
         }
@@ -119,15 +136,15 @@ async function mountHoverDefinitionInHidden(
           defBlock.fileName,
           dep.definition,
           dep.declaredSymbols,
+          language,
         ) as DefinitionNode,
       );
     }
 
     for (const symbol of declaredOnThisRow) {
       if (!symbol.startsWith("http") && !hiddenUriMap.has(symbol)) {
-        const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
+        const hiddenUri = declareSymbol(fdHidden, symbol, hiddenUriMap);
         if (hiddenUri) {
-          hiddenUriMap.set(symbol, hiddenUri);
           resolvedUris.set(symbol, hiddenUri);
         }
       } else if (hiddenUriMap.has(symbol)) {
@@ -144,6 +161,7 @@ async function mountHoverDefinitionInHidden(
         defBlock.fileName,
         def,
         Array.from(declaredOnThisRow),
+        language,
       ) as DefinitionNode,
     );
   }
@@ -171,30 +189,40 @@ export function FtmlPreview({
     let disposed = false;
 
     (async () => {
-      const floDown = (await initFloDown()) as FloDownLib;
-      if (disposed) return;
+      try {
+        const floDown = (await initFloDown()) as FloDownLib;
+        if (disposed) return;
 
-      const visibleDocUri = symbolContext
-        ? `http://${symbolContext.futureRepo}?a=${symbolContext.filePath}&d=${symbolContext.fileName}&l=${symbolContext.language}`
-        : `http://temp-visible?a=temp&d=${docId}&l=en`;
+      const previewLanguage = symbolContext?.language ?? "en";
       const hiddenDocUri = symbolContext
-        ? `http://hidden?a=temp&d=${symbolContext.fileName}&l=${symbolContext.language}`
-        : `http://temp-hidden?a=temp&d=${docId}&l=en`;
+        ? hiddenScratchDocumentUri(symbolContext.fileName, previewLanguage)
+        : scratchDocumentUri(docId, previewLanguage);
 
       const fdHidden = floDown.FloDown.fromUri(hiddenDocUri);
       hiddenEl.innerHTML = "";
       fdHidden.mountTo(hiddenEl);
       hiddenEl.style.display = "none";
 
-      const fdVisible = floDown.FloDown.fromUri(visibleDocUri);
+      const fdVisible = symbolContext
+        ? (createFloDownDocument(
+            floDown.FloDown,
+            exportIdentityFromGlox({
+              futureRepo: symbolContext.futureRepo,
+              filePath: symbolContext.filePath,
+              fileName: symbolContext.fileName,
+              language: symbolContext.language,
+            }),
+          ) as FloDownWasmBlock)
+        : (floDown.FloDown.fromUri(
+            scratchDocumentUri(docId, previewLanguage),
+          ) as FloDownWasmBlock);
+
       fdHiddenRef.current = fdHidden;
       fdVisibleRef.current = fdVisible;
       containerEl.innerHTML = "";
       fdVisible.mountTo(containerEl);
 
-      const statementSymbolUriMap = symbolContext
-        ? new Map(symbolContext.localSymbolUriMap)
-        : null;
+      const uriMap = new Map(symbolContext?.localSymbolUriMap ?? []);
 
       if (symbolContext) {
         for (const defBlock of symbolContext.hoverDefinitions) {
@@ -204,42 +232,65 @@ export function FtmlPreview({
           );
           if (disposed) return;
           for (const [label, uri] of resolvedUris) {
-            statementSymbolUriMap!.set(label, uri);
+            uriMap.set(label, uri);
           }
         }
       }
 
       const root = normalizeToRoot(ftmlAst);
       const declaredOnThisRow = new Set(declaredSymbols);
+      const exportIdentity = symbolContext
+        ? {
+            futureRepo: symbolContext.futureRepo,
+            filePath: symbolContext.filePath,
+            fileName: symbolContext.fileName,
+            language: symbolContext.language,
+          }
+        : {
+            futureRepo: "no/archive",
+            filePath: "",
+            fileName: docId,
+            language: previewLanguage,
+          };
 
-      for (const block of root.content) {
+      const previewBlocks = root.content as Array<{
+        type: string;
+        [key: string]: unknown;
+      }>;
+
+      for (const block of previewBlocks) {
         if (disposed) return;
 
-        if (isHeadingNode(block)) {
-          fdVisible.addElement(block);
+        if (block.type === "heading") {
+          const heading = block as {
+            type: "heading";
+            content: wasm_bindgen.Inline[];
+          };
+          fdVisible.addElement({
+            type: "heading",
+            level: "Section" as unknown as wasm_bindgen.HeadingLevel,
+            content: heading.content,
+          });
           continue;
         }
 
         if (block.type === "paragraph") {
-          if (symbolContext && statementSymbolUriMap) {
-            fdVisible.addElement(
-              toExportBlock(
-                block,
-                statementSymbolUriMap,
-                symbolContext.futureRepo,
-                symbolContext.filePath,
-                symbolContext.fileName,
-                block,
-                [],
-              ),
-            );
-          } else {
-            fdVisible.addElement(block);
-          }
+          fdVisible.addElement(
+            toExportBlock(
+              block as ParagraphNode,
+              uriMap,
+              exportIdentity.futureRepo,
+              exportIdentity.filePath,
+              exportIdentity.fileName,
+              block as ParagraphNode,
+              [],
+              exportIdentity.language,
+            ),
+          );
           continue;
         }
 
-        if (!isDefinitionNode(block)) continue;
+        if (!isDefinitionNode(block as FloDownAstNode)) continue;
 
         const def = block as DefinitionNode;
         const external = collectExternalSymbols(def, declaredOnThisRow);
@@ -255,13 +306,20 @@ export function FtmlPreview({
 
         const defHiddenUriMap = new Map<string, string>();
         const defVisibleUriMap = new Map<string, string>();
+        const scratchIdentity = {
+          futureRepo: "no/archive",
+          filePath: null as string | null,
+          fileName: docId,
+          language: previewLanguage,
+        };
 
         for (const dep of Object.values(deps)) {
           for (const label of dep.declaredSymbols) {
             if (!defHiddenUriMap.has(label)) {
-              const hiddenUri = fdHidden.addSymbolDeclaration(label);
-              defHiddenUriMap.set(label, hiddenUri);
-              defVisibleUriMap.set(label, hiddenUri);
+              const hiddenUri = declareSymbol(fdHidden, label, defHiddenUriMap);
+              if (hiddenUri) {
+                defVisibleUriMap.set(label, hiddenUri);
+              }
             }
           }
 
@@ -269,22 +327,20 @@ export function FtmlPreview({
             toExportBlock(
               dep.definition,
               defHiddenUriMap,
-              "temp",
-              "temp",
-              docId,
+              scratchIdentity.futureRepo,
+              scratchIdentity.filePath ?? "",
+              scratchIdentity.fileName,
               dep.definition,
               dep.declaredSymbols,
+              scratchIdentity.language,
             ) as DefinitionNode,
           );
         }
 
         for (const symbol of declaredOnThisRow) {
           if (!symbol.startsWith("http") && !defVisibleUriMap.has(symbol)) {
-            const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
-            const visibleUri = fdVisible.addSymbolDeclaration(symbol);
-
-            defHiddenUriMap.set(symbol, hiddenUri);
-            defVisibleUriMap.set(symbol, visibleUri);
+            declareSymbol(fdHidden, symbol, defHiddenUriMap);
+            declareSymbol(fdVisible, symbol, defVisibleUriMap);
           }
         }
 
@@ -292,13 +348,18 @@ export function FtmlPreview({
           toExportBlock(
             def,
             defVisibleUriMap,
-            "temp",
-            "temp",
-            docId,
+            scratchIdentity.futureRepo,
+            scratchIdentity.filePath ?? "",
+            scratchIdentity.fileName,
             def,
             Array.from(declaredOnThisRow),
+            scratchIdentity.language,
           ) as DefinitionNode,
         );
+      }
+      } catch (error) {
+        if (disposed) return;
+        console.error("FtmlPreview FloDown mount failed:", error);
       }
     })();
 

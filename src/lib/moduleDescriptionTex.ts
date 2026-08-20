@@ -1,4 +1,10 @@
 import { initFloDown } from "@/lib/flodownClient";
+import {
+  createFloDownDocument,
+  declareSymbol,
+  exportIdentityFromGlox,
+  hiddenScratchDocumentUri,
+} from "@/lib/flodownUris";
 import { buildModuleLocalSymbolUriMap } from "@/lib/moduleLocalSymbols";
 import { toExportBlock } from "@/server/ftml/generateStexFromFtml";
 import { collectExternalSymbols } from "@/server/ftml/statementContent";
@@ -45,18 +51,27 @@ type ModulePreviewBlock = PersistedBlock | HeadingNode;
 
 type FloDownWasmBlock = {
   addElement: (node: wasm_bindgen.FloDownBlock) => void;
-  addSymbolDeclaration: (name: string) => string;
+  addSymbolDeclaration: (name: string) => string | undefined;
   getStex(): string;
   clear: () => void;
 };
 
 type FloDownLib = {
-  FloDown: { fromUri: (uri: string) => FloDownWasmBlock };
+  FloDown: {
+    fromUri: (uri: string) => FloDownWasmBlock;
+    fromPath: (
+      archive: string,
+      path: string | null | undefined,
+      name: string,
+      lang: wasm_bindgen.Language,
+    ) => FloDownWasmBlock | undefined;
+  };
 };
 
 function sectionHeading(title: string): HeadingNode {
   return {
     type: "heading",
+    // FloDown WASM serde expects a variant name ("Section"), not HeadingLevel.Section = 0.
     level: "Section" as unknown as HeadingNode["level"],
     content: [title],
   };
@@ -86,20 +101,16 @@ export function buildModuleDescriptionStatement(
   return content as FloDownStatement;
 }
 
-function buildDocumentUri(
-  futureRepo: string,
-  archive: string,
-  documentId: string,
-  language: string,
-): string {
-  return `http://${futureRepo}?a=${archive}&d=${documentId}&l=${language}`;
-}
-
 async function mountDefinitionDeps(
   fdHidden: FloDownWasmBlock,
   fdVisible: FloDownWasmBlock,
   block: DefinitionNode,
-  identity: { futureRepo: string; filePath: string; fileName: string },
+  identity: {
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
+  },
   declaredOnThisRow: Set<string>,
 ) {
   const external = collectExternalSymbols(block, declaredOnThisRow);
@@ -114,9 +125,10 @@ async function mountDefinitionDeps(
   for (const dep of Object.values(deps)) {
     for (const label of dep.declaredSymbols) {
       if (!hiddenUriMap.has(label)) {
-        const hiddenUri = fdHidden.addSymbolDeclaration(label);
-        hiddenUriMap.set(label, hiddenUri);
-        visibleUriMap.set(label, hiddenUri);
+        const hiddenUri = declareSymbol(fdHidden, label, hiddenUriMap);
+        if (hiddenUri) {
+          visibleUriMap.set(label, hiddenUri);
+        }
       }
     }
 
@@ -129,16 +141,15 @@ async function mountDefinitionDeps(
         identity.fileName,
         dep.definition,
         dep.declaredSymbols,
+        identity.language,
       ) as DefinitionNode,
     );
   }
 
   for (const symbol of declaredOnThisRow) {
     if (!symbol.startsWith("http") && !visibleUriMap.has(symbol)) {
-      const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
-      const visibleUri = fdVisible.addSymbolDeclaration(symbol);
-      hiddenUriMap.set(symbol, hiddenUri);
-      visibleUriMap.set(symbol, visibleUri);
+      declareSymbol(fdHidden, symbol, hiddenUriMap);
+      declareSymbol(fdVisible, symbol, visibleUriMap);
     }
   }
 
@@ -151,6 +162,7 @@ async function mountDefinitionDeps(
       identity.fileName,
       block,
       Array.from(declaredOnThisRow),
+      identity.language,
     ) as DefinitionNode,
   );
 }
@@ -158,7 +170,12 @@ async function mountDefinitionDeps(
 async function addModulePreviewBlock(
   fdVisible: FloDownWasmBlock,
   block: ModulePreviewBlock,
-  identity: { futureRepo: string; filePath: string; fileName: string },
+  identity: {
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
+  },
   localSymbolUriMap: Map<string, string>,
 ) {
   if (isHeadingNode(block)) {
@@ -177,17 +194,21 @@ async function addModulePreviewBlock(
       identity.fileName,
       block,
       [],
+      identity.language,
     ) as PersistedBlock,
   );
 }
 
 async function initFloDownBlocks(
   floDown: FloDownLib,
-  visibleUri: string,
+  visibleIdentity: ReturnType<typeof exportIdentityFromGlox>,
   hiddenUri: string,
 ): Promise<{ fdHidden: FloDownWasmBlock; fdVisible: FloDownWasmBlock }> {
-  const fdHidden = floDown.FloDown.fromUri(hiddenUri);
-  const fdVisible = floDown.FloDown.fromUri(visibleUri);
+  const fdHidden = floDown.FloDown.fromUri(hiddenUri) as FloDownWasmBlock;
+  const fdVisible = createFloDownDocument(
+    floDown.FloDown,
+    visibleIdentity,
+  ) as FloDownWasmBlock;
   return { fdHidden, fdVisible };
 }
 
@@ -200,20 +221,17 @@ export async function generateModuleDescriptionModuleTex(
 
   const floDown = (await initFloDown()) as FloDownLib;
 
-  const fdVisible = floDown.FloDown.fromUri(
-    buildDocumentUri(
-      input.futureRepo,
-      input.modulesFilePath,
-      input.moduleId,
-      input.language,
-    ),
-  );
-
-  const moduleIdentity = {
+  const moduleIdentity = exportIdentityFromGlox({
     futureRepo: input.futureRepo,
     filePath: input.modulesFilePath,
     fileName: input.moduleId,
-  };
+    language: input.language,
+  });
+
+  const fdVisible = createFloDownDocument(
+    floDown.FloDown,
+    moduleIdentity,
+  ) as FloDownWasmBlock;
 
   const localSymbolUriMap = buildModuleLocalSymbolUriMap(
     input.definitionBlocks,
@@ -225,7 +243,12 @@ export async function generateModuleDescriptionModuleTex(
     await addModulePreviewBlock(
       fdVisible,
       block,
-      moduleIdentity,
+      {
+        futureRepo: input.futureRepo,
+        filePath: input.modulesFilePath,
+        fileName: input.moduleId,
+        language: input.language,
+      },
       localSymbolUriMap,
     );
   }
@@ -243,18 +266,23 @@ export async function generateModuleDescriptionDefinitionTex(
 
   const floDown = (await initFloDown()) as FloDownLib;
 
+  const visibleIdentity = exportIdentityFromGlox({
+    futureRepo: defBlock.futureRepo,
+    filePath: defBlock.filePath,
+    fileName: defBlock.fileName,
+    language: defBlock.language,
+  });
+
   const { fdHidden, fdVisible } = await initFloDownBlocks(
     floDown,
-    buildDocumentUri(
-      defBlock.futureRepo,
-      defBlock.filePath,
-      defBlock.fileName,
-      defBlock.language,
-    ),
-    buildDocumentUri("hidden", "temp", moduleId, defBlock.language),
+    visibleIdentity,
+    hiddenScratchDocumentUri(moduleId, defBlock.language),
   );
 
-  const alive: FloDownWasmBlock[] = [fdHidden, fdVisible];
+  const alive: FloDownWasmBlock[] = [
+    fdHidden,
+    fdVisible as FloDownWasmBlock,
+  ];
 
   const root = normalizeToRoot(defBlock.statement);
   for (const block of root.content) {
@@ -267,6 +295,7 @@ export async function generateModuleDescriptionDefinitionTex(
         futureRepo: defBlock.futureRepo,
         filePath: defBlock.filePath,
         fileName: defBlock.fileName,
+        language: defBlock.language,
       },
       new Set(defBlock.declaredSymbols),
     );

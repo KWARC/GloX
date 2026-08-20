@@ -154,6 +154,7 @@ export function ModuleStatementsSection({
         futureRepo: block.futureRepo,
         filePath: block.filePath,
         fileName: block.fileName,
+        language: block.language,
       })),
     };
   }, [definitionBlocks, futureRepo, language, moduleId, modulesFilePath]);

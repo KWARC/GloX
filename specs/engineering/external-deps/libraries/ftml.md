@@ -59,9 +59,11 @@ At preview/export, blocks are passed to FloDown via `addElement()`; local symbol
 | Local `Symbol` row | `symbolName` string, e.g. `"monoid"` | Matched with export identity on the `Symbol` table |
 | MathHub concept | Full HTTP URL | Stored verbatim |
 
-At sTeX export, local `symbolName` values expand to MathHub-style HTTP URIs using the exporting
-module's file identity. Export-identity moves update `Symbol` rows but do not change `symbolName`
-strings already stored in `statement` JSON.
+At sTeX export, local `symbolName` values expand to MathHub document URIs of the form
+`http://mathhub.info?a={archive}&p={path}&m={module}&s={symbol}` using the exporting file identity.
+Prefer URIs returned by FloDown `addSymbolDeclaration()` when declaring symbols in the WASM block.
+Export-identity moves update `Symbol` rows but do not change `symbolName` strings already stored in
+`statement` JSON.
 
 **Naming note:** FloDown's `flodown.d.ts` also defines a document-tree type `LogicalParagraph` — not
 a GloX database entity. See [naming layers](../../features/flodown-blocks/lifecycle.md#naming-layers).

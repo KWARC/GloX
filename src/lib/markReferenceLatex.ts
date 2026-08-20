@@ -1,12 +1,16 @@
 import { initFloDown } from "@/lib/flodownClient";
+import {
+  createFloDownDocument,
+  exportIdentityFromGlox,
+  symbolIdentityFromGlox,
+  symbolUri,
+} from "@/lib/flodownUris";
 import { parseUri } from "@/server/parseUri";
 import { isHttp } from "@/server/ftml/generateStexFromFtml";
 import type {
-  DefinitionNode,
   FloDownContent,
   Inline,
   ParagraphNode,
-  PersistedBlock,
   SymrefNode,
 } from "@/types/floDown.types";
 
@@ -24,13 +28,21 @@ type MarkReferenceLatexIdentity = {
 };
 
 type FloDownBlock = {
-  addElement: (node: PersistedBlock | DefinitionNode | ParagraphNode) => void;
+  addElement: (node: wasm_bindgen.FloDownBlock) => void;
   getStex(): string;
-  clear: () => void;
+  clear?: () => void;
 };
 
 type FloDownLib = {
-  FloDown: { fromUri: (uri: string) => FloDownBlock };
+  FloDown: {
+    fromUri: (uri: string) => FloDownBlock;
+    fromPath: (
+      archive: string,
+      path: string | null | undefined,
+      name: string,
+      lang: wasm_bindgen.Language,
+    ) => wasm_bindgen.FloDown | undefined;
+  };
 };
 
 function getDisplaySymbol(symbolName: string): string {
@@ -55,7 +67,14 @@ function rewriteContent(
 
     return {
       ...symref,
-      uri: `http://${identity.futureRepo}?a=${identity.filePath}&m=${identity.fileName}&s=${symref.uri}`,
+      uri: symbolUri(
+        symbolIdentityFromGlox({
+          futureRepo: identity.futureRepo,
+          filePath: identity.filePath,
+          fileName: identity.fileName,
+          symbolName: symref.uri,
+        }),
+      ),
     };
   });
 }
@@ -106,8 +125,14 @@ export async function buildMarkReferenceLatex(
 
   const floDown = (await initFloDown()) as FloDownLib;
 
-  const fdVisible = floDown.FloDown.fromUri(
-    `http://${identity.futureRepo}?a=${identity.filePath}&d=${identity.fileName}&l=${identity.language}`,
+  const fdVisible = createFloDownDocument(
+    floDown.FloDown as Parameters<typeof createFloDownDocument>[0],
+    exportIdentityFromGlox({
+      futureRepo: identity.futureRepo,
+      filePath: identity.filePath,
+      fileName: identity.fileName,
+      language: identity.language,
+    }),
   );
 
   try {
@@ -135,7 +160,7 @@ export async function buildMarkReferenceLatex(
     return fdVisible.getStex().trimEnd();
   } finally {
     try {
-      fdVisible.clear();
+      fdVisible.clear?.();
     } catch {}
   }
 }

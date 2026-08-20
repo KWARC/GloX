@@ -127,6 +127,7 @@ function CreateLatexPage() {
         filePath,
         fileName,
         combinedStatement!.declaredSymbolsPerBlock,
+        language,
       ),
     enabled: !finalized && !!combinedStatement?.statement,
     staleTime: Infinity,

@@ -1,4 +1,12 @@
 import { initFloDown } from "@/lib/flodownClient";
+import {
+  createFloDownDocument,
+  declareSymbol,
+  exportIdentityFromGlox,
+  canonicalizeSymbolUri,
+  hiddenScratchDocumentUri,
+  symbolIdentityFromGlox,
+} from "@/lib/flodownUris";
 import { buildForSymbols } from "@/server/ftml/declaredSymbols";
 import {
   collectExternalSymbols,
@@ -20,11 +28,21 @@ import {
 
 export { isHttp };
 
-function isMathHubUri(uri: string): boolean {
-  return (
-    uri.startsWith("http://mathhub.info?") ||
-    uri.startsWith("https://mathhub.info?")
-  );
+function resolveExportSymbolUri(
+  uri: string,
+  uriMap: Map<string, string>,
+  futureRepo: string,
+  filePath: string,
+  fileName: string,
+): string {
+  const fallback = symbolIdentityFromGlox({
+    futureRepo,
+    filePath,
+    fileName,
+    symbolName: "symbol",
+  });
+  const mapped = uriMap.get(uri) ?? uri;
+  return canonicalizeSymbolUri(mapped, { ...fallback, symbol: mapped });
 }
 
 function rewriteInlineUris(
@@ -33,36 +51,43 @@ function rewriteInlineUris(
   futureRepo: string,
   filePath: string,
   fileName: string,
+  asParagraph: boolean,
 ): FloDownContent[] {
   return mapInlines(content, (item) => {
     if (typeof item === "string") return item;
 
     if (isDefiniendumNode(item)) {
-      const n = item as DefiniendumNode;
-      if (n.uri && uriMap.has(n.uri)) {
-        return { ...n, uri: uriMap.get(n.uri)! };
+      const { symdecl: _symdecl, ...rest } = item as DefiniendumNode;
+      const uri = resolveExportSymbolUri(
+        rest.uri,
+        uriMap,
+        futureRepo,
+        filePath,
+        fileName,
+      );
+      // Paragraph Inline does not include definiendum; extra `symdecl` also fails serde.
+      if (asParagraph) {
+        return { type: "symref", uri, content: rest.content ?? [] };
       }
-      if (n.uri && !isHttp(n.uri) && !uriMap.has(n.uri)) {
-        return {
-          ...n,
-          uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${n.uri}`,
-        };
-      }
-      return { ...n, uri: uriMap.get(n.uri) ?? n.uri };
+      return { type: "definiendum", uri, content: rest.content ?? [] };
     }
 
     if (item.type === "symref") {
-      const u = item.uri;
-      if (u && uriMap.has(u)) {
-        return { ...item, uri: uriMap.get(u)! };
-      }
-      if (u && !isMathHubUri(u)) {
-        return {
-          ...item,
-          uri: `http://${futureRepo}?a=${filePath}&m=${fileName}&s=${u}`,
-        };
-      }
-      return { ...item, uri: uriMap.get(item.uri) ?? item.uri };
+      return {
+        type: "symref",
+        uri: resolveExportSymbolUri(
+          item.uri,
+          uriMap,
+          futureRepo,
+          filePath,
+          fileName,
+        ),
+        content: item.content ?? [],
+      };
+    }
+
+    if (asParagraph && item.type === "definiens") {
+      return { type: "symref", uri: item.uri, content: item.content ?? [] };
     }
 
     return item;
@@ -77,15 +102,30 @@ export function toExportBlock(
   fileName: string,
   blockStatement: FloDownStatement,
   declaredSymbols: readonly string[],
+  _language = "en",
 ): PersistedBlock | DefinitionNode {
   if (block.type === "paragraph") {
     return mapInlineContent(block, (content) =>
-      rewriteInlineUris(content, uriMap, futureRepo, filePath, fileName),
+      rewriteInlineUris(
+        content,
+        uriMap,
+        futureRepo,
+        filePath,
+        fileName,
+        true,
+      ),
     );
   }
 
   const rewritten = mapInlineContent(block as DefinitionNode, (content) =>
-    rewriteInlineUris(content, uriMap, futureRepo, filePath, fileName),
+    rewriteInlineUris(
+      content,
+      uriMap,
+      futureRepo,
+      filePath,
+      fileName,
+      false,
+    ),
   ) as DefinitionNode;
 
   return toExportDefinition(
@@ -100,16 +140,22 @@ export async function generateStexFromFloDown(
   filePath: string,
   fileName: string,
   declaredSymbolsPerBlock: readonly (readonly string[])[] = [],
+  language = "en",
 ): Promise<string> {
   const floDown = await initFloDown();
 
+  const exportIdentity = exportIdentityFromGlox({
+    futureRepo,
+    filePath,
+    fileName,
+    language,
+  });
+
   const fdHidden = floDown.FloDown.fromUri(
-    `http://hidden?a=temp&d=${fileName}&l=en`,
+    hiddenScratchDocumentUri(fileName, language),
   );
 
-  const fdVisible = floDown.FloDown.fromUri(
-    `http://${futureRepo}?a=${filePath}&d=${fileName}&l=en`,
-  );
+  const fdVisible = createFloDownDocument(floDown.FloDown, exportIdentity);
 
   const root = normalizeToRoot(statement);
 
@@ -126,6 +172,7 @@ export async function generateStexFromFloDown(
           fileName,
           block,
           [],
+          language,
         ) as PersistedBlock,
       );
       continue;
@@ -154,9 +201,10 @@ export async function generateStexFromFloDown(
     for (const dep of uniqueDeps.values()) {
       for (const label of dep.declaredSymbols) {
         if (!hiddenUriMap.has(label)) {
-          const hiddenUri = fdHidden.addSymbolDeclaration(label);
-          hiddenUriMap.set(label, hiddenUri);
-          visibleUriMap.set(label, hiddenUri);
+          const hiddenUri = declareSymbol(fdHidden, label, hiddenUriMap);
+          if (hiddenUri) {
+            visibleUriMap.set(label, hiddenUri);
+          }
         }
       }
 
@@ -169,17 +217,15 @@ export async function generateStexFromFloDown(
           fileName,
           dep.definition,
           dep.declaredSymbols,
+          language,
         ) as DefinitionNode,
       );
     }
 
     for (const symbol of declaredOnThisRow) {
       if (!symbol.startsWith("http") && !visibleUriMap.has(symbol)) {
-        const hiddenUri = fdHidden.addSymbolDeclaration(symbol);
-        const visibleUri = fdVisible.addSymbolDeclaration(symbol);
-
-        hiddenUriMap.set(symbol, hiddenUri);
-        visibleUriMap.set(symbol, visibleUri);
+        declareSymbol(fdHidden, symbol, hiddenUriMap);
+        declareSymbol(fdVisible, symbol, visibleUriMap);
       }
     }
 
@@ -193,6 +239,7 @@ export async function generateStexFromFloDown(
         fileName,
         def,
         declaredOnThisRowList,
+        language,
       ) as DefinitionNode,
     );
   }
