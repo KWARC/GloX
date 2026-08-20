@@ -23,6 +23,10 @@ Decisions (`D-*`) live in [`../decisions/`](../decisions/). Runtime deploy/featu
 
 | Path | Atoms |
 | --- | --- |
-| *(add vendor and library files as you backfill)* | |
+| [`vendors/openai.md`](./vendors/openai.md) | `E-OPENAI-*` |
+| [`vendors/wikipedia.md`](./vendors/wikipedia.md) | `E-WIKI-*` |
+| [`vendors/mathhub.md`](./vendors/mathhub.md) | `E-MATHHUB-*` |
+| [`vendors/flodown.md`](./vendors/flodown.md) | FloDown WASM facts |
+| [`libraries/ftml.md`](./libraries/ftml.md) | `E-FTML-*` |
 
 Cite **`E-VENDOR-01`** from SDDs and PRDs — not file paths.

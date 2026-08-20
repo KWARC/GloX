@@ -29,6 +29,7 @@ Set `featured: true` in frontmatter only after upstream review — not on work-i
 | [`features/symbols-semantics/registry.md`](./features/symbols-semantics/registry.md) | Symbol registry |
 | [`features/symbols-semantics/propagation.md`](./features/symbols-semantics/propagation.md) | Symbol propagation |
 | [`features/symbols-semantics/search.md`](./features/symbols-semantics/search.md) | Symbolic catalog search |
+| [`features/symbols-semantics/wikipedia-lookup.md`](./features/symbols-semantics/wikipedia-lookup.md) | Wikipedia lookup for new symbols |
 | [`features/module-descriptions/workspace.md`](./features/module-descriptions/workspace.md) | Module description workspace |
 | [`features/module-descriptions/export.md`](./features/module-descriptions/export.md) | Module description TeX export |
 | [`features/curation-export/queue.md`](./features/curation-export/queue.md) | Curation queue & status |

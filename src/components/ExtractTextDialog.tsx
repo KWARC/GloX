@@ -1,4 +1,5 @@
 import {
+  Box,
   Button,
   ActionIcon,
   Checkbox,
@@ -23,6 +24,7 @@ import { useDraftSemanticAuthoring } from "@/hooks/useDraftSemanticAuthoring";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import { FloDownStatement } from "@/types/floDown.types";
 import { SelectionPopup } from "./SelectionPopup";
+import { WikipediaDefinitionLookup } from "./WikipediaDefinitionLookup";
 
 export function normalizeContentName(value: string) {
   return value.toLowerCase().replaceAll(" ", "-");
@@ -234,6 +236,99 @@ export function ExtractTextDialog({
     }
   }
 
+  const contentEditor = (
+    <>
+      <Divider />
+
+      <Stack gap={4}>
+        <Text size="sm" fw={500}>
+          {textLabel}
+        </Text>
+        <Textarea
+          value={text}
+          onChange={(e) => handleTextChange(e.currentTarget.value)}
+          placeholder={textPlaceholder}
+          disabled={enableSemanticAuthoring && semanticEnabled}
+          autosize
+          minRows={2}
+          maxRows={12}
+          styles={{
+            input: {
+              fontFamily: "monospace",
+              fontSize: "0.85rem",
+              lineHeight: 1.7,
+              resize: "vertical",
+            },
+          }}
+        />
+      </Stack>
+
+      {enableSemanticAuthoring && (
+        <Checkbox
+          label="Add semantics"
+          checked={semanticEnabled}
+          onChange={(event) =>
+            handleSemanticToggle(event.currentTarget.checked)
+          }
+        />
+      )}
+
+      {enableSemanticAuthoring && semanticEnabled && (
+        <Stack gap="sm">
+          <Paper withBorder p="sm" radius="md">
+            <style>
+              {`
+                [data-compact-ftml-preview] > *:first-child {
+                  margin-top: 0 !important;
+                }
+
+                [data-compact-ftml-preview] > *:last-child {
+                  margin-bottom: 0 !important;
+                }
+
+                [data-compact-ftml-preview] p,
+                [data-compact-ftml-preview] .paragraph {
+                  margin-top: 0.2rem !important;
+                  margin-bottom: 0.2rem !important;
+                }
+              `}
+            </style>
+            <Text size="xs" c="dimmed" fw={600} mb={6}>
+              FTML Preview
+            </Text>
+            <Text size="xs" c="dimmed" mb="sm">
+              Select text in the preview, then add a definiendum or symbolic
+              reference.
+            </Text>
+            <div
+              ref={previewRef}
+              style={{
+                maxHeight: 220,
+                overflow: "auto",
+                userSelect: "text",
+                cursor: "text",
+              }}
+              data-compact-ftml-preview
+              onMouseUp={draftSemantic.handlePreviewMouseUp}
+            >
+              <FtmlPreview
+                ftmlAst={draftSemantic.statement}
+                docId="draft-definition"
+                declaredSymbols={draftSemantic.declaredSymbols}
+              />
+            </div>
+          </Paper>
+
+          {semanticError && (
+            <Text size="xs" c="red">
+              {semanticError}
+            </Text>
+          )}
+        </Stack>
+      )}
+    </>
+  );
+
   return (
     <>
       <Modal
@@ -261,184 +356,155 @@ export function ExtractTextDialog({
           </Stack>
         }
         centered
-        size="lg"
+        size={createSymbolFlow ? "90%" : "lg"}
         radius="md"
         padding="xl"
+        styles={{
+          content: {
+            maxHeight: "90vh",
+            display: "flex",
+            flexDirection: "column",
+          },
+          body: {
+            flex: 1,
+            minHeight: 0,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
       >
-        <Stack gap="lg">
-          {location && editingLocation && (
-            <Paper withBorder p="sm" bg="gray.0">
-              <Stack gap="xs">
-                <Text size="xs" fw={600}>Content location</Text>
-                <TextInput size="xs" label="Future Repo" value={location.futureRepo} onChange={(event) => location.setFutureRepo(event.currentTarget.value)} />
-                <TextInput size="xs" label="File Path" value={location.filePath} onChange={(event) => location.setFilePath(event.currentTarget.value)} />
-                <TextInput size="xs" label="Language" value={location.language} onChange={(event) => location.setLanguage(event.currentTarget.value)} />
-              </Stack>
-            </Paper>
-          )}
-          {showSymbolNameField && (
-            <TextInput
-              label={resolvedSymbolNameLabel}
-              placeholder="e.g. natural number"
-              value={symbolName}
-              disabled={symbolNameDisabled}
-              onChange={(e) => handleSymbolNameChange(e.currentTarget.value)}
-              styles={{ input: { fontWeight: 500 } }}
-            />
-          )}
-          <TextInput
-            label="Content Name"
-            placeholder="e.g. derivative-rules"
-            value={paragraphFileName}
-            disabled={contentNameDisabled}
-            onChange={(e) =>
-              setParagraphFileName(normalizeContentName(e.currentTarget.value))
-            }
-            styles={{ input: { fontWeight: 500 } }}
-          />
-          {createSymbolFlow ? (
-            <TextInput
-              label="Block type"
-              value={blockTypeLabel("definition")}
-              disabled
-              styles={{ input: { fontWeight: 500 } }}
-            />
-          ) : (
-            <Select
-              label="Block type"
-              data={EXTRACT_BLOCK_TYPES.map((value) => ({
-                value,
-                label: blockTypeLabel(value),
-              }))}
-              value={blockType}
-              onChange={(value) => {
-                if (value) setBlockType(value as ExtractBlockType);
-              }}
-              allowDeselect={false}
-            />
-          )}
-
-          <Divider />
-
-          <Stack gap={4}>
-            <Text size="sm" fw={500}>
-              {textLabel}
-            </Text>
-            <Textarea
-              value={text}
-              onChange={(e) => handleTextChange(e.currentTarget.value)}
-              placeholder={textPlaceholder}
-              disabled={enableSemanticAuthoring && semanticEnabled}
-              autosize
-              minRows={2}
-              maxRows={12}
-              styles={{
-                input: {
-                  fontFamily: "monospace",
-                  fontSize: "0.85rem",
-                  lineHeight: 1.7,
-                  resize: "vertical",
-                },
-              }}
-            />
-          </Stack>
-
-          {enableSemanticAuthoring && (
-            <Checkbox
-              label="Add semantics"
-              checked={semanticEnabled}
-              onChange={(event) =>
-                handleSemanticToggle(event.currentTarget.checked)
-              }
-            />
-          )}
-
-          {enableSemanticAuthoring && semanticEnabled && (
-            <Stack gap="sm">
-              <Paper withBorder p="sm" radius="md">
-                <style>
-                  {`
-                    [data-compact-ftml-preview] > *:first-child {
-                      margin-top: 0 !important;
-                    }
-
-                    [data-compact-ftml-preview] > *:last-child {
-                      margin-bottom: 0 !important;
-                    }
-
-                    [data-compact-ftml-preview] p,
-                    [data-compact-ftml-preview] .paragraph {
-                      margin-top: 0.2rem !important;
-                      margin-bottom: 0.2rem !important;
-                    }
-                  `}
-                </style>
-                <Text size="xs" c="dimmed" fw={600} mb={6}>
-                  FTML Preview
-                </Text>
-                <Text size="xs" c="dimmed" mb="sm">
-                  Select text in the preview, then add a definiendum or symbolic
-                  reference.
-                </Text>
-                <div
-                  ref={previewRef}
-                  style={{
-                    maxHeight: 220,
-                    overflow: "auto",
-                    userSelect: "text",
-                    cursor: "text",
-                  }}
-                  data-compact-ftml-preview
-                  onMouseUp={draftSemantic.handlePreviewMouseUp}
-                >
-                  <FtmlPreview
-                    ftmlAst={draftSemantic.statement}
-                    docId="draft-definition"
-                    declaredSymbols={draftSemantic.declaredSymbols}
-                  />
-                </div>
+        <Box style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          <Stack gap="lg">
+            {location && editingLocation && (
+              <Paper withBorder p="sm" bg="gray.0">
+                <Stack gap="xs">
+                  <Text size="xs" fw={600}>Content location</Text>
+                  <TextInput size="xs" label="Future Repo" value={location.futureRepo} onChange={(event) => location.setFutureRepo(event.currentTarget.value)} />
+                  <TextInput size="xs" label="File Path" value={location.filePath} onChange={(event) => location.setFilePath(event.currentTarget.value)} />
+                  <TextInput size="xs" label="Language" value={location.language} onChange={(event) => location.setLanguage(event.currentTarget.value)} />
+                </Stack>
               </Paper>
+            )}
 
-              {semanticError && (
-                <Text size="xs" c="red">
-                  {semanticError}
-                </Text>
-              )}
-            </Stack>
-          )}
+            {createSymbolFlow ? (
+              <WikipediaDefinitionLookup
+                symbolName={symbolName}
+                filePath={filePath}
+                locationLanguage={location?.language}
+                enabled={opened}
+                symbolNameField={
+                  showSymbolNameField ? (
+                    <TextInput
+                      label={resolvedSymbolNameLabel}
+                      placeholder="e.g. natural number"
+                      value={symbolName}
+                      disabled={symbolNameDisabled}
+                      onChange={(e) =>
+                        handleSymbolNameChange(e.currentTarget.value)
+                      }
+                      styles={{ input: { fontWeight: 500 } }}
+                    />
+                  ) : null
+                }
+              >
+                <TextInput
+                  label="Content Name"
+                  placeholder="e.g. derivative-rules"
+                  value={paragraphFileName}
+                  disabled={contentNameDisabled}
+                  onChange={(e) =>
+                    setParagraphFileName(
+                      normalizeContentName(e.currentTarget.value),
+                    )
+                  }
+                  styles={{ input: { fontWeight: 500 } }}
+                />
+                <TextInput
+                  label="Block type"
+                  value={blockTypeLabel("definition")}
+                  disabled
+                  styles={{ input: { fontWeight: 500 } }}
+                />
 
-          <Group justify="flex-end" gap="sm">
-            <Button variant="default" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                const cleaned = text.trim();
-                if (!cleaned) return;
-                onSubmit({
-                  text: cleaned,
-                  blockType: effectiveBlockType,
-                  statement:
-                    enableSemanticAuthoring && semanticEnabled
-                      ? draftSemantic.statement
-                      : undefined,
-                  declaredSymbols:
-                    enableSemanticAuthoring && semanticEnabled
-                      ? draftSemantic.declaredSymbols
-                      : undefined,
-                });
-              }}
-              disabled={
-                !text.trim() ||
-                !paragraphFileName.trim() ||
-                ((showSymbolNameField || createSymbolFlow) && !symbolName.trim())
-              }
-              leftSection={<IconFileText size={16} />}
-            >
-              {submitLabel}
-            </Button>
-          </Group>
-        </Stack>
+                {contentEditor}
+              </WikipediaDefinitionLookup>
+            ) : (
+              <>
+                {showSymbolNameField && (
+                  <TextInput
+                    label={resolvedSymbolNameLabel}
+                    placeholder="e.g. natural number"
+                    value={symbolName}
+                    disabled={symbolNameDisabled}
+                    onChange={(e) =>
+                      handleSymbolNameChange(e.currentTarget.value)
+                    }
+                    styles={{ input: { fontWeight: 500 } }}
+                  />
+                )}
+                <TextInput
+                  label="Content Name"
+                  placeholder="e.g. derivative-rules"
+                  value={paragraphFileName}
+                  disabled={contentNameDisabled}
+                  onChange={(e) =>
+                    setParagraphFileName(
+                      normalizeContentName(e.currentTarget.value),
+                    )
+                  }
+                  styles={{ input: { fontWeight: 500 } }}
+                />
+                <Select
+                  label="Block type"
+                  data={EXTRACT_BLOCK_TYPES.map((value) => ({
+                    value,
+                    label: blockTypeLabel(value),
+                  }))}
+                  value={blockType}
+                  onChange={(value) => {
+                    if (value) setBlockType(value as ExtractBlockType);
+                  }}
+                  allowDeselect={false}
+                />
+
+                {contentEditor}
+              </>
+            )}
+          </Stack>
+        </Box>
+
+        <Group justify="flex-end" gap="sm" mt="lg" style={{ flexShrink: 0 }}>
+          <Button variant="default" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              const cleaned = text.trim();
+              if (!cleaned) return;
+              onSubmit({
+                text: cleaned,
+                blockType: effectiveBlockType,
+                statement:
+                  enableSemanticAuthoring && semanticEnabled
+                    ? draftSemantic.statement
+                    : undefined,
+                declaredSymbols:
+                  enableSemanticAuthoring && semanticEnabled
+                    ? draftSemantic.declaredSymbols
+                    : undefined,
+              });
+            }}
+            disabled={
+              !text.trim() ||
+              !paragraphFileName.trim() ||
+              ((showSymbolNameField || createSymbolFlow) && !symbolName.trim())
+            }
+            leftSection={<IconFileText size={16} />}
+          >
+            {submitLabel}
+          </Button>
+        </Group>
       </Modal>
 
       <DefiniendumDialog
