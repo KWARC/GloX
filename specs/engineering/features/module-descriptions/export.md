@@ -42,8 +42,8 @@ Out of scope (sibling specs):
 | Module TeX file | `{moduleId}.{language}.tex` |
 | Definition TeX file | `{fileName}.{language}.tex` per definition FloDown block |
 | Module FTML structure | Section headings Title, Inhalt, Lernziele und Kompetenzen wrapping the three statement contents (`buildModuleDescriptionStatement`) |
-| Module FloDown document URI | `http://{futureRepo}?a={modulesFilePath}&d={moduleId}&l={language}` |
-| Definition FloDown document URI | `http://{futureRepo}?a={filePath}&d={fileName}&l={language}` |
+| Module FloDown document URI | `http://mathhub.info?a={futureRepo}&p={modulesFilePath}&d={moduleId}&l={language}` |
+| Definition FloDown document URI | `http://mathhub.info?a={futureRepo}&p={filePath}&d={fileName}&l={language}` |
 
 ## Business rules
 

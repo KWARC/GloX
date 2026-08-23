@@ -1,9 +1,13 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
-import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
+import {
+  sanitizeStatementForPersist,
+  syncDeclaredSymbolsFromDefinienda,
+} from "@/server/ftml/declaredSymbols";
 import {
   addDeclaredSymbol,
   removeDeclaredSymbol,
+  setDeclaredSymbols,
 } from "@/server/floDownBlockDeclaredSymbols";
 import { parseUri, SemanticOperation, transform } from "@/server/parseUri";
 import { assertFloDownStatement } from "@/types/floDown.types";
@@ -161,6 +165,24 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
           currentVersion: nextVersion,
         },
       });
+
+      const syncedDeclared = syncDeclaredSymbolsFromDefinienda(
+        newAst,
+        def.declaredSymbols,
+      );
+      if (
+        syncedDeclared.length !== def.declaredSymbols.length ||
+        syncedDeclared.some(
+          (symbol, index) => symbol !== def.declaredSymbols[index],
+        )
+      ) {
+        await setDeclaredSymbols(tx, def.id, syncedDeclared, {
+          futureRepo: def.futureRepo,
+          filePath: def.filePath,
+          fileName: def.fileName,
+          language: def.language,
+        });
+      }
     });
 
     if (isLocalToMathHubConversion && localSymbolUri && mathHubUri) {

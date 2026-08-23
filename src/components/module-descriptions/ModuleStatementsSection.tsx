@@ -14,12 +14,10 @@ import {
   useModuleStatementSniffyFlow,
 } from "@/hooks/module-descriptions/useModuleStatementSemantics";
 import {
-  collectModuleRegisteredSymbols,
   moduleStatementsToExtractedItems,
   moduleStatementExtractId,
   type ModuleStatementField,
 } from "@/lib/moduleStatementExtracts";
-import { buildModuleLocalSymbolUriMap } from "@/lib/moduleLocalSymbols";
 import type { ModuleDefinitionBlock } from "@/lib/moduleDefinitionExtracts";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
 import { useTextSelection } from "@/server/text-selection";
@@ -145,8 +143,6 @@ export function ModuleStatementsSection({
       filePath: modulesFilePath,
       fileName: moduleId,
       language,
-      registeredSymbols: collectModuleRegisteredSymbols(definitionBlocks),
-      localSymbolUriMap: buildModuleLocalSymbolUriMap(definitionBlocks),
       hoverDefinitions: definitionBlocks.map((block) => ({
         cacheKey: block.id,
         statement: block.statement,

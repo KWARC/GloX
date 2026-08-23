@@ -36,12 +36,6 @@ type FloDownBlock = {
 type FloDownLib = {
   FloDown: {
     fromUri: (uri: string) => FloDownBlock;
-    fromPath: (
-      archive: string,
-      path: string | null | undefined,
-      name: string,
-      lang: wasm_bindgen.Language,
-    ) => wasm_bindgen.FloDown | undefined;
   };
 };
 

@@ -14,7 +14,7 @@ import {
   normalizeToRoot,
 } from "@/types/floDown.types";
 import { getInlineContent, walkInlines } from "@/server/ftml/statementContent";
-import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
+import { prepareFloDownBlockForPersist } from "@/server/ftml/declaredSymbols";
 import { ExtractBlockType, buildStatementFromText } from "@/types/blockType";
 import {
   setDeclaredSymbols,
@@ -174,10 +174,12 @@ export const createFloDownBlock = createServerFn({ method: "POST" })
         data.blockType ?? "definition",
         data.originalText,
       );
-    const statement = sanitizeStatementForPersist(rawStatement);
-    const declaredSymbolNames =
-      data.declaredSymbols ??
-      extractDeclaredSymbols(rawStatement).map((symbol) => symbol.symbolName);
+    const { statement, declaredSymbols: declaredSymbolNames } =
+      prepareFloDownBlockForPersist(
+        rawStatement,
+        data.declaredSymbols ??
+          extractDeclaredSymbols(rawStatement).map((symbol) => symbol.symbolName),
+      );
 
     await prisma.$transaction(async (tx) => {
       const def = await tx.floDownBlock.create({
@@ -243,7 +245,10 @@ export const updateFloDownBlock = createServerFn({ method: "POST" })
       });
 
       const nextVersion = existing.currentVersion + 1;
-      const statement = sanitizeStatementForPersist(data.statement);
+      const { statement, declaredSymbols } = prepareFloDownBlockForPersist(
+        data.statement,
+        existing.declaredSymbols,
+      );
 
       await tx.floDownBlockVersion.create({
         data: {
@@ -263,6 +268,25 @@ export const updateFloDownBlock = createServerFn({ method: "POST" })
           currentVersion: nextVersion,
         },
       });
+
+      if (
+        declaredSymbols.length !== existing.declaredSymbols.length ||
+        declaredSymbols.some(
+          (symbol, index) => symbol !== existing.declaredSymbols[index],
+        )
+      ) {
+        await setDeclaredSymbols(
+          tx,
+          existing.id,
+          declaredSymbols,
+          {
+            futureRepo: existing.futureRepo,
+            filePath: existing.filePath,
+            fileName: existing.fileName,
+            language: existing.language,
+          },
+        );
+      }
     });
 
     return { success: true };

@@ -13,7 +13,7 @@ import {
 } from "./flodownUris";
 
 describe("flodownUris", () => {
-  it("builds document URIs with archive as host and path in a=", () => {
+  it("builds document URIs with archive in a= and path in p=", () => {
     const uri = documentUri(
       exportIdentityFromGlox({
         futureRepo: "smglom/softeng",
@@ -23,11 +23,11 @@ describe("flodownUris", () => {
       }),
     );
     expect(uri).toBe(
-      "http://smglom/softeng?a=mod&d=MyConcept&l=en",
+      "http://mathhub.info?a=smglom/softeng&p=mod&d=MyConcept&l=en",
     );
-    expect(new URL(uri).hostname).toBe("smglom");
-    expect(new URL(uri).pathname).toBe("/softeng");
-    expect(new URL(uri).searchParams.get("a")).toBe("mod");
+    expect(new URL(uri).hostname).toBe("mathhub.info");
+    expect(new URL(uri).searchParams.get("a")).toBe("smglom/softeng");
+    expect(new URL(uri).searchParams.get("p")).toBe("mod");
     expect(new URL(uri).searchParams.get("d")).toBe("MyConcept");
   });
 
@@ -41,21 +41,20 @@ describe("flodownUris", () => {
       }),
     );
     expect(uri).toBe(
-      "http://courses/FAU/module-descriptions?a=modules&d=33995&l=de",
+      "http://mathhub.info?a=courses/FAU/module-descriptions&p=modules&d=33995&l=de",
     );
-    expect(new URL(uri).hostname).toBe("courses");
-    expect(new URL(uri).pathname).toBe("/FAU/module-descriptions");
+    expect(new URL(uri).hostname).toBe("mathhub.info");
   });
 
-  it("omits a= when path is empty", () => {
+  it("omits p= when path is empty", () => {
     const uri = documentUri({
       archive: "test",
       path: "",
       name: "doc",
       language: "en",
     });
-    expect(uri).toBe("http://test?d=doc&l=en");
-    expect(new URL(uri).searchParams.get("a")).toBeNull();
+    expect(uri).toBe("http://mathhub.info?a=test&d=doc&l=en");
+    expect(new URL(uri).searchParams.get("p")).toBeNull();
   });
 
   it("canonicalizes inverted and language-tagged symbol URIs", () => {
@@ -108,7 +107,7 @@ describe("flodownUris", () => {
     expect(parsed.symbol).toBe("MyConcept");
   });
 
-  it("puts archive in hostname, not mathhub.info", () => {
+  it("puts archive in a=, host mathhub.info", () => {
     const uri = documentUri(
       exportIdentityFromGlox({
         futureRepo: "courses/FAU/module-descriptions",
@@ -117,8 +116,10 @@ describe("flodownUris", () => {
         language: "de",
       }),
     );
-    expect(new URL(uri).hostname).toBe("courses");
-    expect(new URL(uri).hostname).not.toBe("mathhub.info");
+    expect(new URL(uri).hostname).toBe("mathhub.info");
+    expect(new URL(uri).searchParams.get("a")).toBe(
+      "courses/FAU/module-descriptions",
+    );
   });
 
   it("maps ISO language codes to FloDown Language enum values", () => {

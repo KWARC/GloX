@@ -64,6 +64,31 @@ export function sanitizeStatementForPersist(
   return unwrapRoot(stripped);
 }
 
+/** When `declaredSymbols` is empty, infer local symbol names from definienda in the statement. */
+export function syncDeclaredSymbolsFromDefinienda(
+  statement: FloDownStatement,
+  existing: readonly string[],
+): string[] {
+  if (existing.length > 0) return [...existing];
+  return collectDefiniendumUris(statement).filter(
+    (uri) => !uri.startsWith("http://") && !uri.startsWith("https://"),
+  );
+}
+
+export function prepareFloDownBlockForPersist(
+  statement: FloDownStatement,
+  declaredSymbols: readonly string[],
+): { statement: FloDownStatement; declaredSymbols: string[] } {
+  const sanitized = sanitizeStatementForPersist(statement);
+  return {
+    statement: sanitized,
+    declaredSymbols: syncDeclaredSymbolsFromDefinienda(
+      sanitized,
+      declaredSymbols,
+    ),
+  };
+}
+
 /** Build `for_symbols` for export: definienda ∩ declaredSymbols, mapped via uriMap. */
 export function buildForSymbols(
   statement: FloDownStatement,

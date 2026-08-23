@@ -34,8 +34,23 @@ Top-level `statement.type` is the block kind — no parallel DB column.
 | `definition` | `{ type: "definition", for_symbols, content: [{ type: "paragraph", … }] }` | Yes |
 | `paragraph` | `{ type: "paragraph", content: [...] }` | No (symref only) |
 
-At preview/export, blocks are passed to FloDown via `addElement()`; local symbols via
-`addSymbolDeclaration()`.
+At preview/export, blocks are passed to FloDown via `addElement()` on a document created with
+`FloDown.fromUri(documentUri)` — **not** `fromPath` (WASM panics on current Language encodings).
+Local symbols are resolved with `addSymbolDeclaration()` at the FloDown boundary; GloX persists short
+names in `statement` JSON.
+
+### FloDown document URI (vendor contract)
+
+```
+http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}
+```
+
+`p=` is omitted when path is empty. Scratch previews use
+`http://unknown.source?a=no/archive&d={docId}&l={lang}`.
+
+**E-FTML-04:** Production MUST NOT call `fromPath` or pass short symbol names / persisted `symdecl`
+fields directly to `addElement`. Rewrite at the FloDown boundary via
+`rewriteStatementForFloDown` / `mountStatementOnFloDown` in `src/lib/prepareFloDownStatement.ts`.
 
 ### sTeX mapping (current)
 

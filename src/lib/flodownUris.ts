@@ -81,15 +81,14 @@ export function buildFloDownQueryUri(
   return parts.length ? `${base}?${parts.join("&")}` : base;
 }
 
-/** Build a FloDown DocumentUri: `http://{archive}?a={path}&d={name}&l={lang}`. */
+/** Build a FloDown DocumentUri: `http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}`. */
 export function documentUri(identity: FloDownExportIdentity): string {
-  const path = identity.path?.trim();
-  const params: string[] = [];
-  if (path) {
-    params.push(`a=${path}`);
-  }
-  params.push(`d=${identity.name}`, `l=${identity.language}`);
-  return `http://${identity.archive}?${params.join("&")}`;
+  return buildFloDownQueryUri(FLODOWN_MATHHUB_BASE, {
+    a: identity.archive,
+    p: identity.path?.trim() || undefined,
+    d: identity.name,
+    l: identity.language,
+  });
 }
 
 /** Fallback symbol URI when `addSymbolDeclaration` cannot be used yet. */
@@ -197,7 +196,7 @@ export function hiddenScratchDocumentUri(name: string, language = "en"): string 
 
 export type FloDownDocumentBlock = {
   addElement: (node: wasm_bindgen.FloDownBlock) => void;
-  addSymbolDeclaration: (name: string) => string | undefined;
+  addSymbolDeclaration?: (name: string) => string | undefined;
   getStex(): string;
   getFtml?(): string;
   mountTo?(node: HTMLElement): void;
@@ -207,12 +206,6 @@ export type FloDownDocumentBlock = {
 
 type FloDownConstructor = {
   fromUri(uri: string): FloDownDocumentBlock;
-  fromPath(
-    archive: string,
-    path: string | null | undefined,
-    name: string,
-    lang: FloDownLanguageValue,
-  ): FloDownDocumentBlock | undefined;
 };
 
 /** Create a FloDown document block via `fromUri` (see public/flodown/test.html). */
