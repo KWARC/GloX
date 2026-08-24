@@ -164,6 +164,58 @@ describe("rewriteStatementForFloDown", () => {
     });
   });
 
+  it("reuses knownUris without declaring on the current document", () => {
+    const declared: string[] = [];
+    const known = new Map([
+      [
+        "triangle",
+        "http://mathhub.info?a=smglom/geometry&p=mod&m=triangle&s=triangle",
+      ],
+    ]);
+    const { statement, replacements } = rewriteStatementForFloDown(
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "symref",
+            uri: "triangle",
+            content: ["triangle"],
+          },
+        ],
+      },
+      {
+        addSymbolDeclaration: (name) => {
+          declared.push(name);
+          return `http://mathhub.info?a=courses/FAU/module-descriptions&p=mod&m=wrong&s=${name}`;
+        },
+      },
+      {
+        futureRepo: "courses/FAU/module-descriptions",
+        filePath: "mod",
+        fileName: "triangle-sum-of-angles",
+      },
+      { knownUris: known },
+    );
+
+    expect(declared).toEqual([]);
+    expect(replacements).toEqual([
+      {
+        from: "triangle",
+        to: "http://mathhub.info?a=smglom/geometry&p=mod&m=triangle&s=triangle",
+        reason: "knownUriMap",
+      },
+    ]);
+    expect(statement).toMatchObject({
+      type: "paragraph",
+      content: [
+        {
+          type: "symref",
+          uri: "http://mathhub.info?a=smglom/geometry&p=mod&m=triangle&s=triangle",
+        },
+      ],
+    });
+  });
+
   it("mountStatementOnFloDown rewrites and calls addElement", () => {
     const elements: unknown[] = [];
     const { replacements } = mountStatementOnFloDown(

@@ -1,5 +1,5 @@
 import { initFloDown } from "@/lib/flodownClient";
-import { createFloDownDocument, exportIdentityFromGlox } from "@/lib/flodownUris";
+import { createFloDownDocumentFromGlox } from "@/lib/flodownUris";
 import { buildModuleLocalSymbolUriMap } from "@/lib/moduleLocalSymbols";
 import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
 import {
@@ -95,19 +95,15 @@ export async function generateModuleDescriptionModuleTex(
 
   const floDown = (await initFloDown()) as FloDownLib;
 
-  const moduleIdentity = exportIdentityFromGlox({
+  const fd = createFloDownDocumentFromGlox(floDown.FloDown, {
     futureRepo: input.futureRepo,
     filePath: input.modulesFilePath,
     fileName: input.moduleId,
     language: input.language,
-  });
+  }) as FloDownWasmBlock;
 
-  const fd = createFloDownDocument(
-    floDown.FloDown,
-    moduleIdentity,
-  ) as FloDownWasmBlock;
-
-  // Remaining issue: constructed MathHub URIs, not addSymbolDeclaration return values (preview hover).
+  // Remaining issue: constructed MathHub URIs from declaring files, not addSymbolDeclaration
+  // return values (preview hover). Importers must not mint a URI from this file (E8).
   const knownUris = buildModuleLocalSymbolUriMap(input.definitionBlocks);
   const moduleStatement = buildModuleDescriptionStatement(input);
 
@@ -136,18 +132,14 @@ export async function generateModuleDescriptionDefinitionTex(
 
   const floDown = (await initFloDown()) as FloDownLib;
 
-  const visibleIdentity = exportIdentityFromGlox({
+  const fd = createFloDownDocumentFromGlox(floDown.FloDown, {
     futureRepo: defBlock.futureRepo,
     filePath: defBlock.filePath,
     fileName: defBlock.fileName,
     language: defBlock.language,
-  });
+  }) as FloDownWasmBlock;
 
-  const fd = createFloDownDocument(
-    floDown.FloDown,
-    visibleIdentity,
-  ) as FloDownWasmBlock;
-
+  // Other files’ declarations only. This file still addSymbolDeclaration for its own names (E8).
   const knownUris = buildModuleLocalSymbolUriMap(
     siblingBlocks.filter((block) => block.id !== defBlock.id),
   );

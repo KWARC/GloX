@@ -1,7 +1,5 @@
 import {
   canonicalizeSymbolUri,
-  documentUri,
-  exportIdentityFromGlox,
   type FloDownSymbolIdentity,
 } from "@/lib/flodownUris";
 
@@ -40,8 +38,6 @@ function resolveUri(
   }
 
   if (!isHttp(uri)) {
-    // Remaining issue: callers may pass constructed MathHub URIs here (module export) instead of
-    // addSymbolDeclaration return values (preview hover). Same short name, two URI sources. D-FTML-01.
     if (knownUris?.has(uri)) {
       const to = knownUris.get(uri)!;
       declared.set(uri, to);
@@ -226,22 +222,6 @@ export function rewriteStatementForFloDown(
     ),
     replacements,
   };
-}
-
-export function documentUriFromDbSample(sample: {
-  futureRepo: string;
-  filePath: string;
-  fileName: string;
-  language: string;
-}): string {
-  return documentUri(
-    exportIdentityFromGlox({
-      futureRepo: sample.futureRepo,
-      filePath: sample.filePath,
-      fileName: sample.fileName,
-      language: sample.language,
-    }),
-  );
 }
 
 export type FloDownMountBlock = DeclareBlock & {

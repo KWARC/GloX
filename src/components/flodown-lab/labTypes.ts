@@ -48,8 +48,3 @@ export const EMPTY_SNAPSHOT: LabDebugSnapshot = {
   ftml: null,
   dbSample: null,
 };
-
-export const MATHHUB_BOOLEAN_URI =
-  "http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra";
-
-export const TEST_HTML_DOCUMENT_URI = "http://test?a=test&d=test&l=en";

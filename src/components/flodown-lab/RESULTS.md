@@ -6,11 +6,10 @@ Recorded from `/flodown-lab` (Curator/Admin). E6 = **DB** group: `addElement` se
 
 | ID | Result | Error / notes |
 | --- | --- | --- |
-| **E1** Clone `test.html` | **PASS** | `fromUri("http://test?a=test&d=test&l=en")` + MathHub `symref` + `addSymbolDeclaration` return value in the same block. |
-| **E2** UnknownDocument | **PASS** | `http://unknown.source?a=no/archive&d=unknown_document&l=en` |
+| **E1** Clone `test.html` | **PASS** | Now `fromUri` via `documentUri` (`http://mathhub.info?a=test&d=test&l=en`) + MathHub `symref` + `addSymbolDeclaration`. |
+| **E2** `a=no/archive` | **PASS** | `http://mathhub.info?a=no/archive&d=unknown_document&l=en` (no `unknown.source`). |
 | **E2** `mathhub.info?a=test&d=test&l=en` | **PASS** | Archive in `a=`, host `mathhub.info`. |
 | **E2** smglom + `p=` | **PASS** | `http://mathhub.info?a=smglom/algebra&p=mod&d=Boolean-algebra&l=en` |
-| **E2** GloX inverted host | **PASS** | `http://courses/FAU/module-descriptions?a=modules&d=33995&l=de` — accepted, but not the vendor grammar. |
 | **E2** vendor GloX + `d=33995` | **PASS** | `http://mathhub.info?a=courses/FAU/module-descriptions&p=modules&d=33995&l=de` |
 | **E2** vendor GloX + `d=mod33995` | **PASS** | Same as above with a non-numeric name. |
 | **E3** `fromPath(..., lang=0)` | **FAIL** | `called Result::unwrap_throw() on an Err value` |
@@ -22,12 +21,13 @@ Recorded from `/flodown-lab` (Curator/Admin). E6 = **DB** group: `addElement` se
 | **E5** **hidden** second `fd` | **PASS** | Current GloX pattern also works (GC/lifetime, not URI grammar). |
 | **E5** short name `uri: "foobar"` | **FAIL** | Confirmed 2026-08-23: `data did not match any variant of untagged enum Inline` |
 | **E6** DB statement `addElement` verbatim | **FAIL** (many rows) | `Inline` or `InlineInDefinition` serde mismatch |
-| **E7** hover same fd | *still run* | Control: definition body on the same visible document. Needed to confirm popup vs backend fetch. |
-| **E7** hover two visible fds | *still run* | Definition on second **visible** mount. Needed to confirm popup without hidden. |
-| **E7** hover declaration only | **FAIL** | No popup. WASM `GET https://mathhub.info/content/fragment?uri=http://test?a=test&m=hover_decl_only&s=foobar&context=http://test?a=test&d=hover_decl_only&l=en` → **404**. Console: `no definition for element found`. |
-| **E7** hover constructed URI | **FAIL** | No popup (production-like). `GET https://mathhub.info/content/fragment?uri=http://mathhub.info?a=test&p=mod&m=definition_block&s=foobar&context=http://unknown.source?a=no/archive&d=hover_known_uri&l=en` → **404**. Same `no definition for element found`. |
-| **E8** triangle one fd, two defs | *run on `/flodown-lab`* | One `addSymbolDeclaration("triangle")`. Definienda “triangle” and “Dreieck” share that URI. Check sTeX: one `\symdecl`, two `sdefinition`. |
-| **E8** triangle.en declares; triangle.de defines only | *run on `/flodown-lab`* | Visible = en, second mount = de. de must not call `addSymbolDeclaration`. sTeX for de should reuse the EN URI, not mint `m=triangle` from `l=de` as a new declaration. |
+| **E7** hover same fd | **PASS** | Popup works: `addSymbolDeclaration` + `addElement(definition)` on the same live fd. |
+| **E7** hover two visible fds | **PASS** | Popup works: those calls ran on the second mount. Hidden is not required. |
+| **E7** hover declaration only | **PASS** (no local popup) | Expected. Declaration without a definition element is not a local hit; FloDown asks MathHub `/content/fragment`. |
+| **E7** hover constructed URI | **PASS** (no local popup) | Expected. Constructed `symbolUri` with no live declaration+definition is a MathHub lookup. |
+| **E8** triangle one fd, two defs | **PASS** | Both defs rendered on the visible mount. Second/third mounts unused (expected). |
+| **E8** triangle.en + de (two docs) | **PASS** | Two mounts rendered correctly (en declares; de defines only). Superseded by three-docs. |
+| **E8** en declares; de defines; third doc symrefs | **PASS** | Three mounts: EN declaration+def, DE def only, `triangle-sum-of-angles` symref. Shared URI; no extra `addSymbolDeclaration` on de or the third doc. |
 
 ## Inferences
 
@@ -39,7 +39,7 @@ All three `fromPath` encodings panicked (`0`, `"English"`, `1`). Production must
 
 E2 **vendor-shaped** URIs passed, including numeric `d=33995`. The earlier module-description panic was almost certainly **`fromPath`**, not “FloDown rejects `mathhub.info` document URIs.”
 
-GloX inverted `http://{futureRepo}?a={path}&d={name}` also passed, so it is a *tolerated* encoding, not the documented one ([`public/flodown/test.html`](../../../public/flodown/test.html): `http://test?a=test&d=test&l=en`, `UnknownDocument` with archive in `a=`).
+GloX inverted `http://{futureRepo}?a={path}&d={name}` was a tolerated encoding, not the contract. Lab no longer `fromUri`s that host.
 
 **Document URI truth (from this lab):**
 
@@ -47,7 +47,7 @@ GloX inverted `http://{futureRepo}?a={path}&d={name}` also passed, so it is a *t
 http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}
 ```
 
-`p=` omitted when path is empty. Scratch: `http://unknown.source?a=no/archive&d=…&l=…`.
+`p=` omitted when path is empty. Scratch: `http://mathhub.info?a=no/archive&d=…&l=…`.
 
 ### 3. Never send GloX short names into `addElement`
 
@@ -58,21 +58,19 @@ http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}
 
 Rewrite belongs at the **FloDown boundary**, not as a DB migration, unless we later choose to persist full URIs.
 
-### 4. Hover is a MathHub fragment fetch, not a local-only tooltip
+### 4. Local hover needs a live declaration and a definition element
 
-E7 **declaration-only** and **constructed URI** both fail hover. FloDown does not invent a popup from `addSymbolDeclaration` or from a well-formed `SymbolUri`. On hover it requests:
+FloDown looks up a symbol **locally** first. That only succeeds if the relevant calls ran on a still-alive `fd` (`addSymbolDeclaration` and `addElement({ type: "definition", for_symbols: [symbol], … })`). Same fd (E7 same-fd) or another mounted fd (E7 two-visible) both work. A hidden mount is only lifetime/`display:none`.
+
+If those calls did not happen, FloDown asks MathHub:
 
 ```
 GET {backend}/content/fragment?uri={symbolUri}&context={documentUri}
 ```
 
-GloX sets `backend` to `https://mathhub.info` ([`src/lib/flodownClient.ts`](../../../lib/flodownClient.ts)). Lab `test` / `unknown.source` symbols are not on MathHub, so the response is 404 and WASM logs `no definition for element found`.
+So E7 declaration-only and constructed-URI have **no local popup** — that is library behavior, not a GloX bug. Production Title/Inhalt hover needs a live defining document (D-FTML-03), not a constructed URI alone.
 
-That matches production Title/Inhalt local-symref hover after the cleanup: rewrite emits a constructed URI, no definition body is mounted, MathHub has no GloX-local symbol.
-
-**Still required to close “can hover work without hidden blocks”:** run **E7 hover same fd** and **E7 hover two visible fds**. If same-fd popups without a network 404, a live `sdefinition` on a mounted `fd` is the local source. If two-visible also popups, hidden is only lifetime/`display:none`, not a FloDown requirement. If both still 404 MathHub, even a mounted local definition is ignored and local hover cannot work until a backend serves `/content/fragment` for those URIs.
-
-Vendor `test.html` comment after adding a definition on the **same** `fd`: “which should now show on hover.” That experiment is E7 same-fd.
+Vendor `test.html` still uses `http://test?…` as a sample; GloX lab and production construct only `http://mathhub.info?…` via `documentUri` / `symbolUri`.
 
 ### 5. Production `flodownUris.documentUri` inverted host is a false conclusion
 
@@ -83,7 +81,7 @@ Commit `4a6ebbc` switched documents to `http://{archive}?a={path}` because `from
 - [`documentUri`](../../lib/flodownUris.ts) now emits `http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}`.
 - [`rewriteStatementForFloDown`](../../lib/prepareFloDownStatement.ts) rewrites persisted JSON at the FloDown boundary (`addSymbolDeclaration`, strip `symdecl`, heading level names, paragraph definiendum → symref).
 - Lab button **DB + rewrite**: select a DB sample, then run. Compare with verbatim E6.
-- **E7 2026-08-23:** declaration-only and constructed-URI hovers **FAIL** (MathHub `/content/fragment` 404). Same-fd / two-visible hover still need a recorded run.
+- **E7 2026-08-24:** Local hover **PASS** when declaration + definition live on a mounted fd (same or second visible). No local popup for declaration-only or constructed URI (MathHub fallback). Lab documents use `documentUri` / `symbolUri` only.
 
 Still do not persist rewritten URIs.
 

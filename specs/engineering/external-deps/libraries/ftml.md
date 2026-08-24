@@ -47,8 +47,8 @@ names in `statement` JSON.
 http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}
 ```
 
-`p=` is omitted when path is empty. Scratch previews use
-`http://unknown.source?a=no/archive&d={docId}&l={lang}`.
+`p=` is omitted when path is empty. Local DB rows use that row’s archive/path/name/language.
+Previews without a row identity use `http://mathhub.info?a=no/archive&d={docId}&l={lang}`.
 
 **E-FTML-04:** Production MUST NOT call `fromPath` or pass short symbol names / persisted `symdecl`
 fields directly to `addElement`. Rewrite at the FloDown boundary via
@@ -109,39 +109,65 @@ sides”); “triangle” is the definiendum. `triangle.de.tex` defines the same
 ein Polygon mit drei Seiten”), imports the URI from the English file, and uses “Dreieck” as the
 definiendum.
 
-**E-FTML-05:** FloDown hover for a local symbol requires a definition body on a **live** FloDown
-document that shares the declaration URI with the **symref**. `addSymbolDeclaration` alone, or a
-constructed MathHub URI with no live definition, makes FloDown request
-`{backend}/content/fragment` (MathHub 404 for GloX-local names). See D-FTML-03.
+**E-FTML-05:** FloDown hover looks up a symbol locally first. Local hit requires the relevant
+calls on a live `fd`: `addSymbolDeclaration` and `addElement` of a `definition` whose
+`for_symbols` include that URI (same document or another mounted document). Otherwise FloDown
+requests `{backend}/content/fragment` (MathHub 404 for GloX-local names). See D-FTML-03.
 
-## Remaining issues (not blocking the persist/boundary split)
+## Remaining issues
 
-- **Do not infer `declaredSymbols` from definienda.** `syncDeclaredSymbolsFromDefinienda` copies
-  every local definiendum name into the column when it is empty. That treats a second-language
-  definition (E-FTML-06) as a new declaration. Empty `declaredSymbols` plus definienda can mean
-  “defines an imported symbol” (like `triangle.de.tex`) or a stale column — they are not the same.
-  Unifying every save path onto that helper would **worsen** the confusion.
-- Persist still writes `for_symbols: []` on every definition save. WASM requires the **key**; rewrite
-  fills it from definienda (the symbols this **definition is for**, which may be imported). That
-  fill is closer to E-FTML-06 than filling from `declaredSymbols`.
-- GloX `Symbol` uniqueness (R-SYM-02) is a catalog key, not a check that two files never declare
-  the same name. **Author-level:** a second declaration is allowed; it yields a duplicate and the
-  author chooses which URI to use. GloX MUST NOT treat that as a system error.
-- Storing full symbol URIs in `statement` (so importing files keep the declaring file’s URI) is
-  deferred. Until then, short names plus current-file `addSymbolDeclaration` remain.
-- **`collectDeclaredSymbolsForDefinitionBlock` unions definienda** and mints URIs from **this**
-  file. Lab **E8** is the vendor pattern to match before changing production: one declaration, two
-  definitions. Do not implement that production change until E8 is recorded.
-- Persist still writes `for_symbols: []` on every definition save. WASM requires the **key**; rewrite
-  fills it from definienda (the symbols this **definition is for**, which may be imported). Fix later.
-- Preview hover still depends on an in-memory hidden document. Lab E7 same-fd / two-visible hover
-  results were not recorded after the MathHub fragment 404s; if WASM always fetches MathHub, D-FTML-03
-  cannot produce a popup.
-- Document sTeX (`generateStexFromFloDown`) no longer mounts defining FloDown blocks for referenced
-  local names; it declares short names on the export document. Module description export still uses
-  **constructed** symbol URIs (`buildModuleLocalSymbolUriMap`) instead of `addSymbolDeclaration`
-  return values. Mark-reference LaTeX and unused `finalFloDown.ts` are further parallel rewrites.
-- `/flodown-lab` is diagnostic only and is not part of the production commit.
+Status after E8 (one declaration, two definitions, third-doc symref), D-FTML-01…04, and the
+declaration-only URI map.
+
+### Closed or not a defect
+
+- **Catalog uniqueness vs one MathHub symbol.** R-SYM-02 is a **GloX catalog** key
+  `(name, identity, language)`. E-FTML-06 is the **authoring** model (declare once; many
+  definitions). Authors may declare twice; GloX MUST NOT reject that. Two Symbol rows for
+  `triangle` in `.en` vs `.de` is catalog design, not a FloDown bug.
+- **`collectDeclaredSymbolsForDefinitionBlock` unioning definienda.** Fixed. The URI map is built
+  only from `declaredSymbols` of the **declaring** file (first declaration wins).
+- **Title/Inhalt dumping sibling definition bodies** into the visible FloDown document. Fixed
+  (D-FTML-03).
+- **`fromPath` / inverted `http://{futureRepo}?a=` as the production document URI.** Production uses
+  `fromUri` + `http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}`.
+- **Filling `for_symbols` from definienda at the WASM boundary.** Intended: “this definition is
+  **for** these symbols” (imported or not). Not the same as `declaredSymbols`.
+
+### Open (FloDown / persist)
+
+1. **Local hover is understood (E7).** Popup when a live `fd` has called `addSymbolDeclaration` and
+   `addElement(definition)`. Same-fd and second-visible both work; hidden is not required. No local
+   popup for declaration-only or constructed URI — MathHub `/content/fragment`. Production Title/Inhalt
+   still needs those calls on a sibling/hidden defining document (D-FTML-03).
+2. **`declaredSymbols` still inferred on some saves.** `syncDeclaredSymbolsFromDefinienda` (via
+   `prepareFloDownBlockForPersist` / extract AST update) fills an empty column from definienda. That
+   contradicts D-FTML-04 (a `triangle.de.tex`-style row can have definienda and empty
+   `declaredSymbols` on purpose). Other writers only sanitize. Do **not** spread the helper; remove
+   or replace it so only `symdecl: true` / `addDeclaredSymbol` update the column. Legacy empty
+   columns stay stale until then.
+3. **Persist `for_symbols: []` (no DB backfill).** Rewrite supplies the WASM key (definienda or
+   `[]`). Verbatim `addElement` of persisted JSON (lab E6) still fails. Full URI persist is
+   deferred (D-FTML-01).
+4. **Constructed export URI vs declaration return value.** Module TeX still invents
+   `http://mathhub.info?a=&p=&m=&s=` from the **declaring** file. Preview hover prefers the string
+   FloDown returned on the hidden declaring document. Same short name, two strings. Orphan names
+   not in any `declaredSymbols` map still `addSymbolDeclaration` / canonicalize on the **current**
+   file.
+5. **`getDefiningDefinitions` full-table scan** of non-discarded FloDown blocks (preview hover
+   only). Authenticated now; still not indexed by label.
+6. **Parallel rewrites.** Mark-reference LaTeX and unused `finalFloDown.ts` are not on
+   `prepareFloDownStatement`. Document sTeX (`generateStexFromFloDown`) declares short names on the
+   **export** document and does not mount defining bodies — **S-CUR-08 on purpose**. If MathHub
+   expected the defining `sdefinition` in the same file, that is a product gap, not a WASM panic.
+7. **`/flodown-lab`.** Keep until hover is signed off (Curator/Admin). Then drop or leave
+   diagnostic-only.
+
+### Spec debt (not blocking preview/export)
+
+- SDD Test mapping is still **Gap** for S-CUR-04/05/06/08, module export rules, and most other
+  featured SDDs. Unit tests exist for rewrite, URI builders, and the declaration-only map; they are
+  not wired into those mapping tables.
 
 ## Related docs
 

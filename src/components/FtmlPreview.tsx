@@ -1,8 +1,5 @@
 import { initFloDown } from "@/lib/flodownClient";
-import {
-  hiddenScratchDocumentUri,
-  scratchDocumentUri,
-} from "@/lib/flodownUris";
+import { documentUriFromGlox } from "@/lib/flodownUris";
 import { collectDeclaredSymbolsForDefinitionBlock } from "@/lib/moduleLocalSymbols";
 import type { ModuleLocalSymbolSource } from "@/lib/moduleLocalSymbols";
 import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
@@ -31,10 +28,11 @@ export type FloDownSymbolContext = {
   hoverDefinitions?: readonly FloDownHoverDefinition[];
 };
 
-type FloDownIdentity = {
+type GloxFileIdentity = {
   futureRepo: string;
   filePath: string;
   fileName: string;
+  language: string;
 };
 
 function collectShortUris(statement: FloDownStatement): string[] {
@@ -55,18 +53,6 @@ function collectShortUris(statement: FloDownStatement): string[] {
   }
 
   return [...found];
-}
-
-function labelsCoveredByHoverDefinitions(
-  hoverDefinitions: readonly FloDownHoverDefinition[] | undefined,
-): Set<string> {
-  const covered = new Set<string>();
-  for (const defBlock of hoverDefinitions ?? []) {
-    for (const label of collectDeclaredSymbolsForDefinitionBlock(defBlock)) {
-      covered.add(label);
-    }
-  }
-  return covered;
 }
 
 function mergeDeclarationUris(
@@ -95,6 +81,50 @@ function symbolContextDep(context: FloDownSymbolContext | undefined): string {
         `${definition.cacheKey}\0${JSON.stringify(definition.statement)}`,
     ),
   ].join("\0");
+}
+
+function identityFromContext(
+  docId: string,
+  symbolContext: FloDownSymbolContext | undefined,
+): GloxFileIdentity {
+  const fromHover = symbolContext?.hoverDefinitions?.find(
+    (definition) => definition.cacheKey === docId,
+  );
+  if (fromHover) {
+    return {
+      futureRepo: fromHover.futureRepo,
+      filePath: fromHover.filePath,
+      fileName: fromHover.fileName,
+      language: fromHover.language ?? "en",
+    };
+  }
+  if (symbolContext) {
+    return {
+      futureRepo: symbolContext.futureRepo,
+      filePath: symbolContext.filePath,
+      fileName: symbolContext.fileName,
+      language: symbolContext.language,
+    };
+  }
+  return {
+    futureRepo: "no/archive",
+    filePath: "",
+    fileName: docId.slice(0, 200) || "scratch",
+    language: "en",
+  };
+}
+
+function documentUriForIdentity(identity: GloxFileIdentity): string {
+  return documentUriFromGlox({
+    futureRepo: identity.futureRepo,
+    filePath: identity.filePath,
+    fileName: identity.fileName,
+    language: identity.language,
+  });
+}
+
+function declarationCount(block: Pick<ModuleLocalSymbolSource, "declaredSymbols">): number {
+  return collectDeclaredSymbolsForDefinitionBlock(block).length;
 }
 
 interface FtmlPreviewProps {
@@ -126,13 +156,13 @@ export function FtmlPreview({
   declaredSymbols = EMPTY_DECLARED_SYMBOLS,
   symbolContext,
 }: FtmlPreviewProps) {
-  // Remaining issue (E-FTML-05): hidden document holds definition bodies so local symref hover
+  // Remaining issue (E-FTML-05): hidden documents hold definition bodies so local symref hover
   // does not mix those bodies into Title/Inhalt/Lernziele (D-FTML-03). If WASM always fetches
   // MathHub /content/fragment, this still 404s. Lab E7 same-fd / two-visible hover was not re-recorded.
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
   const fdVisibleRef = useRef<FloDownWasmBlock | null>(null);
-  const fdHiddenRef = useRef<FloDownWasmBlock | null>(null);
+  const fdHiddenRefs = useRef<FloDownWasmBlock[]>([]);
 
   useEffect(() => {
     const containerEl = containerRef.current;
@@ -146,57 +176,79 @@ export function FtmlPreview({
         const floDown = (await initFloDown()) as FloDownLib;
         if (disposed) return;
 
-        const previewLanguage = symbolContext?.language ?? "en";
-        const identity: FloDownIdentity = symbolContext
-          ? {
-              futureRepo: symbolContext.futureRepo,
-              filePath: symbolContext.filePath,
-              fileName: symbolContext.fileName,
-            }
-          : {
-              futureRepo: "no/archive",
-              filePath: "",
-              fileName: docId,
-            };
+        const visibleIdentity = identityFromContext(docId, symbolContext);
+        const visibleUri = documentUriForIdentity(visibleIdentity);
+        const uriMap = new Map<string, string>();
+        const hiddenFds: FloDownWasmBlock[] = [];
 
-        const fdHidden = floDown.FloDown.fromUri(
-          hiddenScratchDocumentUri(docId, previewLanguage),
-        ) as FloDownWasmBlock;
         hiddenEl.innerHTML = "";
-        fdHidden.mountTo(hiddenEl);
         hiddenEl.style.display = "none";
 
-        const fdVisible = floDown.FloDown.fromUri(
-          scratchDocumentUri(docId, previewLanguage),
-        ) as FloDownWasmBlock;
-
-        fdHiddenRef.current = fdHidden;
-        fdVisibleRef.current = fdVisible;
-        containerEl.innerHTML = "";
-        fdVisible.mountTo(containerEl);
-
-        const uriMap = new Map<string, string>();
-
-        for (const defBlock of symbolContext?.hoverDefinitions ?? []) {
-          if (disposed) return;
+        const mountOnFd = (
+          fd: FloDownWasmBlock,
+          identity: GloxFileIdentity,
+          statement: unknown,
+        ) => {
           const { replacements } = mountStatementOnFloDown(
-            fdHidden,
-            defBlock.statement,
+            fd,
+            statement,
             {
-              futureRepo: defBlock.futureRepo,
-              filePath: defBlock.filePath,
-              fileName: defBlock.fileName,
+              futureRepo: identity.futureRepo,
+              filePath: identity.filePath,
+              fileName: identity.fileName,
             },
+            { knownUris: uriMap },
           );
           mergeDeclarationUris(uriMap, replacements);
+        };
+
+        const createHiddenFd = (identity: GloxFileIdentity): FloDownWasmBlock => {
+          const child = document.createElement("div");
+          hiddenEl.appendChild(child);
+          const fd = floDown.FloDown.fromUri(
+            documentUriForIdentity(identity),
+          ) as FloDownWasmBlock;
+          fd.mountTo(child);
+          hiddenFds.push(fd);
+          return fd;
+        };
+
+        const hiddenHover = [...(symbolContext?.hoverDefinitions ?? [])]
+          .filter((definition) => definition.cacheKey !== docId)
+          .sort((a, b) => declarationCount(b) - declarationCount(a));
+
+        const groups = new Map<string, FloDownHoverDefinition[]>();
+        for (const definition of hiddenHover) {
+          const uri = documentUriForIdentity({
+            futureRepo: definition.futureRepo,
+            filePath: definition.filePath,
+            fileName: definition.fileName,
+            language: definition.language ?? "en",
+          });
+          const list = groups.get(uri) ?? [];
+          list.push(definition);
+          groups.set(uri, list);
         }
 
-        const covered = labelsCoveredByHoverDefinitions(
-          symbolContext?.hoverDefinitions,
-        );
+        for (const [, blocks] of groups) {
+          if (disposed) return;
+          const first = blocks[0];
+          const identity: GloxFileIdentity = {
+            futureRepo: first.futureRepo,
+            filePath: first.filePath,
+            fileName: first.fileName,
+            language: first.language ?? "en",
+          };
+          if (documentUriForIdentity(identity) === visibleUri) continue;
+          const fd = createHiddenFd(identity);
+          for (const block of blocks) {
+            mountOnFd(fd, identity, block.statement);
+          }
+        }
+
         const declaredOnThisRow = new Set(declaredSymbols);
         const missing = collectShortUris(ftmlAst).filter(
-          (label) => !covered.has(label) && !declaredOnThisRow.has(label),
+          (label) => !uriMap.has(label) && !declaredOnThisRow.has(label),
         );
 
         if (missing.length > 0) {
@@ -212,20 +264,36 @@ export function FtmlPreview({
             ]),
           );
           for (const dep of uniqueDefs.values()) {
-            const { replacements } = mountStatementOnFloDown(
-              fdHidden,
-              dep.definition,
-              identity,
-            );
-            mergeDeclarationUris(uriMap, replacements);
+            const identity: GloxFileIdentity = {
+              futureRepo: dep.futureRepo,
+              filePath: dep.filePath,
+              fileName: dep.fileName,
+              language: dep.language,
+            };
+            if (documentUriForIdentity(identity) === visibleUri) continue;
+            const fd = createHiddenFd(identity);
+            mountOnFd(fd, identity, dep.definition);
           }
         }
 
         if (disposed) return;
 
-        mountStatementOnFloDown(fdVisible, ftmlAst, identity, {
-          knownUris: uriMap,
-        });
+        const fdVisible = floDown.FloDown.fromUri(visibleUri) as FloDownWasmBlock;
+        fdHiddenRefs.current = hiddenFds;
+        fdVisibleRef.current = fdVisible;
+        containerEl.innerHTML = "";
+        fdVisible.mountTo(containerEl);
+
+        mountStatementOnFloDown(
+          fdVisible,
+          ftmlAst,
+          {
+            futureRepo: visibleIdentity.futureRepo,
+            filePath: visibleIdentity.filePath,
+            fileName: visibleIdentity.fileName,
+          },
+          { knownUris: uriMap },
+        );
       } catch (error) {
         if (disposed) return;
         console.error("FtmlPreview FloDown mount failed:", error);
@@ -235,12 +303,12 @@ export function FtmlPreview({
     return () => {
       disposed = true;
 
-      if (fdHiddenRef.current) {
+      for (const fd of fdHiddenRefs.current) {
         try {
-          fdHiddenRef.current.clear();
+          fd.clear();
         } catch {}
-        fdHiddenRef.current = null;
       }
+      fdHiddenRefs.current = [];
 
       if (fdVisibleRef.current) {
         try {

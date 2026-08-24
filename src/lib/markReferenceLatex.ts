@@ -1,9 +1,7 @@
 import { initFloDown } from "@/lib/flodownClient";
 import {
-  createFloDownDocument,
-  exportIdentityFromGlox,
-  symbolIdentityFromGlox,
-  symbolUri,
+  createFloDownDocumentFromGlox,
+  symbolUriFromGlox,
 } from "@/lib/flodownUris";
 import { parseUri } from "@/server/parseUri";
 import { isHttp } from "@/server/ftml/generateStexFromFtml";
@@ -64,14 +62,12 @@ function rewriteContent(
 
     return {
       ...symref,
-      uri: symbolUri(
-        symbolIdentityFromGlox({
-          futureRepo: identity.futureRepo,
-          filePath: identity.filePath,
-          fileName: identity.fileName,
-          symbolName: symref.uri,
-        }),
-      ),
+      uri: symbolUriFromGlox({
+        futureRepo: identity.futureRepo,
+        filePath: identity.filePath,
+        fileName: identity.fileName,
+        symbolName: symref.uri,
+      }),
     };
   });
 }
@@ -122,14 +118,14 @@ export async function buildMarkReferenceLatex(
 
   const floDown = (await initFloDown()) as FloDownLib;
 
-  const fdVisible = createFloDownDocument(
-    floDown.FloDown as Parameters<typeof createFloDownDocument>[0],
-    exportIdentityFromGlox({
+  const fdVisible = createFloDownDocumentFromGlox(
+    floDown.FloDown as Parameters<typeof createFloDownDocumentFromGlox>[0],
+    {
       futureRepo: identity.futureRepo,
       filePath: identity.filePath,
       fileName: identity.fileName,
       language: identity.language,
-    }),
+    },
   );
 
   try {

@@ -1,16 +1,12 @@
 import { collectInlineUris } from "./collectInlineUris";
 import {
   EMPTY_SNAPSHOT,
-  MATHHUB_BOOLEAN_URI,
-  TEST_HTML_DOCUMENT_URI,
   type LabDebugSnapshot,
   type UriReplacement,
 } from "./labTypes";
 import type { FloDownLabDbSample } from "@/serverFns/flodownLab.server";
-import {
-  documentUriFromDbSample,
-  mountStatementOnFloDown,
-} from "@/lib/prepareFloDownStatement";
+import { documentUri, documentUriFromGlox, symbolUri } from "@/lib/flodownUris";
+import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
 
 type FloDownBlock = {
   addElement: (node: unknown) => void;
@@ -49,13 +45,13 @@ export const LAB_EXPERIMENTS: LabExperiment[] = [
     id: "e1",
     group: "E1",
     title: "Clone test.html",
-    notes: "Vendor sample: fromUri test URI, MathHub symref, addSymbolDeclaration, same-block definition.",
+    notes: "Vendor sample shape on mathhub.info: fromUri, MathHub symref, addSymbolDeclaration, same-block definition.",
   },
   {
     id: "e2-unknown",
     group: "E2",
-    title: "fromUri UnknownDocument",
-    notes: "http://unknown.source?a=no/archive&d=unknown_document&l=en",
+    title: "fromUri mathhub a=no/archive",
+    notes: "http://mathhub.info?a=no/archive&d=unknown_document&l=en",
   },
   {
     id: "e2-mathhub-simple",
@@ -68,12 +64,6 @@ export const LAB_EXPERIMENTS: LabExperiment[] = [
     group: "E2",
     title: "fromUri mathhub.info smglom + p=",
     notes: "http://mathhub.info?a=smglom/algebra&p=mod&d=Boolean-algebra&l=en",
-  },
-  {
-    id: "e2-glox-inverted",
-    group: "E2",
-    title: "fromUri GloX inverted host",
-    notes: "http://courses/FAU/module-descriptions?a=modules&d=33995&l=de",
   },
   {
     id: "e2-vendor-glox-numeric",
@@ -140,28 +130,28 @@ export const LAB_EXPERIMENTS: LabExperiment[] = [
     group: "E7",
     title: "Hover: def + symref on one visible fd",
     notes:
-      "Control (test.html). Hover the word foobar. Expect definition popup. No hidden fd.",
+      "Control. Hover foobar. Expect popup: same fd called addSymbolDeclaration and addElement(definition).",
   },
   {
     id: "e7-hover-two-visible",
     group: "E7",
     title: "Hover: def on second visible fd (no hidden)",
     notes:
-      "Paragraph on visible mount, definition on second mount (display:block). Hover foobar. Same as E5 two-visible, labeled for hover.",
+      "Paragraph on visible mount, definition on second mount. Hover works because those FloDown calls ran on the second fd.",
   },
   {
     id: "e7-hover-decl-only",
     group: "E7",
     title: "Hover: addSymbolDeclaration, no definition element",
     notes:
-      "Same fd: declare foobar, paragraph symref uses return URI, no sdefinition. Tests whether a popup needs a definition body.",
+      "Expect no local popup. FloDown only resolves locally after declaration + definition addElement; otherwise it hits MathHub /content/fragment.",
   },
   {
     id: "e7-hover-known-uri",
     group: "E7",
     title: "Hover: constructed SymbolUri, no live definition",
     notes:
-      "Production-like: paragraph-only fd, uri is mathhub.info?a=&p=&m=&s= with no addSymbolDeclaration and no definition on any fd. Unique scratch document. Hover foobar.",
+      "Expect no local popup. Constructed URI without addSymbolDeclaration + definition is a MathHub lookup.",
   },
   {
     id: "e8-triangle-same-fd",
@@ -171,11 +161,11 @@ export const LAB_EXPERIMENTS: LabExperiment[] = [
       "E-FTML-06. addSymbolDeclaration('triangle') once. English definiendum triangle + German definiendum Dreieck, both for_symbols/uri = that return value. No second declaration.",
   },
   {
-    id: "e8-triangle-two-docs",
+    id: "e8-triangle-three-docs",
     group: "E8",
-    title: "Triangle: en.tex declares; de.tex defines only",
+    title: "Triangle: en declares; de defines; third doc symrefs",
     notes:
-      "Two documents: d=triangle l=en declares+defines; d=triangle l=de defines Dreieck using the EN declaration URI. de MUST NOT call addSymbolDeclaration. Contrast production minting a URI from the German file identity.",
+      "Three documents: d=triangle l=en declares+defines; d=triangle l=de defines Dreieck with the EN URI (no addSymbolDeclaration); d=triangle-sum-of-angles l=en paragraph symrefs that URI. Contrast production minting a URI from the importing file.",
   },
   {
     id: "db-raw",
@@ -192,6 +182,19 @@ export const LAB_EXPERIMENTS: LabExperiment[] = [
     usesDbRow: true,
   },
 ];
+
+const MATHHUB_BOOLEAN_URI = symbolUri({
+  archive: "smglom/algebra",
+  path: "mod",
+  module: "Boolean-algebra",
+  symbol: "Boolean algebra",
+});
+
+const LAB_TEST_DOC = documentUri({
+  archive: "test",
+  name: "test",
+  language: "en",
+});
 
 const MATHHUB_SYMREF = {
   type: "symref" as const,
@@ -234,6 +237,7 @@ export function runLabExperiment(params: {
   floDown: FloDownLib;
   mountEl: HTMLElement;
   hiddenEl: HTMLElement;
+  thirdEl: HTMLElement;
   retain: FloDownBlock[];
   dbSample: FloDownLabDbSample | null;
 }): LabDebugSnapshot {
@@ -257,6 +261,8 @@ export function runLabExperiment(params: {
   params.mountEl.innerHTML = "";
   params.hiddenEl.innerHTML = "";
   params.hiddenEl.style.display = "none";
+  params.thirdEl.innerHTML = "";
+  params.thirdEl.style.display = "none";
 
   try {
     runExperimentBody(experiment.id, params, snapshot);
@@ -275,6 +281,7 @@ function runExperimentBody(
     floDown: FloDownLib;
     mountEl: HTMLElement;
     hiddenEl: HTMLElement;
+    thirdEl: HTMLElement;
     retain: FloDownBlock[];
     dbSample: FloDownLabDbSample | null;
   },
@@ -283,8 +290,8 @@ function runExperimentBody(
   const { floDown, mountEl, retain } = params;
 
   if (id === "e1" || id === "e4-symdecl") {
-    snapshot.documentUriCreated = TEST_HTML_DOCUMENT_URI;
-    const fd = floDown.FloDown.fromUri(TEST_HTML_DOCUMENT_URI);
+    snapshot.documentUriCreated = LAB_TEST_DOC;
+    const fd = floDown.FloDown.fromUri(LAB_TEST_DOC);
     mountAndRetain(fd, mountEl, retain);
     snapshot.getUriAfterCreate = fd.getUri();
 
@@ -333,17 +340,34 @@ function runExperimentBody(
 
   if (id.startsWith("e2-")) {
     const uris: Record<string, string> = {
-      "e2-unknown":
-        "http://unknown.source?a=no/archive&d=unknown_document&l=en",
-      "e2-mathhub-simple": "http://mathhub.info?a=test&d=test&l=en",
-      "e2-mathhub-smglom":
-        "http://mathhub.info?a=smglom/algebra&p=mod&d=Boolean-algebra&l=en",
-      "e2-glox-inverted":
-        "http://courses/FAU/module-descriptions?a=modules&d=33995&l=de",
-      "e2-vendor-glox-numeric":
-        "http://mathhub.info?a=courses/FAU/module-descriptions&p=modules&d=33995&l=de",
-      "e2-vendor-glox-named":
-        "http://mathhub.info?a=courses/FAU/module-descriptions&p=modules&d=mod33995&l=de",
+      "e2-unknown": documentUri({
+        archive: "no/archive",
+        name: "unknown_document",
+        language: "en",
+      }),
+      "e2-mathhub-simple": documentUri({
+        archive: "test",
+        name: "test",
+        language: "en",
+      }),
+      "e2-mathhub-smglom": documentUri({
+        archive: "smglom/algebra",
+        path: "mod",
+        name: "Boolean-algebra",
+        language: "en",
+      }),
+      "e2-vendor-glox-numeric": documentUri({
+        archive: "courses/FAU/module-descriptions",
+        path: "modules",
+        name: "33995",
+        language: "de",
+      }),
+      "e2-vendor-glox-named": documentUri({
+        archive: "courses/FAU/module-descriptions",
+        path: "modules",
+        name: "mod33995",
+        language: "de",
+      }),
     };
     const uri = uris[id];
     snapshot.documentUriCreated = uri;
@@ -396,8 +420,8 @@ function runExperimentBody(
   }
 
   if (id === "e5-short-name") {
-    snapshot.documentUriCreated = TEST_HTML_DOCUMENT_URI;
-    const fd = floDown.FloDown.fromUri(TEST_HTML_DOCUMENT_URI);
+    snapshot.documentUriCreated = LAB_TEST_DOC;
+    const fd = floDown.FloDown.fromUri(LAB_TEST_DOC);
     mountAndRetain(fd, mountEl, retain);
     snapshot.getUriAfterCreate = fd.getUri();
     const payload = {
@@ -433,10 +457,10 @@ function runExperimentBody(
     if (!params.dbSample) {
       throw new Error("Select a DB sample first");
     }
-    const inverted = `http://${params.dbSample.futureRepo}?a=${params.dbSample.filePath}&d=${params.dbSample.fileName}&l=${params.dbSample.language}`;
-    snapshot.documentUriCreated = inverted;
+    const uri = documentUriFromGlox(params.dbSample);
+    snapshot.documentUriCreated = uri;
     snapshot.replacedUris = [];
-    const fd = floDown.FloDown.fromUri(inverted);
+    const fd = floDown.FloDown.fromUri(uri);
     mountAndRetain(fd, mountEl, retain);
     snapshot.getUriAfterCreate = fd.getUri();
     snapshot.addElementPayload = params.dbSample.statement;
@@ -449,7 +473,7 @@ function runExperimentBody(
     if (!params.dbSample) {
       throw new Error("Select a DB sample first");
     }
-    const uri = documentUriFromDbSample(params.dbSample);
+    const uri = documentUriFromGlox(params.dbSample);
     snapshot.documentUriCreated = uri;
     const fd = floDown.FloDown.fromUri(uri);
     mountAndRetain(fd, mountEl, retain);
@@ -512,10 +536,10 @@ function runCrossBlock(
   snapshot: LabDebugSnapshot,
 ) {
   const { floDown, mountEl, hiddenEl, retain } = params;
-  snapshot.documentUriCreated = TEST_HTML_DOCUMENT_URI;
+  snapshot.documentUriCreated = LAB_TEST_DOC;
 
   const fdDef = floDown.FloDown.fromUri(
-    "http://test?a=test&d=definition_block&l=en",
+    documentUri({ archive: "test", name: "definition_block", language: "en" }),
   );
   const localName = "foobar";
   const symbol = fdDef.addSymbolDeclaration(localName);
@@ -561,7 +585,7 @@ function runCrossBlock(
   }
 
   const fdPara = floDown.FloDown.fromUri(
-    "http://test?a=test&d=paragraph_block&l=en",
+    documentUri({ archive: "test", name: "paragraph_block", language: "en" }),
   );
   retain.push(fdDef, fdPara);
   hiddenEl.innerHTML = "";
@@ -580,8 +604,12 @@ function runCrossBlock(
 }
 
 const HOVER_LOCAL_NAME = "foobar";
-const HOVER_KNOWN_URI =
-  "http://mathhub.info?a=test&p=mod&m=definition_block&s=foobar";
+const HOVER_KNOWN_URI = symbolUri({
+  archive: "test",
+  path: "mod",
+  module: "definition_block",
+  symbol: "foobar",
+});
 
 function localDefinition(symbol: string | undefined) {
   return {
@@ -624,7 +652,7 @@ function runHoverExperiment(
   hiddenEl.style.display = "block";
 
   if (id === "e7-hover-same-fd") {
-    const uri = "http://test?a=test&d=hover_same&l=en";
+    const uri = documentUri({ archive: "test", name: "hover_same", language: "en" });
     snapshot.documentUriCreated = uri;
     const fd = floDown.FloDown.fromUri(uri);
     mountAndRetain(fd, mountEl, retain);
@@ -648,8 +676,16 @@ function runHoverExperiment(
   }
 
   if (id === "e7-hover-two-visible") {
-    const defUri = "http://test?a=test&d=hover_def&l=en";
-    const paraUri = "http://test?a=test&d=hover_para&l=en";
+    const defUri = documentUri({
+      archive: "test",
+      name: "hover_def",
+      language: "en",
+    });
+    const paraUri = documentUri({
+      archive: "test",
+      name: "hover_para",
+      language: "en",
+    });
     snapshot.documentUriCreated = `${paraUri} + ${defUri}`;
     const fdDef = floDown.FloDown.fromUri(defUri);
     const fdPara = floDown.FloDown.fromUri(paraUri);
@@ -680,7 +716,11 @@ function runHoverExperiment(
   }
 
   if (id === "e7-hover-decl-only") {
-    const uri = "http://test?a=test&d=hover_decl_only&l=en";
+    const uri = documentUri({
+      archive: "test",
+      name: "hover_decl_only",
+      language: "en",
+    });
     snapshot.documentUriCreated = uri;
     const fd = floDown.FloDown.fromUri(uri);
     mountAndRetain(fd, mountEl, retain);
@@ -701,7 +741,11 @@ function runHoverExperiment(
   }
 
   if (id === "e7-hover-known-uri") {
-    const uri = "http://unknown.source?a=no/archive&d=hover_known_uri&l=en";
+    const uri = documentUri({
+      archive: "no/archive",
+      name: "hover_known_uri",
+      language: "en",
+    });
     snapshot.documentUriCreated = uri;
     const fd = floDown.FloDown.fromUri(uri);
     mountAndRetain(fd, mountEl, retain);
@@ -722,10 +766,24 @@ function runHoverExperiment(
   throw new Error(`Unimplemented hover experiment ${id}`);
 }
 
-const TRIANGLE_EN_DOC =
-  "http://mathhub.info?a=smglom/geometry&p=mod&d=triangle&l=en";
-const TRIANGLE_DE_DOC =
-  "http://mathhub.info?a=smglom/geometry&p=mod&d=triangle&l=de";
+const TRIANGLE_EN_DOC = documentUri({
+  archive: "smglom/geometry",
+  path: "mod",
+  name: "triangle",
+  language: "en",
+});
+const TRIANGLE_DE_DOC = documentUri({
+  archive: "smglom/geometry",
+  path: "mod",
+  name: "triangle",
+  language: "de",
+});
+const TRIANGLE_REF_DOC = documentUri({
+  archive: "smglom/geometry",
+  path: "mod",
+  name: "triangle-sum-of-angles",
+  language: "en",
+});
 
 function triangleDefinition(symbol: string | undefined, verbalization: string, gloss: string) {
   return {
@@ -744,17 +802,29 @@ function triangleDefinition(symbol: string | undefined, verbalization: string, g
   };
 }
 
+function triangleSymrefParagraph(symbol: string | undefined) {
+  return {
+    type: "paragraph" as const,
+    content: [
+      "Sum of angles of a ",
+      { type: "symref", uri: symbol, content: ["triangle"] },
+      " is 180 degree.",
+    ],
+  };
+}
+
 function runTriangleExperiment(
   id: string,
   params: {
     floDown: FloDownLib;
     mountEl: HTMLElement;
     hiddenEl: HTMLElement;
+    thirdEl: HTMLElement;
     retain: FloDownBlock[];
   },
   snapshot: LabDebugSnapshot,
 ) {
-  const { floDown, mountEl, hiddenEl, retain } = params;
+  const { floDown, mountEl, hiddenEl, thirdEl, retain } = params;
 
   if (id === "e8-triangle-same-fd") {
     snapshot.documentUriCreated = TRIANGLE_EN_DOC;
@@ -787,25 +857,30 @@ function runTriangleExperiment(
     return;
   }
 
-  if (id === "e8-triangle-two-docs") {
-    snapshot.documentUriCreated = `${TRIANGLE_EN_DOC} + ${TRIANGLE_DE_DOC}`;
+  if (id === "e8-triangle-three-docs") {
+    snapshot.documentUriCreated = `${TRIANGLE_EN_DOC} + ${TRIANGLE_DE_DOC} + ${TRIANGLE_REF_DOC}`;
     const fdEn = floDown.FloDown.fromUri(TRIANGLE_EN_DOC);
     const fdDe = floDown.FloDown.fromUri(TRIANGLE_DE_DOC);
+    const fdRef = floDown.FloDown.fromUri(TRIANGLE_REF_DOC);
     const symbol = fdEn.addSymbolDeclaration("triangle");
     snapshot.declaredSymbolUris.push({ name: "triangle", uri: symbol });
     snapshot.replacedUris = [
       {
         from: "triangle",
         to: symbol ?? "(undefined)",
-        reason: "declared only on l=en; l=de definiendum reuses this URI (no addSymbolDeclaration on de)",
+        reason:
+          "declared only on l=en; de definiendum and third-doc symref reuse this URI (no addSymbolDeclaration on de or ref)",
       },
     ];
-    retain.push(fdEn, fdDe);
+    retain.push(fdEn, fdDe, fdRef);
     mountEl.innerHTML = "";
     hiddenEl.innerHTML = "";
+    thirdEl.innerHTML = "";
     hiddenEl.style.display = "block";
+    thirdEl.style.display = "block";
     fdEn.mountTo(mountEl);
     fdDe.mountTo(hiddenEl);
+    fdRef.mountTo(thirdEl);
     const enDef = triangleDefinition(
       symbol,
       "triangle",
@@ -816,12 +891,14 @@ function runTriangleExperiment(
       "Dreieck",
       "ist ein Polygon mit drei Seiten.",
     );
-    snapshot.addElementPayload = { en: enDef, de: deDef };
+    const refPara = triangleSymrefParagraph(symbol);
+    snapshot.addElementPayload = { en: enDef, de: deDef, ref: refPara };
     fdEn.addElement(enDef);
     fdDe.addElement(deDef);
-    snapshot.getUriAfterCreate = `en=${fdEn.getUri()} de=${fdDe.getUri()}`;
-    snapshot.stex = `--- triangle.en ---\n${fdEn.getStex()}\n--- triangle.de (no second \\symdecl expected) ---\n${fdDe.getStex()}`;
-    snapshot.ftml = `--- en ---\n${fdEn.getFtml()}\n--- de ---\n${fdDe.getFtml()}`;
+    fdRef.addElement(refPara);
+    snapshot.getUriAfterCreate = `en=${fdEn.getUri()} de=${fdDe.getUri()} ref=${fdRef.getUri()}`;
+    snapshot.stex = `--- triangle.en ---\n${fdEn.getStex()}\n--- triangle.de (no second \\symdecl expected) ---\n${fdDe.getStex()}\n--- triangle-sum-of-angles (symref only) ---\n${fdRef.getStex()}`;
+    snapshot.ftml = `--- en ---\n${fdEn.getFtml()}\n--- de ---\n${fdDe.getFtml()}\n--- ref ---\n${fdRef.getFtml()}`;
     return;
   }
 

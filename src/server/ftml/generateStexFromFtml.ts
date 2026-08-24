@@ -1,5 +1,5 @@
 import { initFloDown } from "@/lib/flodownClient";
-import { createFloDownDocument, exportIdentityFromGlox } from "@/lib/flodownUris";
+import { createFloDownDocumentFromGlox } from "@/lib/flodownUris";
 import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
 import { isHttp } from "@/server/ftml/statementContent";
 import {
@@ -24,14 +24,12 @@ export async function generateStexFromFloDown(
 ): Promise<string> {
   const floDown = await initFloDown();
 
-  const exportIdentity = exportIdentityFromGlox({
+  const fd = createFloDownDocumentFromGlox(floDown.FloDown, {
     futureRepo,
     filePath,
     fileName,
     language,
   });
-
-  const fd = createFloDownDocument(floDown.FloDown, exportIdentity);
   const mountFd = fd as Parameters<typeof mountStatementOnFloDown>[0];
   const identity = { futureRepo, filePath, fileName };
   const root = normalizeToRoot(statement);

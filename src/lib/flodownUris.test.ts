@@ -2,26 +2,23 @@ import { describe, expect, it } from "vitest";
 import { parseUri } from "@/server/parseUri";
 import {
   documentUri,
-  exportIdentityFromGlox,
+  documentUriFromGlox,
   FloDownLanguage,
-  hiddenScratchDocumentUri,
   languageToFloDown,
   scratchDocumentUri,
   symbolIdentityFromGlox,
-  symbolUri,
+  symbolUriFromGlox,
   canonicalizeSymbolUri,
 } from "./flodownUris";
 
 describe("flodownUris", () => {
   it("builds document URIs with archive in a= and path in p=", () => {
-    const uri = documentUri(
-      exportIdentityFromGlox({
-        futureRepo: "smglom/softeng",
-        filePath: "mod",
-        fileName: "MyConcept",
-        language: "en",
-      }),
-    );
+    const uri = documentUriFromGlox({
+      futureRepo: "smglom/softeng",
+      filePath: "mod",
+      fileName: "MyConcept",
+      language: "en",
+    });
     expect(uri).toBe(
       "http://mathhub.info?a=smglom/softeng&p=mod&d=MyConcept&l=en",
     );
@@ -32,14 +29,12 @@ describe("flodownUris", () => {
   });
 
   it("builds module file document URIs", () => {
-    const uri = documentUri(
-      exportIdentityFromGlox({
-        futureRepo: "courses/FAU/module-descriptions",
-        filePath: "modules",
-        fileName: "33995",
-        language: "de",
-      }),
-    );
+    const uri = documentUriFromGlox({
+      futureRepo: "courses/FAU/module-descriptions",
+      filePath: "modules",
+      fileName: "33995",
+      language: "de",
+    });
     expect(uri).toBe(
       "http://mathhub.info?a=courses/FAU/module-descriptions&p=modules&d=33995&l=de",
     );
@@ -88,14 +83,12 @@ describe("flodownUris", () => {
   });
 
   it("builds symbol URIs with m= and s=", () => {
-    const uri = symbolUri(
-      symbolIdentityFromGlox({
-        futureRepo: "courses/FAU/module-descriptions",
-        filePath: "defs",
-        fileName: "MyConcept",
-        symbolName: "MyConcept",
-      }),
-    );
+    const uri = symbolUriFromGlox({
+      futureRepo: "courses/FAU/module-descriptions",
+      filePath: "defs",
+      fileName: "MyConcept",
+      symbolName: "MyConcept",
+    });
     expect(uri).toBe(
       "http://mathhub.info?a=courses/FAU/module-descriptions&p=defs&m=MyConcept&s=MyConcept",
     );
@@ -108,14 +101,12 @@ describe("flodownUris", () => {
   });
 
   it("puts archive in a=, host mathhub.info", () => {
-    const uri = documentUri(
-      exportIdentityFromGlox({
-        futureRepo: "courses/FAU/module-descriptions",
-        filePath: "modules",
-        fileName: "33995",
-        language: "de",
-      }),
-    );
+    const uri = documentUriFromGlox({
+      futureRepo: "courses/FAU/module-descriptions",
+      filePath: "modules",
+      fileName: "33995",
+      language: "de",
+    });
     expect(new URL(uri).hostname).toBe("mathhub.info");
     expect(new URL(uri).searchParams.get("a")).toBe(
       "courses/FAU/module-descriptions",
@@ -127,11 +118,10 @@ describe("flodownUris", () => {
     expect(languageToFloDown("en")).toBe(FloDownLanguage.English);
   });
 
-  it("uses unknown.source scratch documents", () => {
+  it("uses mathhub.info scratch documents", () => {
     expect(scratchDocumentUri("preview-1", "en")).toBe(
-      "http://unknown.source?a=no/archive&d=preview-1&l=en",
+      "http://mathhub.info?a=no/archive&d=preview-1&l=en",
     );
-    expect(hiddenScratchDocumentUri("foo", "de")).toContain("hidden-foo");
   });
 });
 

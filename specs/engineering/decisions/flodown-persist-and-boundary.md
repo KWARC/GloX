@@ -36,9 +36,11 @@ symbol URIs MUST be produced only at the FloDown boundary (`rewriteStatementForF
 `mountStatementOnFloDown`) and MUST NOT be written back into `statement` JSON.
 
 **D-FTML-02:** Production MUST create FloDown documents with `fromUri` and the vendor document URI
-`http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}` (omit `p=` when path is empty). Scratch
-previews MAY use `http://unknown.source?a=no/archive&d={id}&l={lang}`. Production MUST NOT call
-`fromPath`.
+`http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}` (omit `p=` when path is empty). Local
+DB rows use that row’s `futureRepo` / `filePath` / `fileName` / `language` (`a=courses/FAU/…` when
+that is the archive). Previews without a row identity MAY use
+`http://mathhub.info?a=no/archive&d={id}&l={lang}`. Production MUST NOT emit `http://test…` or
+`http://unknown.source…`. Production MUST NOT call `fromPath`.
 
 **D-FTML-03:** FTML preview MUST mount only the current statement on the visible FloDown document.
 Definition bodies needed so a **symref** can show hover text MUST live on a second live FloDown
@@ -55,7 +57,8 @@ The system MUST NOT treat every definiendum `uri` as a declaration. Persist MUST
 Rejected: persisting MathHub URIs in every statement (export-identity moves would rewrite JSON;
 cascade delete already keys off short names). Rejected: `fromPath` (WASM panics on language
 encodings we tried). Rejected: inverted host `http://{futureRepo}?a={path}` as the encoding we
-generate (WASM may accept it; it is not the vendor contract). Rejected: putting sibling definitions
+generate (WASM may accept it; it is not the vendor contract). Rejected: `unknown.source` / `http://test`
+scratch documents for local DB previews. Rejected: putting sibling definitions
 on the visible document so hover works (Title/Inhalt/Lernziele showed those definitions).
 
 ## Consequences
@@ -66,7 +69,8 @@ on the visible document so hover works (Title/Inhalt/Lernziele showed those defi
 - `syncDeclaredSymbolsFromDefinienda` contradicts D-FTML-04 / E-FTML-06; do not spread it to more
   save paths. Remove or replace it so only explicit `symdecl: true` / `addDeclaredSymbol` updates
   the column.
-- Hover for local symbols is not served by MathHub `/content/fragment`. If WASM ignores in-memory
-  definitions and always fetches MathHub, local hover cannot work until a backend serves those URIs.
+- Hover for a local symbol works when a live FloDown document has declared it and mounted a
+  definition (`addSymbolDeclaration` + `addElement`). Otherwise FloDown requests MathHub
+  `/content/fragment` (404 for GloX-local names).
 - Mark-reference LaTeX and `finalFloDown` still rewrite URIs on their own paths — follow-on to fold
   them into `prepareFloDownStatement` if they stay in use.

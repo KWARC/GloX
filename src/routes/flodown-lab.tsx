@@ -31,6 +31,7 @@ export const Route = createFileRoute("/flodown-lab")({
 function FloDownLabPage() {
   const mountRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
+  const thirdRef = useRef<HTMLDivElement>(null);
   const retainRef = useRef<object[]>([]);
   const [snapshot, setSnapshot] = useState<LabDebugSnapshot>(EMPTY_SNAPSHOT);
   const [runningId, setRunningId] = useState<string | null>(null);
@@ -49,7 +50,8 @@ function FloDownLabPage() {
   async function run(experimentId: string) {
     const mountEl = mountRef.current;
     const hiddenEl = hiddenRef.current;
-    if (!mountEl || !hiddenEl) return;
+    const thirdEl = thirdRef.current;
+    if (!mountEl || !hiddenEl || !thirdEl) return;
 
     setRunningId(experimentId);
     try {
@@ -59,6 +61,7 @@ function FloDownLabPage() {
         floDown,
         mountEl,
         hiddenEl,
+        thirdEl,
         retain: retainRef.current as never,
         dbSample: selectedSample,
       });
@@ -145,10 +148,22 @@ function FloDownLabPage() {
             }}
           />
           <Text size="xs" fw={600} mt="sm" mb="xs">
-            Second mount (E5/E7 hidden; E8 German triangle.de)
+            Second mount (E5/E7; E8 German triangle.de)
           </Text>
           <Box
             ref={hiddenRef}
+            mih={40}
+            p="xs"
+            style={{
+              background: "var(--mantine-color-gray-1)",
+              borderRadius: 8,
+            }}
+          />
+          <Text size="xs" fw={600} mt="sm" mb="xs">
+            Third mount (E8 triangle-sum-of-angles, symref only)
+          </Text>
+          <Box
+            ref={thirdRef}
             mih={40}
             p="xs"
             style={{
