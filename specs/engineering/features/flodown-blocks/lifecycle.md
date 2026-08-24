@@ -167,9 +167,6 @@ that Document or holds Admin role before proceeding.
 - Module-description-scoped block ownership rules — `moduleDescription.server.ts` uses separate
   auth helper; not yet traced to SDD rules.
 - `updateFloDownBlockAst` semantic edit path — same ownership gap as BUG-001.
-- Persist hygiene: `syncDeclaredSymbolsFromDefinienda` infers declarations from definienda and
-  contradicts D-FTML-04 / E-FTML-06. Do not apply it on remaining write paths. See
-  [`ftml.md` remaining issues](../../external-deps/libraries/ftml.md#remaining-issues-not-blocking-the-persistboundary-split).
 
 ## Related docs
 

@@ -15,8 +15,6 @@ import {
 } from "@/types/floDown.types";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
-// Remaining issue: this path sanitizes statement but does not run prepareFloDownBlockForPersist
-// (declaredSymbols sync from definienda). extractFloDownBlock does. See lifecycle.md persist hygiene.
 import { ExtractBlockType } from "@/types/blockType";
 import { createServerFn } from "@tanstack/react-start";
 

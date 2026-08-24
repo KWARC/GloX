@@ -66,31 +66,23 @@ export function sanitizeStatementForPersist(
   return unwrapRoot(stripped);
 }
 
-/** When `declaredSymbols` is empty, copy local definiendum names into the column.
- * Remaining issue (D-FTML-04 / E-FTML-06): this infers **declaration** from **definienda**.
- * A second-language definition of an imported symbol (triangle.de.tex) can have definienda and
- * empty declaredSymbols on purpose. Do not spread this helper to more save paths. */
-export function syncDeclaredSymbolsFromDefinienda(
-  statement: FloDownStatement,
-  existing: readonly string[],
-): string[] {
-  if (existing.length > 0) return [...existing];
-  return collectDefiniendumUris(statement).filter(
-    (uri) => !uri.startsWith("http://") && !uri.startsWith("https://"),
-  );
+function copyDeclaredSymbols(existing: readonly string[]): string[] {
+  const symbols = new Set<string>();
+  for (const symbol of existing) {
+    const label = symbol.trim();
+    if (label) symbols.add(label);
+  }
+  return [...symbols];
 }
 
+/** Sanitize JSON. Keep `declaredSymbols` as passed (D-FTML-04); do not infer from definienda. */
 export function prepareFloDownBlockForPersist(
   statement: FloDownStatement,
   declaredSymbols: readonly string[],
 ): { statement: FloDownStatement; declaredSymbols: string[] } {
-  const sanitized = sanitizeStatementForPersist(statement);
   return {
-    statement: sanitized,
-    declaredSymbols: syncDeclaredSymbolsFromDefinienda(
-      sanitized,
-      declaredSymbols,
-    ),
+    statement: sanitizeStatementForPersist(statement),
+    declaredSymbols: copyDeclaredSymbols(declaredSymbols),
   };
 }
 

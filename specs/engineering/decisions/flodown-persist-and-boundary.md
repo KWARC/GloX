@@ -66,9 +66,8 @@ on the visible document so hover works (Title/Inhalt/Lernziele showed those defi
 - Persist `for_symbols` is emptied on save; FloDown still requires the key at `addElement` — the
   rewrite supplies definiendum URIs (symbols this definition is **for**, declared here or imported)
   or `[]`.
-- `syncDeclaredSymbolsFromDefinienda` contradicts D-FTML-04 / E-FTML-06; do not spread it to more
-  save paths. Remove or replace it so only explicit `symdecl: true` / `addDeclaredSymbol` updates
-  the column.
+- `declaredSymbols` is updated only via `symdecl: true` / `addDeclaredSymbol` (and explicit
+  `setDeclaredSymbols` of that list). Persist MUST NOT copy definienda into the column.
 - Hover for a local symbol works when a live FloDown document has declared it and mounted a
   definition (`addSymbolDeclaration` + `addElement`). Otherwise FloDown requests MathHub
   `/content/fragment` (404 for GloX-local names).

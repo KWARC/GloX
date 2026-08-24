@@ -133,6 +133,9 @@ declaration-only URI map.
   `fromUri` + `http://mathhub.info?a={archive}&p={path}&d={name}&l={lang}`.
 - **Filling `for_symbols` from definienda at the WASM boundary.** Intended: “this definition is
   **for** these symbols” (imported or not). Not the same as `declaredSymbols`.
+- **Inferring `declaredSymbols` from definienda on save.** Fixed. Persist keeps the caller-supplied
+  list (`symdecl: true` / `addDeclaredSymbol`). Empty column plus definienda is a valid importing
+  definition.
 
 ### Open (FloDown / persist)
 
@@ -140,27 +143,21 @@ declaration-only URI map.
    `addElement(definition)`. Same-fd and second-visible both work; hidden is not required. No local
    popup for declaration-only or constructed URI — MathHub `/content/fragment`. Production Title/Inhalt
    still needs those calls on a sibling/hidden defining document (D-FTML-03).
-2. **`declaredSymbols` still inferred on some saves.** `syncDeclaredSymbolsFromDefinienda` (via
-   `prepareFloDownBlockForPersist` / extract AST update) fills an empty column from definienda. That
-   contradicts D-FTML-04 (a `triangle.de.tex`-style row can have definienda and empty
-   `declaredSymbols` on purpose). Other writers only sanitize. Do **not** spread the helper; remove
-   or replace it so only `symdecl: true` / `addDeclaredSymbol` update the column. Legacy empty
-   columns stay stale until then.
-3. **Persist `for_symbols: []` (no DB backfill).** Rewrite supplies the WASM key (definienda or
+2. **Persist `for_symbols: []` (no DB backfill).** Rewrite supplies the WASM key (definienda or
    `[]`). Verbatim `addElement` of persisted JSON (lab E6) still fails. Full URI persist is
    deferred (D-FTML-01).
-4. **Constructed export URI vs declaration return value.** Module TeX still invents
+3. **Constructed export URI vs declaration return value.** Module TeX still invents
    `http://mathhub.info?a=&p=&m=&s=` from the **declaring** file. Preview hover prefers the string
    FloDown returned on the hidden declaring document. Same short name, two strings. Orphan names
    not in any `declaredSymbols` map still `addSymbolDeclaration` / canonicalize on the **current**
    file.
-5. **`getDefiningDefinitions` full-table scan** of non-discarded FloDown blocks (preview hover
+4. **`getDefiningDefinitions` full-table scan** of non-discarded FloDown blocks (preview hover
    only). Authenticated now; still not indexed by label.
-6. **Parallel rewrites.** Mark-reference LaTeX and unused `finalFloDown.ts` are not on
+5. **Parallel rewrites.** Mark-reference LaTeX and unused `finalFloDown.ts` are not on
    `prepareFloDownStatement`. Document sTeX (`generateStexFromFloDown`) declares short names on the
    **export** document and does not mount defining bodies — **S-CUR-08 on purpose**. If MathHub
    expected the defining `sdefinition` in the same file, that is a product gap, not a WASM panic.
-7. **`/flodown-lab`.** Keep until hover is signed off (Curator/Admin). Then drop or leave
+6. **`/flodown-lab`.** Keep until hover is signed off (Curator/Admin). Then drop or leave
    diagnostic-only.
 
 ### Spec debt (not blocking preview/export)

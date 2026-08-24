@@ -8,7 +8,6 @@ import {
 import { findDefiniendum } from "@/server/parseUri";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
-// Remaining issue: sanitize only; no prepareFloDownBlockForPersist (declaredSymbols sync).
 import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import {
   assertFloDownStatement,

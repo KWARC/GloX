@@ -1,62 +1,9 @@
 import { assertFloDownStatement } from "@/types/floDown.types";
 import { describe, expect, it } from "vitest";
-import {
-  prepareFloDownBlockForPersist,
-  syncDeclaredSymbolsFromDefinienda,
-} from "./declaredSymbols";
-
-describe("syncDeclaredSymbolsFromDefinienda", () => {
-  it("keeps existing declared symbols", () => {
-    expect(
-      syncDeclaredSymbolsFromDefinienda(
-        {
-          type: "definition",
-          for_symbols: [],
-          content: [
-            {
-              type: "paragraph",
-              content: [
-                {
-                  type: "definiendum",
-                  uri: "ignored",
-                  content: ["ignored"],
-                },
-              ],
-            },
-          ],
-        },
-        ["existing"],
-      ),
-    ).toEqual(["existing"]);
-  });
-
-  it("infers local definiendum names when declaredSymbols is empty", () => {
-    expect(
-      syncDeclaredSymbolsFromDefinienda(
-        {
-          type: "definition",
-          for_symbols: [],
-          content: [
-            {
-              type: "paragraph",
-              content: [
-                {
-                  type: "definiendum",
-                  uri: "production bottlenecks",
-                  content: ["production bottlenecks"],
-                },
-              ],
-            },
-          ],
-        },
-        [],
-      ),
-    ).toEqual(["production bottlenecks"]);
-  });
-});
+import { prepareFloDownBlockForPersist } from "./declaredSymbols";
 
 describe("prepareFloDownBlockForPersist", () => {
-  it("sanitizes statement and syncs declaredSymbols", () => {
+  it("strips symdecl and keeps an empty declaredSymbols list", () => {
     const { statement, declaredSymbols } = prepareFloDownBlockForPersist(
       assertFloDownStatement({
         type: "definition",
@@ -87,6 +34,54 @@ describe("prepareFloDownBlockForPersist", () => {
         },
       ],
     });
-    expect(declaredSymbols).toEqual(["Foo"]);
+    expect(declaredSymbols).toEqual([]);
+  });
+
+  it("does not copy definiendum names into declaredSymbols", () => {
+    const { declaredSymbols } = prepareFloDownBlockForPersist(
+      {
+        type: "definition",
+        for_symbols: [],
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "definiendum",
+                uri: "triangle",
+                content: ["Dreieck"],
+              },
+            ],
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(declaredSymbols).toEqual([]);
+  });
+
+  it("keeps caller-supplied declaredSymbols", () => {
+    const { declaredSymbols } = prepareFloDownBlockForPersist(
+      {
+        type: "definition",
+        for_symbols: [],
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "definiendum",
+                uri: "triangle",
+                content: ["triangle"],
+              },
+            ],
+          },
+        ],
+      },
+      ["triangle"],
+    );
+
+    expect(declaredSymbols).toEqual(["triangle"]);
   });
 });
