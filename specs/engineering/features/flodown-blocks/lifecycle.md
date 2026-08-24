@@ -77,8 +77,8 @@ erDiagram
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `statement` | JSON (FTML) | `definition` or `paragraph` per `statement.type` |
-| `declaredSymbols` | `string[]` | Symbol names introduced via symdecl definienda |
+| `statement` | JSON (FTML) | `definition` or `paragraph` per `statement.type`. Local `uri` values are short names (D-FTML-01). On persist, definition `for_symbols` is written as `[]`; FloDown still needs the key at `addElement` (rewrite fills it). |
+| `declaredSymbols` | `string[]` | Names this block **declares** (E-FTML-06 / D-FTML-04), not every definiendum. Persist MUST NOT copy definienda into this column. |
 | `currentVersion` | int | Incremented on each edit |
 | Export identity | `futureRepo`, `filePath`, `fileName`, `language` | Set at creation from Document or module context |
 
@@ -167,9 +167,13 @@ that Document or holds Admin role before proceeding.
 - Module-description-scoped block ownership rules — `moduleDescription.server.ts` uses separate
   auth helper; not yet traced to SDD rules.
 - `updateFloDownBlockAst` semantic edit path — same ownership gap as BUG-001.
+- Persist hygiene: `syncDeclaredSymbolsFromDefinienda` infers declarations from definienda and
+  contradicts D-FTML-04 / E-FTML-06. Do not apply it on remaining write paths. See
+  [`ftml.md` remaining issues](../../external-deps/libraries/ftml.md#remaining-issues-not-blocking-the-persistboundary-split).
 
 ## Related docs
 
+- [`../../decisions/flodown-persist-and-boundary.md`](../../decisions/flodown-persist-and-boundary.md)
 - [`flodown-blocks.md`](../../../prds/domains/flodown-blocks.md)
 - [`../../external-deps/libraries/ftml.md`](../../external-deps/libraries/ftml.md)
 - [`../auth/auth-sessions.md`](../auth/auth-sessions.md)

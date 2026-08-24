@@ -35,6 +35,8 @@ function stripBlockForPersist(block: PersistedBlock): PersistedBlock {
   if (isDefinitionNode(block)) {
     return {
       ...block,
+      // Remaining issue: persist always empties for_symbols. WASM still needs the key at addElement;
+      // rewrite fills it (D-FTML-01). Legacy rows that skipped sanitize omit the key entirely.
       for_symbols: [],
       content: block.content.map((inner) => {
         if (inner.type !== "paragraph") return inner;
@@ -64,7 +66,10 @@ export function sanitizeStatementForPersist(
   return unwrapRoot(stripped);
 }
 
-/** When `declaredSymbols` is empty, infer local symbol names from definienda in the statement. */
+/** When `declaredSymbols` is empty, copy local definiendum names into the column.
+ * Remaining issue (D-FTML-04 / E-FTML-06): this infers **declaration** from **definienda**.
+ * A second-language definition of an imported symbol (triangle.de.tex) can have definienda and
+ * empty declaredSymbols on purpose. Do not spread this helper to more save paths. */
 export function syncDeclaredSymbolsFromDefinienda(
   statement: FloDownStatement,
   existing: readonly string[],

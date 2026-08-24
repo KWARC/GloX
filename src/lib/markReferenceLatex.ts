@@ -7,6 +7,8 @@ import {
 } from "@/lib/flodownUris";
 import { parseUri } from "@/server/parseUri";
 import { isHttp } from "@/server/ftml/generateStexFromFtml";
+// Remaining issue: isHttp is re-exported from generateStexFromFtml; the definition lives in
+// statementContent.ts. Import the source module when touching this file.
 import type {
   FloDownContent,
   Inline,
@@ -52,6 +54,7 @@ function rewriteContent(
   content: FloDownContent[],
   identity: MarkReferenceLatexIdentity,
 ): FloDownContent[] {
+  // Remaining issue: own URI rewrite; does not use mountStatementOnFloDown / addSymbolDeclaration.
   return content.map((item) => {
     if (typeof item === "string") return item;
     if (item.type !== "symref") return item;

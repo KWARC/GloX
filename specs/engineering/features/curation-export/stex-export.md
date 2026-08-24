@@ -6,6 +6,7 @@ upstream:
 compliance: []
 code:
   - src/server/ftml/generateStexFromFtml.ts
+  - src/lib/prepareFloDownStatement.ts
   - src/server/ftml/addProvenanceData.ts
   - src/serverFns/floDownBlockAggregate.server.ts
   - src/serverFns/floDownBlockProvenance.server.ts
@@ -16,8 +17,8 @@ code:
 
 ## Domain context
 
-Owns combining FloDown blocks into export statements, resolving local symbol references to
-MathHub-canonical HTTP URIs, passing through external MathHub URIs, and injecting provenance comments
+Owns combining FloDown blocks into export statements, rewriting short local symbol names at the
+FloDown boundary (D-FTML-01), passing through external MathHub URIs, and injecting provenance comments
 into generated sTeX.
 
 Out of scope:
@@ -31,8 +32,9 @@ Out of scope:
 | Layer | Responsibility |
 | --- | --- |
 | `src/serverFns/floDownBlockAggregate.server.ts` | Combines FloDown block statements for a file identity into one export document. |
-| `src/server/ftml/generateStexFromFtml.ts` | Mounts FTML in FloDown WASM, rewrites local URIs, and serializes sTeX. |
-| `src/serverFns/getSymbolUriMap.server.ts` | Resolves defining definitions for external local labels referenced during export. |
+| `src/server/ftml/generateStexFromFtml.ts` | Creates a FloDown document with `fromUri`, mounts each top-level block through `mountStatementOnFloDown`, and serializes sTeX. |
+| `src/lib/prepareFloDownStatement.ts` | Rewrites short local names via `addSymbolDeclaration` (or a known-URI map) before `addElement`. |
+| `src/serverFns/getSymbolUriMap.server.ts` | Resolves defining definitions for local labels. Used by **preview hover**, not by `generateStexFromFloDown` after the boundary cleanup. |
 | `src/serverFns/floDownBlockProvenance.server.ts` | Loads provenance metadata (document, page, timestamps) per contributing block. |
 | `src/server/ftml/addProvenanceData.ts` | Appends provenance comment lines to generated sTeX. |
 
@@ -40,16 +42,16 @@ Out of scope:
 
 | Concern | Rule |
 | --- | --- |
-| Local URI rewrite | Short `symbolName` → `http://mathhub.info?a={futureRepo}&p={filePath}&m={fileName}&s={uri}` (or `uriMap` / `addSymbolDeclaration` override) |
-| MathHub URI | `http(s)://mathhub.info?...` left unchanged |
+| Local URI rewrite | Short `symbolName` → FloDown symbol URI via `addSymbolDeclaration` on the export document, or a known map of already-declared URIs. Fallback shape `http://mathhub.info?a={futureRepo}&p={filePath}&m={fileName}&s={uri}` (D-FTML-01). |
+| MathHub URI | `http(s)://mathhub.info?...` canonicalized if needed; not stored back to the database |
 | Provenance | `%%%` comment lines from `injectProvenance` |
-| Export dependency scope | The exporting file identity plus definitions reachable via `uriMap` / defining FloDown blocks for referenced local symbols (see `getSymbolUriMap`) |
+| Export dependency scope | The exporting file identity. Defining FloDown blocks are **not** copied into the sTeX document. |
 
 ## Business rules
 
 **S-CUR-04 (Event-Driven):** WHEN `generateStexFromFloDown` runs, the system MUST rewrite local symbol
-references in export FTML to MathHub-canonical HTTP form using the exporting module's file identity
-(and dependency `uriMap` when present).
+references in export FTML to FloDown symbol URIs using `mountStatementOnFloDown` and the exporting
+file identity (D-FTML-01).
 
 **Upstream:** R-CUR-04
 
@@ -58,14 +60,14 @@ provenance metadata for each contributing FloDown block via `injectProvenance`.
 
 **Upstream:** R-CUR-05
 
-**S-CUR-06 (Ubiquitous):** External MathHub URIs in statements MUST pass through `rewriteInlineUris`
-unchanged.
+**S-CUR-06 (Ubiquitous):** External MathHub URIs in statements MUST pass through the FloDown rewrite
+unchanged except for canonicalization of query shape (no `l=` on symbol URIs).
 
 **Upstream:** R-CUR-06
 
-**S-CUR-08 (Ubiquitous):** WHEN a defining definition for a referenced local symbol exists in the
-export dependency scope, the system MUST resolve that symbol for export rather than leaving an
-unresolved local short name in the serialized sTeX.
+**S-CUR-08 (Ubiquitous):** WHEN a referenced local symbol is a short name, the system MUST NOT leave
+that short name in `addElement` payload. The export document MUST declare the name (or use a known
+FloDown URI). The defining FloDown block body MUST NOT be copied into the exported sTeX file.
 
 **Upstream:** R-CUR-08
 
@@ -80,6 +82,7 @@ unresolved local short name in the serialized sTeX.
 
 ## Related docs
 
+- [`../../decisions/flodown-persist-and-boundary.md`](../../decisions/flodown-persist-and-boundary.md)
 - [`curation-export.md`](../../../prds/domains/curation-export.md)
 - [`queue.md`](./queue.md)
 - [`../../external-deps/libraries/ftml.md`](../../external-deps/libraries/ftml.md)

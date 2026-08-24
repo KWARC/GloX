@@ -14,6 +14,7 @@ import {
 } from "@/server/ftml/astOperations";
 import { extractPlainText } from "@/server/ftml/statementContent";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
+// Remaining issue: module description writes use sanitize only, not prepareFloDownBlockForPersist.
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { parseUri, SemanticOperation, transform } from "@/server/parseUri";

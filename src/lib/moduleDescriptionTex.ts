@@ -107,6 +107,7 @@ export async function generateModuleDescriptionModuleTex(
     moduleIdentity,
   ) as FloDownWasmBlock;
 
+  // Remaining issue: constructed MathHub URIs, not addSymbolDeclaration return values (preview hover).
   const knownUris = buildModuleLocalSymbolUriMap(input.definitionBlocks);
   const moduleStatement = buildModuleDescriptionStatement(input);
 

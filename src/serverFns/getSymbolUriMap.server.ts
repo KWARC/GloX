@@ -18,6 +18,8 @@ export const getDefiningDefinitions = createServerFn({ method: "POST" })
     if (!data.labels.length) return {};
 
     const floDownBlocks = await prisma.floDownBlock.findMany({
+      // Remaining issue: scans every non-discarded FloDown block. Fine for small DBs; not keyed
+      // by export identity or label index. Preview hover is the remaining caller.
       where: { status: { not: "DISCARDED" } },
       select: { statement: true, declaredSymbols: true },
     });

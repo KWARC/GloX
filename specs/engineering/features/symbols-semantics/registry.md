@@ -16,8 +16,9 @@ code:
 
 ## Domain context
 
-Owns local `Symbol` catalog creation via definienda, uniqueness, association tracking, guarded
-deletion, and duplicate confirmation.
+Owns local `Symbol` catalog creation via **symbol declaration** (`symdecl: true` on a definiendum),
+uniqueness, association tracking, guarded deletion, and duplicate confirmation. A later definition
+MAY use a definiendum for the same symbol without declaring it again (E-FTML-06).
 
 Out of scope:
 
@@ -100,3 +101,5 @@ search/list handlers lack auth).
 - [`propagation.md`](./propagation.md)
 - [`search.md`](./search.md)
 - [`../flodown-blocks/lifecycle.md`](../flodown-blocks/lifecycle.md)
+- [`../../external-deps/libraries/ftml.md`](../../external-deps/libraries/ftml.md) — E-FTML-06
+- [`../../decisions/flodown-persist-and-boundary.md`](../../decisions/flodown-persist-and-boundary.md) — D-FTML-04

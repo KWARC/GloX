@@ -40,6 +40,8 @@ function resolveUri(
   }
 
   if (!isHttp(uri)) {
+    // Remaining issue: callers may pass constructed MathHub URIs here (module export) instead of
+    // addSymbolDeclaration return values (preview hover). Same short name, two URI sources. D-FTML-01.
     if (knownUris?.has(uri)) {
       const to = knownUris.get(uri)!;
       declared.set(uri, to);
@@ -183,13 +185,14 @@ function rewriteNode(
       ? (next.for_symbols as unknown[])
       : [];
     const fromDefinienda = collectDefiniendumUris(next.content);
+    // FloDown for_symbols = symbols this definition is **for** (may be imported). Not declaredSymbols.
     next.for_symbols = existing.length > 0 ? existing : fromDefinienda;
   }
 
   return next;
 }
 
-/** Clone GloX persisted JSON into FloDown-valid blocks. Does not write the DB. */
+/** Clone GloX persisted JSON into FloDown-valid blocks. Does not write the DB (D-FTML-01). */
 export function rewriteStatementForFloDown(
   statement: unknown,
   block: DeclareBlock,

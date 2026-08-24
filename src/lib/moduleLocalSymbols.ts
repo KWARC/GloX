@@ -20,6 +20,8 @@ export function buildLocalSymbolUri(
   fileName: string,
   symbolName: string,
 ): string {
+  // Remaining issue: invents a MathHub symbol URI without a live FloDown declaration. Preview hover
+  // needs the declaration return value (D-FTML-03). Export still uses this map.
   return symbolUri(
     symbolIdentityFromGlox({
       futureRepo,
@@ -40,6 +42,9 @@ export function collectDeclaredSymbolsForDefinitionBlock(
     if (label) symbols.add(label);
   }
 
+  // Remaining issue (E-FTML-06): also unions definiendum uris, then buildModuleLocalSymbolUriMap
+  // builds a URI from **this** block's file identity. An importing definition (triangle.de.tex)
+  // should keep the declaring file's URI, not mint a new one here.
   for (const uri of collectDefiniendumUris(block.statement)) {
     if (!uri.startsWith("http://") && !uri.startsWith("https://")) {
       symbols.add(uri);

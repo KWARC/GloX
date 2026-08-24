@@ -13,16 +13,21 @@ code:
 
 # PRD: Symbols & semantics
 
-Symbols name concepts in the local catalog. Definienda declare concepts in definitions; symrefs link
-to local Symbols or MathHub URIs. This PRD covers symbol creation, search, propagation,
-deduplication, and Wikipedia-assisted definition authoring for **new** Symbols.
+Symbols name concepts in the local catalog. A symbol is declared once; definienda in definitions
+name or verbalize that symbol (E-FTML-06). Symrefs link to local Symbols or MathHub URIs. This PRD
+covers symbol creation, search, propagation, deduplication, and Wikipedia-assisted definition
+authoring for **new** Symbols.
 
 ## Business rules
 
 ### Product outcomes
 
-**R-SYM-01 (Event-Driven):** WHEN an Extractor, Curator, or Admin marks a definiendum in a FloDown
-block, the system MUST create or associate a Symbol with the block's export identity.
+**R-SYM-01 (Event-Driven):** WHEN an Extractor, Curator, or Admin **declares** a symbol on a FloDown
+block (definiendum with `symdecl: true`), the system MUST create or associate a Symbol with the
+block's export identity.
+
+**Rationale:** A definiendum can name an already-declared symbol (E-FTML-06). Only a declaration
+creates or owns the Symbol URI.
 
 **R-SYM-02 (Ubiquitous):** The system MUST enforce unique Symbols per (symbol name, future repository,
 file path, file name, language) tuple.

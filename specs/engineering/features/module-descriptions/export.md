@@ -6,6 +6,7 @@ upstream:
 compliance: []
 code:
   - src/lib/moduleDescriptionTex.ts
+  - src/lib/prepareFloDownStatement.ts
   - src/lib/flodownUris.ts
   - src/components/module-descriptions/ModuleDescriptionLatexModal.tsx
   - src/routes/module-description/$moduleId.tsx
@@ -30,8 +31,9 @@ Out of scope (sibling specs):
 | Layer | Responsibility |
 | --- | --- |
 | `src/routes/module-description/$moduleId.tsx` | Shows Preview LaTeX only for Curator or Admin and invokes client-side TeX generation. |
-| `src/lib/moduleDescriptionTex.ts` | Builds the combined module FTML document and serializes module and definition sTeX via FloDown WASM in the browser. |
-| `src/lib/moduleLocalSymbols.ts` | Maps local Symbol names from definition blocks into URI maps used when serializing the module file. |
+| `src/lib/moduleDescriptionTex.ts` | Builds the combined module FTML document and serializes module and definition sTeX via FloDown WASM in the browser. Mounts **only** the file being exported (D-FTML-03 for preview; export does not copy sibling definition bodies). |
+| `src/lib/prepareFloDownStatement.ts` | Shared rewrite before `addElement`. |
+| `src/lib/moduleLocalSymbols.ts` | Builds a map of short names to **constructed** MathHub symbol URIs for sibling symbols in the module file. Remaining issue: export does not use `addSymbolDeclaration` return values the way preview hover does. |
 | `ModuleDescriptionLatexModal` | Displays generated module and definition TeX for copy or download. |
 | FloDown WASM (`initFloDown`) | Serializes mounted FTML blocks to sTeX; must run in the browser. |
 
@@ -77,10 +79,14 @@ users; only Curator and Admin may invoke export.
 - Export is client-only (browser WASM); there is no server-side TeX persistence for modules comparable
   to Document `LatexTable`.
 - Exact sTeX macros and URI rewrite details for local symbols at export time are owned by
-  [`stex-export.md`](../curation-export/stex-export.md) and [`ftml.md`](../../external-deps/libraries/ftml.md).
+  [`stex-export.md`](../curation-export/stex-export.md) and [`ftml.md`](../../external-deps/libraries/ftml.md)
+  (D-FTML-01).
+- Preview of Title/Inhalt/Lernziele uses a hidden FloDown document for local **symref** hover
+  (D-FTML-03). That is not part of the TeX files.
 
 ## Related docs
 
+- [`../../decisions/flodown-persist-and-boundary.md`](../../decisions/flodown-persist-and-boundary.md)
 - [`module-descriptions.md`](../../../prds/domains/module-descriptions.md)
 - [`workspace.md`](./workspace.md)
 - [`../../external-deps/libraries/ftml.md`](../../external-deps/libraries/ftml.md)

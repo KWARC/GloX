@@ -9,11 +9,16 @@ import {
 
 export { isHttp };
 
+// Remaining issue (S-CUR-08): this path no longer mounts defining FloDown blocks for referenced
+// local names. Short names are declared on the export document only. Contrast moduleDescriptionTex,
+// which uses constructed sibling URIs. Fold remaining rewrites into prepareFloDownStatement.
+
 export async function generateStexFromFloDown(
   statement: FloDownStatement,
   futureRepo: string,
   filePath: string,
   fileName: string,
+  // Remaining issue: unused after boundary cleanup. Callers still pass per-block declaredSymbols.
   _declaredSymbolsPerBlock: readonly (readonly string[])[] = [],
   language = "en",
 ): Promise<string> {
