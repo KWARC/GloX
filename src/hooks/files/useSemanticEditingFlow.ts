@@ -204,6 +204,7 @@ export function useSemanticEditingFlow({
             target: { type: "definiendum", uri: editingNodeId },
             payload,
           },
+          ...(isDeclared ? { declaredSymbolName: params.symbolName } : {}),
         },
       });
     } else {
@@ -351,6 +352,7 @@ export function useSemanticEditingFlow({
     floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
     payload: ReplacePayload,
+    options?: { declaredSymbolName?: string },
   ) {
     const result = await updateFloDownBlockAst({
       data: {
@@ -360,6 +362,9 @@ export function useSemanticEditingFlow({
           target,
           payload,
         },
+        ...(options?.declaredSymbolName
+          ? { declaredSymbolName: options.declaredSymbolName }
+          : {}),
       },
     });
 

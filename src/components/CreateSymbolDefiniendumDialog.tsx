@@ -1,3 +1,4 @@
+import { createDeclarationRecord } from "@/server/declaredSymbolsInfo";
 import type { CreatedSymbolTarget } from "@/serverFns/createFloDownBlockWithDeclaredSymbol.server";
 import {
   Button,
@@ -107,6 +108,13 @@ export function CreateSymbolDefiniendumDialog({
                 <FtmlPreview
                   docId={target.floDownBlock.id}
                   ftmlAst={target.floDownBlock.statement}
+                  declaredSymbols={[target.symbol.id]}
+                  declaredSymbolsInfo={[
+                    createDeclarationRecord({
+                      symbolName: target.symbol.symbolName,
+                      symbolUri: target.symbol.id,
+                    }),
+                  ]}
                 />
               </div>
             </Paper>

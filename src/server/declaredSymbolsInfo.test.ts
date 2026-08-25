@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  catalogDeclaresUri,
   createDeclarationRecord,
   declaredUrisFromJson,
+  isDeclaredLocalUri,
+  localDeclarationUris,
   matchesCatalogQuery,
   otherBlockDeclaresUri,
   parseDeclaredSymbolsInfo,
@@ -15,6 +18,54 @@ import {
 const SAMPLE_URI = "http://mathhub.info?a=smglom/g&p=mod&m=t&s=triangle";
 const OTHER_URI = "http://mathhub.info?a=smglom/g&p=mod&m=t&s=angle";
 const MATHHUB = "http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean%20algebra";
+
+describe("isDeclaredLocalUri", () => {
+  it("matches catalog URIs, not MathHub-vs-HTTP guessing", () => {
+    expect(isDeclaredLocalUri([SAMPLE_URI], SAMPLE_URI)).toBe(true);
+    expect(isDeclaredLocalUri([SAMPLE_URI], MATHHUB)).toBe(false);
+    expect(isDeclaredLocalUri([], SAMPLE_URI)).toBe(false);
+  });
+});
+
+describe("catalogDeclaresUri", () => {
+  it("treats a URI as local when any live catalog row declares it", () => {
+    expect(
+      catalogDeclaresUri(
+        [
+          {
+            declaredSymbolsInfo: [
+              { symbolName: "triangle", symbolUri: SAMPLE_URI },
+            ],
+          },
+        ],
+        SAMPLE_URI,
+      ),
+    ).toBe(true);
+    expect(
+      catalogDeclaresUri(
+        [
+          {
+            declaredSymbolsInfo: [
+              { symbolName: "triangle", symbolUri: SAMPLE_URI },
+            ],
+          },
+        ],
+        MATHHUB,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("localDeclarationUris", () => {
+  it("prefers catalog URIs over a URI-list fallback", () => {
+    expect(
+      localDeclarationUris(
+        [{ symbolName: "triangle", symbolUri: SAMPLE_URI }],
+        [OTHER_URI],
+      ),
+    ).toEqual([SAMPLE_URI]);
+  });
+});
 
 describe("parseDeclaredSymbolsInfo", () => {
   it("keeps valid records and drops incomplete ones", () => {

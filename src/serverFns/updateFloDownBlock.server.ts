@@ -1,6 +1,9 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
-import { declaredUrisFromJson } from "@/server/declaredSymbolsInfo";
+import {
+  catalogDeclaresUri,
+  declaredUrisFromJson,
+} from "@/server/declaredSymbolsInfo";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import {
   addDeclaredSymbol,
@@ -20,31 +23,20 @@ export type UpdateFloDownBlockAstResult =
 
 export const updateFloDownBlockAst = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { floDownBlockId: string; operation: SemanticOperation }) => data,
+    (data: {
+      floDownBlockId: string;
+      operation: SemanticOperation;
+      declaredSymbolName?: string;
+    }) => data,
   )
   .handler(async ({ data }): Promise<UpdateFloDownBlockAstResult> => {
     const userRes = await currentUser();
     if (!userRes.loggedIn) throw new Error("Unauthorized");
     const userId = userRes.user.id;
 
-    const isLocalToMathHubConversion =
-      data.operation.kind === "replaceSemantic" &&
-      (data.operation.payload.type === "symref" ||
-        (data.operation.payload.type === "definiendum" &&
-          data.operation.payload.symdecl === false)) &&
-      data.operation.payload.uri.startsWith("http") &&
-      !data.operation.target.uri.startsWith("http");
-
-    const localSymbolUri: string | null = isLocalToMathHubConversion
-      ? data.operation.target.uri
-      : null;
-
-    const mathHubUri: string | null =
-      isLocalToMathHubConversion &&
-      data.operation.kind === "replaceSemantic" &&
-      data.operation.payload.type === "definiendum"
-        ? data.operation.payload.uri
-        : null;
+    let isLocalToMathHubConversion = false;
+    let localSymbolUri: string | null = null;
+    let mathHubUri: string | null = null;
 
     await prisma.$transaction(async (tx) => {
       const def = await tx.floDownBlock.findUniqueOrThrow({
@@ -53,6 +45,28 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
       assertFloDownStatement(def.statement);
 
       const operation = data.operation;
+      const declared = declaredUrisFromJson(def.declaredSymbolsInfo);
+
+      if (operation.kind === "replaceSemantic") {
+        const liveCatalogRows = await tx.floDownBlock.findMany({
+          select: { declaredSymbolsInfo: true, status: true },
+        });
+        isLocalToMathHubConversion =
+          (operation.payload.type === "symref" ||
+            (operation.payload.type === "definiendum" &&
+              operation.payload.symdecl === false)) &&
+          declared.includes(operation.target.uri) &&
+          !catalogDeclaresUri(liveCatalogRows, operation.payload.uri);
+
+        localSymbolUri = isLocalToMathHubConversion
+          ? operation.target.uri
+          : null;
+        mathHubUri =
+          isLocalToMathHubConversion &&
+          operation.payload.type === "definiendum"
+            ? operation.payload.uri
+            : null;
+      }
 
       const newAst = sanitizeStatementForPersist(
         assertFloDownStatement(
@@ -71,13 +85,12 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
         if (!uri.startsWith("http://") && !uri.startsWith("https://")) {
           throw new Error("Symbol URI required");
         }
+        const symbolName = data.declaredSymbolName?.trim();
+        if (!symbolName) {
+          throw new Error("Symbol name required");
+        }
         await addDeclaredSymbol(tx, def.id, {
-          symbolName:
-            (Array.isArray(operation.payload.content)
-              ? operation.payload.content.find(
-                  (item): item is string => typeof item === "string",
-                )
-              : undefined)?.trim() || uri,
+          symbolName,
           symbolUri: uri,
         });
       }

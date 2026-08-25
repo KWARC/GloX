@@ -37,6 +37,7 @@ export function DefiniendumEditor({
     setSavingRename,
     selectedDefiniendum,
     canMakeNewSymbol,
+    dbResults,
     setSelectedNode,
   } = state;
 
@@ -129,9 +130,10 @@ export function DefiniendumEditor({
             <Button
               size="xs"
               style={{ flexShrink: 0 }}
-              disabled={!canMakeNewSymbol}
+              disabled={!canMakeNewSymbol || !dbResults.some((r) => r.symbolUri === selectedUri)}
               onClick={async () => {
-                const newUri = selectedUri;
+                const dbHit = dbResults.find((r) => r.symbolUri === selectedUri);
+                if (!dbHit) return;
                 await handleReplaceNode(
                   floDownBlock.id,
                   {
@@ -140,13 +142,14 @@ export function DefiniendumEditor({
                   },
                   {
                     type: "definiendum",
-                    uri: newUri,
+                    uri: dbHit.symbolUri,
                     symdecl: true,
                   },
+                  { declaredSymbolName: dbHit.symbolName },
                 );
                 setSelectedNode({
                   type: "definiendum",
-                  uri: newUri,
+                  uri: dbHit.symbolUri,
                 });
                 setSelectedUri("");
               }}

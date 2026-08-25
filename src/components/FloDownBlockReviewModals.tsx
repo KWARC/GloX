@@ -10,7 +10,10 @@ import { FtmlPreview } from "./FtmlPreview";
 type DuplicateFloDownBlock = Pick<
   ExtractedItem,
   "id" | "originalText" | "statement" | "pageNumber"
->;
+> & {
+  declaredSymbols?: string[];
+  declaredSymbolsInfo?: unknown;
+};
 
 export function DuplicateFloDownBlockModal({
   opened,
@@ -49,6 +52,8 @@ export function DuplicateFloDownBlockModal({
               <FtmlPreview
                 docId={`duplicate-review-${floDownBlock.id}`}
                 ftmlAst={floDownBlock.statement}
+                declaredSymbols={floDownBlock.declaredSymbols}
+                declaredSymbolsInfo={floDownBlock.declaredSymbolsInfo}
               />
             </Paper>
           </Stack>
@@ -105,6 +110,8 @@ export function FloDownBlockDeleteModal({
           <FtmlPreview
             docId={`delete-review-${floDownBlock.id}`}
             ftmlAst={floDownBlock.statement}
+            declaredSymbols={floDownBlock.declaredSymbols}
+            declaredSymbolsInfo={floDownBlock.declaredSymbolsInfo}
           />
         </Paper>
         {associatedFloDownBlocks.length > 0 && (
@@ -117,6 +124,7 @@ export function FloDownBlockDeleteModal({
                 <FtmlPreview
                   docId={`delete-impact-${associated.id}`}
                   ftmlAst={assertFloDownStatement(associated.statement)}
+                  declaredSymbolsInfo={associated.declaredSymbolsInfo}
                 />
               </Paper>
             ))}

@@ -33,6 +33,7 @@ type Props = {
   onClose: () => void;
   floDownBlockId: string;
   floDownBlockStatement: FloDownStatement | null;
+  declaredSymbolsInfo?: unknown;
   originalText: string;
   suggestions: SuggestedReference[];
   catalog: CatalogEntry[];
@@ -61,6 +62,7 @@ export function ReferenceSuggestionDialog({
   onClose,
   floDownBlockId,
   floDownBlockStatement,
+  declaredSymbolsInfo,
   originalText,
   suggestions,
   catalog,
@@ -343,6 +345,7 @@ export function ReferenceSuggestionDialog({
                   <FtmlPreview
                     ftmlAst={floDownBlockStatement}
                     docId={floDownBlockId}
+                    declaredSymbolsInfo={declaredSymbolsInfo}
                   />
                 </Box>
               </Paper>

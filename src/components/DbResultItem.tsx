@@ -1,3 +1,4 @@
+import { createDeclarationRecord } from "@/server/declaredSymbolsInfo";
 import { useFloDownBlockBySymbol } from "@/serverFns/floDownBlockBySymbol.server";
 import { assertFloDownStatement } from "@/types/floDown.types";
 import {
@@ -38,11 +39,11 @@ export function DbResultItem(props: DbResultItemProps) {
   const isHighlighted =
     props.mode.type === "definiendum" &&
     "selectedUri" in props &&
-    props.selectedUri === r.symbolName;
+    props.selectedUri === r.symbolUri;
 
   function handlePaperClick() {
     if (props.mode.type === "definiendum" && "setSelectedUri" in props) {
-      props.setSelectedUri(r.symbolName);
+      props.setSelectedUri(r.symbolUri);
     }
   }
 
@@ -68,6 +69,13 @@ export function DbResultItem(props: DbResultItemProps) {
           <FtmlPreview
             ftmlAst={assertFloDownStatement(def.statement)}
             docId={def.id}
+            declaredSymbols={[r.symbolUri]}
+            declaredSymbolsInfo={[
+              createDeclarationRecord({
+                symbolName: r.symbolName,
+                symbolUri: r.symbolUri,
+              }),
+            ]}
           />
         </Box>
       )}

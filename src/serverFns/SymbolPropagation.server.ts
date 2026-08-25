@@ -1,9 +1,11 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
+import { parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import {
   astReferencesUri,
   propagateUriInAst,
 } from "@/server/ftml/convertLocalSymbolToMathHub";
+import type { DeclaredSymbolInfo } from "@/types/declaredSymbolsInfo";
 import { assertFloDownStatement, FloDownStatement } from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -15,6 +17,7 @@ export type PropagationCandidate = {
   language: string;
   pageNumber: number | null;
   statement: FloDownStatement;
+  declaredSymbolsInfo: DeclaredSymbolInfo[];
 };
 
 export const getFloDownBlocksReferencingSymbol = createServerFn({
@@ -39,6 +42,7 @@ export const getFloDownBlocksReferencingSymbol = createServerFn({
         fileName: true,
         language: true,
         pageNumber: true,
+        declaredSymbolsInfo: true,
       },
     });
 
@@ -55,6 +59,7 @@ export const getFloDownBlocksReferencingSymbol = createServerFn({
           language: def.language,
           pageNumber: def.pageNumber,
           statement: ast,
+          declaredSymbolsInfo: parseDeclaredSymbolsInfo(def.declaredSymbolsInfo),
         });
       }
     }
@@ -84,6 +89,7 @@ export const getFloDownBlocksReferencingMathHubUri = createServerFn({
         fileName: true,
         language: true,
         pageNumber: true,
+        declaredSymbolsInfo: true,
       },
     });
 
@@ -100,6 +106,7 @@ export const getFloDownBlocksReferencingMathHubUri = createServerFn({
           language: def.language,
           pageNumber: def.pageNumber,
           statement: ast,
+          declaredSymbolsInfo: parseDeclaredSymbolsInfo(def.declaredSymbolsInfo),
         });
       }
     }

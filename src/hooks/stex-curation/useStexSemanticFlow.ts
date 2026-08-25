@@ -101,6 +101,7 @@ export function useStexSemanticFlow(
     floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
     payload: ReplacePayload,
+    options?: { declaredSymbolName?: string },
   ): Promise<UpdateFloDownBlockAstResult> {
     const result = await updateFloDownBlockAst({
       data: {
@@ -110,6 +111,9 @@ export function useStexSemanticFlow(
           target,
           payload,
         },
+        ...(options?.declaredSymbolName
+          ? { declaredSymbolName: options.declaredSymbolName }
+          : {}),
       },
     });
 

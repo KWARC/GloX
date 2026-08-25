@@ -26,12 +26,18 @@ export type FloDownBlockSemantic = {
   id: string;
   statement: FloDownStatement;
   declaredSymbols?: string[];
+  declaredSymbolsInfo?: unknown;
+};
+
+export type ReplaceNodeOptions = {
+  declaredSymbolName?: string;
 };
 
 export type OnReplaceNode = (
   floDownBlockId: string,
   target: { type: "definiendum" | "symref"; uri: string },
   payload: ReplacePayload,
+  options?: ReplaceNodeOptions,
 ) => Promise<UpdateFloDownBlockAstResult>;
 
 export type OnDeleteNode = (

@@ -45,6 +45,43 @@ export function declaredUrisFromJson(value: unknown): string[] {
   return declaredSymbolUris(parseDeclaredSymbolsInfo(value));
 }
 
+export function isDeclaredLocalUri(
+  declaredUris: readonly string[] | undefined,
+  uri: string,
+): boolean {
+  const target = uri.trim();
+  if (!target) return false;
+  return (declaredUris ?? []).includes(target);
+}
+
+export function catalogDeclaresUri(
+  rows: readonly { declaredSymbolsInfo: unknown; status?: string }[],
+  symbolUri: string,
+): boolean {
+  const target = symbolUri.trim();
+  if (!target) return false;
+  for (const row of rows) {
+    if (row.status === "DISCARDED") continue;
+    if (
+      parseDeclaredSymbolsInfo(row.declaredSymbolsInfo).some(
+        (item) => item.symbolUri === target,
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function localDeclarationUris(
+  declaredSymbolsInfo: unknown,
+  fallbackUris?: readonly string[],
+): string[] {
+  const fromInfo = declaredUrisFromJson(declaredSymbolsInfo);
+  if (fromInfo.length > 0) return fromInfo;
+  return [...(fallbackUris ?? [])];
+}
+
 export function draftsFromHttpUris(
   uris: readonly string[],
 ): DeclaredSymbolDraft[] {

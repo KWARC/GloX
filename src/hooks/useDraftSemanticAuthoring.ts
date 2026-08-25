@@ -1,4 +1,6 @@
+import { createDeclarationRecord } from "@/server/declaredSymbolsInfo";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
+import type { DeclaredSymbolInfo } from "@/types/declaredSymbolsInfo";
 import {
   extractTextContent,
   pathTraversesSemanticNode,
@@ -252,12 +254,16 @@ export function useDraftSemanticAuthoring(
     buildPlainDefinitionStatement(text),
   );
   const [declaredSymbols, setDeclaredSymbols] = useState<string[]>([]);
+  const [declaredSymbolsInfo, setDeclaredSymbolsInfo] = useState<
+    DeclaredSymbolInfo[]
+  >([]);
   const [selection, setSelection] = useState<DraftSelectionRange | null>(null);
   const [popup, setPopup] = useState<DraftSelectionPopup | null>(null);
 
   useEffect(() => {
     setStatement(buildPlainDefinitionStatement(text));
     setDeclaredSymbols([]);
+    setDeclaredSymbolsInfo([]);
     setSelection(null);
     setPopup(null);
   }, [text, enabled]);
@@ -326,8 +332,17 @@ export function useDraftSemanticAuthoring(
     setStatement((current) => insertDefiniendumNode(current, selection, payload));
     if (payload.mode === "CREATE") {
       const symbolUri = payload.symbolUri.trim();
+      const record = createDeclarationRecord({
+        symbolName: payload.symbolName,
+        symbolUri,
+      });
       setDeclaredSymbols((current) =>
         current.includes(symbolUri) ? current : [...current, symbolUri],
+      );
+      setDeclaredSymbolsInfo((current) =>
+        current.some((item) => item.symbolUri === symbolUri)
+          ? current
+          : [...current, record],
       );
     }
     clearSelection();
@@ -345,6 +360,7 @@ export function useDraftSemanticAuthoring(
   return {
     statement,
     declaredSymbols,
+    declaredSymbolsInfo,
     selection,
     popup,
     hasSemantics,

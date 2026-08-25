@@ -154,7 +154,11 @@ export function SymbolPropagationDialog({
                       background: "#fff",
                     }}
                   >
-                    <FtmlPreview ftmlAst={c.statement} docId={c.id} />
+                    <FtmlPreview
+                      ftmlAst={c.statement}
+                      docId={c.id}
+                      declaredSymbolsInfo={c.declaredSymbolsInfo}
+                    />
                   </Box>
                 </Stack>
               </Paper>

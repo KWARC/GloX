@@ -13,6 +13,7 @@ import {
   normalizeToRoot,
   unwrapRoot,
 } from "@/types/floDown.types";
+import { findDeclarationByUri, parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import { ExtractBlockType } from "@/types/blockType";
@@ -266,8 +267,15 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
       const nextVersion = floDownBlock.currentVersion + 1;
       const statement = sanitizeStatementForPersist(unwrapRoot(updatedRoot));
 
+      const catalogName = findDeclarationByUri(
+        parseDeclaredSymbolsInfo(floDownBlock.declaredSymbolsInfo),
+        symbolUri,
+      )?.symbolName;
+      if (!catalogName) {
+        throw new Error("Symbol name required");
+      }
       await addDeclaredSymbol(tx, floDownBlock.id, {
-        symbolName: selectedText,
+        symbolName: catalogName,
         symbolUri,
       });
 

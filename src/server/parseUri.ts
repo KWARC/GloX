@@ -267,17 +267,7 @@ function removeSemanticNodeWithIndex(
 }
 
 function normalizeUri(u: string | undefined): string | undefined {
-  if (!u) return u;
-
-  if (u.startsWith("http")) {
-    try {
-      return new URL(u).searchParams.get("s") ?? u;
-    } catch {
-      return u;
-    }
-  }
-
-  return u;
+  return u?.trim() || u;
 }
 
 function replaceSemanticInInlines(

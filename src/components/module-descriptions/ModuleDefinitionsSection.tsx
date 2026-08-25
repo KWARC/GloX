@@ -312,6 +312,7 @@ export function ModuleDefinitionsSection({
         onClose={() => sniffyFlow.setSuggestOpen(false)}
         floDownBlockId={sniffyFlow.activeFloDownBlockId ?? ""}
         floDownBlockStatement={sniffyFlow.activeFloDownBlockStatement}
+        declaredSymbolsInfo={sniffyFlow.activeDeclaredSymbolsInfo}
         originalText={sniffyFlow.activeFloDownBlockText}
         suggestions={sniffyFlow.suggestions}
         catalog={sniffyCatalog}

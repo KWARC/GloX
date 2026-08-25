@@ -169,6 +169,8 @@ export function FtmlPreview({
   // Remaining issue (E-FTML-05): hidden documents hold definition bodies so local symref hover
   // does not mix those bodies into Title/Inhalt/Lernziele (D-FTML-03). If WASM always fetches
   // MathHub /content/fragment, this still 404s. Lab E7 same-fd / two-visible hover was not re-recorded.
+  // Hover lookup loads statement JSON only for catalog URI hits; MathHub-only refs still scan
+  // declaredSymbolsInfo rows but skip statement parse.
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLDivElement>(null);
   const fdVisibleRef = useRef<FloDownWasmBlock | null>(null);

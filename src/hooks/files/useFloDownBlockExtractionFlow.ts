@@ -17,6 +17,7 @@ import {
 import { createMarkReference } from "@/serverFns/markReference.server";
 import { findFloDownBlocksByIdentity } from "@/serverFns/extractFloDownBlock.server";
 import { FloDownStatement } from "@/types/floDown.types";
+import type { DeclaredSymbolDraft } from "@/types/declaredSymbolsInfo";
 import { ExtractBlockType } from "@/types/blockType";
 import { DocumentPage } from "generated/prisma/browser";
 import { useState } from "react";
@@ -204,11 +205,13 @@ export function useFloDownBlockExtractionFlow({
     blockType,
     statement,
     declaredSymbols,
+    declaredSymbolsInfo,
   }: {
     text: string;
     blockType: ExtractBlockType;
     statement?: FloDownStatement;
     declaredSymbols?: string[];
+    declaredSymbolsInfo?: DeclaredSymbolDraft[];
   }) {
     if (!document) return;
     if (!validateIdentity()) return;
@@ -263,6 +266,7 @@ export function useFloDownBlockExtractionFlow({
           text: editedText,
           statement,
           declaredSymbols,
+          declaredSymbolsInfo,
           futureRepo: identity.futureRepo,
           filePath: identity.filePath,
           fileName: paragraphFileName.trim(),
@@ -279,6 +283,7 @@ export function useFloDownBlockExtractionFlow({
         text: editedText,
         statement,
         declaredSymbols,
+        declaredSymbolsInfo,
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
         fileName: paragraphFileName.trim(),
@@ -308,6 +313,7 @@ export function useFloDownBlockExtractionFlow({
     blockType: ExtractBlockType;
     statement?: FloDownStatement;
     declaredSymbols?: string[];
+    declaredSymbolsInfo?: DeclaredSymbolDraft[];
   }) {
     if (!document || !validateIdentity()) return;
     const matches = await findFloDownBlocksByIdentity({

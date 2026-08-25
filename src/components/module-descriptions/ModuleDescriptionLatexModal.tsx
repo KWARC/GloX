@@ -45,11 +45,13 @@ function TexPreviewPanel({
   tex,
   ftmlStatement,
   declaredSymbols,
+  declaredSymbolsInfo,
 }: {
   fileName: string;
   tex: string;
   ftmlStatement: FloDownStatement;
   declaredSymbols?: readonly string[];
+  declaredSymbolsInfo?: unknown;
 }) {
   const [showFtml, setShowFtml] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -102,6 +104,7 @@ function TexPreviewPanel({
             ftmlAst={ftmlStatement}
             docId={`latex-preview-${fileName}`}
             declaredSymbols={declaredSymbols ? [...declaredSymbols] : undefined}
+            declaredSymbolsInfo={declaredSymbolsInfo}
           />
         </Box>
       ) : (
@@ -194,6 +197,7 @@ export function ModuleDescriptionLatexModal({
                 tex={file.tex}
                 ftmlStatement={file.ftmlStatement}
                 declaredSymbols={file.declaredSymbols}
+                declaredSymbolsInfo={file.declaredSymbolsInfo}
               />
             </Accordion.Panel>
           </Accordion.Item>

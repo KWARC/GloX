@@ -346,6 +346,7 @@ export const getFloDownBlockBySymbol = createServerFn({ method: "POST" })
         documentPageId: true,
         pageNumber: true,
         originalText: true,
+        declaredSymbolsInfo: true,
         futureRepo: true,
         filePath: true,
         fileName: true,

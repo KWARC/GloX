@@ -24,6 +24,7 @@ import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { useDraftSemanticAuthoring } from "@/hooks/useDraftSemanticAuthoring";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import { FloDownStatement } from "@/types/floDown.types";
+import type { DeclaredSymbolDraft } from "@/types/declaredSymbolsInfo";
 import { SelectionPopup } from "./SelectionPopup";
 import { WikipediaDefinitionLookup } from "./WikipediaDefinitionLookup";
 
@@ -74,6 +75,7 @@ interface ExtractTextDialogProps {
     blockType: ExtractBlockType;
     statement?: FloDownStatement;
     declaredSymbols?: string[];
+    declaredSymbolsInfo?: DeclaredSymbolDraft[];
   }) => void;
   title?: string;
   textLabel?: string;
@@ -328,6 +330,7 @@ export function ExtractTextDialog({
                 ftmlAst={draftSemantic.statement}
                 docId="draft-definition"
                 declaredSymbols={draftSemantic.declaredSymbols}
+                declaredSymbolsInfo={draftSemantic.declaredSymbolsInfo}
               />
             </div>
           </Paper>
@@ -505,6 +508,10 @@ export function ExtractTextDialog({
                 declaredSymbols:
                   enableSemanticAuthoring && semanticEnabled
                     ? draftSemantic.declaredSymbols
+                    : undefined,
+                declaredSymbolsInfo:
+                  enableSemanticAuthoring && semanticEnabled
+                    ? draftSemantic.declaredSymbolsInfo
                     : undefined,
               });
             }}

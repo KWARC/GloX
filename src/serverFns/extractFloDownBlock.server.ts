@@ -16,14 +16,14 @@ import {
 import { applyOpaqueUriReplacements } from "@/server/applyOpaqueUriReplacements";
 import {
   declaredUrisFromJson,
+  draftsFromHttpUris,
   parseDeclaredSymbolsInfo,
 } from "@/server/declaredSymbolsInfo";
 import { getInlineContent, walkInlines } from "@/server/ftml/statementContent";
 import { prepareFloDownBlockForPersist } from "@/server/ftml/declaredSymbols";
 import { ExtractBlockType, buildStatementFromText } from "@/types/blockType";
-import {
-  setDeclaredSymbols,
-} from "@/server/floDownBlockDeclaredSymbols";
+import { setDeclaredSymbolsInfo } from "@/server/floDownBlockDeclaredSymbols";
+import type { DeclaredSymbolDraft } from "@/types/declaredSymbolsInfo";
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
 
@@ -71,6 +71,7 @@ export type CreateFloDownBlockInput = {
   originalText: string;
   statement?: FloDownStatement;
   declaredSymbols?: string[];
+  declaredSymbolsInfo?: DeclaredSymbolDraft[];
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -128,6 +129,7 @@ export const getFloDownBlockDeletionImpact = createServerFn({ method: "POST" })
         statement: true,
         pageNumber: true,
         originalText: true,
+        declaredSymbolsInfo: true,
       },
     });
     return candidates.filter(
@@ -181,12 +183,16 @@ export const createFloDownBlock = createServerFn({ method: "POST" })
         data.blockType ?? "definition",
         data.originalText,
       );
-    const { statement, declaredSymbols: declaredSymbolNames } =
+    const { statement, declaredSymbols: declaredSymbolUris } =
       prepareFloDownBlockForPersist(
         rawStatement,
         data.declaredSymbols ??
           extractDeclaredSymbols(rawStatement).map((symbol) => symbol.symbolName),
       );
+    const declarationDrafts =
+      data.declaredSymbolsInfo && data.declaredSymbolsInfo.length > 0
+        ? data.declaredSymbolsInfo
+        : draftsFromHttpUris(declaredSymbolUris);
 
     await prisma.$transaction(async (tx) => {
       const def = await tx.floDownBlock.create({
@@ -207,17 +213,7 @@ export const createFloDownBlock = createServerFn({ method: "POST" })
         },
       });
 
-      await setDeclaredSymbols(
-        tx,
-        def.id,
-        declaredSymbolNames,
-        {
-          futureRepo: data.futureRepo,
-          filePath: data.filePath,
-          fileName: data.fileName,
-          language: data.language,
-        },
-      );
+      await setDeclaredSymbolsInfo(tx, def.id, declarationDrafts);
 
       await tx.floDownBlockVersion.create({
         data: {

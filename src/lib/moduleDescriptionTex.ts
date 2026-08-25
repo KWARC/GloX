@@ -13,6 +13,7 @@ export type DefinitionBlockInput = {
   id: string;
   statement: FloDownStatement;
   declaredSymbols: readonly string[];
+  declaredSymbolsInfo?: unknown;
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -35,6 +36,7 @@ export type TexFilePreview = {
   tex: string;
   ftmlStatement: FloDownStatement;
   declaredSymbols?: readonly string[];
+  declaredSymbolsInfo?: unknown;
 };
 
 type ModulePreviewBlock = PersistedBlock | HeadingNode;
@@ -152,6 +154,7 @@ export async function generateModuleDescriptionTexPreview(
       ),
       ftmlStatement: block.statement,
       declaredSymbols: block.declaredSymbols,
+      declaredSymbolsInfo: block.declaredSymbolsInfo,
     })),
   );
 
