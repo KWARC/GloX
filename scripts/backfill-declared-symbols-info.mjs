@@ -1,15 +1,18 @@
 /**
  * S-SYM-12 one-shot: fill FloDownBlock.declaredSymbolsInfo and rewrite short
- * names in current statement JSON (not FloDownBlockVersion). Temporary mint
- * lives only in this script.
+ * names in `uri` / `for_symbols` of current statement JSON (not display
+ * `content`, not FloDownBlockVersion). Temporary mint lives only in this script.
  *
  * Usage:
  *   pnpm backfill:declared-symbols-info           # dry run
  *   pnpm backfill:declared-symbols-info -- --apply
  *
- * Run after prisma migrate deploy that adds declaredSymbolsInfo.
+ * Run after:
+ *   1. prisma migrate deploy (declaredSymbolsInfo + *_bkp columns)
+ *   2. pnpm backup:statement-json -- --apply
  * Requires DATABASE_URL. Idempotent. Exits 0 if declaredSymbolsInfo is missing
  * (migrate first) or if declaredSymbols was already dropped.
+ * --apply refuses to rewrite statements until every *_bkp column is filled.
  */
 import pg from "pg";
 
@@ -105,16 +108,24 @@ function parseInfo(value) {
   return result;
 }
 
+/** Rewrite symbol identity fields only. Never rewrite display `content`. */
 function replaceOpaqueUrisInValue(value, replacements) {
-  if (typeof value === "string") {
-    return replacements.get(value) ?? value;
-  }
   if (Array.isArray(value)) {
     return value.map((item) => replaceOpaqueUrisInValue(item, replacements));
   }
   if (value && typeof value === "object") {
     const next = {};
     for (const [key, child] of Object.entries(value)) {
+      if (key === "uri" && typeof child === "string") {
+        next.uri = replacements.get(child) ?? child;
+        continue;
+      }
+      if (key === "for_symbols" && Array.isArray(child)) {
+        next.for_symbols = child.map((item) =>
+          typeof item === "string" ? (replacements.get(item) ?? item) : replaceOpaqueUrisInValue(item, replacements),
+        );
+        continue;
+      }
       next[key] = replaceOpaqueUrisInValue(child, replacements);
     }
     return next;
@@ -158,6 +169,36 @@ async function main() {
         }),
       );
       return;
+    }
+
+    if (apply) {
+      const backupCols = [
+        ["FloDownBlock", "statement_bkp"],
+        ["ModuleDescription", "titleStatement_bkp"],
+        ["ModuleDescription", "inhaltStatement_bkp"],
+        ["ModuleDescription", "lernzieleStatement_bkp"],
+      ];
+      for (const [table, column] of backupCols) {
+        if (!(await columnExists(client, table, column))) {
+          throw new Error(
+            `Missing ${table}.${column}. Migrate, then run pnpm backup:statement-json -- --apply.`,
+          );
+        }
+      }
+      const missingBlocks = await client.query(`
+        SELECT COUNT(*)::int AS n FROM "FloDownBlock" WHERE "statement_bkp" IS NULL
+      `);
+      const missingModules = await client.query(`
+        SELECT COUNT(*)::int AS n FROM "ModuleDescription"
+        WHERE "titleStatement_bkp" IS NULL
+           OR "inhaltStatement_bkp" IS NULL
+           OR "lernzieleStatement_bkp" IS NULL
+      `);
+      if (missingBlocks.rows[0].n > 0 || missingModules.rows[0].n > 0) {
+        throw new Error(
+          `statement backups incomplete (blocks=${missingBlocks.rows[0].n}, modules=${missingModules.rows[0].n}). Run pnpm backup:statement-json -- --apply first.`,
+        );
+      }
     }
 
     const { rows: blocks } = await client.query(`

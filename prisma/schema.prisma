@@ -66,6 +66,11 @@ model ModuleDescription {
   inhaltStatement    Json
   lernzieleStatement Json
 
+  /// Pre-URI-rewrite snapshot. Filled by backup:statement-json; not written by the app.
+  titleStatement_bkp     Json?
+  inhaltStatement_bkp    Json?
+  lernzieleStatement_bkp Json?
+
   futureRepo      String @default("courses/FAU/module-descriptions")
   modulesFilePath String @default("modules")
   defsFilePath    String @default("defs")
@@ -156,6 +161,9 @@ model FloDownBlock {
 
   originalText String @db.Text
   statement    Json
+
+  /// Pre-URI-rewrite snapshot. Filled by backup:statement-json; not written by the app.
+  statement_bkp Json?
 
   /// @deprecated Prefer declaredSymbolsInfo.symbolUri; retained for existing data.
   declaredSymbols String[] @default([])
