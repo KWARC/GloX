@@ -3,7 +3,10 @@ import {
   listModuleDescriptionsForTexExport,
   searchModuleDescriptions,
 } from "@/serverFns/moduleDescription.server";
-import { generateAllModuleDescriptionTexFiles } from "@/lib/moduleDescriptionTexExport";
+import {
+  generateAllModuleDescriptionTexFiles,
+  ModuleDescriptionTexBulkExportError,
+} from "@/lib/moduleDescriptionTexExport";
 import {
   downloadTexFilesAsZip,
   MODULE_DESCRIPTIONS_TEX_ZIP_FILE_NAME,
@@ -56,6 +59,7 @@ function ModuleDescriptionsPage() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportPartialSuccess, setExportPartialSuccess] = useState(false);
 
   const [listPage, setListPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<IndexStatus | null>(null);
@@ -89,12 +93,23 @@ function ModuleDescriptionsPage() {
       if (modules.length === 0) {
         throw new Error("No module descriptions to export");
       }
-      const files = await generateAllModuleDescriptionTexFiles(modules);
-      downloadTexFilesAsZip(files, MODULE_DESCRIPTIONS_TEX_ZIP_FILE_NAME);
+      const { files, failures } = await generateAllModuleDescriptionTexFiles(modules);
+      if (files.length > 0) {
+        downloadTexFilesAsZip(files, MODULE_DESCRIPTIONS_TEX_ZIP_FILE_NAME);
+      }
+      if (failures.length > 0) {
+        throw new ModuleDescriptionTexBulkExportError(failures, files.length);
+      }
     },
-    onMutate: () => setExportError(null),
+    onMutate: () => {
+      setExportError(null);
+      setExportPartialSuccess(false);
+    },
     onError: (error) => {
       setExportError(error instanceof Error ? error.message : String(error));
+      setExportPartialSuccess(
+        error instanceof ModuleDescriptionTexBulkExportError && error.partialSuccess,
+      );
     },
   });
 
@@ -230,8 +245,17 @@ function ModuleDescriptionsPage() {
         </Group>
 
         {exportError && (
-          <Alert color="red" title="LaTeX export failed">
-            {exportError}
+          <Alert
+            color={exportPartialSuccess ? "yellow" : "red"}
+            title={
+              exportPartialSuccess
+                ? "LaTeX export completed with failures"
+                : "LaTeX export failed"
+            }
+          >
+            <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+              {exportError}
+            </Text>
           </Alert>
         )}
 

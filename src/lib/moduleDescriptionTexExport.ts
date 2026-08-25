@@ -8,6 +8,17 @@ import {
 } from "@/lib/moduleDescriptionTex";
 import type { TexZipFile } from "@/lib/texZipExport";
 
+export type ModuleDescriptionTexExportFailure = {
+  moduleId: string;
+  phase?: string;
+  message: string;
+};
+
+export type ModuleDescriptionTexExportResult = {
+  files: TexZipFile[];
+  failures: ModuleDescriptionTexExportFailure[];
+};
+
 export class ModuleDescriptionTexExportError extends Error {
   readonly moduleId: string;
   readonly phase?: string;
@@ -21,6 +32,33 @@ export class ModuleDescriptionTexExportError extends Error {
     this.phase = phase;
     if (cause instanceof Error) this.cause = cause;
   }
+
+  toFailure(): ModuleDescriptionTexExportFailure {
+    return {
+      moduleId: this.moduleId,
+      phase: this.phase,
+      message: this.message,
+    };
+  }
+}
+
+export class ModuleDescriptionTexBulkExportError extends Error {
+  readonly failures: readonly ModuleDescriptionTexExportFailure[];
+  readonly exportedFileCount: number;
+
+  constructor(
+    failures: readonly ModuleDescriptionTexExportFailure[],
+    exportedFileCount: number,
+  ) {
+    super(formatExportFailures(failures));
+    this.name = "ModuleDescriptionTexBulkExportError";
+    this.failures = failures;
+    this.exportedFileCount = exportedFileCount;
+  }
+
+  get partialSuccess(): boolean {
+    return this.exportedFileCount > 0;
+  }
 }
 
 const LOG = "[module-descriptions export]";
@@ -32,6 +70,17 @@ function log(message: string): void {
 function fail(moduleId: string, phase: string, cause: unknown): never {
   console.error(`${LOG} Failed on module ${moduleId} (${phase})`, cause);
   throw new ModuleDescriptionTexExportError(moduleId, phase, cause);
+}
+
+function formatExportFailures(
+  failures: readonly ModuleDescriptionTexExportFailure[],
+): string {
+  if (failures.length === 0) return "LaTeX export failed";
+  if (failures.length === 1) return failures[0].message;
+  return [
+    `${failures.length} module descriptions failed to export:`,
+    ...failures.map((failure) => `- ${failure.message}`),
+  ].join("\n");
 }
 
 async function runPhase<T>(
@@ -81,20 +130,30 @@ async function generateTrackedPreview(
 
 export async function generateAllModuleDescriptionTexFiles(
   modules: readonly GenerateModuleTexInput[],
-): Promise<TexZipFile[]> {
+): Promise<ModuleDescriptionTexExportResult> {
   const files: TexZipFile[] = [];
+  const failures: ModuleDescriptionTexExportFailure[] = [];
 
   for (let index = 0; index < modules.length; index++) {
     const input = modules[index];
     const { moduleId } = input;
     log(`Processing module ${moduleId} (${index + 1}/${modules.length})`);
 
-    const preview = await generateTrackedPreview(input, (phase) =>
-      log(`${moduleId}: ${phase}`),
-    );
-    files.push(...flattenPreview(preview));
-    log(`${moduleId}: done`);
+    try {
+      const preview = await generateTrackedPreview(input, (phase) =>
+        log(`${moduleId}: ${phase}`),
+      );
+      files.push(...flattenPreview(preview));
+      log(`${moduleId}: done`);
+    } catch (error) {
+      if (error instanceof ModuleDescriptionTexExportError) {
+        failures.push(error.toFailure());
+        log(`Skipping module ${moduleId} after failure`);
+        continue;
+      }
+      throw error;
+    }
   }
 
-  return files;
+  return { files, failures };
 }
