@@ -41,8 +41,9 @@ Document, the system MUST return cached suggestions when the document full-text 
 system MUST update the Document and all dependent curated content (FloDown blocks, symbols, and
 export artifacts) in one transaction.
 
-**R-DOC-08 (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST leave
-existing inline symbol references in block content unchanged.
+**R-DOC-08 (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST replace
+previous local symbol URIs for declarations on that Document with the new FloDown URIs, and MUST
+NOT change other symbol URIs.
 
 ### Binding operator / compliance promises
 

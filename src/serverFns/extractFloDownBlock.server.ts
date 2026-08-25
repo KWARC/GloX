@@ -13,12 +13,17 @@ import {
   isDefiniendumNode,
   normalizeToRoot,
 } from "@/types/floDown.types";
-import { getInlineContent, walkInlines } from "@/server/ftml/statementContent";
-import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
-import { ExtractBlockType, buildStatementFromText } from "@/types/blockType";
+import { applyOpaqueUriReplacements } from "@/server/applyOpaqueUriReplacements";
 import {
-  setDeclaredSymbols,
-} from "@/server/floDownBlockDeclaredSymbols";
+  declaredUrisFromJson,
+  draftsFromHttpUris,
+  parseDeclaredSymbolsInfo,
+} from "@/server/declaredSymbolsInfo";
+import { getInlineContent, walkInlines } from "@/server/ftml/statementContent";
+import { prepareFloDownBlockForPersist } from "@/server/ftml/declaredSymbols";
+import { ExtractBlockType, buildStatementFromText } from "@/types/blockType";
+import { setDeclaredSymbolsInfo } from "@/server/floDownBlockDeclaredSymbols";
+import type { DeclaredSymbolDraft } from "@/types/declaredSymbolsInfo";
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
 
@@ -66,6 +71,7 @@ export type CreateFloDownBlockInput = {
   originalText: string;
   statement?: FloDownStatement;
   declaredSymbols?: string[];
+  declaredSymbolsInfo?: DeclaredSymbolDraft[];
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -92,6 +98,8 @@ export const findFloDownBlocksByIdentity = createServerFn({ method: "POST" })
         originalText: true,
         statement: true,
         pageNumber: true,
+        fileName: true,
+        declaredSymbolsInfo: true,
       },
       orderBy: { createdAt: "asc" },
     });
@@ -110,7 +118,7 @@ export const getFloDownBlockDeletionImpact = createServerFn({ method: "POST" })
     });
     const declared = getDeclaredSymbolUris(
       assertFloDownStatement(target.statement),
-      target.declaredSymbols,
+      declaredUrisFromJson(target.declaredSymbolsInfo),
     );
     if (!declared.size) return [];
 
@@ -121,6 +129,7 @@ export const getFloDownBlockDeletionImpact = createServerFn({ method: "POST" })
         statement: true,
         pageNumber: true,
         originalText: true,
+        declaredSymbolsInfo: true,
       },
     });
     return candidates.filter(
@@ -174,10 +183,16 @@ export const createFloDownBlock = createServerFn({ method: "POST" })
         data.blockType ?? "definition",
         data.originalText,
       );
-    const statement = sanitizeStatementForPersist(rawStatement);
-    const declaredSymbolNames =
-      data.declaredSymbols ??
-      extractDeclaredSymbols(rawStatement).map((symbol) => symbol.symbolName);
+    const { statement, declaredSymbols: declaredSymbolUris } =
+      prepareFloDownBlockForPersist(
+        rawStatement,
+        data.declaredSymbols ??
+          extractDeclaredSymbols(rawStatement).map((symbol) => symbol.symbolName),
+      );
+    const declarationDrafts =
+      data.declaredSymbolsInfo && data.declaredSymbolsInfo.length > 0
+        ? data.declaredSymbolsInfo
+        : draftsFromHttpUris(declaredSymbolUris);
 
     await prisma.$transaction(async (tx) => {
       const def = await tx.floDownBlock.create({
@@ -198,17 +213,7 @@ export const createFloDownBlock = createServerFn({ method: "POST" })
         },
       });
 
-      await setDeclaredSymbols(
-        tx,
-        def.id,
-        declaredSymbolNames,
-        {
-          futureRepo: data.futureRepo,
-          filePath: data.filePath,
-          fileName: data.fileName,
-          language: data.language,
-        },
-      );
+      await setDeclaredSymbolsInfo(tx, def.id, declarationDrafts);
 
       await tx.floDownBlockVersion.create({
         data: {
@@ -243,7 +248,10 @@ export const updateFloDownBlock = createServerFn({ method: "POST" })
       });
 
       const nextVersion = existing.currentVersion + 1;
-      const statement = sanitizeStatementForPersist(data.statement);
+      const { statement } = prepareFloDownBlockForPersist(
+        data.statement,
+        declaredUrisFromJson(existing.declaredSymbolsInfo),
+      );
 
       await tx.floDownBlockVersion.create({
         data: {
@@ -282,7 +290,7 @@ export const deleteFloDownBlock = createServerFn({ method: "POST" })
       });
       const declared = getDeclaredSymbolUris(
         assertFloDownStatement(target.statement),
-        target.declaredSymbols,
+        declaredUrisFromJson(target.declaredSymbolsInfo),
       );
 
       let affectedDefinitionCount = 0;
@@ -353,6 +361,7 @@ export const updateFloDownBlockFilePath = createServerFn({ method: "POST" })
       filePath: string;
       fileName: string;
       language: string;
+      uriReplacements?: Array<{ oldUri: string; newUri: string }>;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -381,7 +390,7 @@ export const updateFloDownBlockFilePath = createServerFn({ method: "POST" })
         }
       }
 
-      const floDownBlock = await tx.floDownBlock.update({
+      await tx.floDownBlock.update({
         where: { id: data.id },
         data: {
           futureRepo: data.futureRepo,
@@ -391,51 +400,7 @@ export const updateFloDownBlockFilePath = createServerFn({ method: "POST" })
         },
       });
 
-      const statement = assertFloDownStatement(floDownBlock.statement);
-
-      const symbols: string[] = [];
-
-      const nodes = Array.isArray(statement)
-        ? statement
-        : statement.type === "root"
-          ? (statement.content ?? [])
-          : [statement];
-
-      for (const node of nodes as any[]) {
-        if (node.type !== "definition") continue;
-
-        for (const child of node.content ?? []) {
-          if (child.type === "definiendum" && child.symdecl === true) {
-            const label = (child.content ?? [])
-              .filter((c: any) => typeof c === "string")
-              .join("");
-            symbols.push(label);
-          }
-
-          if (child.type === "paragraph") {
-            for (const sub of child.content ?? []) {
-              if (sub.type === "definiendum" && sub.symdecl === true) {
-                const label = (sub.content ?? [])
-                  .filter((c: any) => typeof c === "string")
-                  .join("");
-                symbols.push(label);
-              }
-            }
-          }
-        }
-      }
-
-      for (const symbolName of symbols) {
-        await tx.symbol.updateMany({
-          where: { symbolName },
-          data: {
-            futureRepo: data.futureRepo,
-            filePath: data.filePath,
-            fileName: data.fileName,
-            language: data.language,
-          },
-        });
-      }
+      await applyOpaqueUriReplacements(tx, data.uriReplacements ?? []);
 
       return { success: true };
     });
@@ -449,6 +414,7 @@ export const updateFloDownBlocksFilePath = createServerFn({ method: "POST" })
       filePath: string;
       fileName: string;
       language: string;
+      uriReplacements?: Array<{ oldUri: string; newUri: string }>;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -462,7 +428,7 @@ export const updateFloDownBlocksFilePath = createServerFn({ method: "POST" })
           fileName: identity.fileName,
           language: identity.language,
         },
-        select: { id: true, status: true, statement: true },
+        select: { id: true, status: true },
       });
 
       if (defs.length === 0) return { success: true };
@@ -496,31 +462,6 @@ export const updateFloDownBlocksFilePath = createServerFn({ method: "POST" })
         }
       }
 
-      const symbols: string[] = [];
-
-      for (const def of defs) {
-        const statement = assertFloDownStatement(def.statement);
-
-        const nodes = Array.isArray(statement)
-          ? statement
-          : statement.type === "root"
-            ? (statement.content ?? [])
-            : [statement];
-
-        for (const node of nodes as any[]) {
-          if (node.type !== "definition") continue;
-
-          for (const child of node.content ?? []) {
-            if (child.type === "definiendum" && child.symdecl === true) {
-              const label = (child.content ?? [])
-                .filter((c: any) => typeof c === "string")
-                .join("");
-              symbols.push(label);
-            }
-          }
-        }
-      }
-
       await tx.floDownBlock.updateMany({
         where: {
           futureRepo: identity.futureRepo,
@@ -536,17 +477,7 @@ export const updateFloDownBlocksFilePath = createServerFn({ method: "POST" })
         },
       });
 
-      for (const symbolName of [...new Set(symbols)]) {
-        await tx.symbol.updateMany({
-          where: { symbolName },
-          data: {
-            futureRepo,
-            filePath,
-            fileName,
-            language,
-          },
-        });
-      }
+      await applyOpaqueUriReplacements(tx, data.uriReplacements ?? []);
 
       return { success: true };
     });
@@ -577,7 +508,8 @@ export const listFloDownBlocks = createServerFn({ method: "GET" })
         pageNumber: def.pageNumber,
         originalText: def.originalText,
         statement,
-        declaredSymbols: def.declaredSymbols,
+        declaredSymbols: declaredUrisFromJson(def.declaredSymbolsInfo),
+        declaredSymbolsInfo: parseDeclaredSymbolsInfo(def.declaredSymbolsInfo),
         futureRepo: def.futureRepo,
         filePath: def.filePath,
         fileName: def.fileName,

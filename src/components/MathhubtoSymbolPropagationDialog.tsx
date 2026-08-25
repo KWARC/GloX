@@ -222,7 +222,11 @@ export function MathhubtoSymbolPropagationDialog({
                             padding: 4,
                           }}
                         >
-                          <FtmlPreview ftmlAst={c.statement} docId={c.id} />
+                          <FtmlPreview
+                            ftmlAst={c.statement}
+                            docId={c.id}
+                            declaredSymbolsInfo={c.declaredSymbolsInfo}
+                          />
                         </Box>
                       </Stack>
                     </Paper>

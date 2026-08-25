@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { queryClient } from "@/queryClient";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
@@ -167,9 +168,15 @@ export function useModuleDefinitionSemantics({
       let newUri: string;
 
       if (params.mode === "CREATE") {
-        newUri = params.symbolName;
+        newUri = await floDownDeclareSymbolUri({
+          futureRepo: futureRepo.trim(),
+          filePath: filePath.trim(),
+          fileName: fileName.trim(),
+          language: language.trim(),
+          symbolName: params.symbolName,
+        });
       } else if (params.selectedSymbol.source === "DB") {
-        newUri = params.selectedSymbol.symbolName;
+        newUri = params.selectedSymbol.symbolUri;
       } else {
         const parsed = parseUri(params.selectedSymbol.uri);
         newUri = parsed.conceptUri;
@@ -198,6 +205,7 @@ export function useModuleDefinitionSemantics({
             target: { type: "definiendum", uri: editingNodeId },
             payload,
           },
+          ...(isDeclared ? { declaredSymbolName: params.symbolName } : {}),
         },
       });
     } else {
@@ -214,6 +222,13 @@ export function useModuleDefinitionSemantics({
             fileName: fileName.trim(),
             language: language.trim(),
             symbolName: params.symbolName,
+            symbolUri: await floDownDeclareSymbolUri({
+              futureRepo: futureRepo.trim(),
+              filePath: filePath.trim(),
+              fileName: fileName.trim(),
+              language: language.trim(),
+              symbolName: params.symbolName,
+            }),
           },
         });
         if (result.linkedExistingSymbol) {
@@ -236,6 +251,7 @@ export function useModuleDefinitionSemantics({
             symbolName: "",
             selectedSymbolSource: "DB",
             selectedSymbolId: params.selectedSymbol.id,
+            selectedSymbolUri: params.selectedSymbol.symbolUri,
           },
         });
       } else {
@@ -332,6 +348,7 @@ export function useModuleDefinitionSemantics({
     floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
     payload: ReplacePayload,
+    options?: { declaredSymbolName?: string },
   ) {
     const result = await updateFloDownBlockAst({
       data: {
@@ -341,6 +358,9 @@ export function useModuleDefinitionSemantics({
           target,
           payload,
         },
+        ...(options?.declaredSymbolName
+          ? { declaredSymbolName: options.declaredSymbolName }
+          : {}),
       },
     });
 

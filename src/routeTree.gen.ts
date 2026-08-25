@@ -15,6 +15,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as FlodownLabRouteImport } from './routes/flodown-lab'
 import { Route as CurationRouteImport } from './routes/curation'
 import { Route as CreateLatexRouteImport } from './routes/create-latex'
 import { Route as DeduplicationRouteImport } from './routes/Deduplication'
@@ -53,6 +54,11 @@ const LoginRoute = LoginRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlodownLabRoute = FlodownLabRouteImport.update({
+  id: '/flodown-lab',
+  path: '/flodown-lab',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CurationRoute = CurationRouteImport.update({
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/Deduplication': typeof DeduplicationRoute
   '/create-latex': typeof CreateLatexRoute
   '/curation': typeof CurationRoute
+  '/flodown-lab': typeof FlodownLabRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/Deduplication': typeof DeduplicationRoute
   '/create-latex': typeof CreateLatexRoute
   '/curation': typeof CurationRoute
+  '/flodown-lab': typeof FlodownLabRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/Deduplication': typeof DeduplicationRoute
   '/create-latex': typeof CreateLatexRoute
   '/curation': typeof CurationRoute
+  '/flodown-lab': typeof FlodownLabRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/Deduplication'
     | '/create-latex'
     | '/curation'
+    | '/flodown-lab'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/Deduplication'
     | '/create-latex'
     | '/curation'
+    | '/flodown-lab'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/Deduplication'
     | '/create-latex'
     | '/curation'
+    | '/flodown-lab'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
@@ -213,6 +225,7 @@ export interface RootRouteChildren {
   DeduplicationRoute: typeof DeduplicationRoute
   CreateLatexRoute: typeof CreateLatexRoute
   CurationRoute: typeof CurationRoute
+  FlodownLabRoute: typeof FlodownLabRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -268,6 +281,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flodown-lab': {
+      id: '/flodown-lab'
+      path: '/flodown-lab'
+      fullPath: '/flodown-lab'
+      preLoaderRoute: typeof FlodownLabRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/curation': {
@@ -341,6 +361,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeduplicationRoute: DeduplicationRoute,
   CreateLatexRoute: CreateLatexRoute,
   CurationRoute: CurationRoute,
+  FlodownLabRoute: FlodownLabRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,

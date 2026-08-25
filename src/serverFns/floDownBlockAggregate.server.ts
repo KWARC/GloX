@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { declaredUrisFromJson } from "@/server/declaredSymbolsInfo";
 import { FloDownStatement, RootNode, normalizeToRoot } from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -26,7 +27,7 @@ export const getCombinedFloDownStatement = createServerFn({ method: "GET" })
       select: {
         id: true,
         statement: true,
-        declaredSymbols: true,
+        declaredSymbolsInfo: true,
       },
     });
 
@@ -39,7 +40,7 @@ export const getCombinedFloDownStatement = createServerFn({ method: "GET" })
         row.id,
         {
           statement: row.statement as FloDownStatement | null,
-          declaredSymbols: row.declaredSymbols,
+          declaredSymbols: declaredUrisFromJson(row.declaredSymbolsInfo),
         },
       ]),
     );

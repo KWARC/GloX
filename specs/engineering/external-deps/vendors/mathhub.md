@@ -25,11 +25,13 @@ exported glossaries.
 
 ## Agent constraints
 
-**E-MATHHUB-01:** Local Symbol URIs MUST be rewritten to MathHub HTTP URIs before FloDown sTeX export;
-external MathHub URIs MUST pass through unchanged.
+**E-MATHHUB-01:** Stored local symbol URIs MUST be opaque HTTP strings passed into FloDown at export
+(D-FTML-05). External MathHub URIs MUST pass through. The system MUST NOT mint symbol URIs in
+application persist paths.
 
-**E-MATHHUB-02:** MathHub availability affects FTML preview and symref resolution — GloX SHOULD degrade
-gracefully (show error) rather than persist broken symrefs silently.
+**E-MATHHUB-02:** MathHub availability affects FTML preview of **MathHub** symbols (`/content/fragment`)
+and catalog search. GloX-local **symref** hover is not a MathHub fragment (E-FTML-05). GloX SHOULD
+degrade gracefully (show error) rather than persist broken MathHub symrefs silently.
 
 **E-MATHHUB-03:** Archive path conventions (`smglom/Glox`, `courses/FAU/module-descriptions`) are
 agreed with MathHub operators — do not invent new top-level archives without PI approval.
@@ -37,5 +39,6 @@ agreed with MathHub operators — do not invent new top-level archives without P
 ## Related docs
 
 - [`../libraries/ftml.md`](../libraries/ftml.md)
+- [`../../decisions/flodown-persist-and-boundary.md`](../../decisions/flodown-persist-and-boundary.md)
 - [`../../prds/domains/curation-export.md`](../../prds/domains/curation-export.md)
 - [`../../../public/flodown/README.md`](../../../public/flodown/README.md)

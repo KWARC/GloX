@@ -7,6 +7,7 @@ export type SymbolSearchResult =
       source: "DB";
       id: string;
       symbolName: string;
+      symbolUri: string;
       futureRepo: string;
       filePath: string;
       fileName: string;
@@ -38,6 +39,7 @@ export function useSymbolSearch(query: string, enabled: boolean = true) {
         source: "DB" as const,
         id: s.id,
         symbolName: s.symbolName,
+        symbolUri: s.symbolUri,
         futureRepo: s.futureRepo,
         filePath: s.filePath,
         fileName: s.fileName,

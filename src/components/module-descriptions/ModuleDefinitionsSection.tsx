@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { ExtractedContentToolbar } from "@/components/files/ExtractedContentToolbar";
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
@@ -23,6 +24,7 @@ import { useTextSelection } from "@/server/text-selection";
 import { createModuleDefinitionBlock } from "@/serverFns/moduleDescription.server";
 import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { ExtractBlockType } from "@/types/blockType";
+import type { FloDownSymbolContext } from "@/components/FtmlPreview";
 import { Box, Paper, Text } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -50,6 +52,27 @@ export function ModuleDefinitionsSection({
     () => moduleDefinitionsToExtractedItems(definitionBlocks),
     [definitionBlocks],
   );
+
+  const symbolContext = useMemo((): FloDownSymbolContext | undefined => {
+    const first = definitionBlocks[0];
+    if (!first) return undefined;
+    return {
+      futureRepo: first.futureRepo,
+      filePath: first.filePath,
+      fileName: first.fileName,
+      language: first.language,
+      hoverDefinitions: definitionBlocks.map((block) => ({
+        cacheKey: block.id,
+        statement: block.statement,
+        declaredSymbols: block.declaredSymbols,
+        declaredSymbolsInfo: block.declaredSymbolsInfo,
+        futureRepo: block.futureRepo,
+        filePath: block.filePath,
+        fileName: block.fileName,
+        language: block.language,
+      })),
+    };
+  }, [definitionBlocks]);
 
   const semanticFlow = useModuleDefinitionSemantics({
     moduleId,
@@ -136,6 +159,15 @@ export function ModuleDefinitionsSection({
           originalText: text,
           statement: definitionStatement,
           symbolName: symbolName.trim(),
+          symbolUri: await floDownDeclareSymbolUri({
+            futureRepo:
+              definitionBlocks[0]?.futureRepo ??
+              "courses/FAU/module-descriptions",
+            filePath: definitionBlocks[0]?.filePath ?? "defs",
+            fileName: paragraphFileName.trim(),
+            language: definitionBlocks[0]?.language ?? "de",
+            symbolName: symbolName.trim(),
+          }),
           blockType: submittedBlockType,
         },
       });
@@ -186,6 +218,7 @@ export function ModuleDefinitionsSection({
           ) : (
             <ExtractedTextPanel
               extracts={extracts}
+              symbolContext={symbolContext}
               editingId={semanticFlow.editingId}
               selectedId={semanticFlow.lockedByExtractId}
               onToggleEdit={semanticFlow.handleToggleEdit}
@@ -279,6 +312,7 @@ export function ModuleDefinitionsSection({
         onClose={() => sniffyFlow.setSuggestOpen(false)}
         floDownBlockId={sniffyFlow.activeFloDownBlockId ?? ""}
         floDownBlockStatement={sniffyFlow.activeFloDownBlockStatement}
+        declaredSymbolsInfo={sniffyFlow.activeDeclaredSymbolsInfo}
         originalText={sniffyFlow.activeFloDownBlockText}
         suggestions={sniffyFlow.suggestions}
         catalog={sniffyCatalog}

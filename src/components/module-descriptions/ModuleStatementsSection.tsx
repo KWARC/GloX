@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { CreateSymbolDefiniendumDialog } from "@/components/CreateSymbolDefiniendumDialog";
 import {
   ExtractTextDialog,
@@ -14,12 +15,10 @@ import {
   useModuleStatementSniffyFlow,
 } from "@/hooks/module-descriptions/useModuleStatementSemantics";
 import {
-  collectModuleRegisteredSymbols,
   moduleStatementsToExtractedItems,
   moduleStatementExtractId,
   type ModuleStatementField,
 } from "@/lib/moduleStatementExtracts";
-import { buildModuleLocalSymbolUriMap } from "@/lib/moduleLocalSymbols";
 import type { ModuleDefinitionBlock } from "@/lib/moduleDefinitionExtracts";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
 import { useTextSelection } from "@/server/text-selection";
@@ -145,12 +144,11 @@ export function ModuleStatementsSection({
       filePath: modulesFilePath,
       fileName: moduleId,
       language,
-      registeredSymbols: collectModuleRegisteredSymbols(definitionBlocks),
-      localSymbolUriMap: buildModuleLocalSymbolUriMap(definitionBlocks),
       hoverDefinitions: definitionBlocks.map((block) => ({
         cacheKey: block.id,
         statement: block.statement,
         declaredSymbols: block.declaredSymbols,
+        declaredSymbolsInfo: block.declaredSymbolsInfo,
         futureRepo: block.futureRepo,
         filePath: block.filePath,
         fileName: block.fileName,
@@ -265,6 +263,13 @@ export function ModuleStatementsSection({
           originalText: text,
           statement: definitionStatement,
           symbolName: symbolName.trim(),
+          symbolUri: await floDownDeclareSymbolUri({
+            futureRepo,
+            filePath: defsFilePath,
+            fileName: paragraphFileName.trim(),
+            language,
+            symbolName: symbolName.trim(),
+          }),
           blockType: submittedBlockType,
         },
       });
@@ -376,6 +381,7 @@ export function ModuleStatementsSection({
         onClose={() => sniffyFlow.setSuggestOpen(false)}
         floDownBlockId={sniffyFlow.activeFloDownBlockId ?? ""}
         floDownBlockStatement={sniffyFlow.activeFloDownBlockStatement}
+        declaredSymbolsInfo={sniffyFlow.activeDeclaredSymbolsInfo}
         originalText={sniffyFlow.activeFloDownBlockText}
         suggestions={sniffyFlow.suggestions}
         catalog={sniffyCatalog}

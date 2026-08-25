@@ -1,3 +1,4 @@
+import { isDeclaredLocalUri, localDeclarationUris } from "@/server/declaredSymbolsInfo";
 import { normalizeSymRef } from "@/server/parseUri";
 import {
   DefiniendumNode,
@@ -35,6 +36,13 @@ type SymrefProps = BaseProps & {
 
 export type SemanticSearchResultsProps = DefiniendumProps | SymrefProps;
 
+function isLocalDeclaration(block: FloDownBlockSemantic, uri: string): boolean {
+  return isDeclaredLocalUri(
+    localDeclarationUris(block.declaredSymbolsInfo, block.declaredSymbols),
+    uri,
+  );
+}
+
 export function SemanticSearchResults(props: SemanticSearchResultsProps) {
   const { floDownBlock, state, onReplaceNode } = props;
   const {
@@ -70,7 +78,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
 
             {dbResults.map((r) => {
               const bg =
-                props.mode === "definiendum" && selectedUri === r.symbolName
+                props.mode === "definiendum" && selectedUri === r.symbolUri
                   ? "blue.0"
                   : undefined;
 
@@ -83,7 +91,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                   bg={bg}
                   onClick={() => {
                     if (props.mode === "definiendum") {
-                      setSelectedUri(r.symbolName);
+                      setSelectedUri(r.symbolUri);
                     }
                   }}
                 >
@@ -106,59 +114,58 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                           e.stopPropagation();
 
                           if (props.mode === "definiendum") {
-                            if (props.selected.uri.startsWith("http")) {
+                            if (isLocalDeclaration(floDownBlock, props.selected.uri)) {
+                              void handleReplaceNode(
+                                floDownBlock.id,
+                                {
+                                  type: "definiendum",
+                                  uri: props.selected.uri,
+                                },
+                                {
+                                  type: "definiendum",
+                                  uri: r.symbolUri,
+                                  content: [props.selected.text],
+                                  symdecl: false,
+                                },
+                              );
+                            } else {
                               setPendingMathHubToLocal({
                                 mathHubUri: props.selected.uri,
-                                localSymbolUri: r.symbolName,
+                                localSymbolUri: r.symbolUri,
                                 targetType: "definiendum",
                                 primaryFloDownBlockId: floDownBlock.id,
                               } satisfies PendingMathHubToLocal);
-                            } else {
-                              setPendingPropagation({
-                                localSymbolUri: props.selected.uri,
-                                mathHubUri: r.symbolName,
-                                primaryFloDownBlockId: floDownBlock.id,
-                              } satisfies PendingPropagation);
                             }
 
                             setSelectedNode({
                               type: "definiendum",
-                              uri: r.symbolName,
+                              uri: r.symbolUri,
                             });
-                            setSelectedUri(r.symbolName);
+                            setSelectedUri(r.symbolUri);
                             return;
                           }
 
-                          const newUri = r.symbolName;
-
-                          if (props.selected.uri.startsWith("http")) {
-                            setPendingMathHubToLocal({
-                              mathHubUri: props.selected.uri,
-                              localSymbolUri: newUri,
-                              targetType: "symref",
-                              primaryFloDownBlockId: floDownBlock.id,
-                            } satisfies PendingMathHubToLocal);
-                          } else {
-                            const { uri } = normalizeSymRef({
-                              source: "DB",
-                              symbolName: r.symbolName,
-                              futureRepo: r.futureRepo,
-                              filePath: r.filePath,
-                              fileName: r.fileName,
-                              language: r.language,
-                            });
-                            onReplaceNode(
-                              floDownBlock.id,
-                              {
-                                type: "symref",
-                                uri: props.selected.uri,
-                              },
-                              {
-                                type: "symref",
-                                uri,
-                              },
-                            );
-                          }
+                          const newUri = r.symbolUri;
+                          const { uri } = normalizeSymRef({
+                            source: "DB",
+                            symbolName: r.symbolName,
+                            symbolUri: r.symbolUri,
+                            futureRepo: r.futureRepo,
+                            filePath: r.filePath,
+                            fileName: r.fileName,
+                            language: r.language,
+                          });
+                          void handleReplaceNode(
+                            floDownBlock.id,
+                            {
+                              type: "symref",
+                              uri: props.selected.uri,
+                            },
+                            {
+                              type: "symref",
+                              uri,
+                            },
+                          );
 
                           setSelectedNode({
                             type: "symref",
@@ -261,11 +268,27 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                         e.stopPropagation();
 
                         if (props.mode === "definiendum") {
-                          setPendingPropagation({
-                            localSymbolUri: props.selected.uri,
-                            mathHubUri: r.uri,
-                            primaryFloDownBlockId: floDownBlock.id,
-                          } satisfies PendingPropagation);
+                          if (isLocalDeclaration(floDownBlock, props.selected.uri)) {
+                            setPendingPropagation({
+                              localSymbolUri: props.selected.uri,
+                              mathHubUri: r.uri,
+                              primaryFloDownBlockId: floDownBlock.id,
+                            } satisfies PendingPropagation);
+                          } else {
+                            void handleReplaceNode(
+                              floDownBlock.id,
+                              {
+                                type: "definiendum",
+                                uri: props.selected.uri,
+                              },
+                              {
+                                type: "definiendum",
+                                uri: r.uri,
+                                content: [props.selected.text],
+                                symdecl: false,
+                              },
+                            );
+                          }
 
                           setSelectedNode({
                             type: "definiendum",

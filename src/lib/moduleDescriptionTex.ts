@@ -1,20 +1,14 @@
 import { initFloDown } from "@/lib/flodownClient";
 import {
-  createFloDownDocument,
-  declareSymbol,
-  exportIdentityFromGlox,
-  hiddenScratchDocumentUri,
+  createFloDownDocumentFromGlox,
+  documentUriFromGlox,
 } from "@/lib/flodownUris";
-import { buildModuleLocalSymbolUriMap } from "@/lib/moduleLocalSymbols";
-import { toExportBlock } from "@/server/ftml/generateStexFromFtml";
-import { collectExternalSymbols } from "@/server/ftml/statementContent";
-import { getDefiningDefinitions } from "@/serverFns/getSymbolUriMap.server";
+import type { TexZipFile } from "@/lib/texZipExport";
+import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
 import {
-  DefinitionNode,
   FloDownStatement,
   HeadingNode,
   isDefinitionNode,
-  isHeadingNode,
   normalizeToRoot,
   PersistedBlock,
 } from "@/types/floDown.types";
@@ -23,6 +17,7 @@ export type DefinitionBlockInput = {
   id: string;
   statement: FloDownStatement;
   declaredSymbols: readonly string[];
+  declaredSymbolsInfo?: unknown;
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -40,11 +35,10 @@ export type GenerateModuleTexInput = {
   definitionBlocks: DefinitionBlockInput[];
 };
 
-export type TexFilePreview = {
-  fileName: string;
-  tex: string;
+export type TexFilePreview = TexZipFile & {
   ftmlStatement: FloDownStatement;
   declaredSymbols?: readonly string[];
+  declaredSymbolsInfo?: unknown;
 };
 
 type ModulePreviewBlock = PersistedBlock | HeadingNode;
@@ -59,14 +53,21 @@ type FloDownWasmBlock = {
 type FloDownLib = {
   FloDown: {
     fromUri: (uri: string) => FloDownWasmBlock;
-    fromPath: (
-      archive: string,
-      path: string | null | undefined,
-      name: string,
-      lang: wasm_bindgen.Language,
-    ) => FloDownWasmBlock | undefined;
   };
 };
+
+type GloxDocumentIdentity = Pick<
+  DefinitionBlockInput,
+  "futureRepo" | "filePath" | "fileName" | "language"
+>;
+
+function texFileName(name: string, language: string): string {
+  return `${name}.${language}.tex`;
+}
+
+function documentUriFor(identity: GloxDocumentIdentity): string {
+  return documentUriFromGlox(identity);
+}
 
 function sectionHeading(title: string): HeadingNode {
   return {
@@ -101,234 +102,99 @@ export function buildModuleDescriptionStatement(
   return content as FloDownStatement;
 }
 
-async function mountDefinitionDeps(
-  fdHidden: FloDownWasmBlock,
-  fdVisible: FloDownWasmBlock,
-  block: DefinitionNode,
-  identity: {
-    futureRepo: string;
-    filePath: string;
-    fileName: string;
-    language: string;
-  },
-  declaredOnThisRow: Set<string>,
-) {
-  const external = collectExternalSymbols(block, declaredOnThisRow);
-  const deps =
-    external.length > 0
-      ? await getDefiningDefinitions({ data: { labels: external } })
-      : {};
-
-  const hiddenUriMap = new Map<string, string>();
-  const visibleUriMap = new Map<string, string>();
-
-  for (const dep of Object.values(deps)) {
-    for (const label of dep.declaredSymbols) {
-      if (!hiddenUriMap.has(label)) {
-        const hiddenUri = declareSymbol(fdHidden, label, hiddenUriMap);
-        if (hiddenUri) {
-          visibleUriMap.set(label, hiddenUri);
-        }
-      }
-    }
-
-    fdHidden.addElement(
-      toExportBlock(
-        dep.definition,
-        hiddenUriMap,
-        identity.futureRepo,
-        identity.filePath,
-        identity.fileName,
-        dep.definition,
-        dep.declaredSymbols,
-        identity.language,
-      ) as DefinitionNode,
-    );
+async function requireFloDownLib(): Promise<FloDownLib> {
+  if (typeof window === "undefined") {
+    throw new Error("FloDown LaTeX export must run in the browser");
   }
-
-  for (const symbol of declaredOnThisRow) {
-    if (!symbol.startsWith("http") && !visibleUriMap.has(symbol)) {
-      declareSymbol(fdHidden, symbol, hiddenUriMap);
-      declareSymbol(fdVisible, symbol, visibleUriMap);
-    }
-  }
-
-  fdVisible.addElement(
-    toExportBlock(
-      block,
-      visibleUriMap,
-      identity.futureRepo,
-      identity.filePath,
-      identity.fileName,
-      block,
-      Array.from(declaredOnThisRow),
-      identity.language,
-    ) as DefinitionNode,
-  );
-}
-
-async function addModulePreviewBlock(
-  fdVisible: FloDownWasmBlock,
-  block: ModulePreviewBlock,
-  identity: {
-    futureRepo: string;
-    filePath: string;
-    fileName: string;
-    language: string;
-  },
-  localSymbolUriMap: Map<string, string>,
-) {
-  if (isHeadingNode(block)) {
-    fdVisible.addElement(block);
-    return;
-  }
-
-  if (block.type !== "paragraph") return;
-
-  fdVisible.addElement(
-    toExportBlock(
-      block,
-      localSymbolUriMap,
-      identity.futureRepo,
-      identity.filePath,
-      identity.fileName,
-      block,
-      [],
-      identity.language,
-    ) as PersistedBlock,
-  );
-}
-
-async function initFloDownBlocks(
-  floDown: FloDownLib,
-  visibleIdentity: ReturnType<typeof exportIdentityFromGlox>,
-  hiddenUri: string,
-): Promise<{ fdHidden: FloDownWasmBlock; fdVisible: FloDownWasmBlock }> {
-  const fdHidden = floDown.FloDown.fromUri(hiddenUri) as FloDownWasmBlock;
-  const fdVisible = createFloDownDocument(
-    floDown.FloDown,
-    visibleIdentity,
-  ) as FloDownWasmBlock;
-  return { fdHidden, fdVisible };
+  return (await initFloDown()) as FloDownLib;
 }
 
 export async function generateModuleDescriptionModuleTex(
   input: GenerateModuleTexInput,
 ): Promise<string> {
-  if (typeof window === "undefined") {
-    throw new Error("FloDown LaTeX export must run in the browser");
-  }
-
-  const floDown = (await initFloDown()) as FloDownLib;
-
-  const moduleIdentity = exportIdentityFromGlox({
+  const floDown = await requireFloDownLib();
+  const fd = createFloDownDocumentFromGlox(floDown.FloDown, {
     futureRepo: input.futureRepo,
     filePath: input.modulesFilePath,
     fileName: input.moduleId,
     language: input.language,
-  });
+  }) as FloDownWasmBlock;
 
-  const fdVisible = createFloDownDocument(
-    floDown.FloDown,
-    moduleIdentity,
-  ) as FloDownWasmBlock;
-
-  const localSymbolUriMap = buildModuleLocalSymbolUriMap(
-    input.definitionBlocks,
-  );
-
-  const moduleStatement = buildModuleDescriptionStatement(input);
-  const previewBlocks = normalizeToRoot(moduleStatement).content as ModulePreviewBlock[];
-  for (const block of previewBlocks) {
-    await addModulePreviewBlock(
-      fdVisible,
-      block,
-      {
-        futureRepo: input.futureRepo,
-        filePath: input.modulesFilePath,
-        fileName: input.moduleId,
-        language: input.language,
-      },
-      localSymbolUriMap,
-    );
-  }
-
-  return fdVisible.getStex().trimEnd();
+  mountStatementOnFloDown(fd, buildModuleDescriptionStatement(input));
+  return fd.getStex().trimEnd();
 }
 
 export async function generateModuleDescriptionDefinitionTex(
-  moduleId: string,
+  _moduleId: string,
   defBlock: DefinitionBlockInput,
+  _siblingBlocks: readonly DefinitionBlockInput[] = [],
 ): Promise<string> {
-  if (typeof window === "undefined") {
-    throw new Error("FloDown LaTeX export must run in the browser");
-  }
-
-  const floDown = (await initFloDown()) as FloDownLib;
-
-  const visibleIdentity = exportIdentityFromGlox({
-    futureRepo: defBlock.futureRepo,
-    filePath: defBlock.filePath,
-    fileName: defBlock.fileName,
-    language: defBlock.language,
-  });
-
-  const { fdHidden, fdVisible } = await initFloDownBlocks(
-    floDown,
-    visibleIdentity,
-    hiddenScratchDocumentUri(moduleId, defBlock.language),
-  );
-
-  const alive: FloDownWasmBlock[] = [
-    fdHidden,
-    fdVisible as FloDownWasmBlock,
-  ];
+  const floDown = await requireFloDownLib();
+  const fd = createFloDownDocumentFromGlox(floDown.FloDown, defBlock) as FloDownWasmBlock;
 
   const root = normalizeToRoot(defBlock.statement);
   for (const block of root.content) {
     if (!isDefinitionNode(block)) continue;
-    await mountDefinitionDeps(
-      fdHidden,
-      fdVisible,
-      block,
-      {
-        futureRepo: defBlock.futureRepo,
-        filePath: defBlock.filePath,
-        fileName: defBlock.fileName,
-        language: defBlock.language,
-      },
-      new Set(defBlock.declaredSymbols),
-    );
+    mountStatementOnFloDown(fd, block);
   }
 
-  return alive[1].getStex().trimEnd();
+  return fd.getStex().trimEnd();
+}
+
+export function buildModuleTexPreview(
+  input: GenerateModuleTexInput,
+  tex: string,
+  ftmlStatement: FloDownStatement,
+): TexFilePreview {
+  return {
+    fileName: texFileName(input.moduleId, input.language),
+    tex,
+    ftmlStatement,
+    uri: documentUriFor({
+      futureRepo: input.futureRepo,
+      filePath: input.modulesFilePath,
+      fileName: input.moduleId,
+      language: input.language,
+    }),
+  };
+}
+
+export async function buildDefinitionTexPreview(
+  moduleId: string,
+  block: DefinitionBlockInput,
+  siblings: readonly DefinitionBlockInput[],
+): Promise<TexFilePreview> {
+  return {
+    fileName: texFileName(block.fileName, block.language),
+    tex: await generateModuleDescriptionDefinitionTex(moduleId, block, siblings),
+    ftmlStatement: block.statement,
+    declaredSymbols: block.declaredSymbols,
+    declaredSymbolsInfo: block.declaredSymbolsInfo,
+    uri: documentUriFor(block),
+  };
 }
 
 export async function generateModuleDescriptionTexPreview(
   input: GenerateModuleTexInput,
 ) {
-  const moduleTex = await generateModuleDescriptionModuleTex(input);
-
   const moduleStatement = buildModuleDescriptionStatement(input);
-
+  const moduleTex = buildModuleTexPreview(
+    input,
+    await generateModuleDescriptionModuleTex(input),
+    moduleStatement,
+  );
   const definitionTex = await Promise.all(
-    input.definitionBlocks.map(async (block) => ({
-      fileName: `${block.fileName}.${block.language}.tex`,
-      tex: await generateModuleDescriptionDefinitionTex(input.moduleId, block),
-      ftmlStatement: block.statement,
-      declaredSymbols: block.declaredSymbols,
-    })),
+    input.definitionBlocks.map((block) =>
+      buildDefinitionTexPreview(input.moduleId, block, input.definitionBlocks),
+    ),
   );
 
-  return {
-    moduleTex: {
-      fileName: `${input.moduleId}.${input.language}.tex`,
-      tex: moduleTex,
-      ftmlStatement: moduleStatement,
-    },
-    definitionTex,
-  };
+  return { moduleTex, definitionTex };
 }
+
+export type ModuleDescriptionTexPreview = Awaited<
+  ReturnType<typeof generateModuleDescriptionTexPreview>
+>;
 
 /** @deprecated Use generateModuleDescriptionModuleTex */
 export async function generateModuleDescriptionTex(
@@ -338,6 +204,7 @@ export async function generateModuleDescriptionTex(
     return generateModuleDescriptionDefinitionTex(
       input.moduleId,
       input.definitionBlocks[0],
+      input.definitionBlocks,
     );
   }
   return generateModuleDescriptionModuleTex(input);

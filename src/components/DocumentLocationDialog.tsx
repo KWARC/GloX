@@ -1,3 +1,4 @@
+import { floDownUriReplacementsForMove } from "@/lib/floDownUriReplacements";
 import { queryClient } from "@/queryClient";
 import { MyDocument } from "@/queries/document";
 import {
@@ -57,10 +58,16 @@ export function DocumentLocationDialog({
   }
 
   async function handleConfirm() {
-    if (!document) return;
+    if (!document || !preview) return;
     setLoading(true);
     try {
-      await moveDocumentLocation({ data: { documentId: document.id, futureRepo, filePath, language } });
+      const uriReplacements = await floDownUriReplacementsForMove(
+        preview.declarations,
+        { futureRepo, filePath, language },
+      );
+      await moveDocumentLocation({
+        data: { documentId: document.id, futureRepo, filePath, language, uriReplacements },
+      });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents"] }),
         queryClient.invalidateQueries({ queryKey: ["document", document.id] }),

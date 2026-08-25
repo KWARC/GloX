@@ -4,21 +4,20 @@ import { getAllSymbols } from "@/serverFns/symbol.server";
 import { Box, Stack, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Symbol } from "generated/prisma/client";
 
 export const Route = createFileRoute("/Deduplication")({
   component: DeduplicationPage,
 });
 
 function DeduplicationPage() {
-  const { data: symbols = [], isLoading } = useQuery<Symbol[]>({
+  const { data: symbols = [], isLoading } = useQuery({
     queryKey: ["dedup-symbols"],
     queryFn: () => getAllSymbols(),
   });
 
   if (isLoading) return <DeduplicationPageSkeleton />;
 
-  const grouped: Record<string, Symbol[]> = {};
+  const grouped: Record<string, NonNullable<typeof symbols>> = {};
 
   symbols.forEach((s) => {
     if (!grouped[s.symbolName]) {

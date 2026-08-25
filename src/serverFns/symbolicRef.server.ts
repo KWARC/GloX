@@ -41,13 +41,17 @@ export const symbolicRef = createServerFn({ method: "POST" })
     if (symRef.source === "MATHHUB") {
       parsed = parseUri(symRef.uri);
     } else {
+      const uri = (symRef.symbolUri ?? "").trim();
+      if (!uri.startsWith("http://") && !uri.startsWith("https://")) {
+        throw new Error("Symbol URI required");
+      }
       parsed = {
         archive: symRef.futureRepo,
         filePath: symRef.filePath,
         fileName: symRef.fileName,
         language: symRef.language,
         symbol: symRef.symbolName,
-        conceptUri: symRef.symbolName,
+        conceptUri: uri,
       };
     }
 

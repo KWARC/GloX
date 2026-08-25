@@ -1,4 +1,6 @@
+import { createDeclarationRecord } from "@/server/declaredSymbolsInfo";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
+import type { DeclaredSymbolInfo } from "@/types/declaredSymbolsInfo";
 import {
   extractTextContent,
   pathTraversesSemanticNode,
@@ -116,6 +118,7 @@ function insertDefiniendumNode(
     | {
         mode: "CREATE";
         symbolName: string;
+        symbolUri: string;
       }
     | {
         mode: "PICK_EXISTING";
@@ -123,6 +126,7 @@ function insertDefiniendumNode(
           | {
               source: "DB";
               symbolName: string;
+              symbolUri: string;
             }
           | {
               source: "MATHHUB";
@@ -152,14 +156,14 @@ function insertDefiniendumNode(
     payload.mode === "CREATE"
       ? {
           type: "definiendum",
-          uri: payload.symbolName.trim(),
+          uri: payload.symbolUri.trim(),
           content: [verbalization],
           symdecl: true,
         }
       : payload.symbol.source === "DB"
         ? {
             type: "definiendum",
-            uri: payload.symbol.symbolName,
+            uri: payload.symbol.symbolUri,
             content: [verbalization],
             symdecl: false,
           }
@@ -250,12 +254,16 @@ export function useDraftSemanticAuthoring(
     buildPlainDefinitionStatement(text),
   );
   const [declaredSymbols, setDeclaredSymbols] = useState<string[]>([]);
+  const [declaredSymbolsInfo, setDeclaredSymbolsInfo] = useState<
+    DeclaredSymbolInfo[]
+  >([]);
   const [selection, setSelection] = useState<DraftSelectionRange | null>(null);
   const [popup, setPopup] = useState<DraftSelectionPopup | null>(null);
 
   useEffect(() => {
     setStatement(buildPlainDefinitionStatement(text));
     setDeclaredSymbols([]);
+    setDeclaredSymbolsInfo([]);
     setSelection(null);
     setPopup(null);
   }, [text, enabled]);
@@ -301,6 +309,7 @@ export function useDraftSemanticAuthoring(
       | {
           mode: "CREATE";
           symbolName: string;
+          symbolUri: string;
         }
       | {
           mode: "PICK_EXISTING";
@@ -308,6 +317,7 @@ export function useDraftSemanticAuthoring(
             | {
                 source: "DB";
                 symbolName: string;
+                symbolUri: string;
               }
             | {
                 source: "MATHHUB";
@@ -321,9 +331,18 @@ export function useDraftSemanticAuthoring(
 
     setStatement((current) => insertDefiniendumNode(current, selection, payload));
     if (payload.mode === "CREATE") {
-      const symbolName = payload.symbolName.trim();
+      const symbolUri = payload.symbolUri.trim();
+      const record = createDeclarationRecord({
+        symbolName: payload.symbolName,
+        symbolUri,
+      });
       setDeclaredSymbols((current) =>
-        current.includes(symbolName) ? current : [...current, symbolName],
+        current.includes(symbolUri) ? current : [...current, symbolUri],
+      );
+      setDeclaredSymbolsInfo((current) =>
+        current.some((item) => item.symbolUri === symbolUri)
+          ? current
+          : [...current, record],
       );
     }
     clearSelection();
@@ -341,6 +360,7 @@ export function useDraftSemanticAuthoring(
   return {
     statement,
     declaredSymbols,
+    declaredSymbolsInfo,
     selection,
     popup,
     hasSemantics,

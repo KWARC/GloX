@@ -35,6 +35,8 @@ function stripBlockForPersist(block: PersistedBlock): PersistedBlock {
   if (isDefinitionNode(block)) {
     return {
       ...block,
+      // Remaining issue: persist always empties for_symbols. WASM still needs the key at addElement;
+      // rewrite fills it (D-FTML-01). Legacy rows that skipped sanitize omit the key entirely.
       for_symbols: [],
       content: block.content.map((inner) => {
         if (inner.type !== "paragraph") return inner;
@@ -62,6 +64,26 @@ export function sanitizeStatementForPersist(
     content: root.content.map((block) => stripBlockForPersist(block)),
   };
   return unwrapRoot(stripped);
+}
+
+function copyDeclaredSymbols(existing: readonly string[]): string[] {
+  const symbols = new Set<string>();
+  for (const symbol of existing) {
+    const label = symbol.trim();
+    if (label) symbols.add(label);
+  }
+  return [...symbols];
+}
+
+/** Sanitize JSON. Keep `declaredSymbols` as passed (D-FTML-04); do not infer from definienda. */
+export function prepareFloDownBlockForPersist(
+  statement: FloDownStatement,
+  declaredSymbols: readonly string[],
+): { statement: FloDownStatement; declaredSymbols: string[] } {
+  return {
+    statement: sanitizeStatementForPersist(statement),
+    declaredSymbols: copyDeclaredSymbols(declaredSymbols),
+  };
 }
 
 /** Build `for_symbols` for export: definienda ∩ declaredSymbols, mapped via uriMap. */

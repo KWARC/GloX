@@ -1,124 +1,65 @@
 import { describe, expect, it } from "vitest";
-import { parseUri } from "@/server/parseUri";
 import {
   documentUri,
-  exportIdentityFromGlox,
+  documentUriFromGlox,
   FloDownLanguage,
-  hiddenScratchDocumentUri,
   languageToFloDown,
+  parseDocumentUri,
   scratchDocumentUri,
-  symbolIdentityFromGlox,
-  symbolUri,
-  canonicalizeSymbolUri,
 } from "./flodownUris";
 
 describe("flodownUris", () => {
-  it("builds document URIs with archive as host and path in a=", () => {
-    const uri = documentUri(
-      exportIdentityFromGlox({
-        futureRepo: "smglom/softeng",
-        filePath: "mod",
-        fileName: "MyConcept",
-        language: "en",
-      }),
-    );
+  it("builds document URIs with archive in a= and path in p=", () => {
+    const uri = documentUriFromGlox({
+      futureRepo: "smglom/softeng",
+      filePath: "mod",
+      fileName: "MyConcept",
+      language: "en",
+    });
     expect(uri).toBe(
-      "http://smglom/softeng?a=mod&d=MyConcept&l=en",
+      "http://mathhub.info?a=smglom/softeng&p=mod&d=MyConcept&l=en",
     );
-    expect(new URL(uri).hostname).toBe("smglom");
-    expect(new URL(uri).pathname).toBe("/softeng");
-    expect(new URL(uri).searchParams.get("a")).toBe("mod");
+    expect(new URL(uri).hostname).toBe("mathhub.info");
+    expect(new URL(uri).searchParams.get("a")).toBe("smglom/softeng");
+    expect(new URL(uri).searchParams.get("p")).toBe("mod");
     expect(new URL(uri).searchParams.get("d")).toBe("MyConcept");
   });
 
   it("builds module file document URIs", () => {
-    const uri = documentUri(
-      exportIdentityFromGlox({
-        futureRepo: "courses/FAU/module-descriptions",
-        filePath: "modules",
-        fileName: "33995",
-        language: "de",
-      }),
-    );
+    const uri = documentUriFromGlox({
+      futureRepo: "courses/FAU/module-descriptions",
+      filePath: "modules",
+      fileName: "33995",
+      language: "de",
+    });
     expect(uri).toBe(
-      "http://courses/FAU/module-descriptions?a=modules&d=33995&l=de",
+      "http://mathhub.info?a=courses/FAU/module-descriptions&p=modules&d=33995&l=de",
     );
-    expect(new URL(uri).hostname).toBe("courses");
-    expect(new URL(uri).pathname).toBe("/FAU/module-descriptions");
+    expect(new URL(uri).hostname).toBe("mathhub.info");
   });
 
-  it("omits a= when path is empty", () => {
+  it("omits p= when path is empty", () => {
     const uri = documentUri({
       archive: "test",
       path: "",
       name: "doc",
       language: "en",
     });
-    expect(uri).toBe("http://test?d=doc&l=en");
-    expect(new URL(uri).searchParams.get("a")).toBeNull();
+    expect(uri).toBe("http://mathhub.info?a=test&d=doc&l=en");
+    expect(new URL(uri).searchParams.get("p")).toBeNull();
   });
 
-  it("canonicalizes inverted and language-tagged symbol URIs", () => {
-    const fallback = symbolIdentityFromGlox({
+  it("puts archive in a=, host mathhub.info", () => {
+    const uri = documentUriFromGlox({
       futureRepo: "courses/FAU/module-descriptions",
       filePath: "modules",
       fileName: "33995",
-      symbolName: "unused",
+      language: "de",
     });
-    expect(
-      canonicalizeSymbolUri("Group", fallback),
-    ).toBe(
-      "http://mathhub.info?a=courses/FAU/module-descriptions&p=modules&m=33995&s=Group",
+    expect(new URL(uri).hostname).toBe("mathhub.info");
+    expect(new URL(uri).searchParams.get("a")).toBe(
+      "courses/FAU/module-descriptions",
     );
-    expect(
-      canonicalizeSymbolUri(
-        "http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra&l=de",
-        fallback,
-      ),
-    ).toBe(
-      "http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra",
-    );
-    expect(
-      canonicalizeSymbolUri(
-        "http://courses/FAU/module-descriptions?a=defs&m=Group&s=Group",
-        fallback,
-      ),
-    ).toBe(
-      "http://mathhub.info?a=courses/FAU/module-descriptions&p=defs&m=Group&s=Group",
-    );
-  });
-
-  it("builds symbol URIs with m= and s=", () => {
-    const uri = symbolUri(
-      symbolIdentityFromGlox({
-        futureRepo: "courses/FAU/module-descriptions",
-        filePath: "defs",
-        fileName: "MyConcept",
-        symbolName: "MyConcept",
-      }),
-    );
-    expect(uri).toBe(
-      "http://mathhub.info?a=courses/FAU/module-descriptions&p=defs&m=MyConcept&s=MyConcept",
-    );
-    expect(uri).not.toContain("&l=");
-    const parsed = parseUri(uri);
-    expect(parsed.archive).toBe("courses/FAU/module-descriptions");
-    expect(parsed.filePath).toBe("defs");
-    expect(parsed.fileName).toBe("MyConcept");
-    expect(parsed.symbol).toBe("MyConcept");
-  });
-
-  it("puts archive in hostname, not mathhub.info", () => {
-    const uri = documentUri(
-      exportIdentityFromGlox({
-        futureRepo: "courses/FAU/module-descriptions",
-        filePath: "modules",
-        fileName: "33995",
-        language: "de",
-      }),
-    );
-    expect(new URL(uri).hostname).toBe("courses");
-    expect(new URL(uri).hostname).not.toBe("mathhub.info");
   });
 
   it("maps ISO language codes to FloDown Language enum values", () => {
@@ -126,11 +67,26 @@ describe("flodownUris", () => {
     expect(languageToFloDown("en")).toBe(FloDownLanguage.English);
   });
 
-  it("uses unknown.source scratch documents", () => {
+  it("uses mathhub.info scratch documents", () => {
     expect(scratchDocumentUri("preview-1", "en")).toBe(
-      "http://unknown.source?a=no/archive&d=preview-1&l=en",
+      "http://mathhub.info?a=no/archive&d=preview-1&l=en",
     );
-    expect(hiddenScratchDocumentUri("foo", "de")).toContain("hidden-foo");
+  });
+
+  it("round-trips document URIs through parseDocumentUri", () => {
+    const identity = {
+      futureRepo: "courses/FAU/module-descriptions",
+      filePath: "modules",
+      fileName: "121455",
+      language: "en",
+    };
+    const uri = documentUriFromGlox(identity);
+    expect(parseDocumentUri(uri)).toEqual({
+      archive: identity.futureRepo,
+      path: identity.filePath,
+      name: identity.fileName,
+      language: identity.language,
+    });
   });
 });
 

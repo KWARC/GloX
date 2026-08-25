@@ -85,7 +85,18 @@ export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
     const parsed = parseUri(symRef.uri);
     return { uri: parsed.conceptUri, text: parsed.symbol };
   }
-  return { uri: `${symRef.symbolName}`, text: symRef.symbolName };
+  return {
+    uri: localSymbolUri(symRef),
+    text: symRef.symbolName,
+  };
+}
+
+function localSymbolUri(symRef: Extract<UnifiedSymbolicReference, { source: "DB" }>): string {
+  const uri = (symRef.symbolUri ?? "").trim();
+  if (!uri.startsWith("http://") && !uri.startsWith("https://")) {
+    throw new Error("Symbol URI required");
+  }
+  return uri;
 }
 
 function normalizeContent(content: FloDownContent[]): FloDownContent[] {
@@ -256,17 +267,7 @@ function removeSemanticNodeWithIndex(
 }
 
 function normalizeUri(u: string | undefined): string | undefined {
-  if (!u) return u;
-
-  if (u.startsWith("http")) {
-    try {
-      return new URL(u).searchParams.get("s") ?? u;
-    } catch {
-      return u;
-    }
-  }
-
-  return u;
+  return u?.trim() || u;
 }
 
 function replaceSemanticInInlines(

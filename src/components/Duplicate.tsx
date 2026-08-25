@@ -1,6 +1,11 @@
 import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { queryClient } from "@/queryClient";
 import { normalizeSymRef } from "@/server/parseUri";
+import {
+  declaredUrisFromJson,
+  parseDeclaredSymbolsInfo,
+} from "@/server/declaredSymbolsInfo";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
 import { parseUri, ReplacePayload } from "@/server/parseUri";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
@@ -41,11 +46,15 @@ const handleReplaceNode: OnReplaceNode = async (
   floDownBlockId,
   target,
   payload,
+  options,
 ): Promise<UpdateFloDownBlockAstResult> => {
   const result = await updateFloDownBlockAst({
     data: {
       floDownBlockId,
       operation: { kind: "replaceSemantic", target, payload },
+      ...(options?.declaredSymbolName
+        ? { declaredSymbolName: options.declaredSymbolName }
+        : {}),
     },
   });
   await queryClient.invalidateQueries({ queryKey: ["dedup-symbols"] });
@@ -113,6 +122,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
       return {
         id: rawDefinition.id,
         statement: assertFloDownStatement(rawDefinition.statement),
+        declaredSymbols: declaredUrisFromJson(rawDefinition.declaredSymbolsInfo),
+        declaredSymbolsInfo: parseDeclaredSymbolsInfo(
+          rawDefinition.declaredSymbolsInfo,
+        ),
       };
     } catch {
       return null;
@@ -133,6 +146,10 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
         filePath: rawDefinition.filePath ?? "",
         fileName: rawDefinition.fileName ?? "",
         language: rawDefinition.language ?? "",
+        declaredSymbols: declaredUrisFromJson(rawDefinition.declaredSymbolsInfo),
+        declaredSymbolsInfo: parseDeclaredSymbolsInfo(
+          rawDefinition.declaredSymbolsInfo,
+        ),
       },
     ];
   }, [rawDefinition]);
@@ -177,11 +194,15 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
     payload: ReplacePayload,
+    options?: { declaredSymbolName?: string },
   ): Promise<UpdateFloDownBlockAstResult> {
     const result = await updateFloDownBlockAst({
       data: {
         floDownBlockId,
         operation: { kind: "replaceSemantic", target, payload },
+        ...(options?.declaredSymbolName
+          ? { declaredSymbolName: options.declaredSymbolName }
+          : {}),
       },
     });
     await queryClient.invalidateQueries({
@@ -210,6 +231,14 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     if (!floDownBlockExtractId || !floDownBlockExtractText || !selection) return;
 
     if (params.mode === "CREATE") {
+      if (!rawDefinition) return;
+      const symbolUri = await floDownDeclareSymbolUri({
+        futureRepo: rawDefinition.futureRepo,
+        filePath: rawDefinition.filePath,
+        fileName: rawDefinition.fileName,
+        language: rawDefinition.language,
+        symbolName: params.symbolName,
+      });
       await createSymbolDefiniendum({
         data: {
           floDownBlockId: floDownBlockExtractId,
@@ -217,11 +246,12 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           startOffset: selection.startOffset,
           endOffset: selection.endOffset,
           symdecl: true,
-          futureRepo: "",
-          filePath: "",
-          fileName: "",
-          language: "en",
+          futureRepo: rawDefinition.futureRepo,
+          filePath: rawDefinition.filePath,
+          fileName: rawDefinition.fileName,
+          language: rawDefinition.language,
           symbolName: params.symbolName,
+          symbolUri,
         },
       });
     } else {

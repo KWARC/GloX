@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { IconFileText, IconPencil } from "@tabler/icons-react";
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { EXTRACT_BLOCK_TYPES, ExtractBlockType, blockTypeLabel } from "@/types/blockType";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
@@ -23,6 +24,7 @@ import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { useDraftSemanticAuthoring } from "@/hooks/useDraftSemanticAuthoring";
 import { SymbolSearchResult } from "@/server/useSymbolSearch";
 import { FloDownStatement } from "@/types/floDown.types";
+import type { DeclaredSymbolDraft } from "@/types/declaredSymbolsInfo";
 import { SelectionPopup } from "./SelectionPopup";
 import { WikipediaDefinitionLookup } from "./WikipediaDefinitionLookup";
 
@@ -73,6 +75,7 @@ interface ExtractTextDialogProps {
     blockType: ExtractBlockType;
     statement?: FloDownStatement;
     declaredSymbols?: string[];
+    declaredSymbolsInfo?: DeclaredSymbolDraft[];
   }) => void;
   title?: string;
   textLabel?: string;
@@ -191,9 +194,20 @@ export function ExtractTextDialog({
   ) {
     try {
       if (params.mode === "CREATE") {
+        if (!location) {
+          throw new Error("Export identity required to declare a symbol");
+        }
+        const symbolUri = await floDownDeclareSymbolUri({
+          futureRepo: location.futureRepo,
+          filePath: location.filePath,
+          fileName: paragraphFileName.trim(),
+          language: location.language,
+          symbolName: params.symbolName,
+        });
         draftSemantic.applyDefiniendum({
           mode: "CREATE",
           symbolName: params.symbolName,
+          symbolUri,
         });
       } else if (params.selectedSymbol.source === "DB") {
         draftSemantic.applyDefiniendum({
@@ -201,6 +215,7 @@ export function ExtractTextDialog({
           symbol: {
             source: "DB",
             symbolName: params.selectedSymbol.symbolName,
+            symbolUri: params.selectedSymbol.symbolUri,
           },
         });
       } else {
@@ -315,6 +330,7 @@ export function ExtractTextDialog({
                 ftmlAst={draftSemantic.statement}
                 docId="draft-definition"
                 declaredSymbols={draftSemantic.declaredSymbols}
+                declaredSymbolsInfo={draftSemantic.declaredSymbolsInfo}
               />
             </div>
           </Paper>
@@ -492,6 +508,10 @@ export function ExtractTextDialog({
                 declaredSymbols:
                   enableSemanticAuthoring && semanticEnabled
                     ? draftSemantic.declaredSymbols
+                    : undefined,
+                declaredSymbolsInfo:
+                  enableSemanticAuthoring && semanticEnabled
+                    ? draftSemantic.declaredSymbolsInfo
                     : undefined,
               });
             }}

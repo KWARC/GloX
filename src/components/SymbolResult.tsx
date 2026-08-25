@@ -17,6 +17,7 @@ import {
 import { IconPlus } from "@tabler/icons-react";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
+import { createDeclarationRecord } from "@/server/declaredSymbolsInfo";
 import { useFloDownBlockBySymbol } from "@/serverFns/floDownBlockBySymbol.server";
 import { assertFloDownStatement } from "@/types/floDown.types";
 import { FtmlPreview } from "./FtmlPreview";
@@ -24,7 +25,13 @@ import { FtmlPreview } from "./FtmlPreview";
 const SEARCH_RESULTS_HEIGHT = 240;
 const SYMBOL_RESULT_TOOLTIP_Z_INDEX = 7000;
 
-function DbSymbolHoverPreview({ symbolName }: { symbolName: string }) {
+function DbSymbolHoverPreview({
+  symbolName,
+  symbolUri,
+}: {
+  symbolName: string;
+  symbolUri: string;
+}) {
   const { data: floDownBlock, isLoading } = useFloDownBlockBySymbol(symbolName);
 
   if (isLoading) return <Loader size="xs" />;
@@ -35,6 +42,10 @@ function DbSymbolHoverPreview({ symbolName }: { symbolName: string }) {
       <FtmlPreview
         docId={`db-symbol-preview-${floDownBlock.id}`}
         ftmlAst={assertFloDownStatement(floDownBlock.statement)}
+        declaredSymbols={[symbolUri]}
+        declaredSymbolsInfo={[
+          createDeclarationRecord({ symbolName, symbolUri }),
+        ]}
       />
     </Box>
   );
@@ -168,7 +179,10 @@ export function SymbolResult({
                             <Text size="xs" fw={600} c="dimmed" mb={4}>
                               Content preview
                             </Text>
-                            <DbSymbolHoverPreview symbolName={result.symbolName} />
+                            <DbSymbolHoverPreview
+                              symbolName={result.symbolName}
+                              symbolUri={result.symbolUri}
+                            />
                           </HoverCard.Dropdown>
                         </HoverCard>
 

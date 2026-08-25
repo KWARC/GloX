@@ -1,7 +1,9 @@
 import { FtmlPreview } from "@/components/FtmlPreview";
 import type { TexFilePreview } from "@/lib/moduleDescriptionTex";
+import { downloadTexFilesAsZip } from "@/lib/texZipExport";
 import {
   Accordion,
+  ActionIcon,
   Badge,
   Box,
   Button,
@@ -10,9 +12,11 @@ import {
   Stack,
   Text,
   Textarea,
+  Tooltip,
 } from "@mantine/core";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { ArrowLeftRight, Copy, Download } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import type { FloDownStatement } from "@/types/floDown.types";
 
 type ModuleDescriptionLatexModalProps = {
@@ -21,6 +25,37 @@ type ModuleDescriptionLatexModalProps = {
   definitionTex: TexFilePreview[];
   onClose: () => void;
 };
+
+function ModuleUriInfoButton({ uri }: { uri: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyUri(event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    await navigator.clipboard.writeText(uri);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <Tooltip
+      label={copied ? "Copied!" : uri}
+      withArrow
+      multiline
+      maw={420}
+    >
+      <ActionIcon
+        aria-label="Copy LaTeX module URI"
+        variant="subtle"
+        color={copied ? "teal" : "gray"}
+        size="sm"
+        onClick={(event) => void copyUri(event)}
+      >
+        <IconInfoCircle size={16} />
+      </ActionIcon>
+    </Tooltip>
+  );
+}
 
 function downloadTex(fileName: string, tex: string) {
   const blob = new Blob([tex], { type: "application/x-tex" });
@@ -45,11 +80,13 @@ function TexPreviewPanel({
   tex,
   ftmlStatement,
   declaredSymbols,
+  declaredSymbolsInfo,
 }: {
   fileName: string;
   tex: string;
   ftmlStatement: FloDownStatement;
   declaredSymbols?: readonly string[];
+  declaredSymbolsInfo?: unknown;
 }) {
   const [showFtml, setShowFtml] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -102,6 +139,7 @@ function TexPreviewPanel({
             ftmlAst={ftmlStatement}
             docId={`latex-preview-${fileName}`}
             declaredSymbols={declaredSymbols ? [...declaredSymbols] : undefined}
+            declaredSymbolsInfo={declaredSymbolsInfo}
           />
         </Box>
       ) : (
@@ -157,11 +195,25 @@ export function ModuleDescriptionLatexModal({
       })),
     ];
 
+  const allTexFiles = files.map(({ file }) => file);
+
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title={<Text fw={600}>Module description LaTeX</Text>}
+      title={
+        <Group justify="space-between" w="100%" wrap="nowrap">
+          <Text fw={600}>Module description LaTeX</Text>
+          <Button
+            variant="light"
+            size="compact-sm"
+            leftSection={<Download size={14} />}
+            onClick={() => downloadTexFilesAsZip(allTexFiles)}
+          >
+            Download all
+          </Button>
+        </Group>
+      }
       size="xl"
       padding="lg"
     >
@@ -186,6 +238,7 @@ export function ModuleDescriptionLatexModal({
                 >
                   {file.fileName}
                 </Badge>
+                <ModuleUriInfoButton uri={file.uri} />
               </Group>
             </Accordion.Control>
             <Accordion.Panel>
@@ -194,6 +247,7 @@ export function ModuleDescriptionLatexModal({
                 tex={file.tex}
                 ftmlStatement={file.ftmlStatement}
                 declaredSymbols={file.declaredSymbols}
+                declaredSymbolsInfo={file.declaredSymbolsInfo}
               />
             </Accordion.Panel>
           </Accordion.Item>

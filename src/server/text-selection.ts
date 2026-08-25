@@ -2,6 +2,7 @@ import { queryClient } from "@/queryClient";
 import { createFloDownBlock, updateFloDownBlock } from "@/serverFns/extractFloDownBlock.server";
 import { FloDownStatement } from "@/types/floDown.types";
 import { ExtractBlockType } from "@/types/blockType";
+import type { DeclaredSymbolDraft, DeclaredSymbolInfo } from "@/types/declaredSymbolsInfo";
 import { useState } from "react";
 
 export interface PopupState {
@@ -37,6 +38,7 @@ export type ExtractedItem = {
   originalText: string;
   statement: FloDownStatement;
   declaredSymbols?: string[];
+  declaredSymbolsInfo?: DeclaredSymbolInfo[];
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -137,6 +139,7 @@ export function useExtractionActions(documentId: string) {
     text: string;
     statement?: FloDownStatement;
     declaredSymbols?: string[];
+    declaredSymbolsInfo?: DeclaredSymbolDraft[];
     futureRepo: string;
     filePath: string;
     fileName: string;
@@ -151,6 +154,7 @@ export function useExtractionActions(documentId: string) {
         originalText: params.text,
         statement: params.statement,
         declaredSymbols: params.declaredSymbols,
+        declaredSymbolsInfo: params.declaredSymbolsInfo,
         futureRepo: params.futureRepo,
         filePath: params.filePath,
         fileName: params.fileName,

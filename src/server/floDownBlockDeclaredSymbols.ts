@@ -1,96 +1,113 @@
+import {
+  createDeclarationRecord,
+  draftsFromHttpUris,
+  otherBlockDeclaresUri,
+  parseDeclaredSymbolsInfo,
+  removeDeclarationByUri,
+  upsertDeclaration,
+} from "@/server/declaredSymbolsInfo";
+import type { DeclaredSymbolDraft } from "@/types/declaredSymbolsInfo";
 import type { Prisma } from "generated/prisma/client";
 
 type TransactionClient = Prisma.TransactionClient;
 
-type FileIdentity = {
-  futureRepo: string;
-  filePath: string;
-  fileName: string;
-  language: string;
-};
+async function loadLiveDeclarationRows(
+  tx: TransactionClient,
+): Promise<Array<{ id: string; declaredSymbolsInfo: unknown; status: string }>> {
+  return tx.floDownBlock.findMany({
+    select: {
+      id: true,
+      declaredSymbolsInfo: true,
+      status: true,
+    },
+  });
+}
 
-/**
- * v1 orphan policy: leave Symbol rows when removed from declaredSymbols.
- * Rows are upserted when names are added.
- */
-export async function setDeclaredSymbols(
+export async function setDeclaredSymbolsInfo(
   tx: TransactionClient,
   floDownBlockId: string,
-  names: string[],
-  identity: FileIdentity,
-): Promise<string[]> {
-  const deduped = [
-    ...new Set(names.map((name) => name.trim()).filter(Boolean)),
-  ];
+  drafts: readonly DeclaredSymbolDraft[],
+): Promise<void> {
+  const rows = await loadLiveDeclarationRows(tx);
+  const records = drafts.map((draft) => createDeclarationRecord(draft));
+  const seen = new Set<string>();
+
+  for (const record of records) {
+    if (seen.has(record.symbolUri)) {
+      throw new Error("Duplicate symbol URI in declaration list");
+    }
+    seen.add(record.symbolUri);
+    if (otherBlockDeclaresUri(rows, floDownBlockId, record.symbolUri)) {
+      throw new Error("Symbol URI already declared on another block");
+    }
+  }
 
   await tx.floDownBlock.update({
     where: { id: floDownBlockId },
-    data: { declaredSymbols: deduped },
+    data: {
+      declaredSymbolsInfo: records,
+    },
   });
-
-  for (const symbolName of deduped) {
-    await tx.symbol.upsert({
-      where: {
-        symbolName_futureRepo_filePath_fileName_language: {
-          symbolName,
-          futureRepo: identity.futureRepo,
-          filePath: identity.filePath,
-          fileName: identity.fileName,
-          language: identity.language,
-        },
-      },
-      update: {},
-      create: {
-        symbolName,
-        futureRepo: identity.futureRepo,
-        filePath: identity.filePath,
-        fileName: identity.fileName,
-        language: identity.language,
-      },
-    });
-  }
-
-  return deduped;
 }
 
 export async function addDeclaredSymbol(
   tx: TransactionClient,
   floDownBlockId: string,
-  symbolName: string,
-  identity: FileIdentity,
-): Promise<string[]> {
+  draft: DeclaredSymbolDraft,
+): Promise<void> {
+  const record = createDeclarationRecord(draft);
   const block = await tx.floDownBlock.findUniqueOrThrow({
     where: { id: floDownBlockId },
-    select: { declaredSymbols: true },
+    select: { declaredSymbolsInfo: true },
   });
-
-  if (block.declaredSymbols.includes(symbolName)) {
-    return block.declaredSymbols;
+  const current = parseDeclaredSymbolsInfo(block.declaredSymbolsInfo);
+  if (current.some((item) => item.symbolUri === record.symbolUri)) {
+    return;
   }
 
-  return setDeclaredSymbols(
-    tx,
-    floDownBlockId,
-    [...block.declaredSymbols, symbolName],
-    identity,
-  );
+  const rows = await loadLiveDeclarationRows(tx);
+  if (otherBlockDeclaresUri(rows, floDownBlockId, record.symbolUri)) {
+    throw new Error("Symbol URI already declared on another block");
+  }
+
+  const next = upsertDeclaration(current, draft);
+  await tx.floDownBlock.update({
+    where: { id: floDownBlockId },
+    data: {
+      declaredSymbolsInfo: next,
+    },
+  });
 }
 
 export async function removeDeclaredSymbol(
   tx: TransactionClient,
   floDownBlockId: string,
-  symbolName: string,
-  identity: FileIdentity,
-): Promise<string[]> {
+  symbolUri: string,
+): Promise<void> {
   const block = await tx.floDownBlock.findUniqueOrThrow({
     where: { id: floDownBlockId },
-    select: { declaredSymbols: true },
+    select: { declaredSymbolsInfo: true },
   });
-
-  return setDeclaredSymbols(
-    tx,
-    floDownBlockId,
-    block.declaredSymbols.filter((name) => name !== symbolName),
-    identity,
+  const next = removeDeclarationByUri(
+    parseDeclaredSymbolsInfo(block.declaredSymbolsInfo),
+    symbolUri,
   );
+  await tx.floDownBlock.update({
+    where: { id: floDownBlockId },
+    data: {
+      declaredSymbolsInfo: next,
+    },
+  });
+}
+
+/** @deprecated Prefer setDeclaredSymbolsInfo. Ignores short names (does not mint URIs). */
+export async function setDeclaredSymbols(
+  tx: TransactionClient,
+  floDownBlockId: string,
+  names: string[],
+  _identity?: unknown,
+): Promise<string[]> {
+  const drafts = draftsFromHttpUris(names);
+  await setDeclaredSymbolsInfo(tx, floDownBlockId, drafts);
+  return drafts.map((draft) => draft.symbolUri);
 }

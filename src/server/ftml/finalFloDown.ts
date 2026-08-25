@@ -68,6 +68,8 @@ export function finalFloDown(
   fd: FloDownInstance,
   declaredSymbols: readonly string[] = [],
 ): FloDownStatement {
+  // Remaining issue: unused parallel rewrite. Production preview/export uses
+  // prepareFloDownStatement.mountStatementOnFloDown. Delete or fold in a later pass.
   const clone: FloDownStatement = structuredClone(ast);
   const statementForSymbols = clone;
   const symbolMap = new Map<string, string>();

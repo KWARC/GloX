@@ -25,6 +25,7 @@ export type StexCurationDialogsProps = {
     activeFloDownBlockStatement: ComponentProps<
       typeof ReferenceSuggestionDialog
     >["floDownBlockStatement"];
+    activeDeclaredSymbolsInfo?: unknown;
     activeFloDownBlockText: string;
     suggestions: ComponentProps<
       typeof ReferenceSuggestionDialog
@@ -112,6 +113,7 @@ export function StexCurationDialogs({
         onClose={sniffy.onClose}
         floDownBlockId={sniffy.activeFloDownBlockId ?? ""}
         floDownBlockStatement={sniffy.activeFloDownBlockStatement}
+        declaredSymbolsInfo={sniffy.activeDeclaredSymbolsInfo}
         originalText={sniffy.activeFloDownBlockText}
         suggestions={sniffy.suggestions}
         catalog={sniffy.catalog}

@@ -1,15 +1,26 @@
 import {
   listModuleDescriptions,
+  listModuleDescriptionsForTexExport,
   searchModuleDescriptions,
 } from "@/serverFns/moduleDescription.server";
+import {
+  generateAllModuleDescriptionTexFiles,
+  ModuleDescriptionTexBulkExportError,
+} from "@/lib/moduleDescriptionTexExport";
+import {
+  downloadTexFilesAsZip,
+  MODULE_DESCRIPTIONS_TEX_ZIP_FILE_NAME,
+} from "@/lib/texZipExport";
 import {
   INDEX_STATUS_CONFIG,
   INDEX_STATUS_OPTIONS,
   IndexStatus,
 } from "@/types/indexStatus";
 import {
+  Alert,
   Badge,
   Box,
+  Button,
   Divider,
   Group,
   Loader,
@@ -21,9 +32,10 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { currentUser } from "@/server/auth/currentUser";
+import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const LIST_PAGE_SIZE = 20;
@@ -46,6 +58,8 @@ export const Route = createFileRoute("/module-descriptions/")({
 function ModuleDescriptionsPage() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportPartialSuccess, setExportPartialSuccess] = useState(false);
 
   const [listPage, setListPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<IndexStatus | null>(null);
@@ -65,6 +79,39 @@ function ModuleDescriptionsPage() {
   useEffect(() => {
     setListPage(1);
   }, [statusFilter, debouncedListQuery]);
+
+  const { data: auth } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: currentUser,
+  });
+  const role = auth?.user?.role;
+  const canExportTex = role === "ADMIN" || role === "CURATOR";
+
+  const exportAllMutation = useMutation({
+    mutationFn: async () => {
+      const modules = await listModuleDescriptionsForTexExport();
+      if (modules.length === 0) {
+        throw new Error("No module descriptions to export");
+      }
+      const { files, failures } = await generateAllModuleDescriptionTexFiles(modules);
+      if (files.length > 0) {
+        downloadTexFilesAsZip(files, MODULE_DESCRIPTIONS_TEX_ZIP_FILE_NAME);
+      }
+      if (failures.length > 0) {
+        throw new ModuleDescriptionTexBulkExportError(failures, files.length);
+      }
+    },
+    onMutate: () => {
+      setExportError(null);
+      setExportPartialSuccess(false);
+    },
+    onError: (error) => {
+      setExportError(error instanceof Error ? error.message : String(error));
+      setExportPartialSuccess(
+        error instanceof ModuleDescriptionTexBulkExportError && error.partialSuccess,
+      );
+    },
+  });
 
   const { data: results = [], isFetching } = useQuery({
     queryKey: ["module-descriptions-search", debouncedQuery],
@@ -161,7 +208,7 @@ function ModuleDescriptionsPage() {
       <Divider />
 
       <Stack gap="sm">
-        <Group justify="space-between" align="flex-end">
+        <Group justify="space-between" align="flex-end" wrap="wrap">
           <Stack gap={4}>
             <Title order={4}>Modules</Title>
             <Text size="sm" c="dimmed">
@@ -169,20 +216,48 @@ function ModuleDescriptionsPage() {
             </Text>
           </Stack>
 
-          <Select
-            label="Filter by status"
-            placeholder="All statuses"
-            value={statusFilter}
-            onChange={(value) => setStatusFilter(value as IndexStatus | null)}
-            clearable
-            data={INDEX_STATUS_OPTIONS}
-            w={220}
-            size="sm"
-            styles={{
-              label: { fontWeight: 500, marginBottom: 4 },
-            }}
-          />
+          <Group align="flex-end" gap="sm" wrap="wrap">
+            {canExportTex && (
+              <Button
+                variant="light"
+                size="compact-sm"
+                leftSection={<Download size={14} />}
+                loading={exportAllMutation.isPending}
+                onClick={() => exportAllMutation.mutate()}
+              >
+                Download all
+              </Button>
+            )}
+            <Select
+              label="Filter by status"
+              placeholder="All statuses"
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value as IndexStatus | null)}
+              clearable
+              data={INDEX_STATUS_OPTIONS}
+              w={220}
+              size="sm"
+              styles={{
+                label: { fontWeight: 500, marginBottom: 4 },
+              }}
+            />
+          </Group>
         </Group>
+
+        {exportError && (
+          <Alert
+            color={exportPartialSuccess ? "yellow" : "red"}
+            title={
+              exportPartialSuccess
+                ? "LaTeX export completed with failures"
+                : "LaTeX export failed"
+            }
+          >
+            <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+              {exportError}
+            </Text>
+          </Alert>
+        )}
 
         <TextInput
           placeholder="Filter by module ID"

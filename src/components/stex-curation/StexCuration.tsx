@@ -223,6 +223,7 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 onClose: () => sniffyFlow.setSuggestOpen(false),
                 activeFloDownBlockId: sniffyFlow.activeFloDownBlockId,
                 activeFloDownBlockStatement: sniffyFlow.activeFloDownBlockStatement,
+                activeDeclaredSymbolsInfo: sniffyFlow.activeDeclaredSymbolsInfo,
                 activeFloDownBlockText: sniffyFlow.activeFloDownBlockText,
                 suggestions: sniffyFlow.suggestions,
                 catalog: sniffyCatalog,

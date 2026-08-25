@@ -1,6 +1,9 @@
+import { floDownUriReplacementsForMove } from "@/lib/floDownUriReplacements";
+import { parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import { queryClient } from "@/queryClient";
 import { ExtractedItem } from "@/server/text-selection";
 import {
+  findFloDownBlocksByIdentity,
   updateFloDownBlockFilePath,
   updateFloDownBlocksFilePath,
 } from "@/serverFns/extractFloDownBlock.server";
@@ -45,24 +48,45 @@ export function FloDownBlockIdentityDialog({
 
   async function handleSave() {
     try {
+      const target = {
+        futureRepo: futureRepo.trim(),
+        filePath: filePath.trim(),
+        fileName: fileName.trim(),
+        language: language.trim(),
+      };
       if (multipleDefinitions) {
+        const blocks = await findFloDownBlocksByIdentity({ data: multipleDefinitions });
+        const uriReplacements = await floDownUriReplacementsForMove(
+          blocks.flatMap((block) =>
+            parseDeclaredSymbolsInfo(block.declaredSymbolsInfo).map((item) => ({
+              symbolName: item.symbolName,
+              symbolUri: item.symbolUri,
+              fileName: block.fileName,
+            })),
+          ),
+          target,
+        );
         await updateFloDownBlocksFilePath({
           data: {
             identity: multipleDefinitions,
-            futureRepo: futureRepo.trim(),
-            filePath: filePath.trim(),
-            fileName: fileName.trim(),
-            language: language.trim(),
+            ...target,
+            uriReplacements,
           },
         });
       } else if (floDownBlock) {
+        const uriReplacements = await floDownUriReplacementsForMove(
+          parseDeclaredSymbolsInfo(floDownBlock.declaredSymbolsInfo).map((item) => ({
+            symbolName: item.symbolName,
+            symbolUri: item.symbolUri,
+            fileName: floDownBlock.fileName,
+          })),
+          target,
+        );
         await updateFloDownBlockFilePath({
           data: {
             id: floDownBlock.id,
-            futureRepo: futureRepo.trim(),
-            filePath: filePath.trim(),
-            fileName: fileName.trim(),
-            language: language.trim(),
+            ...target,
+            uriReplacements,
           },
         });
       }

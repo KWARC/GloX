@@ -1,12 +1,9 @@
 import { initFloDown } from "@/lib/flodownClient";
-import {
-  createFloDownDocument,
-  exportIdentityFromGlox,
-  symbolIdentityFromGlox,
-  symbolUri,
-} from "@/lib/flodownUris";
+import { createFloDownDocumentFromGlox } from "@/lib/flodownUris";
 import { parseUri } from "@/server/parseUri";
 import { isHttp } from "@/server/ftml/generateStexFromFtml";
+// Remaining issue: isHttp is re-exported from generateStexFromFtml; the definition lives in
+// statementContent.ts. Import the source module when touching this file.
 import type {
   FloDownContent,
   Inline,
@@ -36,12 +33,6 @@ type FloDownBlock = {
 type FloDownLib = {
   FloDown: {
     fromUri: (uri: string) => FloDownBlock;
-    fromPath: (
-      archive: string,
-      path: string | null | undefined,
-      name: string,
-      lang: wasm_bindgen.Language,
-    ) => wasm_bindgen.FloDown | undefined;
   };
 };
 
@@ -56,26 +47,16 @@ function getDisplaySymbol(symbolName: string): string {
 
 function rewriteContent(
   content: FloDownContent[],
-  identity: MarkReferenceLatexIdentity,
+  _identity: MarkReferenceLatexIdentity,
 ): FloDownContent[] {
+  // Remaining issue: own URI rewrite; does not use mountStatementOnFloDown / addSymbolDeclaration.
   return content.map((item) => {
     if (typeof item === "string") return item;
     if (item.type !== "symref") return item;
 
     const symref = item as SymrefNode;
     if (isHttp(symref.uri)) return symref;
-
-    return {
-      ...symref,
-      uri: symbolUri(
-        symbolIdentityFromGlox({
-          futureRepo: identity.futureRepo,
-          filePath: identity.filePath,
-          fileName: identity.fileName,
-          symbolName: symref.uri,
-        }),
-      ),
-    };
+    return symref;
   });
 }
 
@@ -125,14 +106,14 @@ export async function buildMarkReferenceLatex(
 
   const floDown = (await initFloDown()) as FloDownLib;
 
-  const fdVisible = createFloDownDocument(
-    floDown.FloDown as Parameters<typeof createFloDownDocument>[0],
-    exportIdentityFromGlox({
+  const fdVisible = createFloDownDocumentFromGlox(
+    floDown.FloDown as Parameters<typeof createFloDownDocumentFromGlox>[0],
+    {
       futureRepo: identity.futureRepo,
       filePath: identity.filePath,
       fileName: identity.fileName,
       language: identity.language,
-    }),
+    },
   );
 
   try {

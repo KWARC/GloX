@@ -198,6 +198,20 @@ export default function Header() {
             }}
           />
 
+          <NavLink
+            label="FloDown lab"
+            component={Link}
+            to="/flodown-lab"
+            onClick={() => setOpened(false)}
+            leftSection={<FileText size={18} />}
+            styles={{
+              root: {
+                borderRadius: "8px",
+                padding: "12px",
+              },
+            }}
+          />
+
           {loggedIn && (
             <>
               <NavLink

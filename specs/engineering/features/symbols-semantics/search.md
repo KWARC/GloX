@@ -40,8 +40,9 @@ for automatic suggestion matching in that language.
 
 **Upstream:** R-SYM-05
 
-Manual picker search (`searchSymbol`) uses case-insensitive substring match on `symbolName` and is
-language-agnostic; MathHub results come from the configured FTML search API.
+Manual picker search (`searchSymbol`) uses case-insensitive substring match on `symbolName` and
+optional `alias` in `declaredSymbolsInfo` across FloDown blocks and is language-agnostic; MathHub
+results come from the configured FTML search API.
 
 ## Test mapping
 

@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { queryClient } from "@/queryClient";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
@@ -166,9 +167,15 @@ export function useSemanticEditingFlow({
       let newUri: string;
 
       if (params.mode === "CREATE") {
-        newUri = params.symbolName;
+        newUri = await floDownDeclareSymbolUri({
+          futureRepo: futureRepo.trim(),
+          filePath: filePath.trim(),
+          fileName: fileName.trim(),
+          language: language.trim(),
+          symbolName: params.symbolName,
+        });
       } else if (params.selectedSymbol.source === "DB") {
-        newUri = params.selectedSymbol.symbolName;
+        newUri = params.selectedSymbol.symbolUri;
       } else {
         const parsed = parseUri(params.selectedSymbol.uri);
         newUri = parsed.conceptUri;
@@ -197,10 +204,18 @@ export function useSemanticEditingFlow({
             target: { type: "definiendum", uri: editingNodeId },
             payload,
           },
+          ...(isDeclared ? { declaredSymbolName: params.symbolName } : {}),
         },
       });
     } else {
       if (params.mode === "CREATE") {
+        const symbolUri = await floDownDeclareSymbolUri({
+          futureRepo: futureRepo.trim(),
+          filePath: filePath.trim(),
+          fileName: fileName.trim(),
+          language: language.trim(),
+          symbolName: params.symbolName,
+        });
         const result = await createSymbolDefiniendum({
           data: {
             floDownBlockId: floDownBlockExtractId,
@@ -213,6 +228,7 @@ export function useSemanticEditingFlow({
             fileName: fileName.trim(),
             language: language.trim(),
             symbolName: params.symbolName,
+            symbolUri,
           },
         });
         if (result.linkedExistingSymbol) {
@@ -235,6 +251,7 @@ export function useSemanticEditingFlow({
             symbolName: "",
             selectedSymbolSource: "DB",
             selectedSymbolId: params.selectedSymbol.id,
+            selectedSymbolUri: params.selectedSymbol.symbolUri,
           },
         });
       } else {
@@ -335,6 +352,7 @@ export function useSemanticEditingFlow({
     floDownBlockId: string,
     target: { type: "definiendum" | "symref"; uri: string },
     payload: ReplacePayload,
+    options?: { declaredSymbolName?: string },
   ) {
     const result = await updateFloDownBlockAst({
       data: {
@@ -344,6 +362,9 @@ export function useSemanticEditingFlow({
           target,
           payload,
         },
+        ...(options?.declaredSymbolName
+          ? { declaredSymbolName: options.declaredSymbolName }
+          : {}),
       },
     });
 

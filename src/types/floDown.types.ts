@@ -1,9 +1,9 @@
 /**
  * Types for `FloDownBlock.statement` JSON and in-memory curation.
  *
- * Persistence: `PersistedBlock` + `declaredSymbols` column (FloDown shapes only).
+ * Persistence: `PersistedBlock` + `declaredSymbolsInfo` (FloDown shapes only).
  * Draft-only: `DefiniendumNode.symdecl`, `RootNode` — stripped before persist.
- * Export: `toExportDefinition` fills `for_symbols` from `declaredSymbols`.
+ * Export: `toExportDefinition` fills `for_symbols` from stored declaration URIs.
  *
  * Canonical shapes: `public/flodown/flodown.d.ts`.
  */

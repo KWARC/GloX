@@ -1,6 +1,6 @@
 # GloX — shipped features
 
-> **Layer:** Product inventory — orientation only. **Last verified:** 2026-08-15.
+> **Layer:** Product inventory — orientation only. **Last verified:** 2026-08-25.
 >
 > Parent brief: [`glox.md`](./glox.md)
 
@@ -46,14 +46,14 @@
 - **Status lifecycle** — EXTRACTED → FINALIZED_IN_FILE → SUBMITTED_TO_MATHHUB (or DISCARDED).
 - **LaTeX draft/final** — Save and version LaTeX output per document.
 - **sTeX export** — Generate sTeX from combined FloDown statements with provenance injection.
-- **Document location move** — Relocate export identity; updates symbols and blocks atomically.
+- **Document location move** — Relocate export identity; updates blocks and listed local symbol URIs.
 
 ## Symbols & deduplication
 
-- **Symbol registry** — Local symbols keyed by name + export identity.
+- **Symbol registry** — Local declarations on FloDown blocks, keyed by opaque FloDown symbol URI.
 - **Symbol propagation** — Replace symbol URIs across referencing blocks.
 - **MathHub URI replacement** — Bulk replace external URIs in block statements.
-- **Duplicate confirmation** — Curators confirm symbols are not duplicates (`hasConfirmed`).
+- **Duplicate confirmation** — Curators confirm declarations are not duplicates (`hasConfirmed` on the declaration record).
 
 ## Mark references
 

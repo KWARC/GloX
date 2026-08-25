@@ -1,5 +1,9 @@
 export const FLODOWN_BACKEND_URL = "https://mathhub.info";
 
+// Remaining issue (E-FTML-05): hover on GloX-local symbols is not served by this backend's
+// /content/fragment. MathHub 404s those URIs. Local hover depends on D-FTML-03 (live definition
+// document), not on changing this URL.
+
 let floDownPromise: Promise<any> | null = null;
 
 export function initFloDown(): Promise<any> {

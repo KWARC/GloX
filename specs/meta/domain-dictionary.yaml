@@ -182,11 +182,30 @@ terms:
   definiendum:
     preferred: Definiendum
     definition: >
-      A symbol declaration inline in a definition statement — the concept being defined, marked with
-      symdecl in FTML.
+      The term being defined in a definition statement (inline FTML node). It names or verbalizes a
+      symbol in that definition (e.g. "triangle" in English, "Dreieck" in German). A definiendum
+      references a symbol URI; it does not by itself declare the symbol. The same symbol MAY appear
+      as a definiendum in many definitions (including other languages). Distinct from symbol
+      declaration and from declared symbols on a FloDown block.
     technical_anchors:
-      - src/serverFns/symbol.server.ts
       - src/types/floDown.types.ts
+      - specs/engineering/external-deps/libraries/ftml.md
+    see_also:
+      - declared_symbols
+      - symbol
+
+  declared_symbols:
+    preferred: Declared symbols
+    definition: >
+      Local symbol names and URIs a FloDown block introduces (declares) once; the declaration
+      establishes the opaque FloDown symbol URI. Deleting such a block removes matching symrefs from
+      other blocks. Not the same as definienda: a later definition MAY use a definiendum for an
+      already-declared symbol without declaring it again.
+    technical_anchors:
+      - prisma/schema.prisma FloDownBlock.declaredSymbolsInfo
+      - prisma/schema.prisma FloDownBlock.declaredSymbols
+      - src/server/floDownBlockDeclaredSymbols.ts
+      - specs/engineering/external-deps/libraries/ftml.md
 
   symref:
     preferred: Symref
@@ -198,9 +217,10 @@ terms:
   symbol:
     preferred: Symbol
     definition: >
-      A named concept in the local symbolic catalog, uniquely identified by symbol name plus export
-      identity (futureRepo, filePath, fileName, language). A Symbol is associated when a
-      non-discarded FloDown block at the same export identity declares that symbol name.
+      A named concept in the local symbolic catalog. Identity is the opaque URI FloDown returned
+      (E-FTML-06). GloX allows at most one live declaration of a given URI (R-SYM-02). Display name
+      is search-only. A Symbol is associated when a non-discarded FloDown block lists that URI in
+      `declaredSymbolsInfo`.
     technical_anchors:
       - prisma/schema.prisma Symbol
       - src/serverFns/symbol.server.ts
@@ -252,15 +272,6 @@ terms:
         context: PRD wording for confirm-not-duplicate workflow
       - label: confirmed flag
         context: database / SDD
-
-  declared_symbols:
-    preferred: Declared symbols
-    definition: >
-      Local symbol names a FloDown block introduces; deleting such a block removes symrefs to those
-      symbols from other blocks.
-    technical_anchors:
-      - prisma/schema.prisma FloDownBlock.declaredSymbols
-      - src/server/floDownBlockDeclaredSymbols.ts
 
   original_text:
     preferred: Original text

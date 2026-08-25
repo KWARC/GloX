@@ -190,6 +190,9 @@ export function useSniffyReferenceSuggestions({
     activeFloDownBlockId,
     activeFloDownBlockText,
     activeFloDownBlockStatement,
+    activeDeclaredSymbolsInfo:
+      floDownBlocks.find((block) => block.id === activeFloDownBlockId)
+        ?.declaredSymbolsInfo,
     handleRecomputeReferences,
     handleRetryCatalog,
     handleAcceptSuggestion,

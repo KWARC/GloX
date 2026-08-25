@@ -19,6 +19,7 @@ import {
   IconPencil,
   IconSettings,
   IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
 import { FtmlPreview, type FloDownSymbolContext } from "./FtmlPreview";
@@ -108,6 +109,14 @@ export function ExtractedTextPanel({
     }
   }
 
+  function discardJsonEditor(item: ExtractedItem) {
+    setJsonDrafts((current) => {
+      const { [item.id]: _, ...remaining } = current;
+      return remaining;
+    });
+    onToggleEdit(item.id);
+  }
+
   return (
     <Paper
       withBorder={!compact}
@@ -160,84 +169,101 @@ export function ExtractedTextPanel({
 
                     {showActions ? (
                       <Group gap={compact ? "xs" : "xs"}>
-                        {item.pageNumber !== null && onGoToSourcePage && (
-                          <Tooltip label="Go to source page" withArrow>
-                            <ActionIcon
-                              size={compact ? 22 : isMobile ? "md" : "sm"}
-                              variant="subtle"
-                              color="blue"
-                              onClick={() => onGoToSourcePage(item.pageNumber!)}
-                            >
-                              <IconArrowLeft size={16} />
-                            </ActionIcon>
-                          </Tooltip>
-                        )}
-                        {showDelete && (
-                          <Tooltip label="Delete content" withArrow>
-                            <ActionIcon
-                              size={compact ? 22 : isMobile ? "md" : "sm"}
-                              color="red"
-                              disabled={isLocked}
-                              onClick={() => onDelete(item.id)}
-                            >
-                              <IconTrash size={14} />
-                            </ActionIcon>
-                          </Tooltip>
-                        )}
-
-                        {showJsonEdit && (
-                          <Tooltip
-                            label={
-                              isEditing
-                                ? "Save JSON changes"
-                                : "Edit JSON format"
-                            }
-                            withArrow
-                          >
-                            <ActionIcon
-                              size={compact ? 22 : isMobile ? "md" : "sm"}
-                              variant="subtle"
-                              color={isEditing ? "blue" : undefined}
-                              disabled={isLocked || savingId === item.id}
-                              loading={savingId === item.id}
-                              onClick={() =>
-                                isEditing
-                                  ? void saveJsonEditor(item)
-                                  : openJsonEditor(item)
-                              }
-                            >
-                              {isEditing ? (
+                        {isEditing ? (
+                          <>
+                            <Tooltip label="Save JSON changes" withArrow>
+                              <ActionIcon
+                                size={compact ? 22 : isMobile ? "md" : "sm"}
+                                variant="subtle"
+                                color="blue"
+                                disabled={isLocked || savingId === item.id}
+                                loading={savingId === item.id}
+                                onClick={() => void saveJsonEditor(item)}
+                              >
                                 <IconDeviceFloppy size={16} />
-                              ) : (
-                                <IconPencil size={16} />
-                              )}
-                            </ActionIcon>
-                          </Tooltip>
-                        )}
+                              </ActionIcon>
+                            </Tooltip>
+                            <Tooltip label="Discard changes" withArrow>
+                              <ActionIcon
+                                size={compact ? 22 : isMobile ? "md" : "sm"}
+                                variant="subtle"
+                                color="red"
+                                disabled={isLocked || savingId === item.id}
+                                onClick={() => discardJsonEditor(item)}
+                              >
+                                <IconX size={16} />
+                              </ActionIcon>
+                            </Tooltip>
+                          </>
+                        ) : (
+                          <>
+                            {item.pageNumber !== null && onGoToSourcePage && (
+                              <Tooltip label="Go to source page" withArrow>
+                                <ActionIcon
+                                  size={compact ? 22 : isMobile ? "md" : "sm"}
+                                  variant="subtle"
+                                  color="blue"
+                                  onClick={() =>
+                                    onGoToSourcePage(item.pageNumber!)
+                                  }
+                                >
+                                  <IconArrowLeft size={16} />
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
+                            {showDelete && (
+                              <Tooltip label="Delete content" withArrow>
+                                <ActionIcon
+                                  size={compact ? 22 : isMobile ? "md" : "sm"}
+                                  color="red"
+                                  disabled={isLocked}
+                                  onClick={() => onDelete(item.id)}
+                                >
+                                  <IconTrash size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
 
-                        {onRecomputeReferences && (
-                          <Tooltip label="sn-ify" withArrow>
-                            <ActionIcon
-                              size={compact ? 22 : isMobile ? "md" : "sm"}
-                              variant="subtle"
-                              color="teal"
-                              disabled={isLocked}
-                              onClick={() => onRecomputeReferences(item.id)}
-                            >
-                              <IconDog size={15} />
-                            </ActionIcon>
-                          </Tooltip>
+                            {showJsonEdit && (
+                              <Tooltip label="Edit JSON format" withArrow>
+                                <ActionIcon
+                                  size={compact ? 22 : isMobile ? "md" : "sm"}
+                                  variant="subtle"
+                                  disabled={isLocked}
+                                  onClick={() => openJsonEditor(item)}
+                                >
+                                  <IconPencil size={16} />
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
+
+                            {onRecomputeReferences && (
+                              <Tooltip label="sn-ify" withArrow>
+                                <ActionIcon
+                                  size={compact ? 22 : isMobile ? "md" : "sm"}
+                                  variant="subtle"
+                                  color="teal"
+                                  disabled={isLocked}
+                                  onClick={() =>
+                                    onRecomputeReferences(item.id)
+                                  }
+                                >
+                                  <IconDog size={15} />
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
+                            <Tooltip label="Manage semantics" withArrow>
+                              <ActionIcon
+                                size={compact ? 22 : isMobile ? "md" : "sm"}
+                                variant="subtle"
+                                disabled={isLocked}
+                                onClick={() => onOpenSemanticPanel(item.id)}
+                              >
+                                <IconSettings size={16} />
+                              </ActionIcon>
+                            </Tooltip>
+                          </>
                         )}
-                        <Tooltip label="Manage semantics" withArrow>
-                          <ActionIcon
-                            size={compact ? 22 : isMobile ? "md" : "sm"}
-                            variant="subtle"
-                            disabled={isLocked}
-                            onClick={() => onOpenSemanticPanel(item.id)}
-                          >
-                            <IconSettings size={16} />
-                          </ActionIcon>
-                        </Tooltip>
                       </Group>
                     ) : (
                       <div />
@@ -273,6 +299,7 @@ export function ExtractedTextPanel({
                         docId={item.id}
                         ftmlAst={item.statement}
                         declaredSymbols={item.declaredSymbols}
+                        declaredSymbolsInfo={item.declaredSymbolsInfo}
                         symbolContext={symbolContext}
                       />
 
