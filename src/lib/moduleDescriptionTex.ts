@@ -35,13 +35,10 @@ export type GenerateModuleTexInput = {
   definitionBlocks: DefinitionBlockInput[];
 };
 
-export type TexFilePreview = {
-  fileName: string;
-  tex: string;
+export type TexFilePreview = TexZipFile & {
   ftmlStatement: FloDownStatement;
   declaredSymbols?: readonly string[];
   declaredSymbolsInfo?: unknown;
-  uri: string;
 };
 
 type ModulePreviewBlock = PersistedBlock | HeadingNode;
@@ -58,6 +55,19 @@ type FloDownLib = {
     fromUri: (uri: string) => FloDownWasmBlock;
   };
 };
+
+type GloxDocumentIdentity = Pick<
+  DefinitionBlockInput,
+  "futureRepo" | "filePath" | "fileName" | "language"
+>;
+
+function texFileName(name: string, language: string): string {
+  return `${name}.${language}.tex`;
+}
+
+function documentUriFor(identity: GloxDocumentIdentity): string {
+  return documentUriFromGlox(identity);
+}
 
 function sectionHeading(title: string): HeadingNode {
   return {
@@ -92,15 +102,17 @@ export function buildModuleDescriptionStatement(
   return content as FloDownStatement;
 }
 
-export async function generateModuleDescriptionModuleTex(
-  input: GenerateModuleTexInput,
-): Promise<string> {
+async function requireFloDownLib(): Promise<FloDownLib> {
   if (typeof window === "undefined") {
     throw new Error("FloDown LaTeX export must run in the browser");
   }
+  return (await initFloDown()) as FloDownLib;
+}
 
-  const floDown = (await initFloDown()) as FloDownLib;
-
+export async function generateModuleDescriptionModuleTex(
+  input: GenerateModuleTexInput,
+): Promise<string> {
+  const floDown = await requireFloDownLib();
   const fd = createFloDownDocumentFromGlox(floDown.FloDown, {
     futureRepo: input.futureRepo,
     filePath: input.modulesFilePath,
@@ -108,10 +120,7 @@ export async function generateModuleDescriptionModuleTex(
     language: input.language,
   }) as FloDownWasmBlock;
 
-  const moduleStatement = buildModuleDescriptionStatement(input);
-
-  mountStatementOnFloDown(fd, moduleStatement);
-
+  mountStatementOnFloDown(fd, buildModuleDescriptionStatement(input));
   return fd.getStex().trimEnd();
 }
 
@@ -120,18 +129,8 @@ export async function generateModuleDescriptionDefinitionTex(
   defBlock: DefinitionBlockInput,
   _siblingBlocks: readonly DefinitionBlockInput[] = [],
 ): Promise<string> {
-  if (typeof window === "undefined") {
-    throw new Error("FloDown LaTeX export must run in the browser");
-  }
-
-  const floDown = (await initFloDown()) as FloDownLib;
-
-  const fd = createFloDownDocumentFromGlox(floDown.FloDown, {
-    futureRepo: defBlock.futureRepo,
-    filePath: defBlock.filePath,
-    fileName: defBlock.fileName,
-    language: defBlock.language,
-  }) as FloDownWasmBlock;
+  const floDown = await requireFloDownLib();
+  const fd = createFloDownDocumentFromGlox(floDown.FloDown, defBlock) as FloDownWasmBlock;
 
   const root = normalizeToRoot(defBlock.statement);
   for (const block of root.content) {
@@ -142,69 +141,60 @@ export async function generateModuleDescriptionDefinitionTex(
   return fd.getStex().trimEnd();
 }
 
+export function buildModuleTexPreview(
+  input: GenerateModuleTexInput,
+  tex: string,
+  ftmlStatement: FloDownStatement,
+): TexFilePreview {
+  return {
+    fileName: texFileName(input.moduleId, input.language),
+    tex,
+    ftmlStatement,
+    uri: documentUriFor({
+      futureRepo: input.futureRepo,
+      filePath: input.modulesFilePath,
+      fileName: input.moduleId,
+      language: input.language,
+    }),
+  };
+}
+
+export async function buildDefinitionTexPreview(
+  moduleId: string,
+  block: DefinitionBlockInput,
+  siblings: readonly DefinitionBlockInput[],
+): Promise<TexFilePreview> {
+  return {
+    fileName: texFileName(block.fileName, block.language),
+    tex: await generateModuleDescriptionDefinitionTex(moduleId, block, siblings),
+    ftmlStatement: block.statement,
+    declaredSymbols: block.declaredSymbols,
+    declaredSymbolsInfo: block.declaredSymbolsInfo,
+    uri: documentUriFor(block),
+  };
+}
+
 export async function generateModuleDescriptionTexPreview(
   input: GenerateModuleTexInput,
 ) {
-  const moduleTex = await generateModuleDescriptionModuleTex(input);
-
   const moduleStatement = buildModuleDescriptionStatement(input);
-
+  const moduleTex = buildModuleTexPreview(
+    input,
+    await generateModuleDescriptionModuleTex(input),
+    moduleStatement,
+  );
   const definitionTex = await Promise.all(
-    input.definitionBlocks.map(async (block) => ({
-      fileName: `${block.fileName}.${block.language}.tex`,
-      tex: await generateModuleDescriptionDefinitionTex(
-        input.moduleId,
-        block,
-        input.definitionBlocks,
-      ),
-      ftmlStatement: block.statement,
-      declaredSymbols: block.declaredSymbols,
-      declaredSymbolsInfo: block.declaredSymbolsInfo,
-      uri: documentUriFromGlox({
-        futureRepo: block.futureRepo,
-        filePath: block.filePath,
-        fileName: block.fileName,
-        language: block.language,
-      }),
-    })),
+    input.definitionBlocks.map((block) =>
+      buildDefinitionTexPreview(input.moduleId, block, input.definitionBlocks),
+    ),
   );
 
-  return {
-    moduleTex: {
-      fileName: `${input.moduleId}.${input.language}.tex`,
-      tex: moduleTex,
-      ftmlStatement: moduleStatement,
-      uri: documentUriFromGlox({
-        futureRepo: input.futureRepo,
-        filePath: input.modulesFilePath,
-        fileName: input.moduleId,
-        language: input.language,
-      }),
-    },
-    definitionTex,
-  };
+  return { moduleTex, definitionTex };
 }
 
 export type ModuleDescriptionTexPreview = Awaited<
   ReturnType<typeof generateModuleDescriptionTexPreview>
 >;
-
-export function flattenModuleDescriptionTexPreview(
-  preview: ModuleDescriptionTexPreview,
-): TexZipFile[] {
-  return [preview.moduleTex, ...preview.definitionTex];
-}
-
-export async function generateAllModuleDescriptionTexFiles(
-  modules: readonly GenerateModuleTexInput[],
-): Promise<TexZipFile[]> {
-  const files: TexZipFile[] = [];
-  for (const moduleInput of modules) {
-    const preview = await generateModuleDescriptionTexPreview(moduleInput);
-    files.push(...flattenModuleDescriptionTexPreview(preview));
-  }
-  return files;
-}
 
 /** @deprecated Use generateModuleDescriptionModuleTex */
 export async function generateModuleDescriptionTex(

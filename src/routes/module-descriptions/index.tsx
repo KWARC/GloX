@@ -3,7 +3,7 @@ import {
   listModuleDescriptionsForTexExport,
   searchModuleDescriptions,
 } from "@/serverFns/moduleDescription.server";
-import { generateAllModuleDescriptionTexFiles } from "@/lib/moduleDescriptionTex";
+import { generateAllModuleDescriptionTexFiles } from "@/lib/moduleDescriptionTexExport";
 import {
   downloadTexFilesAsZip,
   MODULE_DESCRIPTIONS_TEX_ZIP_FILE_NAME,
