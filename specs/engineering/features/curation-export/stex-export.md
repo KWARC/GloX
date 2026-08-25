@@ -33,8 +33,8 @@ Out of scope:
 | --- | --- |
 | `src/serverFns/floDownBlockAggregate.server.ts` | Combines FloDown block statements for a file identity into one export document. |
 | `src/server/ftml/generateStexFromFtml.ts` | Creates a FloDown document with `fromUri`, mounts each top-level block through `mountStatementOnFloDown`, and serializes sTeX. |
-| `src/lib/prepareFloDownStatement.ts` | Passes stored HTTP URIs; leftover short names use `addSymbolDeclaration` before `addElement`. |
-| `src/serverFns/getSymbolUriMap.server.ts` | Resolves defining definitions for local labels. Used by **preview hover**, not by `generateStexFromFloDown` after the boundary cleanup. |
+| `src/lib/prepareFloDownStatement.ts` | Passes stored HTTP URIs into FloDown `addElement` (heading/`for_symbols`/`symdecl` shape only). |
+| `src/serverFns/getSymbolUriMap.server.ts` | Resolves defining definitions for opaque symbol URIs. Used by **preview hover**, not by `generateStexFromFloDown`. |
 | `src/serverFns/floDownBlockProvenance.server.ts` | Loads provenance metadata (document, page, timestamps) per contributing block. |
 | `src/server/ftml/addProvenanceData.ts` | Appends provenance comment lines to generated sTeX. |
 
@@ -42,7 +42,7 @@ Out of scope:
 
 | Concern | Rule |
 | --- | --- |
-| Local URI rewrite | Stored opaque FloDown URI pass-through, or `addSymbolDeclaration` for leftover short names (D-FTML-05). |
+| Local URI rewrite | Stored opaque FloDown URI pass-through (D-FTML-05). |
 | MathHub URI | `http(s)://mathhub.info?...` canonicalized if needed; not stored back to the database |
 | Provenance | `%%%` comment lines from `injectProvenance` |
 | Export dependency scope | The exporting file identity. Defining FloDown blocks are **not** copied into the sTeX document. |
@@ -64,9 +64,10 @@ unchanged (opaque equality).
 
 **Upstream:** R-CUR-06
 
-**S-CUR-08 (Ubiquitous):** WHEN a referenced local symbol is still a short name, the system MUST NOT
-leave that short name in `addElement` payload. The export document MUST declare the name (or use a
-stored FloDown URI). The defining FloDown block body MUST NOT be copied into the exported sTeX file.
+**S-CUR-08 (Ubiquitous):** WHEN generating sTeX, the system MUST pass stored opaque symbol URIs into
+FloDown unchanged. The defining FloDown block body MUST NOT be copied into the exported sTeX file.
+`FloDownBlockVersion` JSON MAY still contain short names; this export path MUST NOT rewrite version
+history.
 
 **Upstream:** R-CUR-08
 

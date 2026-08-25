@@ -4,262 +4,108 @@ import {
   rewriteStatementForFloDown,
 } from "./prepareFloDownStatement";
 
-describe("rewriteStatementForFloDown", () => {
-  it("declares short names and strips extra fields on rewrite", () => {
-    const declared: string[] = [];
-    const { statement, replacements } = rewriteStatementForFloDown(
-      {
-        type: "paragraph",
-        content: [
-          {
-            type: "symref",
-            uri: "Group",
-            content: ["Group"],
-          },
-        ],
-      },
-      {
-        addSymbolDeclaration: (name) => {
-          declared.push(name);
-          return `http://mathhub.info?a=a&p=p&m=m&s=${name}`;
-        },
-      },
-      { futureRepo: "a", filePath: "p", fileName: "m" },
-    );
+const GROUP_URI = "http://mathhub.info?a=a&p=p&m=m&s=Group";
+const FOO_URI = "http://mathhub.info?s=Foo";
 
-    expect(declared).toEqual(["Group"]);
-    expect(replacements).toEqual([
-      {
-        from: "Group",
-        to: "http://mathhub.info?a=a&p=p&m=m&s=Group",
-        reason: "addSymbolDeclaration",
-      },
-    ]);
-    expect(statement).toMatchObject({
+describe("rewriteStatementForFloDown", () => {
+  it("passes stored HTTP symbol URIs through without declaring", () => {
+    const statement = rewriteStatementForFloDown({
       type: "paragraph",
       content: [
         {
           type: "symref",
-          uri: "http://mathhub.info?a=a&p=p&m=m&s=Group",
+          uri: GROUP_URI,
+          content: ["Group"],
+        },
+      ],
+    });
+    expect(statement).toEqual({
+      type: "paragraph",
+      content: [
+        {
+          type: "symref",
+          uri: GROUP_URI,
+          content: ["Group"],
         },
       ],
     });
   });
 
-  it("converts paragraph definiendum to symref", () => {
-    const { statement } = rewriteStatementForFloDown(
-      {
+  it("leaves leftover short names unchanged (version history; not rewritten)", () => {
+    expect(
+      rewriteStatementForFloDown({
         type: "paragraph",
-        content: [
-          { type: "definiendum", uri: "Foo", content: ["Foo"], symdecl: true },
-        ],
-      },
-      { addSymbolDeclaration: (name) => `http://mathhub.info?s=${name}` },
-      { futureRepo: "a", filePath: "p", fileName: "m" },
-    );
-    expect(statement).toMatchObject({
+        content: [{ type: "symref", uri: "Group", content: ["Group"] }],
+      }),
+    ).toMatchObject({
+      content: [{ type: "symref", uri: "Group", content: ["Group"] }],
+    });
+  });
+
+  it("converts paragraph definiendum to symref without changing uri", () => {
+    const statement = rewriteStatementForFloDown({
       type: "paragraph",
-      content: [{ type: "symref", uri: "http://mathhub.info?s=Foo" }],
+      content: [
+        { type: "definiendum", uri: FOO_URI, content: ["Foo"], symdecl: true },
+      ],
+    });
+    expect(statement).toEqual({
+      type: "paragraph",
+      content: [{ type: "symref", uri: FOO_URI, content: ["Foo"] }],
     });
   });
 
   it("defaults for_symbols on definition nodes missing the field", () => {
-    const { statement } = rewriteStatementForFloDown(
-      {
-        type: "definition",
-        content: [
-          {
-            type: "paragraph",
-            content: [
-              {
-                type: "definiendum",
-                uri: "Foo",
-                content: ["Foo"],
-              },
-            ],
-          },
-        ],
-      },
-      { addSymbolDeclaration: (name) => `http://mathhub.info?s=${name}` },
-      { futureRepo: "a", filePath: "p", fileName: "m" },
-    );
+    const statement = rewriteStatementForFloDown({
+      type: "definition",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "definiendum",
+              uri: FOO_URI,
+              content: ["Foo"],
+            },
+          ],
+        },
+      ],
+    });
     expect(statement).toMatchObject({
       type: "definition",
-      for_symbols: ["http://mathhub.info?s=Foo"],
+      for_symbols: [FOO_URI],
     });
   });
 
   it("uses empty for_symbols when a definition has no definiendum", () => {
-    const { statement } = rewriteStatementForFloDown(
-      {
-        type: "definition",
-        content: [{ type: "paragraph", content: ["plain text"] }],
-      },
-      { addSymbolDeclaration: (name) => `http://mathhub.info?s=${name}` },
-      { futureRepo: "a", filePath: "p", fileName: "m" },
-    );
+    const statement = rewriteStatementForFloDown({
+      type: "definition",
+      content: [{ type: "paragraph", content: ["plain text"] }],
+    });
     expect(statement).toMatchObject({
       type: "definition",
       for_symbols: [],
     });
   });
 
-  it("rewrites legacy ppp-style definition missing for_symbols", () => {
-    const { statement } = rewriteStatementForFloDown(
-      {
-        type: "definition",
-        content: [
-          {
-            type: "paragraph",
-            content: ["he LNM is a truncated extraction fragment."],
-          },
-        ],
-      },
-      { addSymbolDeclaration: (name) => `http://mathhub.info?s=${name}` },
-      {
-        futureRepo: "smglom/software",
-        filePath: "mod",
-        fileName: "ppp",
-      },
-    );
-    expect(statement).toMatchObject({
-      type: "definition",
-      for_symbols: [],
-    });
-  });
-
-  it("rewrites legacy def3-style definition with definiendum but no for_symbols", () => {
-    const { statement } = rewriteStatementForFloDown(
-      {
-        type: "definition",
-        content: [
-          {
-            type: "paragraph",
-            content: [
-              {
-                type: "definiendum",
-                uri: "production bottlenecks",
-                content: ["production bottlenecks"],
-              },
-              " occur when capacity is exceeded.",
-            ],
-          },
-        ],
-      },
-      {
-        addSymbolDeclaration: (name) =>
-          `http://mathhub.info?a=smglom/software&p=mod&m=def3&s=${encodeURIComponent(name)}`,
-      },
-      {
-        futureRepo: "smglom/software",
-        filePath: "mod",
-        fileName: "def3",
-      },
-    );
-    expect(statement).toMatchObject({
-      type: "definition",
-      for_symbols: [
-        "http://mathhub.info?a=smglom/software&p=mod&m=def3&s=production%20bottlenecks",
-      ],
-    });
-  });
-
-  it("reuses knownUris without declaring on the current document", () => {
-    const declared: string[] = [];
-    const known = new Map([
-      [
-        "triangle",
-        "http://mathhub.info?a=smglom/geometry&p=mod&m=triangle&s=triangle",
-      ],
-    ]);
-    const { statement, replacements } = rewriteStatementForFloDown(
-      {
-        type: "paragraph",
-        content: [
-          {
-            type: "symref",
-            uri: "triangle",
-            content: ["triangle"],
-          },
-        ],
-      },
-      {
-        addSymbolDeclaration: (name) => {
-          declared.push(name);
-          return `http://mathhub.info?a=courses/FAU/module-descriptions&p=mod&m=wrong&s=${name}`;
-        },
-      },
-      {
-        futureRepo: "courses/FAU/module-descriptions",
-        filePath: "mod",
-        fileName: "triangle-sum-of-angles",
-      },
-      { knownUris: known },
-    );
-
-    expect(declared).toEqual([]);
-    expect(replacements).toEqual([
-      {
-        from: "triangle",
-        to: "http://mathhub.info?a=smglom/geometry&p=mod&m=triangle&s=triangle",
-        reason: "knownUriMap",
-      },
-    ]);
-    expect(statement).toMatchObject({
-      type: "paragraph",
-      content: [
-        {
-          type: "symref",
-          uri: "http://mathhub.info?a=smglom/geometry&p=mod&m=triangle&s=triangle",
-        },
-      ],
-    });
-  });
-
-  it("passes stored HTTP symbol URIs through without rewriting", () => {
-    const declared: string[] = [];
-    const uri =
-      "http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra&l=de";
-    const { statement, replacements } = rewriteStatementForFloDown(
-      {
-        type: "paragraph",
-        content: [{ type: "symref", uri, content: ["B"] }],
-      },
-      {
-        addSymbolDeclaration: (name) => {
-          declared.push(name);
-          return `http://mathhub.info?s=${name}`;
-        },
-      },
-      { futureRepo: "a", filePath: "p", fileName: "m" },
-    );
-    expect(declared).toEqual([]);
-    expect(replacements).toEqual([]);
-    expect(statement).toMatchObject({
-      content: [{ type: "symref", uri }],
-    });
-  });
-
-  it("mountStatementOnFloDown rewrites and calls addElement", () => {
+  it("mountStatementOnFloDown rewrites shape and calls addElement", () => {
     const elements: unknown[] = [];
-    const { replacements } = mountStatementOnFloDown(
+    const rewritten = mountStatementOnFloDown(
       {
-        addSymbolDeclaration: (name) => `http://mathhub.info?s=${name}`,
         addElement: (node) => {
           elements.push(node);
         },
       },
       {
         type: "paragraph",
-        content: [{ type: "symref", uri: "Group", content: ["Group"] }],
+        content: [{ type: "symref", uri: GROUP_URI, content: ["Group"] }],
       },
-      { futureRepo: "a", filePath: "p", fileName: "m" },
     );
-    expect(replacements).toHaveLength(1);
     expect(elements).toHaveLength(1);
+    expect(elements[0]).toEqual(rewritten);
     expect(elements[0]).toMatchObject({
       type: "paragraph",
-      content: [{ type: "symref", uri: "http://mathhub.info?s=Group" }],
+      content: [{ type: "symref", uri: GROUP_URI, content: ["Group"] }],
     });
   });
 });

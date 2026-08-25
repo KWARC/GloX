@@ -19,7 +19,7 @@ serializing FTML and sTeX. GloX vendors the build under `public/flodown/`.
 
 - Client: `src/lib/flodownClient.ts` — lazy-loads `/flodown/flodown.js`, sets MathHub backend URL.
 - Preview: `src/components/FtmlPreview.tsx` — `fromUri` per preview; hidden document for local hover (D-FTML-03).
-- Shared rewrite: `src/lib/prepareFloDownStatement.ts` — pass stored HTTP symbol URIs; leftover short names use `addSymbolDeclaration` at WASM only (D-FTML-05).
+- Shared rewrite: `src/lib/prepareFloDownStatement.ts` — pass stored HTTP symbol URIs (D-FTML-05). Preview registers declarations via `addSymbolDeclaration(symbolName)` on the declaring document without rewriting `uri` fields.
 - Document sTeX: `src/server/ftml/generateStexFromFtml.ts`.
 - Module description sTeX: `src/lib/moduleDescriptionTex.ts`.
 - Interactive demo: `public/flodown/test.html` (requires HTTP server — `file://` fails WASM CORS).

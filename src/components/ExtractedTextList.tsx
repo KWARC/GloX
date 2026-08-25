@@ -273,6 +273,7 @@ export function ExtractedTextPanel({
                         docId={item.id}
                         ftmlAst={item.statement}
                         declaredSymbols={item.declaredSymbols}
+                        declaredSymbolsInfo={item.declaredSymbolsInfo}
                         symbolContext={symbolContext}
                       />
 

@@ -92,7 +92,10 @@ export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
 }
 
 function localSymbolUri(symRef: Extract<UnifiedSymbolicReference, { source: "DB" }>): string {
-  const uri = (symRef.symbolUri ?? "").trim() || symRef.symbolName.trim();
+  const uri = (symRef.symbolUri ?? "").trim();
+  if (!uri.startsWith("http://") && !uri.startsWith("https://")) {
+    throw new Error("Symbol URI required");
+  }
   return uri;
 }
 

@@ -167,9 +167,15 @@ export function useSemanticEditingFlow({
       let newUri: string;
 
       if (params.mode === "CREATE") {
-        newUri = params.symbolName;
+        newUri = await floDownDeclareSymbolUri({
+          futureRepo: futureRepo.trim(),
+          filePath: filePath.trim(),
+          fileName: fileName.trim(),
+          language: language.trim(),
+          symbolName: params.symbolName,
+        });
       } else if (params.selectedSymbol.source === "DB") {
-        newUri = params.selectedSymbol.symbolName;
+        newUri = params.selectedSymbol.symbolUri;
       } else {
         const parsed = parseUri(params.selectedSymbol.uri);
         newUri = parsed.conceptUri;

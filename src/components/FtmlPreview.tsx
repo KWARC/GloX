@@ -3,6 +3,7 @@ import { documentUriFromGlox } from "@/lib/flodownUris";
 import { collectDeclaredSymbolsForDefinitionBlock } from "@/lib/moduleLocalSymbols";
 import type { ModuleLocalSymbolSource } from "@/lib/moduleLocalSymbols";
 import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
+import { parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import {
   getInlineContent,
   isHttp,
@@ -35,7 +36,7 @@ type GloxFileIdentity = {
   language: string;
 };
 
-function collectShortUris(statement: FloDownStatement): string[] {
+function collectStatementUris(statement: FloDownStatement): string[] {
   const found = new Set<string>();
   const root = normalizeToRoot(statement);
 
@@ -45,7 +46,7 @@ function collectShortUris(statement: FloDownStatement): string[] {
       if (
         (item.type === "symref" || item.type === "definiendum") &&
         item.uri &&
-        !isHttp(item.uri)
+        isHttp(item.uri)
       ) {
         found.add(item.uri);
       }
@@ -55,17 +56,24 @@ function collectShortUris(statement: FloDownStatement): string[] {
   return [...found];
 }
 
-function mergeDeclarationUris(
-  uriMap: Map<string, string>,
-  replacements: { from: string; to: string; reason: string }[],
+function declaredNames(info: unknown): string[] {
+  return parseDeclaredSymbolsInfo(info)
+    .map((item) => item.symbolName.trim())
+    .filter(Boolean);
+}
+
+function declaredUris(info: unknown, fallback: readonly string[] = []): string[] {
+  const fromInfo = parseDeclaredSymbolsInfo(info).map((item) => item.symbolUri);
+  if (fromInfo.length > 0) return fromInfo;
+  return fallback.filter((uri) => isHttp(uri));
+}
+
+function registerDeclarations(
+  fd: { addSymbolDeclaration: (name: string) => string | undefined },
+  names: readonly string[],
 ): void {
-  for (const item of replacements) {
-    if (
-      item.reason === "addSymbolDeclaration" ||
-      item.reason === "knownUriMap"
-    ) {
-      uriMap.set(item.from, item.to);
-    }
+  for (const name of names) {
+    fd.addSymbolDeclaration(name);
   }
 }
 
@@ -123,7 +131,7 @@ function documentUriForIdentity(identity: GloxFileIdentity): string {
   });
 }
 
-function declarationCount(block: Pick<ModuleLocalSymbolSource, "declaredSymbols">): number {
+function declarationCount(block: Pick<ModuleLocalSymbolSource, "declaredSymbols" | "declaredSymbolsInfo">): number {
   return collectDeclaredSymbolsForDefinitionBlock(block).length;
 }
 
@@ -131,6 +139,7 @@ interface FtmlPreviewProps {
   ftmlAst: FloDownStatement;
   docId: string;
   declaredSymbols?: string[];
+  declaredSymbolsInfo?: unknown;
   symbolContext?: FloDownSymbolContext;
 }
 
@@ -154,6 +163,7 @@ export function FtmlPreview({
   ftmlAst,
   docId,
   declaredSymbols = EMPTY_DECLARED_SYMBOLS,
+  declaredSymbolsInfo,
   symbolContext,
 }: FtmlPreviewProps) {
   // Remaining issue (E-FTML-05): hidden documents hold definition bodies so local symref hover
@@ -178,7 +188,9 @@ export function FtmlPreview({
 
         const visibleIdentity = identityFromContext(docId, symbolContext);
         const visibleUri = documentUriForIdentity(visibleIdentity);
-        const uriMap = new Map<string, string>();
+        const coveredUris = new Set<string>(
+          declaredUris(declaredSymbolsInfo, declaredSymbols),
+        );
         const hiddenFds: FloDownWasmBlock[] = [];
 
         hiddenEl.innerHTML = "";
@@ -186,20 +198,11 @@ export function FtmlPreview({
 
         const mountOnFd = (
           fd: FloDownWasmBlock,
-          identity: GloxFileIdentity,
           statement: unknown,
+          names: readonly string[],
         ) => {
-          const { replacements } = mountStatementOnFloDown(
-            fd,
-            statement,
-            {
-              futureRepo: identity.futureRepo,
-              filePath: identity.filePath,
-              fileName: identity.fileName,
-            },
-            { knownUris: uriMap },
-          );
-          mergeDeclarationUris(uriMap, replacements);
+          registerDeclarations(fd, names);
+          mountStatementOnFloDown(fd, statement);
         };
 
         const createHiddenFd = (identity: GloxFileIdentity): FloDownWasmBlock => {
@@ -242,18 +245,23 @@ export function FtmlPreview({
           if (documentUriForIdentity(identity) === visibleUri) continue;
           const fd = createHiddenFd(identity);
           for (const block of blocks) {
-            mountOnFd(fd, identity, block.statement);
+            for (const uri of declaredUris(
+              block.declaredSymbolsInfo,
+              block.declaredSymbols,
+            )) {
+              coveredUris.add(uri);
+            }
+            mountOnFd(fd, block.statement, declaredNames(block.declaredSymbolsInfo));
           }
         }
 
-        const declaredOnThisRow = new Set(declaredSymbols);
-        const missing = collectShortUris(ftmlAst).filter(
-          (label) => !uriMap.has(label) && !declaredOnThisRow.has(label),
+        const missing = collectStatementUris(ftmlAst).filter(
+          (uri) => !coveredUris.has(uri),
         );
 
         if (missing.length > 0) {
           const deps = await getDefiningDefinitions({
-            data: { labels: missing },
+            data: { uris: missing },
           });
           if (disposed) return;
 
@@ -272,7 +280,7 @@ export function FtmlPreview({
             };
             if (documentUriForIdentity(identity) === visibleUri) continue;
             const fd = createHiddenFd(identity);
-            mountOnFd(fd, identity, dep.definition);
+            mountOnFd(fd, dep.definition, dep.declaredNames);
           }
         }
 
@@ -284,16 +292,14 @@ export function FtmlPreview({
         containerEl.innerHTML = "";
         fdVisible.mountTo(containerEl);
 
-        mountStatementOnFloDown(
-          fdVisible,
-          ftmlAst,
-          {
-            futureRepo: visibleIdentity.futureRepo,
-            filePath: visibleIdentity.filePath,
-            fileName: visibleIdentity.fileName,
-          },
-          { knownUris: uriMap },
+        const ownHover = symbolContext?.hoverDefinitions?.find(
+          (definition) => definition.cacheKey === docId,
         );
+        registerDeclarations(
+          fdVisible,
+          declaredNames(ownHover?.declaredSymbolsInfo ?? declaredSymbolsInfo),
+        );
+        mountStatementOnFloDown(fdVisible, ftmlAst);
       } catch (error) {
         if (disposed) return;
         console.error("FtmlPreview FloDown mount failed:", error);
@@ -320,7 +326,7 @@ export function FtmlPreview({
       if (containerEl) containerEl.innerHTML = "";
       if (hiddenEl) hiddenEl.innerHTML = "";
     };
-  }, [ftmlAst, docId, declaredSymbols, symbolContextDep(symbolContext)]);
+  }, [ftmlAst, docId, declaredSymbols, declaredSymbolsInfo, symbolContextDep(symbolContext)]);
 
   return (
     <>

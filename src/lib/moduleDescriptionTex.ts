@@ -1,6 +1,5 @@
 import { initFloDown } from "@/lib/flodownClient";
 import { createFloDownDocumentFromGlox } from "@/lib/flodownUris";
-import { buildModuleLocalSymbolUriMap } from "@/lib/moduleLocalSymbols";
 import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
 import {
   FloDownStatement,
@@ -102,21 +101,9 @@ export async function generateModuleDescriptionModuleTex(
     language: input.language,
   }) as FloDownWasmBlock;
 
-  // Remaining issue: constructed MathHub URIs from declaring files, not addSymbolDeclaration
-  // return values (preview hover). Importers must not mint a URI from this file (E8).
-  const knownUris = buildModuleLocalSymbolUriMap(input.definitionBlocks);
   const moduleStatement = buildModuleDescriptionStatement(input);
 
-  mountStatementOnFloDown(
-    fd,
-    moduleStatement,
-    {
-      futureRepo: input.futureRepo,
-      filePath: input.modulesFilePath,
-      fileName: input.moduleId,
-    },
-    { knownUris },
-  );
+  mountStatementOnFloDown(fd, moduleStatement);
 
   return fd.getStex().trimEnd();
 }
@@ -124,7 +111,7 @@ export async function generateModuleDescriptionModuleTex(
 export async function generateModuleDescriptionDefinitionTex(
   _moduleId: string,
   defBlock: DefinitionBlockInput,
-  siblingBlocks: readonly DefinitionBlockInput[] = [],
+  _siblingBlocks: readonly DefinitionBlockInput[] = [],
 ): Promise<string> {
   if (typeof window === "undefined") {
     throw new Error("FloDown LaTeX export must run in the browser");
@@ -139,24 +126,10 @@ export async function generateModuleDescriptionDefinitionTex(
     language: defBlock.language,
   }) as FloDownWasmBlock;
 
-  // Other files’ declarations only. This file still addSymbolDeclaration for its own names (E8).
-  const knownUris = buildModuleLocalSymbolUriMap(
-    siblingBlocks.filter((block) => block.id !== defBlock.id),
-  );
-
   const root = normalizeToRoot(defBlock.statement);
   for (const block of root.content) {
     if (!isDefinitionNode(block)) continue;
-    mountStatementOnFloDown(
-      fd,
-      block,
-      {
-        futureRepo: defBlock.futureRepo,
-        filePath: defBlock.filePath,
-        fileName: defBlock.fileName,
-      },
-      { knownUris },
-    );
+    mountStatementOnFloDown(fd, block);
   }
 
   return fd.getStex().trimEnd();

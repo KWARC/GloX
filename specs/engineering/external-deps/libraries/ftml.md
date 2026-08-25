@@ -22,7 +22,7 @@ and inline content. GloX stores FloDown block `statement` fields as FTML JSON.
 | `src/types/floDown.types.ts` | Statement shapes, definiendum/symref node guards |
 | `src/types/blockType.ts` | `ExtractBlockType` — UI choice when creating a row |
 | `src/server/ftml/statementContent.ts` | Inline content walking and mapping |
-| `src/lib/prepareFloDownStatement.ts` | Rewrite persisted JSON for FloDown `addElement` (stored HTTP URIs pass through; leftover short names `addSymbolDeclaration` at WASM only) |
+| `src/lib/prepareFloDownStatement.ts` | Rewrite persisted JSON for FloDown `addElement` (stored HTTP URIs pass through; no short-name mint) |
 | `src/lib/flodownUris.ts` | Document and symbol URI builders (D-FTML-02) |
 | `src/server/ftml/generateStexFromFtml.ts` | Document sTeX generation via the shared rewrite |
 | `src/server/ftml/addProvenanceData.ts` | Provenance injection at export |
@@ -76,9 +76,9 @@ fields directly to `addElement`. Rewrite at the FloDown boundary via
 | Local declaration | Opaque FloDown HTTP URI | Matched by exact string on `declaredSymbolsInfo.symbolUri` |
 | MathHub concept | Full HTTP URL | Stored verbatim |
 
-At sTeX export, stored HTTP symbol URIs pass through. Leftover short names may still be declared on
-the export FloDown document via `addSymbolDeclaration`. Export-identity moves replace listed old
-URIs with FloDown’s new strings.
+At sTeX export and preview, stored HTTP symbol URIs pass through. Version-history JSON MAY still
+contain short names and is not rewritten. Export-identity moves replace listed old URIs with
+FloDown’s new strings.
 
 **Naming note:** FloDown's `flodown.d.ts` also defines a document-tree type `LogicalParagraph` — not
 a GloX database entity. See [naming layers](../../features/flodown-blocks/lifecycle.md#naming-layers).
@@ -143,15 +143,14 @@ declaration-only URI map.
    still needs those calls on a sibling/hidden defining document (D-FTML-03).
 2. **Persist `for_symbols: []` (no DB backfill).** Rewrite supplies the WASM key (definienda or
    `[]`). Verbatim `addElement` of persisted JSON (lab E6) still fails if URIs are not HTTP.
-3. **Leftover short names.** Current statements should be rewritten by the backfill script. Version
-   history is not rewritten. Orphan short names still `addSymbolDeclaration` on the current file at
-   preview/export.
+3. **Leftover short names.** Current statements are rewritten by the backfill script. Version
+   history is not rewritten. Preview/export does not mint URIs for leftover short names.
 4. **`getDefiningDefinitions` full-table scan** of non-discarded FloDown blocks (preview hover
-   only). Authenticated now; still not indexed by label.
+   only). Authenticated now; still not indexed by URI.
 5. **Parallel rewrites.** Mark-reference LaTeX and unused `finalFloDown.ts` are not on
-   `prepareFloDownStatement`. Document sTeX (`generateStexFromFloDown`) declares short names on the
-   **export** document and does not mount defining bodies — **S-CUR-08 on purpose**. If MathHub
-   expected the defining `sdefinition` in the same file, that is a product gap, not a WASM panic.
+   `prepareFloDownStatement`. Document sTeX (`generateStexFromFloDown`) passes stored URIs and does
+   not mount defining bodies — **S-CUR-08 on purpose**. If MathHub expected the defining
+   `sdefinition` in the same file, that is a product gap, not a WASM panic.
 6. **`/flodown-lab`.** Keep until hover is signed off (Curator/Admin). Then drop or leave
    diagnostic-only.
 

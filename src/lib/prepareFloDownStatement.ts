@@ -1,11 +1,5 @@
 /// <reference path="../../public/flodown/flodown.d.ts" />
 
-export type FloDownUriReplacement = {
-  from: string;
-  to: string;
-  reason: string;
-};
-
 const HEADING_LEVEL_NAMES = [
   "Section",
   "SubSection",
@@ -13,56 +7,6 @@ const HEADING_LEVEL_NAMES = [
   "Paragraph",
   "SubParagraph",
 ] as const;
-
-type DeclareBlock = {
-  addSymbolDeclaration: (name: string) => string | undefined;
-};
-
-function isHttp(uri: string): boolean {
-  return uri.startsWith("http://") || uri.startsWith("https://");
-}
-
-function resolveUri(
-  uri: string,
-  block: DeclareBlock,
-  declared: Map<string, string>,
-  replacements: FloDownUriReplacement[],
-  knownUris?: ReadonlyMap<string, string>,
-): string {
-  if (declared.has(uri)) {
-    return declared.get(uri)!;
-  }
-
-  if (!isHttp(uri)) {
-    if (knownUris?.has(uri)) {
-      const to = knownUris.get(uri)!;
-      declared.set(uri, to);
-      if (to !== uri) {
-        replacements.push({
-          from: uri,
-          to,
-          reason: "knownUriMap",
-        });
-      }
-      return to;
-    }
-
-    const created = block.addSymbolDeclaration(uri);
-    const to = created ?? uri;
-    declared.set(uri, to);
-    if (to !== uri) {
-      replacements.push({
-        from: uri,
-        to,
-        reason: "addSymbolDeclaration",
-      });
-    }
-    return to;
-  }
-
-  declared.set(uri, uri);
-  return uri;
-}
 
 function collectDefiniendumUris(value: unknown, found: string[] = []): string[] {
   if (Array.isArray(value)) {
@@ -83,25 +27,9 @@ function collectDefiniendumUris(value: unknown, found: string[] = []): string[] 
   return found;
 }
 
-function rewriteNode(
-  value: unknown,
-  block: DeclareBlock,
-  declared: Map<string, string>,
-  replacements: FloDownUriReplacement[],
-  inDefinition: boolean,
-  knownUris?: ReadonlyMap<string, string>,
-): unknown {
+function rewriteNode(value: unknown, inDefinition: boolean): unknown {
   if (Array.isArray(value)) {
-    return value.map((item) =>
-      rewriteNode(
-        item,
-        block,
-        declared,
-        replacements,
-        inDefinition,
-        knownUris,
-      ),
-    );
+    return value.map((item) => rewriteNode(item, inDefinition));
   }
 
   if (!value || typeof value !== "object") {
@@ -122,34 +50,7 @@ function rewriteNode(
       continue;
     }
 
-    if (key === "uri" && typeof child === "string") {
-      next.uri = resolveUri(
-        child,
-        block,
-        declared,
-        replacements,
-        knownUris,
-      );
-      continue;
-    }
-
-    if (key === "for_symbols" && Array.isArray(child)) {
-      next.for_symbols = child.map((item) =>
-        typeof item === "string"
-          ? resolveUri(item, block, declared, replacements, knownUris)
-          : item,
-      );
-      continue;
-    }
-
-    next[key] = rewriteNode(
-      child,
-      block,
-      declared,
-      replacements,
-      nextInDefinition,
-      knownUris,
-    );
+    next[key] = rewriteNode(child, nextInDefinition);
   }
 
   if (
@@ -173,36 +74,13 @@ function rewriteNode(
 }
 
 /** Clone GloX persisted JSON into FloDown-valid blocks. Does not write the DB (D-FTML-01). */
-export function rewriteStatementForFloDown(
-  statement: unknown,
-  block: DeclareBlock,
-  _identity: {
-    futureRepo: string;
-    filePath: string;
-    fileName: string;
-  },
-  options?: {
-    /** Pre-resolved short names (e.g. module-local symbols from sibling definition blocks). */
-    knownUris?: ReadonlyMap<string, string>;
-  },
-): { statement: unknown; replacements: FloDownUriReplacement[] } {
-  const replacements: FloDownUriReplacement[] = [];
-  const declared = new Map<string, string>();
-  return {
-    statement: rewriteNode(
-      structuredClone(statement),
-      block,
-      declared,
-      replacements,
-      false,
-      options?.knownUris,
-    ),
-    replacements,
-  };
+export function rewriteStatementForFloDown(statement: unknown): unknown {
+  return rewriteNode(structuredClone(statement), false);
 }
 
-export type FloDownMountBlock = DeclareBlock & {
+export type FloDownMountBlock = {
   addElement: (node: wasm_bindgen.FloDownBlock) => void;
+  addSymbolDeclaration?: (name: string) => string | undefined;
 };
 
 function addStatementBlocks(fd: FloDownMountBlock, statement: unknown): void {
@@ -226,25 +104,12 @@ function addStatementBlocks(fd: FloDownMountBlock, statement: unknown): void {
   }
 }
 
-/** Rewrite persisted JSON and mount every top-level block on a live FloDown document. */
+/** Rewrite persisted JSON (headings, for_symbols, strip symdecl) and mount. URIs pass through. */
 export function mountStatementOnFloDown(
   fd: FloDownMountBlock,
   statement: unknown,
-  identity: {
-    futureRepo: string;
-    filePath: string;
-    fileName: string;
-  },
-  options?: {
-    knownUris?: ReadonlyMap<string, string>;
-  },
-): { replacements: FloDownUriReplacement[]; statement: unknown } {
-  const { statement: rewritten, replacements } = rewriteStatementForFloDown(
-    statement,
-    fd,
-    identity,
-    options,
-  );
+): unknown {
+  const rewritten = rewriteStatementForFloDown(statement);
   addStatementBlocks(fd, rewritten);
-  return { replacements, statement: rewritten };
+  return rewritten;
 }

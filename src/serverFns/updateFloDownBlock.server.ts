@@ -72,7 +72,12 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
           throw new Error("Symbol URI required");
         }
         await addDeclaredSymbol(tx, def.id, {
-          symbolName: uri,
+          symbolName:
+            (Array.isArray(operation.payload.content)
+              ? operation.payload.content.find(
+                  (item): item is string => typeof item === "string",
+                )
+              : undefined)?.trim() || uri,
           symbolUri: uri,
         });
       }

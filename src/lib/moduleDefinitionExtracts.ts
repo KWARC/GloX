@@ -1,3 +1,4 @@
+import { parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import type { ExtractedItem } from "@/server/text-selection";
 import type { FloDownStatement } from "@/types/floDown.types";
 
@@ -6,6 +7,7 @@ export type ModuleDefinitionBlock = {
   originalText: string;
   statement: FloDownStatement;
   declaredSymbols: string[];
+  declaredSymbolsInfo?: unknown;
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -23,6 +25,7 @@ export function moduleDefinitionToExtractedItem(
     originalText: block.originalText,
     statement: block.statement,
     declaredSymbols: block.declaredSymbols,
+    declaredSymbolsInfo: parseDeclaredSymbolsInfo(block.declaredSymbolsInfo),
     futureRepo: block.futureRepo,
     filePath: block.filePath,
     fileName: block.fileName,

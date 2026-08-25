@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { IconFileText, IconPencil } from "@tabler/icons-react";
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { EXTRACT_BLOCK_TYPES, ExtractBlockType, blockTypeLabel } from "@/types/blockType";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
@@ -191,9 +192,20 @@ export function ExtractTextDialog({
   ) {
     try {
       if (params.mode === "CREATE") {
+        if (!location) {
+          throw new Error("Export identity required to declare a symbol");
+        }
+        const symbolUri = await floDownDeclareSymbolUri({
+          futureRepo: location.futureRepo,
+          filePath: location.filePath,
+          fileName: paragraphFileName.trim(),
+          language: location.language,
+          symbolName: params.symbolName,
+        });
         draftSemantic.applyDefiniendum({
           mode: "CREATE",
           symbolName: params.symbolName,
+          symbolUri,
         });
       } else if (params.selectedSymbol.source === "DB") {
         draftSemantic.applyDefiniendum({
@@ -201,6 +213,7 @@ export function ExtractTextDialog({
           symbol: {
             source: "DB",
             symbolName: params.selectedSymbol.symbolName,
+            symbolUri: params.selectedSymbol.symbolUri,
           },
         });
       } else {

@@ -32,8 +32,8 @@ Out of scope (sibling specs):
 | --- | --- |
 | `src/routes/module-description/$moduleId.tsx` | Shows Preview LaTeX only for Curator or Admin and invokes client-side TeX generation. |
 | `src/lib/moduleDescriptionTex.ts` | Builds the combined module FTML document and serializes module and definition sTeX via FloDown WASM in the browser. Mounts **only** the file being exported (D-FTML-03 for preview; export does not copy sibling definition bodies). |
-| `src/lib/prepareFloDownStatement.ts` | Shared rewrite before `addElement`. |
-| `src/lib/moduleLocalSymbols.ts` | Builds a map of short names to **constructed** MathHub symbol URIs for sibling symbols in the module file. Remaining issue: export does not use `addSymbolDeclaration` return values the way preview hover does. |
+| `src/lib/prepareFloDownStatement.ts` | Shared rewrite before `addElement` (stored URIs pass through). |
+| `src/lib/moduleLocalSymbols.ts` | Collects declared opaque URIs for hover/export identity of sibling definition blocks. |
 | `ModuleDescriptionLatexModal` | Displays generated module and definition TeX for copy or download. |
 | FloDown WASM (`initFloDown`) | Serializes mounted FTML blocks to sTeX; must run in the browser. |
 

@@ -178,7 +178,7 @@ export const LAB_EXPERIMENTS: LabExperiment[] = [
     id: "db-rewrite",
     group: "DB",
     title: "DB + rewrite (vendor documentUri + addSymbolDeclaration)",
-    notes: "fromUri mathhub.info?a=&p=&d=&l=; rewrite short names before addElement. Does not write DB.",
+    notes: "fromUri mathhub.info?a=&p=&d=&l=; shape rewrite only (no short-name mint). Does not write DB.",
     usesDbRow: true,
   },
 ];
@@ -474,19 +474,8 @@ function runExperimentBody(
     const fd = floDown.FloDown.fromUri(uri);
     mountAndRetain(fd, mountEl, retain);
     snapshot.getUriAfterCreate = fd.getUri();
-    const { replacements, statement: rewritten } = mountStatementOnFloDown(
-      fd,
-      params.dbSample.statement,
-      {
-        futureRepo: params.dbSample.futureRepo,
-        filePath: params.dbSample.filePath,
-        fileName: params.dbSample.fileName,
-      },
-    );
-    snapshot.replacedUris = replacements;
-    snapshot.declaredSymbolUris = replacements
-      .filter((item) => item.reason === "addSymbolDeclaration")
-      .map((item) => ({ name: item.from, uri: item.to }));
+    const rewritten = mountStatementOnFloDown(fd, params.dbSample.statement);
+    snapshot.replacedUris = [];
     snapshot.addElementPayload = rewritten;
     Object.assign(snapshot, captureBlock(fd));
     return;

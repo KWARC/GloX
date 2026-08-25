@@ -9,10 +9,6 @@ import {
 
 export { isHttp };
 
-// Remaining issue (S-CUR-08): this path no longer mounts defining FloDown blocks for referenced
-// local names. Short names are declared on the export document only. Contrast moduleDescriptionTex,
-// which uses constructed sibling URIs. Fold remaining rewrites into prepareFloDownStatement.
-
 export async function generateStexFromFloDown(
   statement: FloDownStatement,
   futureRepo: string,
@@ -31,11 +27,10 @@ export async function generateStexFromFloDown(
     language,
   });
   const mountFd = fd as Parameters<typeof mountStatementOnFloDown>[0];
-  const identity = { futureRepo, filePath, fileName };
   const root = normalizeToRoot(statement);
 
   for (const block of root.content) {
-    mountStatementOnFloDown(mountFd, block, identity);
+    mountStatementOnFloDown(mountFd, block);
   }
 
   return fd.getStex();

@@ -65,6 +65,7 @@ export function ModuleDefinitionsSection({
         cacheKey: block.id,
         statement: block.statement,
         declaredSymbols: block.declaredSymbols,
+        declaredSymbolsInfo: block.declaredSymbolsInfo,
         futureRepo: block.futureRepo,
         filePath: block.filePath,
         fileName: block.fileName,

@@ -12,6 +12,7 @@ import { createServerFn } from "@tanstack/react-start";
 export type DefiningDefinition = {
   definition: DefinitionNode;
   declaredSymbols: string[];
+  declaredNames: string[];
   futureRepo: string;
   filePath: string;
   fileName: string;
@@ -19,14 +20,14 @@ export type DefiningDefinition = {
 };
 
 export const getDefiningDefinitions = createServerFn({ method: "POST" })
-  .inputValidator((data: { labels: string[] }) => data)
+  .inputValidator((data: { uris: string[] }) => data)
   .handler(async ({ data }): Promise<Record<string, DefiningDefinition>> => {
     await requireUserId();
-    if (!data.labels.length) return {};
+    if (!data.uris.length) return {};
 
     const floDownBlocks = await prisma.floDownBlock.findMany({
       // Remaining issue: scans every non-discarded FloDown block. Fine for small DBs; not keyed
-      // by export identity or label index. Preview hover is the remaining caller.
+      // by export identity or URI index. Preview hover is the remaining caller.
       where: { status: { not: "DISCARDED" } },
       select: {
         statement: true,
@@ -39,7 +40,7 @@ export const getDefiningDefinitions = createServerFn({ method: "POST" })
     });
 
     const result: Record<string, DefiningDefinition> = {};
-    const remaining = new Set(data.labels);
+    const remaining = new Set(data.uris.filter((uri) => uri.trim()));
 
     for (const row of floDownBlocks) {
       if (!remaining.size) break;
@@ -48,26 +49,22 @@ export const getDefiningDefinitions = createServerFn({ method: "POST" })
       const definition = root.content.find(isDefinitionNode);
       if (!definition) continue;
 
-      const labels = new Set(
-        parseDeclaredSymbolsInfo(row.declaredSymbolsInfo).flatMap((item) => [
-          item.symbolUri,
-          item.symbolName,
-        ]),
-      );
+      const info = parseDeclaredSymbolsInfo(row.declaredSymbolsInfo);
+      const declaredSymbols = info.map((item) => item.symbolUri);
+      const declaredNames = info.map((item) => item.symbolName);
 
-      for (const label of labels) {
-        if (remaining.has(label)) {
-          result[label] = {
+      for (const item of info) {
+        if (remaining.has(item.symbolUri)) {
+          result[item.symbolUri] = {
             definition,
-            declaredSymbols: parseDeclaredSymbolsInfo(row.declaredSymbolsInfo).map(
-              (item) => item.symbolUri,
-            ),
+            declaredSymbols,
+            declaredNames,
             futureRepo: row.futureRepo,
             filePath: row.filePath,
             fileName: row.fileName,
             language: row.language,
           };
-          remaining.delete(label);
+          remaining.delete(item.symbolUri);
         }
       }
     }

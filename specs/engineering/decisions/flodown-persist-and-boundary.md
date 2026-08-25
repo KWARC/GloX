@@ -74,9 +74,11 @@ works (Title/Inhalt/Lernziele showed those definitions).
 ## Consequences
 
 - Persist `for_symbols` is emptied on save; FloDown still requires the key at `addElement` — the
-  rewrite supplies stored HTTP URIs or `addSymbolDeclaration` for leftover short names.
+  rewrite copies stored HTTP URIs from definienda when the key is empty.
 - Declaration catalog is `declaredSymbolsInfo` on the declaring block. Unused `Symbol` /
   `declaredSymbols` columns MAY remain deprecated.
 - Identity moves replace listed opaque URI strings only (client supplies FloDown’s new URI).
-- Hover for a local symbol works when a live FloDown document has declared it and mounted a
-  definition. Otherwise FloDown requests MathHub `/content/fragment` (404 for GloX-local names).
+- Hover for a local symbol works when a live FloDown document has declared it (`addSymbolDeclaration`
+  with the catalog `symbolName`) and mounted a definition that already stores the opaque URI.
+  Otherwise FloDown requests MathHub `/content/fragment` (404 for GloX-local names).
+- Version history JSON is not rewritten; leftover short names there are not upgraded at preview.

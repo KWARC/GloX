@@ -70,7 +70,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
 
             {dbResults.map((r) => {
               const bg =
-                props.mode === "definiendum" && selectedUri === r.symbolName
+                props.mode === "definiendum" && selectedUri === r.symbolUri
                   ? "blue.0"
                   : undefined;
 
@@ -83,7 +83,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                   bg={bg}
                   onClick={() => {
                     if (props.mode === "definiendum") {
-                      setSelectedUri(r.symbolName);
+                      setSelectedUri(r.symbolUri);
                     }
                   }}
                 >
@@ -109,27 +109,27 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                             if (props.selected.uri.startsWith("http")) {
                               setPendingMathHubToLocal({
                                 mathHubUri: props.selected.uri,
-                                localSymbolUri: r.symbolName,
+                                localSymbolUri: r.symbolUri,
                                 targetType: "definiendum",
                                 primaryFloDownBlockId: floDownBlock.id,
                               } satisfies PendingMathHubToLocal);
                             } else {
                               setPendingPropagation({
                                 localSymbolUri: props.selected.uri,
-                                mathHubUri: r.symbolName,
+                                mathHubUri: r.symbolUri,
                                 primaryFloDownBlockId: floDownBlock.id,
                               } satisfies PendingPropagation);
                             }
 
                             setSelectedNode({
                               type: "definiendum",
-                              uri: r.symbolName,
+                              uri: r.symbolUri,
                             });
-                            setSelectedUri(r.symbolName);
+                            setSelectedUri(r.symbolUri);
                             return;
                           }
 
-                          const newUri = r.symbolName;
+                          const newUri = r.symbolUri;
 
                           if (props.selected.uri.startsWith("http")) {
                             setPendingMathHubToLocal({
@@ -142,6 +142,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                             const { uri } = normalizeSymRef({
                               source: "DB",
                               symbolName: r.symbolName,
+                              symbolUri: r.symbolUri,
                               futureRepo: r.futureRepo,
                               filePath: r.filePath,
                               fileName: r.fileName,
