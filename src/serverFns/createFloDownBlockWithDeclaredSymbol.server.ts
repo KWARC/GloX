@@ -27,6 +27,7 @@ export type CreateFloDownBlockWithDeclaredSymbolInput = {
   originalText: string;
   statement?: FloDownStatement;
   symbolName: string;
+  symbolUri?: string;
   existingSymbolId?: string;
   futureRepo: string;
   filePath: string;
@@ -75,6 +76,7 @@ export const createFloDownBlockWithDeclaredSymbol = createServerFn({
     const originalText = data.originalText?.trim();
     const symbolName = data.symbolName?.trim();
     const existingSymbolId = data.existingSymbolId?.trim();
+    const symbolUri = data.symbolUri?.trim() || existingSymbolId;
     const futureRepo = data.futureRepo?.trim();
     const filePath = data.filePath?.trim();
     const language = data.language?.trim();
@@ -116,35 +118,11 @@ export const createFloDownBlockWithDeclaredSymbol = createServerFn({
     const serializedStatement = JSON.parse(JSON.stringify(statement));
     const isNewSymbol = !existingSymbolId;
 
+    if (isNewSymbol && !symbolUri) {
+      throw new Error("Symbol URI required");
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      const symbol = existingSymbolId
-        ? await tx.symbol.findUnique({
-            where: { id: existingSymbolId },
-          })
-        : await tx.symbol.upsert({
-            where: {
-              symbolName_futureRepo_filePath_fileName_language: {
-                symbolName,
-                futureRepo,
-                filePath,
-                fileName: paragraphFileName,
-                language,
-              },
-            },
-            update: {},
-            create: {
-              symbolName,
-              futureRepo,
-              filePath,
-              fileName: paragraphFileName,
-              language,
-            },
-          });
-
-      if (!symbol) {
-        throw new Error("Symbol not found");
-      }
-
       const createdFloDownBlock = await tx.floDownBlock.create({
         data: {
           documentId: data.documentId,
@@ -173,18 +151,11 @@ export const createFloDownBlockWithDeclaredSymbol = createServerFn({
         },
       });
 
-      if (isNewSymbol) {
-        await addDeclaredSymbol(
-          tx,
-          createdFloDownBlock.id,
-          symbol.symbolName,
-          {
-            futureRepo,
-            filePath,
-            fileName: paragraphFileName,
-            language,
-          },
-        );
+      if (isNewSymbol && symbolUri) {
+        await addDeclaredSymbol(tx, createdFloDownBlock.id, {
+          symbolName,
+          symbolUri,
+        });
       }
 
       await tx.document.update({
@@ -203,12 +174,12 @@ export const createFloDownBlockWithDeclaredSymbol = createServerFn({
           language: createdFloDownBlock.language,
         },
         symbol: {
-          id: symbol.id,
-          symbolName: symbol.symbolName,
-          futureRepo: symbol.futureRepo,
-          filePath: symbol.filePath,
-          fileName: symbol.fileName,
-          language: symbol.language,
+          id: symbolUri ?? existingSymbolId ?? symbolName,
+          symbolName,
+          futureRepo,
+          filePath,
+          fileName: paragraphFileName,
+          language,
         },
       } satisfies CreatedSymbolTarget;
     });
@@ -247,17 +218,17 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
     const userId = userRes.user.id;
 
     await prisma.$transaction(async (tx) => {
-      const [floDownBlock, symbol] = await Promise.all([
-        tx.floDownBlock.findUnique({ where: { id: data.floDownBlockId } }),
-        tx.symbol.findUnique({ where: { id: data.symbolId } }),
-      ]);
+      const floDownBlock = await tx.floDownBlock.findUnique({
+        where: { id: data.floDownBlockId },
+      });
 
       if (!floDownBlock?.statement) {
         throw new Error("Content not found");
       }
 
-      if (!symbol) {
-        throw new Error("Symbol not found");
+      const symbolUri = data.symbolId.trim();
+      if (!symbolUri) {
+        throw new Error("Symbol URI required");
       }
 
       const root = normalizeToRoot(assertFloDownStatement(floDownBlock.statement));
@@ -279,7 +250,7 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
 
       const definiendumNode: DefiniendumNode = {
         type: "definiendum",
-        uri: symbol.symbolName,
+        uri: symbolUri,
         content: [selectedText],
         symdecl: true,
       };
@@ -295,17 +266,10 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
       const nextVersion = floDownBlock.currentVersion + 1;
       const statement = sanitizeStatementForPersist(unwrapRoot(updatedRoot));
 
-      await addDeclaredSymbol(
-        tx,
-        floDownBlock.id,
-        symbol.symbolName,
-        {
-          futureRepo: floDownBlock.futureRepo,
-          filePath: floDownBlock.filePath,
-          fileName: floDownBlock.fileName,
-          language: floDownBlock.language,
-        },
-      );
+      await addDeclaredSymbol(tx, floDownBlock.id, {
+        symbolName: selectedText,
+        symbolUri,
+      });
 
       await tx.floDownBlockVersion.create({
         data: {

@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
+import { declaredUrisFromJson } from "@/server/declaredSymbolsInfo";
 import { createServerFn } from "@tanstack/react-start";
 
 export type FloDownLabDbSample = {
@@ -39,7 +40,7 @@ export const listFloDownLabSamples = createServerFn({ method: "POST" }).handler(
           id: true,
           originalText: true,
           statement: true,
-          declaredSymbols: true,
+          declaredSymbolsInfo: true,
           futureRepo: true,
           filePath: true,
           fileName: true,
@@ -72,7 +73,7 @@ export const listFloDownLabSamples = createServerFn({ method: "POST" }).handler(
       filePath: block.filePath,
       fileName: block.fileName,
       language: block.language,
-      declaredSymbols: block.declaredSymbols,
+      declaredSymbols: declaredUrisFromJson(block.declaredSymbolsInfo),
       statement: block.statement as object,
     }));
 

@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { documentFloDownBlockWhere } from "@/server/floDownBlockProvenance";
+import { declaredUrisFromJson, parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
 import { ExtractedItem } from "@/server/text-selection";
 import {
@@ -235,7 +236,8 @@ export const getFloDownBlocksByIdentity = createServerFn({ method: "POST" })
         pageNumber: def.pageNumber,
         originalText: def.originalText,
         statement,
-        declaredSymbols: def.declaredSymbols,
+        declaredSymbols: declaredUrisFromJson(def.declaredSymbolsInfo),
+        declaredSymbolsInfo: parseDeclaredSymbolsInfo(def.declaredSymbolsInfo),
         futureRepo: def.futureRepo,
         filePath: def.filePath,
         fileName: def.fileName,

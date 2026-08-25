@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { CreateSymbolDefiniendumDialog } from "@/components/CreateSymbolDefiniendumDialog";
 import {
   ExtractTextDialog,
@@ -261,6 +262,13 @@ export function ModuleStatementsSection({
           originalText: text,
           statement: definitionStatement,
           symbolName: symbolName.trim(),
+          symbolUri: await floDownDeclareSymbolUri({
+            futureRepo,
+            filePath: defsFilePath,
+            fileName: paragraphFileName.trim(),
+            language,
+            symbolName: symbolName.trim(),
+          }),
           blockType: submittedBlockType,
         },
       });

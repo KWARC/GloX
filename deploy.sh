@@ -16,6 +16,9 @@ pnpm prisma generate
 echo "==> Running database migrations..."
 pnpm prisma migrate deploy
 
+echo "==> Backfilling declaredSymbolsInfo (S-SYM-12; no-op if already applied)..."
+pnpm backfill:declared-symbols-info -- --apply
+
 echo "==> Building app..."
 pnpm run build
 

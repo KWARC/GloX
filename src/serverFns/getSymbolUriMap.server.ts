@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { requireUserId } from "@/server/auth/requireUser";
+import { parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import {
   assertFloDownStatement,
   DefinitionNode,
@@ -29,7 +30,7 @@ export const getDefiningDefinitions = createServerFn({ method: "POST" })
       where: { status: { not: "DISCARDED" } },
       select: {
         statement: true,
-        declaredSymbols: true,
+        declaredSymbolsInfo: true,
         futureRepo: true,
         filePath: true,
         fileName: true,
@@ -47,11 +48,20 @@ export const getDefiningDefinitions = createServerFn({ method: "POST" })
       const definition = root.content.find(isDefinitionNode);
       if (!definition) continue;
 
-      for (const label of row.declaredSymbols) {
+      const labels = new Set(
+        parseDeclaredSymbolsInfo(row.declaredSymbolsInfo).flatMap((item) => [
+          item.symbolUri,
+          item.symbolName,
+        ]),
+      );
+
+      for (const label of labels) {
         if (remaining.has(label)) {
           result[label] = {
             definition,
-            declaredSymbols: row.declaredSymbols,
+            declaredSymbols: parseDeclaredSymbolsInfo(row.declaredSymbolsInfo).map(
+              (item) => item.symbolUri,
+            ),
             futureRepo: row.futureRepo,
             filePath: row.filePath,
             fileName: row.fileName,

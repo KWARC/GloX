@@ -22,7 +22,7 @@ and inline content. GloX stores FloDown block `statement` fields as FTML JSON.
 | `src/types/floDown.types.ts` | Statement shapes, definiendum/symref node guards |
 | `src/types/blockType.ts` | `ExtractBlockType` — UI choice when creating a row |
 | `src/server/ftml/statementContent.ts` | Inline content walking and mapping |
-| `src/lib/prepareFloDownStatement.ts` | Rewrite persisted JSON for FloDown `addElement` (D-FTML-01) |
+| `src/lib/prepareFloDownStatement.ts` | Rewrite persisted JSON for FloDown `addElement` (stored HTTP URIs pass through; leftover short names `addSymbolDeclaration` at WASM only) |
 | `src/lib/flodownUris.ts` | Document and symbol URI builders (D-FTML-02) |
 | `src/server/ftml/generateStexFromFtml.ts` | Document sTeX generation via the shared rewrite |
 | `src/server/ftml/addProvenanceData.ts` | Provenance injection at export |
@@ -66,21 +66,19 @@ fields directly to `addElement`. Rewrite at the FloDown boundary via
 | Node | FloDown shape | GloX notes |
 | --- | --- | --- |
 | `symref` | `{ type, uri, content }` | Reference to local or MathHub symbol; `content` is verbalization |
-| `definiendum` | `{ type, uri, content }` | Term being defined (verbalization in `content`). `uri` is the **symbol** URI (or GloX short name). Optional **`symdecl`**: `true` = this block **declares** the symbol; `false`/absent after persist = definiendum only. Persist **strips** `symdecl`; declaration is recorded in `declaredSymbols`. |
+| `definiendum` | `{ type, uri, content }` | Term being defined (verbalization in `content`). `uri` is the opaque **symbol** URI FloDown returned (legacy short names may remain in version history). Optional **`symdecl`**: `true` = this block **declares** the symbol; `false`/absent after persist = definiendum only. Persist **strips** `symdecl`; declaration is recorded in `declaredSymbolsInfo`. |
 | `definiens` | `{ type, uri, content }` | In ontology; rarely created in UI |
 
 ### Local vs MathHub references in FTML
 
 | Source | `uri` in `statement` | Resolution |
 | --- | --- | --- |
-| Local `Symbol` row | `symbolName` string, e.g. `"monoid"` | Matched with export identity on the `Symbol` table |
+| Local declaration | Opaque FloDown HTTP URI | Matched by exact string on `declaredSymbolsInfo.symbolUri` |
 | MathHub concept | Full HTTP URL | Stored verbatim |
 
-At sTeX export, local `symbolName` values expand to MathHub document URIs of the form
-`http://mathhub.info?a={archive}&p={path}&m={module}&s={symbol}` using the exporting file identity.
-Prefer URIs returned by FloDown `addSymbolDeclaration()` when declaring symbols in the WASM block.
-Export-identity moves update `Symbol` rows but do not change `symbolName` strings already stored in
-`statement` JSON.
+At sTeX export, stored HTTP symbol URIs pass through. Leftover short names may still be declared on
+the export FloDown document via `addSymbolDeclaration`. Export-identity moves replace listed old
+URIs with FloDown’s new strings.
 
 **Naming note:** FloDown's `flodown.d.ts` also defines a document-tree type `LogicalParagraph` — not
 a GloX database entity. See [naming layers](../../features/flodown-blocks/lifecycle.md#naming-layers).
@@ -91,7 +89,7 @@ a GloX database entity. See [naming layers](../../features/flodown-blocks/lifecy
 do not add parallel type columns to the database.
 
 **E-FTML-02:** A **definiendum** is the term being defined in a definition; it MUST NOT be treated as
-the symbol declaration. `declaredSymbols[]` records names this FloDown block **declares**. See
+the symbol declaration. `declaredSymbolsInfo` records what this FloDown block **declares**. See
 E-FTML-06.
 
 **E-FTML-03:** Symrefs use `type: "symref"` with `uri` pointing to local symbols or MathHub concepts.
@@ -121,12 +119,12 @@ declaration-only URI map.
 
 ### Closed or not a defect
 
-- **Catalog uniqueness vs one MathHub symbol.** R-SYM-02 is a **GloX catalog** key
-  `(name, identity, language)`. E-FTML-06 is the **authoring** model (declare once; many
-  definitions). Authors may declare twice; GloX MUST NOT reject that. Two Symbol rows for
-  `triangle` in `.en` vs `.de` is catalog design, not a FloDown bug.
+- **Catalog uniqueness vs one MathHub symbol.** R-SYM-02 is a **GloX catalog** key (opaque
+  `symbolUri`, one live declaration). E-FTML-06 is the **authoring** model (declare once; many
+  definitions). Authors may declare twice; GloX MUST NOT reject a second **name**. GloX MUST reject
+  a second live declaration of the same URI.
 - **`collectDeclaredSymbolsForDefinitionBlock` unioning definienda.** Fixed. The URI map is built
-  only from `declaredSymbols` of the **declaring** file (first declaration wins).
+  only from `declaredSymbolsInfo` of the **declaring** file (first declaration wins).
 - **Title/Inhalt dumping sibling definition bodies** into the visible FloDown document. Fixed
   (D-FTML-03).
 - **`fromPath` / inverted `http://{futureRepo}?a=` as the production document URI.** Production uses
@@ -144,13 +142,10 @@ declaration-only URI map.
    popup for declaration-only or constructed URI — MathHub `/content/fragment`. Production Title/Inhalt
    still needs those calls on a sibling/hidden defining document (D-FTML-03).
 2. **Persist `for_symbols: []` (no DB backfill).** Rewrite supplies the WASM key (definienda or
-   `[]`). Verbatim `addElement` of persisted JSON (lab E6) still fails. Full URI persist is
-   deferred (D-FTML-01).
-3. **Constructed export URI vs declaration return value.** Module TeX still invents
-   `http://mathhub.info?a=&p=&m=&s=` from the **declaring** file. Preview hover prefers the string
-   FloDown returned on the hidden declaring document. Same short name, two strings. Orphan names
-   not in any `declaredSymbols` map still `addSymbolDeclaration` / canonicalize on the **current**
-   file.
+   `[]`). Verbatim `addElement` of persisted JSON (lab E6) still fails if URIs are not HTTP.
+3. **Leftover short names.** Current statements should be rewritten by the backfill script. Version
+   history is not rewritten. Orphan short names still `addSymbolDeclaration` on the current file at
+   preview/export.
 4. **`getDefiningDefinitions` full-table scan** of non-discarded FloDown blocks (preview hover
    only). Authenticated now; still not indexed by label.
 5. **Parallel rewrites.** Mark-reference LaTeX and unused `finalFloDown.ts` are not on
@@ -169,7 +164,7 @@ declaration-only URI map.
 ## Related docs
 
 - [`../../features/flodown-blocks/lifecycle.md`](../../features/flodown-blocks/lifecycle.md) — DB entities, DTOs, relationships
-- [`../../decisions/flodown-persist-and-boundary.md`](../../decisions/flodown-persist-and-boundary.md) — D-FTML-01…04
+- [`../../decisions/flodown-persist-and-boundary.md`](../../decisions/flodown-persist-and-boundary.md) — D-FTML-01…06
 - [`../vendors/flodown.md`](../vendors/flodown.md)
 - [`../vendors/mathhub.md`](../vendors/mathhub.md)
 - [`../../../public/flodown/README.md`](../../../public/flodown/README.md)

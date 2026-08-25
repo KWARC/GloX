@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { normalizeContentName } from "@/components/ExtractTextDialog";
 import { statementHasDeclaredSymbol } from "@/hooks/useDraftSemanticAuthoring";
 import { MyDocument } from "@/queries/document";
@@ -227,6 +228,13 @@ export function useFloDownBlockExtractionFlow({
             originalText: editedText,
             statement,
             symbolName: symbolName.trim(),
+            symbolUri: await floDownDeclareSymbolUri({
+              futureRepo: identity.futureRepo,
+              filePath: identity.filePath,
+              fileName: paragraphFileName.trim(),
+              language: identity.language,
+              symbolName: symbolName.trim(),
+            }),
             futureRepo: identity.futureRepo,
             filePath: identity.filePath,
             language: identity.language,

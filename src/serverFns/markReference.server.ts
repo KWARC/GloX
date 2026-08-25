@@ -58,39 +58,9 @@ export const createLocalSymbol = createServerFn({ method: "POST" })
       throw new Error("Missing symbol creation fields");
     }
 
-    const symbol = await prisma.symbol.upsert({
-      where: {
-        symbolName_futureRepo_filePath_fileName_language: {
-          symbolName,
-          futureRepo,
-          filePath,
-          fileName,
-          language,
-        },
-      },
-      update: {
-        alias: data.alias?.trim() || null,
-      },
-      create: {
-        symbolName,
-        alias: data.alias?.trim() || null,
-        futureRepo,
-        filePath,
-        fileName,
-        language,
-      },
-      select: {
-        id: true,
-        symbolName: true,
-        alias: true,
-        futureRepo: true,
-        filePath: true,
-        fileName: true,
-        language: true,
-      },
-    });
-
-    return symbol satisfies CreatedLocalSymbol;
+    throw new Error(
+      "Cannot create a local symbol without a declaring FloDown block",
+    );
   });
 
 export const createMarkReference = createServerFn({ method: "POST" })
@@ -101,8 +71,14 @@ export const createMarkReference = createServerFn({ method: "POST" })
 
     const { selectedSymbol } = data;
 
+    if (selectedSymbol.source === "NEW") {
+      throw new Error(
+        "Cannot create a local symbol without a declaring FloDown block",
+      );
+    }
+
     const symbolName =
-      selectedSymbol.source === "DB" || selectedSymbol.source === "NEW"
+      selectedSymbol.source === "DB"
         ? selectedSymbol.symbolName
         : selectedSymbol.uri;
 

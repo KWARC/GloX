@@ -25,9 +25,9 @@ exported glossaries.
 
 ## Agent constraints
 
-**E-MATHHUB-01:** Local Symbol URIs MUST be rewritten to FloDown/MathHub HTTP URIs before sTeX export
-(D-FTML-01); external MathHub URIs MUST pass through (canonicalized). Those URIs MUST NOT be persisted
-into `statement` JSON.
+**E-MATHHUB-01:** Stored local symbol URIs MUST be opaque HTTP strings passed into FloDown at export
+(D-FTML-05). External MathHub URIs MUST pass through. The system MUST NOT mint symbol URIs in
+application persist paths.
 
 **E-MATHHUB-02:** MathHub availability affects FTML preview of **MathHub** symbols (`/content/fragment`)
 and catalog search. GloX-local **symref** hover is not a MathHub fragment (E-FTML-05). GloX SHOULD

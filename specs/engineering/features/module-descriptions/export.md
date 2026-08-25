@@ -80,7 +80,7 @@ users; only Curator and Admin may invoke export.
   to Document `LatexTable`.
 - Exact sTeX macros and URI rewrite details for local symbols at export time are owned by
   [`stex-export.md`](../curation-export/stex-export.md) and [`ftml.md`](../../external-deps/libraries/ftml.md)
-  (D-FTML-01).
+  (D-FTML-05).
 - Preview of Title/Inhalt/Lernziele uses a hidden FloDown document for local **symref** hover
   (D-FTML-03). That is not part of the TeX files.
 

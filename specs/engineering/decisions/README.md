@@ -33,7 +33,7 @@ wiring detail (SDD `S-*`), **not** vendor/world facts (`E-*`).
 | --- | --- | --- |
 | [`jwt-session-fingerprint.md`](./jwt-session-fingerprint.md) | D-AUTH-01…03 | Accepted |
 | [`password-storage.md`](./password-storage.md) | D-AUTH-04 | Accepted |
-| [`flodown-persist-and-boundary.md`](./flodown-persist-and-boundary.md) | D-FTML-01…04 | Accepted |
+| [`flodown-persist-and-boundary.md`](./flodown-persist-and-boundary.md) | D-FTML-01…06 | Accepted |
 
 ## When to write
 

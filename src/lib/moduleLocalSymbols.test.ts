@@ -5,41 +5,48 @@ import {
 } from "./moduleLocalSymbols";
 import type { FloDownStatement } from "@/types/floDown.types";
 
+const TRIANGLE_URI =
+  "http://mathhub.info?a=smglom/geometry&p=mod&m=triangle&s=triangle";
+
 const triangleDef = (verbalization: string): FloDownStatement => ({
   type: "definition",
+  for_symbols: [],
   content: [
     {
       type: "paragraph",
       content: [
-        { type: "definiendum", uri: "triangle", content: [verbalization] },
+        { type: "definiendum", uri: TRIANGLE_URI, content: [verbalization] },
       ],
     },
   ],
 });
 
 describe("collectDeclaredSymbolsForDefinitionBlock", () => {
-  it("returns declaredSymbols only, not definiendum names", () => {
+  it("returns stored declaration names, not importing definienda", () => {
     expect(
       collectDeclaredSymbolsForDefinitionBlock({
-        declaredSymbols: ["triangle"],
-        statement: triangleDef("triangle"),
+        declaredSymbolsInfo: [
+          { symbolName: "triangle", symbolUri: TRIANGLE_URI },
+        ],
       }),
-    ).toEqual(["triangle"]);
+    ).toEqual(["triangle", TRIANGLE_URI]);
 
     expect(
       collectDeclaredSymbolsForDefinitionBlock({
         declaredSymbols: [],
-        statement: triangleDef("Dreieck"),
       }),
     ).toEqual([]);
   });
 });
 
 describe("buildModuleLocalSymbolUriMap", () => {
-  it("mints the declaring file URI and ignores importing definienda", () => {
+  it("uses stored declaration URIs and ignores importing definienda", () => {
     const map = buildModuleLocalSymbolUriMap([
       {
-        declaredSymbols: ["triangle"],
+        declaredSymbols: [TRIANGLE_URI],
+        declaredSymbolsInfo: [
+          { symbolName: "triangle", symbolUri: TRIANGLE_URI },
+        ],
         statement: triangleDef("triangle"),
         futureRepo: "smglom/geometry",
         filePath: "mod",
@@ -56,32 +63,7 @@ describe("buildModuleLocalSymbolUriMap", () => {
       },
     ]);
 
-    expect(map.get("triangle")).toBe(
-      "http://mathhub.info?a=smglom/geometry&p=mod&m=triangle&s=triangle",
-    );
-    expect(map.size).toBe(1);
-  });
-
-  it("keeps the first declaration when authors declare the same name twice", () => {
-    const map = buildModuleLocalSymbolUriMap([
-      {
-        declaredSymbols: ["triangle"],
-        statement: triangleDef("triangle"),
-        futureRepo: "smglom/geometry",
-        filePath: "mod",
-        fileName: "triangle",
-      },
-      {
-        declaredSymbols: ["triangle"],
-        statement: triangleDef("Dreieck"),
-        futureRepo: "smglom/geometry",
-        filePath: "mod",
-        fileName: "triangle-de",
-      },
-    ]);
-
-    expect(map.get("triangle")).toBe(
-      "http://mathhub.info?a=smglom/geometry&p=mod&m=triangle&s=triangle",
-    );
+    expect(map.get("triangle")).toBe(TRIANGLE_URI);
+    expect(map.get(TRIANGLE_URI)).toBe(TRIANGLE_URI);
   });
 });

@@ -1,7 +1,4 @@
-import {
-  canonicalizeSymbolUri,
-  type FloDownSymbolIdentity,
-} from "@/lib/flodownUris";
+/// <reference path="../../public/flodown/flodown.d.ts" />
 
 export type FloDownUriReplacement = {
   from: string;
@@ -28,7 +25,6 @@ function isHttp(uri: string): boolean {
 function resolveUri(
   uri: string,
   block: DeclareBlock,
-  identity: FloDownSymbolIdentity,
   declared: Map<string, string>,
   replacements: FloDownUriReplacement[],
   knownUris?: ReadonlyMap<string, string>,
@@ -52,28 +48,20 @@ function resolveUri(
     }
 
     const created = block.addSymbolDeclaration(uri);
-    const to = created ?? canonicalizeSymbolUri(uri, { ...identity, symbol: uri });
+    const to = created ?? uri;
     declared.set(uri, to);
-    replacements.push({
-      from: uri,
-      to,
-      reason: created
-        ? "addSymbolDeclaration"
-        : "canonicalizeSymbolUri fallback (declaration rejected)",
-    });
+    if (to !== uri) {
+      replacements.push({
+        from: uri,
+        to,
+        reason: "addSymbolDeclaration",
+      });
+    }
     return to;
   }
 
-  const to = canonicalizeSymbolUri(uri, identity);
-  if (to !== uri) {
-    replacements.push({
-      from: uri,
-      to,
-      reason: "canonicalizeSymbolUri",
-    });
-  }
-  declared.set(uri, to);
-  return to;
+  declared.set(uri, uri);
+  return uri;
 }
 
 function collectDefiniendumUris(value: unknown, found: string[] = []): string[] {
@@ -98,7 +86,6 @@ function collectDefiniendumUris(value: unknown, found: string[] = []): string[] 
 function rewriteNode(
   value: unknown,
   block: DeclareBlock,
-  identity: FloDownSymbolIdentity,
   declared: Map<string, string>,
   replacements: FloDownUriReplacement[],
   inDefinition: boolean,
@@ -109,7 +96,6 @@ function rewriteNode(
       rewriteNode(
         item,
         block,
-        identity,
         declared,
         replacements,
         inDefinition,
@@ -140,7 +126,6 @@ function rewriteNode(
       next.uri = resolveUri(
         child,
         block,
-        identity,
         declared,
         replacements,
         knownUris,
@@ -151,7 +136,7 @@ function rewriteNode(
     if (key === "for_symbols" && Array.isArray(child)) {
       next.for_symbols = child.map((item) =>
         typeof item === "string"
-          ? resolveUri(item, block, identity, declared, replacements, knownUris)
+          ? resolveUri(item, block, declared, replacements, knownUris)
           : item,
       );
       continue;
@@ -160,7 +145,6 @@ function rewriteNode(
     next[key] = rewriteNode(
       child,
       block,
-      identity,
       declared,
       replacements,
       nextInDefinition,
@@ -192,7 +176,7 @@ function rewriteNode(
 export function rewriteStatementForFloDown(
   statement: unknown,
   block: DeclareBlock,
-  identity: {
+  _identity: {
     futureRepo: string;
     filePath: string;
     fileName: string;
@@ -202,19 +186,12 @@ export function rewriteStatementForFloDown(
     knownUris?: ReadonlyMap<string, string>;
   },
 ): { statement: unknown; replacements: FloDownUriReplacement[] } {
-  const symbolIdentity: FloDownSymbolIdentity = {
-    archive: identity.futureRepo,
-    path: identity.filePath,
-    module: identity.fileName,
-    symbol: "symbol",
-  };
   const replacements: FloDownUriReplacement[] = [];
   const declared = new Map<string, string>();
   return {
     statement: rewriteNode(
       structuredClone(statement),
       block,
-      symbolIdentity,
       declared,
       replacements,
       false,

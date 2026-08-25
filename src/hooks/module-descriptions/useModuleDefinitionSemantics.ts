@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { queryClient } from "@/queryClient";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
@@ -214,6 +215,13 @@ export function useModuleDefinitionSemantics({
             fileName: fileName.trim(),
             language: language.trim(),
             symbolName: params.symbolName,
+            symbolUri: await floDownDeclareSymbolUri({
+              futureRepo: futureRepo.trim(),
+              filePath: filePath.trim(),
+              fileName: fileName.trim(),
+              language: language.trim(),
+              symbolName: params.symbolName,
+            }),
           },
         });
         if (result.linkedExistingSymbol) {
@@ -236,6 +244,7 @@ export function useModuleDefinitionSemantics({
             symbolName: "",
             selectedSymbolSource: "DB",
             selectedSymbolId: params.selectedSymbol.id,
+            selectedSymbolUri: params.selectedSymbol.symbolUri,
           },
         });
       } else {

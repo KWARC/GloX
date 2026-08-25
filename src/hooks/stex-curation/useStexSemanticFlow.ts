@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { queryClient } from "@/queryClient";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, ReplacePayload } from "@/server/parseUri";
@@ -205,6 +206,13 @@ export function useStexSemanticFlow(
           language: identity.language,
 
           symbolName: params.symbolName,
+          symbolUri: await floDownDeclareSymbolUri({
+            futureRepo: identity.futureRepo,
+            filePath: identity.filePath,
+            fileName: identity.fileName,
+            language: identity.language,
+            symbolName: params.symbolName,
+          }),
         },
       });
       if (result.linkedExistingSymbol) {
@@ -228,6 +236,7 @@ export function useStexSemanticFlow(
             symbolName: "",
             selectedSymbolSource: "DB",
             selectedSymbolId: params.selectedSymbol.id,
+            selectedSymbolUri: params.selectedSymbol.symbolUri,
           },
         });
       } else {
@@ -283,6 +292,13 @@ export function useStexSemanticFlow(
         paragraphFileName: paragraphFileName.trim(),
         originalText: editedText,
         symbolName: symbolName.trim(),
+        symbolUri: await floDownDeclareSymbolUri({
+          futureRepo: identity.futureRepo,
+          filePath: identity.filePath,
+          fileName: paragraphFileName.trim(),
+          language: identity.language,
+          symbolName: symbolName.trim(),
+        }),
         futureRepo: identity.futureRepo,
         filePath: identity.filePath,
         language: identity.language,

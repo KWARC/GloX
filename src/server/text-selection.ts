@@ -2,6 +2,7 @@ import { queryClient } from "@/queryClient";
 import { createFloDownBlock, updateFloDownBlock } from "@/serverFns/extractFloDownBlock.server";
 import { FloDownStatement } from "@/types/floDown.types";
 import { ExtractBlockType } from "@/types/blockType";
+import type { DeclaredSymbolInfo } from "@/types/declaredSymbolsInfo";
 import { useState } from "react";
 
 export interface PopupState {
@@ -37,6 +38,7 @@ export type ExtractedItem = {
   originalText: string;
   statement: FloDownStatement;
   declaredSymbols?: string[];
+  declaredSymbolsInfo?: DeclaredSymbolInfo[];
   futureRepo: string;
   filePath: string;
   fileName: string;

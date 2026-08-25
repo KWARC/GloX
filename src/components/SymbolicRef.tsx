@@ -47,6 +47,7 @@ export function SymbolicRef({
       onSelect({
         source: "DB",
         symbolName: selectedSymbol.symbolName,
+        symbolUri: selectedSymbol.symbolUri,
         futureRepo: selectedSymbol.futureRepo,
         filePath: selectedSymbol.filePath,
         fileName: selectedSymbol.fileName,

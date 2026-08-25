@@ -197,11 +197,12 @@ terms:
   declared_symbols:
     preferred: Declared symbols
     definition: >
-      Local symbol names a FloDown block introduces (declares) once for that export identity; the
-      declaration establishes the symbol URI (typically from that file). Deleting such a block
-      removes symrefs to those names from other blocks. Not the same as definienda: a later
-      definition MAY use a definiendum for an already-declared symbol without declaring it again.
+      Local symbol names and URIs a FloDown block introduces (declares) once; the declaration
+      establishes the opaque FloDown symbol URI. Deleting such a block removes matching symrefs from
+      other blocks. Not the same as definienda: a later definition MAY use a definiendum for an
+      already-declared symbol without declaring it again.
     technical_anchors:
+      - prisma/schema.prisma FloDownBlock.declaredSymbolsInfo
       - prisma/schema.prisma FloDownBlock.declaredSymbols
       - src/server/floDownBlockDeclaredSymbols.ts
       - specs/engineering/external-deps/libraries/ftml.md
@@ -216,11 +217,10 @@ terms:
   symbol:
     preferred: Symbol
     definition: >
-      A named concept in the local symbolic catalog. In FTML/sTeX the symbol is declared once and
-      the URI does not depend on definition language (E-FTML-06). GloX currently identifies a Symbol
-      row by symbol name plus export identity including **language** (R-SYM-02) — that is a known
-      mismatch with E-FTML-06. A Symbol is associated when a non-discarded FloDown block at the
-      same export identity lists the name in declared symbols.
+      A named concept in the local symbolic catalog. Identity is the opaque URI FloDown returned
+      (E-FTML-06). GloX allows at most one live declaration of a given URI (R-SYM-02). Display name
+      is search-only. A Symbol is associated when a non-discarded FloDown block lists that URI in
+      `declaredSymbolsInfo`.
     technical_anchors:
       - prisma/schema.prisma Symbol
       - src/serverFns/symbol.server.ts

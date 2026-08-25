@@ -78,15 +78,15 @@ Document (defaults from schema: `smglom/softeng`, `mod`, `en`).
 **Upstream:** R-DOC-05
 
 **S-DOC-07 (Event-Driven):** WHEN `moveDocumentLocation` succeeds, the system MUST update
-`futureRepo`, `filePath`, and `language` on the Document, its FloDown blocks, `LatexTable` rows, and
-declaring `Symbol` rows in one transaction.
+`futureRepo`, `filePath`, and `language` on the Document, its FloDown blocks, and `LatexTable` rows
+in one transaction, and MUST apply opaque symbol URI replacements supplied by the client (S-SYM-10).
 
-**Upstream:** R-DOC-07
+**Upstream:** R-DOC-07, R-SYM-16
 
-**S-DOC-08 (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST leave
-FloDown block `statement` JSON unchanged (local inline `uri` values remain the `symbolName` string).
+**S-DOC-08 (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST replace
+listed local symbol URIs in FloDown block statements and MUST NOT change unlisted URIs.
 
-**Upstream:** R-DOC-08
+**Upstream:** R-DOC-08, R-SYM-16
 
 **Implementation:** `src/serverFns/documentLocation.server.ts`. FloDown block slice: `lifecycle.md`
 S-FDB-06a.

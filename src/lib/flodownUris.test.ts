@@ -1,14 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parseUri } from "@/server/parseUri";
 import {
   documentUri,
   documentUriFromGlox,
   FloDownLanguage,
   languageToFloDown,
   scratchDocumentUri,
-  symbolIdentityFromGlox,
-  symbolUriFromGlox,
-  canonicalizeSymbolUri,
 } from "./flodownUris";
 
 describe("flodownUris", () => {
@@ -50,54 +46,6 @@ describe("flodownUris", () => {
     });
     expect(uri).toBe("http://mathhub.info?a=test&d=doc&l=en");
     expect(new URL(uri).searchParams.get("p")).toBeNull();
-  });
-
-  it("canonicalizes inverted and language-tagged symbol URIs", () => {
-    const fallback = symbolIdentityFromGlox({
-      futureRepo: "courses/FAU/module-descriptions",
-      filePath: "modules",
-      fileName: "33995",
-      symbolName: "unused",
-    });
-    expect(
-      canonicalizeSymbolUri("Group", fallback),
-    ).toBe(
-      "http://mathhub.info?a=courses/FAU/module-descriptions&p=modules&m=33995&s=Group",
-    );
-    expect(
-      canonicalizeSymbolUri(
-        "http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra&l=de",
-        fallback,
-      ),
-    ).toBe(
-      "http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra",
-    );
-    expect(
-      canonicalizeSymbolUri(
-        "http://courses/FAU/module-descriptions?a=defs&m=Group&s=Group",
-        fallback,
-      ),
-    ).toBe(
-      "http://mathhub.info?a=courses/FAU/module-descriptions&p=defs&m=Group&s=Group",
-    );
-  });
-
-  it("builds symbol URIs with m= and s=", () => {
-    const uri = symbolUriFromGlox({
-      futureRepo: "courses/FAU/module-descriptions",
-      filePath: "defs",
-      fileName: "MyConcept",
-      symbolName: "MyConcept",
-    });
-    expect(uri).toBe(
-      "http://mathhub.info?a=courses/FAU/module-descriptions&p=defs&m=MyConcept&s=MyConcept",
-    );
-    expect(uri).not.toContain("&l=");
-    const parsed = parseUri(uri);
-    expect(parsed.archive).toBe("courses/FAU/module-descriptions");
-    expect(parsed.filePath).toBe("defs");
-    expect(parsed.fileName).toBe("MyConcept");
-    expect(parsed.symbol).toBe("MyConcept");
   });
 
   it("puts archive in a=, host mathhub.info", () => {

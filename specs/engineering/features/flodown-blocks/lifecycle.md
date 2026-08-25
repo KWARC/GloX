@@ -11,6 +11,7 @@ code:
   - src/server/floDownBlockDeletion.ts
   - src/serverFns/floDownBlockStatus.server.ts
   - src/serverFns/floDownBlockAggregate.server.ts
+  - src/serverFns/documentLocation.server.ts
 ---
 
 # SDD: FloDown block lifecycle
@@ -51,7 +52,7 @@ erDiagram
   Document ||--o{ FloDownBlock : contains
   DocumentPage ||--o{ FloDownBlock : anchors
   FloDownBlock ||--o{ FloDownBlockVersion : versions
-  FloDownBlock }o..o| Symbol : "FTML declare or reference"
+  FloDownBlock }o..o| ModuleDescription : optional
 ```
 
 **Sibling entities** (other PRDs): `MarkReference` and `LatexTable` on `Document`;
@@ -67,7 +68,8 @@ erDiagram
 | `src/server/floDownBlockDeletion.ts` | Computes declared symbol URIs and removes matching symrefs from other statements transactionally. |
 | `src/serverFns/floDownBlockStatus.server.ts` | Updates FloDown block status; bulk status by export identity. |
 | `src/serverFns/floDownBlockAggregate.server.ts` | Combines statements for LaTeX/sTeX export. |
-| `prisma/schema.prisma` `FloDownBlock` | Authoritative storage for statement JSON, declaredSymbols, status, export identity. |
+| `src/serverFns/documentLocation.server.ts` | Moves document export identity and applies client-supplied opaque symbol URI replacements. |
+| `prisma/schema.prisma` `FloDownBlock` | Authoritative storage for statement JSON, `declaredSymbolsInfo`, status, and export identity. |
 
 ## Data contracts
 
@@ -77,8 +79,9 @@ erDiagram
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `statement` | JSON (FTML) | `definition` or `paragraph` per `statement.type`. Local `uri` values are short names (D-FTML-01). On persist, definition `for_symbols` is written as `[]`; FloDown still needs the key at `addElement` (rewrite fills it). |
-| `declaredSymbols` | `string[]` | Names this block **declares** (E-FTML-06 / D-FTML-04), not every definiendum. Persist MUST NOT copy definienda into this column. |
+| `statement` | JSON (FTML) | `definition` or `paragraph` per `statement.type`. Local `uri` values are opaque FloDown symbol URIs after cutover (D-FTML-01 superseded). On persist, definition `for_symbols` is written as `[]`; FloDown still needs the key at `addElement` (rewrite fills it). |
+| `declaredSymbolsInfo` | JSON array | Declaration records this block **declares** (E-FTML-06 / D-FTML-04). Persist MUST NOT copy importing definienda into this list. |
+| `declaredSymbols` | `string[]` | **Deprecated.** Unused by application code; retained for existing rows. |
 | `currentVersion` | int | Incremented on each edit |
 | Export identity | `futureRepo`, `filePath`, `fileName`, `language` | Set at creation from Document or module context |
 
@@ -98,7 +101,8 @@ same four-field identity on FloDown blocks export as one sTeX module.
 ### Creation & versioning
 
 **S-FDB-01 (Event-Driven):** WHEN `createFloDownBlock` succeeds, the system MUST persist
-`originalText`, `statement`, `declaredSymbols` (if any), and a `FloDownBlockVersion` at version 1.
+`originalText`, `statement`, `declaredSymbolsInfo` (possibly empty), and a `FloDownBlockVersion` at
+version 1.
 
 **Upstream:** R-FDB-01
 
@@ -109,9 +113,9 @@ same four-field identity on FloDown blocks export as one sTeX module.
 
 ### Deletion & symref cascade
 
-**S-FDB-03 (Event-Driven):** WHEN a FloDown block is deleted, the system MUST remove symrefs pointing
-to its declared symbol URIs from all remaining blocks' statements before or within the same
-transaction as the delete.
+**S-FDB-03 (Event-Driven):** WHEN a FloDown block is deleted, the system MUST remove symrefs whose
+`uri` exactly equals any `symbolUri` from that block’s `declaredSymbolsInfo` from remaining
+statements in the same transaction.
 
 **Upstream:** R-FDB-03
 
@@ -131,11 +135,16 @@ that identity have a different status, the system MUST abort and return a confli
 
 **Upstream:** R-FDB-06
 
-**S-FDB-06a (Event-Driven):** WHEN a Document export identity move succeeds, the system MUST update
-`futureRepo`, `filePath`, and `language` on FloDown blocks for that Document and MUST leave each
-block's `statement` JSON unchanged.
+**S-FDB-06a (Event-Driven):** WHEN a Document or block export-identity move succeeds, the system
+MUST update identity columns and MUST apply S-SYM-10 for every declaration on the moved blocks.
+The system MUST NOT leave previous local symbol URIs in statements.
 
-**Upstream:** R-DOC-07, R-DOC-08
+**Upstream:** R-SYM-16, R-DOC-07, R-DOC-08
+
+**S-FDB-09 (Ubiquitous):** Statement persist MUST NOT rewrite a symbol `uri` that is already an
+HTTP(S) string into a short name.
+
+**Upstream:** R-SYM-01, R-SYM-18
 
 ### Access control
 
@@ -158,9 +167,10 @@ that Document or holds Admin role before proceeding.
 | S-FDB-04 | R-FDB-04 | Gap |
 | S-FDB-05 | R-FDB-05 | Gap |
 | S-FDB-06 | R-FDB-06 | Gap |
-| S-FDB-06a | R-DOC-07, R-DOC-08 | Gap |
+| S-FDB-06a | R-SYM-16, R-DOC-07, R-DOC-08 | `declaredSymbolsInfo.test.ts` opaque replace |
 | S-FDB-07 | R-FDB-07 | Gap |
 | S-FDB-08 | R-FDB-08 | Gap |
+| S-FDB-09 | R-SYM-18 | `prepareFloDownStatement.test.ts` |
 
 ## Open documentation gaps
 

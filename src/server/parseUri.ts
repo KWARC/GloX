@@ -85,7 +85,15 @@ export function normalizeSymRef(symRef: UnifiedSymbolicReference): {
     const parsed = parseUri(symRef.uri);
     return { uri: parsed.conceptUri, text: parsed.symbol };
   }
-  return { uri: `${symRef.symbolName}`, text: symRef.symbolName };
+  return {
+    uri: localSymbolUri(symRef),
+    text: symRef.symbolName,
+  };
+}
+
+function localSymbolUri(symRef: Extract<UnifiedSymbolicReference, { source: "DB" }>): string {
+  const uri = (symRef.symbolUri ?? "").trim() || symRef.symbolName.trim();
+  return uri;
 }
 
 function normalizeContent(content: FloDownContent[]): FloDownContent[] {

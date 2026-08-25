@@ -9,7 +9,8 @@
     "preview": "node -r dotenv/config .output/server/index.mjs ",
     "test": "vitest run",
     "audit:statements": "node -r dotenv/config scripts/audit-flo-down-block-statements.mjs",
-    "backfill:declared-symbols": "node -r dotenv/config scripts/backfill-declared-symbols.mjs"
+    "backfill:declared-symbols": "node -r dotenv/config scripts/backfill-declared-symbols.mjs",
+    "backfill:declared-symbols-info": "node -r dotenv/config scripts/backfill-declared-symbols-info.mjs"
   },
   "dependencies": {
     "@flexiformal/ftml": "^0.0.22",

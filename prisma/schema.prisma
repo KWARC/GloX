@@ -53,8 +53,9 @@ model User {
   createdFloDownBlocks   FloDownBlock[]        @relation("FloDownBlockCreatedBy")
   updatedFloDownBlocks   FloDownBlock[]        @relation("FloDownBlockUpdatedBy")
   createdMarkReferences  MarkReference[]       @relation("MarkReferenceCreatedBy")
-  confirmedSymbols       Symbol[]
   createdModuleDescriptions ModuleDescription[] @relation("ModuleDescriptionCreatedBy")
+  /// @deprecated Unused by application. Retained for existing Symbol rows.
+  confirmedSymbols       Symbol[]
 }
 
 model ModuleDescription {
@@ -137,31 +138,6 @@ model DocumentPage {
   @@index([documentId])
 }
 
-model Symbol {
-  id         String  @id @default(uuid())
-  symbolName String
-  alias      String?
-
-  futureRepo String
-  filePath   String
-  fileName   String
-  language   String @default("en")
-
-  hasConfirmed  Boolean @default(false)
-  confirmedById String?
-  confirmedBy   User?   @relation(fields: [confirmedById], references: [id])
-
-  /// @deprecated Legacy SymbolicReference rows only — not used by application code.
-  symbolicReferences SymbolicReference[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([symbolName, futureRepo, filePath, fileName, language])
-  @@index([symbolName])
-  @@index([confirmedById])
-}
-
 /// Curated FloDown block — provenance + FTML `statement` JSON (`definition` or `paragraph`).
 /// Block shape is determined by `statement.type`, not a separate DB column.
 model FloDownBlock {
@@ -181,8 +157,11 @@ model FloDownBlock {
   originalText String @db.Text
   statement    Json
 
-  /// Local symbol names this row introduces via addSymbolDeclaration at export.
+  /// @deprecated Prefer declaredSymbolsInfo.symbolUri; retained for existing data.
   declaredSymbols String[] @default([])
+
+  /// Declarations this block owns (name, opaque FloDown URI, confirmation).
+  declaredSymbolsInfo Json @default("[]")
 
   status          FloDownBlockStatus @default(EXTRACTED)
   discardedReason String?
@@ -376,4 +355,29 @@ model DefinitionSymbolicRef {
   @@unique([floDownBlockId, symbolicReferenceId])
   @@index([floDownBlockId])
   @@index([symbolicReferenceId])
+}
+
+/// @deprecated Unused by application. Retained for existing data.
+model Symbol {
+  id         String  @id @default(uuid())
+  symbolName String
+  alias      String?
+
+  futureRepo String
+  filePath   String
+  fileName   String
+  language   String @default("en")
+
+  hasConfirmed  Boolean @default(false)
+  confirmedById String?
+  confirmedBy   User?   @relation(fields: [confirmedById], references: [id])
+
+  symbolicReferences SymbolicReference[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([symbolName, futureRepo, filePath, fileName, language])
+  @@index([symbolName])
+  @@index([confirmedById])
 }

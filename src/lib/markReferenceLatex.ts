@@ -1,8 +1,5 @@
 import { initFloDown } from "@/lib/flodownClient";
-import {
-  createFloDownDocumentFromGlox,
-  symbolUriFromGlox,
-} from "@/lib/flodownUris";
+import { createFloDownDocumentFromGlox } from "@/lib/flodownUris";
 import { parseUri } from "@/server/parseUri";
 import { isHttp } from "@/server/ftml/generateStexFromFtml";
 // Remaining issue: isHttp is re-exported from generateStexFromFtml; the definition lives in
@@ -50,7 +47,7 @@ function getDisplaySymbol(symbolName: string): string {
 
 function rewriteContent(
   content: FloDownContent[],
-  identity: MarkReferenceLatexIdentity,
+  _identity: MarkReferenceLatexIdentity,
 ): FloDownContent[] {
   // Remaining issue: own URI rewrite; does not use mountStatementOnFloDown / addSymbolDeclaration.
   return content.map((item) => {
@@ -59,16 +56,7 @@ function rewriteContent(
 
     const symref = item as SymrefNode;
     if (isHttp(symref.uri)) return symref;
-
-    return {
-      ...symref,
-      uri: symbolUriFromGlox({
-        futureRepo: identity.futureRepo,
-        filePath: identity.filePath,
-        fileName: identity.fileName,
-        symbolName: symref.uri,
-      }),
-    };
+    return symref;
   });
 }
 

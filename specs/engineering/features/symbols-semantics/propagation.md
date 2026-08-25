@@ -31,8 +31,8 @@ Out of scope:
 ## Business rules
 
 **S-SYM-03 (Event-Driven):** WHEN `applySymbolPropagation` succeeds, the system MUST replace matching
-local symbol references in affected FloDown block statements and MUST append a version history row
-for each changed block.
+local symbol URI strings in affected FloDown block statements and MUST append a version history row
+for each changed block. Match keys are opaque URIs after cutover, not short names.
 
 **Upstream:** R-SYM-03
 

@@ -13,6 +13,7 @@ import {
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
 import { extractPlainText } from "@/server/ftml/statementContent";
+import { declaredUrisFromJson } from "@/server/declaredSymbolsInfo";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
@@ -82,53 +83,9 @@ function buildPlainDefinitionStatement(originalText: string): DefinitionNode {
 }
 
 async function cleanupOrphanedModuleSymbols(
-  moduleDescriptionId: string,
+  _moduleDescriptionId: string,
 ): Promise<void> {
-  const blocks = await prisma.floDownBlock.findMany({
-    where: { moduleDescriptionId },
-    select: { declaredSymbols: true, futureRepo: true, filePath: true, fileName: true, language: true },
-  });
-
-  const declared = new Set<string>();
-  for (const block of blocks) {
-    for (const symbolName of block.declaredSymbols) {
-      declared.add(symbolName);
-    }
-  }
-
-  if (declared.size === 0) return;
-
-  const moduleDesc = await prisma.moduleDescription.findUnique({
-    where: { id: moduleDescriptionId },
-    select: { futureRepo: true, defsFilePath: true, language: true },
-  });
-  if (!moduleDesc) return;
-
-  for (const symbolName of declared) {
-    const symbol = await prisma.symbol.findFirst({
-      where: {
-        symbolName,
-        futureRepo: moduleDesc.futureRepo,
-        filePath: moduleDesc.defsFilePath,
-        language: moduleDesc.language,
-      },
-    });
-    if (!symbol) continue;
-
-    const otherBlocks = await prisma.floDownBlock.count({
-      where: {
-        declaredSymbols: { has: symbolName },
-        OR: [
-          { moduleDescriptionId: { not: moduleDescriptionId } },
-          { documentId: { not: null } },
-        ],
-      },
-    });
-
-    if (otherBlocks === 0) {
-      await prisma.symbol.delete({ where: { id: symbol.id } }).catch(() => undefined);
-    }
-  }
+  return;
 }
 
 export const searchModuleDescriptions = createServerFn({ method: "GET" })
@@ -189,7 +146,8 @@ export const getModuleDescriptionPage = createServerFn({ method: "POST" })
               id: block.id,
               originalText: block.originalText,
               statement: assertFloDownStatement(block.statement),
-              declaredSymbols: block.declaredSymbols,
+              declaredSymbols: declaredUrisFromJson(block.declaredSymbolsInfo),
+              declaredSymbolsInfo: block.declaredSymbolsInfo,
               futureRepo: block.futureRepo,
               filePath: block.filePath,
               fileName: block.fileName,
@@ -333,7 +291,7 @@ export const moduleDescriptionSymbolicRef = createServerFn({ method: "POST" })
     if (data.symRef.source === "MATHHUB") {
       uri = parseUri(data.symRef.uri).conceptUri ?? data.symRef.uri;
     } else {
-      uri = data.symRef.symbolName;
+      uri = (data.symRef.symbolUri ?? "").trim() || data.symRef.symbolName;
     }
 
     const symrefNode: SymrefNode = {
@@ -369,6 +327,7 @@ export const createModuleDefinitionBlock = createServerFn({ method: "POST" })
       originalText: string;
       statement?: FloDownStatement;
       symbolName: string;
+      symbolUri?: string;
       existingSymbolId?: string;
       blockType?: ExtractBlockType;
     }) => data,
@@ -384,6 +343,7 @@ export const createModuleDefinitionBlock = createServerFn({ method: "POST" })
     const originalText = data.originalText.trim();
     const symbolName = data.symbolName.trim();
     const existingSymbolId = data.existingSymbolId?.trim();
+    const symbolUri = data.symbolUri?.trim() || existingSymbolId;
 
     if (!paragraphFileName || !originalText || !symbolName) {
       throw new Error("Missing definition fields");
@@ -394,32 +354,11 @@ export const createModuleDefinitionBlock = createServerFn({ method: "POST" })
     const statement = sanitizeStatementForPersist(rawStatement);
     const serializedStatement = JSON.parse(JSON.stringify(statement));
     const isNewSymbol = !existingSymbolId;
+    if (isNewSymbol && !symbolUri) {
+      throw new Error("Symbol URI required");
+    }
 
     const result = await prisma.$transaction(async (tx) => {
-      const symbol = existingSymbolId
-        ? await tx.symbol.findUnique({ where: { id: existingSymbolId } })
-        : await tx.symbol.upsert({
-            where: {
-              symbolName_futureRepo_filePath_fileName_language: {
-                symbolName,
-                futureRepo: moduleDesc.futureRepo,
-                filePath: moduleDesc.defsFilePath,
-                fileName: paragraphFileName,
-                language: moduleDesc.language,
-              },
-            },
-            update: {},
-            create: {
-              symbolName,
-              futureRepo: moduleDesc.futureRepo,
-              filePath: moduleDesc.defsFilePath,
-              fileName: paragraphFileName,
-              language: moduleDesc.language,
-            },
-          });
-
-      if (!symbol) throw new Error("Symbol not found");
-
       const createdFloDownBlock = await tx.floDownBlock.create({
         data: {
           moduleDescriptionId: moduleDesc.id,
@@ -446,26 +385,24 @@ export const createModuleDefinitionBlock = createServerFn({ method: "POST" })
         },
       });
 
-      if (isNewSymbol) {
-        await addDeclaredSymbol(tx, createdFloDownBlock.id, symbol.symbolName, {
-          futureRepo: moduleDesc.futureRepo,
-          filePath: moduleDesc.defsFilePath,
-          fileName: paragraphFileName,
-          language: moduleDesc.language,
+      if (isNewSymbol && symbolUri) {
+        await addDeclaredSymbol(tx, createdFloDownBlock.id, {
+          symbolName,
+          symbolUri,
         });
       }
 
       return {
         id: createdFloDownBlock.id,
         statement: assertFloDownStatement(createdFloDownBlock.statement),
-        declaredSymbols: createdFloDownBlock.declaredSymbols,
+        declaredSymbols: declaredUrisFromJson(createdFloDownBlock.declaredSymbolsInfo),
         futureRepo: createdFloDownBlock.futureRepo,
         filePath: createdFloDownBlock.filePath,
         fileName: createdFloDownBlock.fileName,
         language: createdFloDownBlock.language,
         symbol: {
-          id: symbol.id,
-          symbolName: symbol.symbolName,
+          id: symbolUri ?? existingSymbolId ?? symbolName,
+          symbolName,
         },
       };
     });

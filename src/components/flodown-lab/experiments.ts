@@ -5,7 +5,7 @@ import {
   type UriReplacement,
 } from "./labTypes";
 import type { FloDownLabDbSample } from "@/serverFns/flodownLab.server";
-import { documentUri, documentUriFromGlox, symbolUri } from "@/lib/flodownUris";
+import { documentUri, documentUriFromGlox } from "@/lib/flodownUris";
 import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
 
 type FloDownBlock = {
@@ -183,12 +183,8 @@ export const LAB_EXPERIMENTS: LabExperiment[] = [
   },
 ];
 
-const MATHHUB_BOOLEAN_URI = symbolUri({
-  archive: "smglom/algebra",
-  path: "mod",
-  module: "Boolean-algebra",
-  symbol: "Boolean algebra",
-});
+const MATHHUB_BOOLEAN_URI =
+  "http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra";
 
 const LAB_TEST_DOC = documentUri({
   archive: "test",
@@ -604,12 +600,8 @@ function runCrossBlock(
 }
 
 const HOVER_LOCAL_NAME = "foobar";
-const HOVER_KNOWN_URI = symbolUri({
-  archive: "test",
-  path: "mod",
-  module: "definition_block",
-  symbol: "foobar",
-});
+const HOVER_KNOWN_URI =
+  "http://mathhub.info?a=test&p=mod&m=definition_block&s=foobar";
 
 function localDefinition(symbol: string | undefined) {
   return {

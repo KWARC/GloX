@@ -1,11 +1,12 @@
 import prisma from "@/lib/prisma";
 import { currentUser } from "@/server/auth/currentUser";
+import { declaredUrisFromJson } from "@/server/declaredSymbolsInfo";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
 import {
   addDeclaredSymbol,
   removeDeclaredSymbol,
 } from "@/server/floDownBlockDeclaredSymbols";
-import { parseUri, SemanticOperation, transform } from "@/server/parseUri";
+import { SemanticOperation, transform } from "@/server/parseUri";
 import { assertFloDownStatement } from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -51,52 +52,7 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
       });
       assertFloDownStatement(def.statement);
 
-      let operation = data.operation;
-
-      if (
-        operation.kind === "replaceSemantic" &&
-        operation.payload.type === "definiendum" &&
-        operation.payload.symdecl === true &&
-        operation.payload.uri.startsWith("http")
-      ) {
-        const parsed = parseUri(operation.payload.uri);
-        if (!parsed.symbol) {
-          throw new Error("Invalid MathHub URI: missing symbol");
-        }
-
-        const currentDef = await tx.floDownBlock.findUniqueOrThrow({
-          where: { id: data.floDownBlockId },
-        });
-
-        await tx.symbol.upsert({
-          where: {
-            symbolName_futureRepo_filePath_fileName_language: {
-              symbolName: parsed.symbol,
-              futureRepo: currentDef.futureRepo,
-              filePath: currentDef.filePath,
-              fileName: currentDef.fileName,
-              language: currentDef.language,
-            },
-          },
-          update: {},
-          create: {
-            symbolName: parsed.symbol,
-            futureRepo: currentDef.futureRepo,
-            filePath: currentDef.filePath,
-            fileName: currentDef.fileName,
-            language: currentDef.language,
-          },
-        });
-
-        operation = {
-          ...operation,
-          payload: {
-            ...operation.payload,
-            uri: parsed.symbol,
-            symdecl: true,
-          },
-        };
-      }
+      const operation = data.operation;
 
       const newAst = sanitizeStatementForPersist(
         assertFloDownStatement(
@@ -109,38 +65,24 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
       if (
         operation.kind === "replaceSemantic" &&
         operation.payload.type === "definiendum" &&
-        operation.payload.symdecl === true &&
-        !operation.payload.uri.startsWith("http")
+        operation.payload.symdecl === true
       ) {
-        await addDeclaredSymbol(
-          tx,
-          def.id,
-          operation.payload.uri,
-          {
-            futureRepo: def.futureRepo,
-            filePath: def.filePath,
-            fileName: def.fileName,
-            language: def.language,
-          },
-        );
+        const uri = operation.payload.uri.trim();
+        if (!uri.startsWith("http://") && !uri.startsWith("https://")) {
+          throw new Error("Symbol URI required");
+        }
+        await addDeclaredSymbol(tx, def.id, {
+          symbolName: uri,
+          symbolUri: uri,
+        });
       }
 
       if (
         operation.kind === "removeSemantic" &&
         operation.target.type === "definiendum" &&
-        def.declaredSymbols.includes(operation.target.uri)
+        declaredUrisFromJson(def.declaredSymbolsInfo).includes(operation.target.uri)
       ) {
-        await removeDeclaredSymbol(
-          tx,
-          def.id,
-          operation.target.uri,
-          {
-            futureRepo: def.futureRepo,
-            filePath: def.filePath,
-            fileName: def.fileName,
-            language: def.language,
-          },
-        );
+        await removeDeclaredSymbol(tx, def.id, operation.target.uri);
       }
 
       await tx.floDownBlockVersion.create({

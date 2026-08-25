@@ -1,4 +1,5 @@
 import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { queryClient } from "@/queryClient";
 import { normalizeSymRef } from "@/server/parseUri";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
@@ -210,6 +211,14 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     if (!floDownBlockExtractId || !floDownBlockExtractText || !selection) return;
 
     if (params.mode === "CREATE") {
+      if (!rawDefinition) return;
+      const symbolUri = await floDownDeclareSymbolUri({
+        futureRepo: rawDefinition.futureRepo,
+        filePath: rawDefinition.filePath,
+        fileName: rawDefinition.fileName,
+        language: rawDefinition.language,
+        symbolName: params.symbolName,
+      });
       await createSymbolDefiniendum({
         data: {
           floDownBlockId: floDownBlockExtractId,
@@ -217,11 +226,12 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           startOffset: selection.startOffset,
           endOffset: selection.endOffset,
           symdecl: true,
-          futureRepo: "",
-          filePath: "",
-          fileName: "",
-          language: "en",
+          futureRepo: rawDefinition.futureRepo,
+          filePath: rawDefinition.filePath,
+          fileName: rawDefinition.fileName,
+          language: rawDefinition.language,
           symbolName: params.symbolName,
+          symbolUri,
         },
       });
     } else {

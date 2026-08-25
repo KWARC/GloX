@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { ExtractedContentToolbar } from "@/components/files/ExtractedContentToolbar";
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
@@ -157,6 +158,15 @@ export function ModuleDefinitionsSection({
           originalText: text,
           statement: definitionStatement,
           symbolName: symbolName.trim(),
+          symbolUri: await floDownDeclareSymbolUri({
+            futureRepo:
+              definitionBlocks[0]?.futureRepo ??
+              "courses/FAU/module-descriptions",
+            filePath: definitionBlocks[0]?.filePath ?? "defs",
+            fileName: paragraphFileName.trim(),
+            language: definitionBlocks[0]?.language ?? "de",
+            symbolName: symbolName.trim(),
+          }),
           blockType: submittedBlockType,
         },
       });

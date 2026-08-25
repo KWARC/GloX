@@ -13,14 +13,6 @@ export type FloDownExportIdentity = {
   language: string;
 };
 
-export type FloDownSymbolIdentity = {
-  archive: string;
-  path?: string | null;
-  /** Module name for symbol URIs (`m=`). */
-  module: string;
-  symbol: string;
-};
-
 /** FloDown `Language` enum values from `flodown.d.ts` (must not use `wasm_bindgen` at runtime). */
 export const FloDownLanguage = {
   English: 0,
@@ -88,68 +80,6 @@ export function documentUri(identity: FloDownExportIdentity): string {
   });
 }
 
-/** Symbol URI: `http://mathhub.info?a={archive}&p={path}&m={module}&s={symbol}` (no `l=`). */
-export function symbolUri(identity: FloDownSymbolIdentity): string {
-  return buildFloDownQueryUri({
-    a: identity.archive,
-    p: identity.path?.trim() || undefined,
-    m: identity.module,
-    s: identity.symbol,
-  });
-}
-
-/**
- * FloDown `SymbolUri` is `http://mathhub.info?a=…&p=…&m=…&s=…` (no `l=`).
- * Rewrite short names, inverted GloX hosts, and stray language params.
- */
-export function canonicalizeSymbolUri(
-  uri: string,
-  fallback: FloDownSymbolIdentity,
-): string {
-  if (!uri) {
-    return symbolUri({ ...fallback, symbol: "unknown" });
-  }
-
-  if (!uri.startsWith("http://") && !uri.startsWith("https://")) {
-    return symbolUri({ ...fallback, symbol: uri });
-  }
-
-  try {
-    const url = new URL(uri);
-    const symbol = url.searchParams.get("s");
-    if (!symbol) {
-      return symbolUri({ ...fallback, symbol: uri });
-    }
-
-    const module =
-      url.searchParams.get("m") ||
-      url.searchParams.get("d") ||
-      fallback.module;
-
-    if (url.hostname.endsWith("mathhub.info")) {
-      return symbolUri({
-        archive: url.searchParams.get("a") || fallback.archive,
-        path: url.searchParams.get("p"),
-        module,
-        symbol,
-      });
-    }
-
-    const archiveFromHost = `${url.hostname}${url.pathname}`.replace(
-      /\/$/,
-      "",
-    );
-    return symbolUri({
-      archive: archiveFromHost || fallback.archive,
-      path: url.searchParams.get("p") || url.searchParams.get("a"),
-      module,
-      symbol,
-    });
-  } catch {
-    return symbolUri({ ...fallback, symbol: uri });
-  }
-}
-
 export function exportIdentityFromGlox(params: {
   futureRepo: string;
   filePath?: string | null;
@@ -164,20 +94,6 @@ export function exportIdentityFromGlox(params: {
   };
 }
 
-export function symbolIdentityFromGlox(params: {
-  futureRepo: string;
-  filePath?: string | null;
-  fileName: string;
-  symbolName: string;
-}): FloDownSymbolIdentity {
-  return {
-    archive: params.futureRepo,
-    path: params.filePath,
-    module: params.fileName,
-    symbol: params.symbolName,
-  };
-}
-
 /** Document URI from a FloDown block / module row. */
 export function documentUriFromGlox(params: {
   futureRepo: string;
@@ -186,16 +102,6 @@ export function documentUriFromGlox(params: {
   language: string;
 }): string {
   return documentUri(exportIdentityFromGlox(params));
-}
-
-/** Constructed symbol URI from a FloDown block / module row (not a live declaration). */
-export function symbolUriFromGlox(params: {
-  futureRepo: string;
-  filePath?: string | null;
-  fileName: string;
-  symbolName: string;
-}): string {
-  return symbolUri(symbolIdentityFromGlox(params));
 }
 
 /** Preview with no row identity: `a=no/archive`, `d={docId}`. */

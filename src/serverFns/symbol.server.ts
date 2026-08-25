@@ -6,9 +6,15 @@ import {
   replaceTextWithNode,
 } from "@/server/ftml/astOperations";
 import { findDefiniendum } from "@/server/parseUri";
+import { parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
-import { resolveDeclaredSymbolNames } from "@/server/floDownBlockDeletion";
+import {
+  associatedBlocksForUri,
+  catalogFromBlocks,
+  loadLiveFloDownBlocks,
+  searchCatalog,
+} from "@/server/symbolCatalog";
 import {
   assertFloDownStatement,
   DefiniendumNode,
@@ -53,6 +59,7 @@ export type CreateSymbolDefiniendumInput = {
   language: string;
 
   symbolName: string;
+  symbolUri?: string;
   alias?: string | null;
 
   selectedSymbolSource?: "DB" | "MATHHUB";
@@ -84,96 +91,15 @@ export type SymbolAssociationSummary = {
   canDelete: boolean;
 };
 
-type AssociatedDefinitionSummary =
-  SymbolAssociationSummary["associatedFloDownBlocks"][number];
-
-function floDownBlockMatchesDeclaredSymbol(
-  floDownBlock: {
-    futureRepo: string;
-    filePath: string;
-    fileName: string;
-    language: string;
-    statement: unknown;
-    declaredSymbols?: string[];
-  },
-  symbol: {
-    symbolName: string;
-    futureRepo: string;
-    filePath: string;
-    fileName: string;
-    language: string;
-  },
-): boolean {
-  if (
-    floDownBlock.futureRepo !== symbol.futureRepo ||
-    floDownBlock.filePath !== symbol.filePath ||
-    floDownBlock.fileName !== symbol.fileName ||
-    floDownBlock.language !== symbol.language
-  ) {
-    return false;
-  }
-
-  const declared = resolveDeclaredSymbolNames(
-    assertFloDownStatement(floDownBlock.statement),
-    floDownBlock.declaredSymbols,
-  );
-
-  return declared.includes(symbol.symbolName);
-}
-
-function addAssociatedFloDownBlock(
-  floDownBlockMap: Map<string, AssociatedDefinitionSummary>,
-  floDownBlock: AssociatedDefinitionSummary,
-) {
-  floDownBlockMap.set(floDownBlock.id, floDownBlock);
-}
-
 async function buildSymbolAssociations() {
-  const [symbols, floDownBlocks] = await Promise.all([
-    prisma.symbol.findMany({
-      orderBy: [
-        { symbolName: "asc" },
-        { futureRepo: "asc" },
-        { filePath: "asc" },
-        { fileName: "asc" },
-        { language: "asc" },
-      ],
-    }),
-    prisma.floDownBlock.findMany({
-      where: { status: { not: "DISCARDED" } },
-      select: {
-        id: true,
-        documentId: true,
-        statement: true,
-        declaredSymbols: true,
-        pageNumber: true,
-        futureRepo: true,
-        filePath: true,
-        fileName: true,
-        language: true,
-      },
-    }),
-  ]);
+  const floDownBlocks = await loadLiveFloDownBlocks();
+  const catalog = catalogFromBlocks(floDownBlocks);
 
-  return symbols.map((symbol) => {
-    const floDownBlockMap = new Map<string, AssociatedDefinitionSummary>();
-
-    for (const floDownBlock of floDownBlocks) {
-      if (!floDownBlockMatchesDeclaredSymbol(floDownBlock, symbol)) continue;
-
-      addAssociatedFloDownBlock(floDownBlockMap, {
-        id: floDownBlock.id,
-        documentId: floDownBlock.documentId,
-        statement: assertFloDownStatement(floDownBlock.statement),
-        futureRepo: floDownBlock.futureRepo,
-        filePath: floDownBlock.filePath,
-        fileName: floDownBlock.fileName,
-        language: floDownBlock.language,
-        pageNumber: floDownBlock.pageNumber,
-      });
-    }
-
-    const associatedFloDownBlocks = Array.from(floDownBlockMap.values());
+  return catalog.map((symbol) => {
+    const associatedFloDownBlocks = associatedBlocksForUri(
+      floDownBlocks,
+      symbol.symbolUri,
+    );
 
     return {
       id: symbol.id,
@@ -183,8 +109,8 @@ async function buildSymbolAssociations() {
       filePath: symbol.filePath,
       fileName: symbol.fileName,
       language: symbol.language,
-      createdAt: symbol.createdAt,
-      updatedAt: symbol.updatedAt,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
       associatedFloDownBlocks,
       associatedDefinitionCount: associatedFloDownBlocks.length,
       canDelete: associatedFloDownBlocks.length === 0,
@@ -194,18 +120,27 @@ async function buildSymbolAssociations() {
 
 export const getAllSymbols = createServerFn({ method: "GET" }).handler(
   async () => {
-    return prisma.symbol.findMany({
-      include: {
-        confirmedBy: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const blocks = await loadLiveFloDownBlocks();
+    return catalogFromBlocks(blocks).map((symbol) => ({
+      id: symbol.id,
+      symbolName: symbol.symbolName,
+      alias: symbol.alias,
+      futureRepo: symbol.futureRepo,
+      filePath: symbol.filePath,
+      fileName: symbol.fileName,
+      language: symbol.language,
+      hasConfirmed: symbol.hasConfirmed,
+      confirmedById: symbol.confirmedById,
+      confirmedBy: symbol.confirmedBy
+        ? {
+            firstName: symbol.confirmedBy,
+            lastName: null,
+            email: "",
+          }
+        : null,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    }));
   },
 );
 
@@ -233,10 +168,6 @@ export const deleteSymbolIfUnassociated = createServerFn({ method: "POST" })
       throw new Error("Cannot delete symbol with associated definitions");
     }
 
-    await prisma.symbol.delete({
-      where: { id: data.symbolId },
-    });
-
     return { success: true };
   });
 
@@ -248,15 +179,12 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         floDownBlockId,
         selectedText,
         symdecl,
-        futureRepo,
-        filePath,
-        fileName,
-        language,
         symbolName,
         alias,
         selectedSymbolSource,
         selectedSymbolId,
         selectedSymbolUri,
+        symbolUri: declaredSymbolUri,
       } = data;
 
       const userRes = await currentUser();
@@ -282,45 +210,28 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
         if (!symbolName.trim()) {
           throw new Error("Symbol name required");
         }
+        const symbolUri = (declaredSymbolUri ?? "").trim();
+        if (!symbolUri) {
+          throw new Error("Symbol URI required");
+        }
 
-        const existingSymbol = await tx.symbol.findUnique({
-          where: {
-            symbolName_futureRepo_filePath_fileName_language: {
-              symbolName: symbolName.trim(), futureRepo: futureRepo.trim(),
-              filePath: filePath.trim(), fileName: fileName.trim(), language: language.trim(),
-            },
-          },
-        });
+        const onThisBlock = parseDeclaredSymbolsInfo(
+          floDownBlock.declaredSymbolsInfo,
+        ).some((item) => item.symbolUri === symbolUri);
+        linkedExistingSymbol = onThisBlock;
 
-        if (existingSymbol) linkedExistingSymbol = true;
-        else await tx.symbol.create({
-          data: {
-            symbolName: symbolName.trim(), alias: alias?.trim() || null,
-            futureRepo: futureRepo.trim(), filePath: filePath.trim(),
-            fileName: fileName.trim(), language: language.trim(),
-          },
-        });
-
-        uri = symbolName.trim();
+        uri = symbolUri;
       } else {
         if (!selectedSymbolSource) {
           throw new Error("Symbol source required");
         }
 
         if (selectedSymbolSource === "DB") {
-          if (!selectedSymbolId) {
-            throw new Error("selectedSymbolId required");
+          const uriFromPicker = (selectedSymbolUri ?? selectedSymbolId ?? "").trim();
+          if (!uriFromPicker) {
+            throw new Error("selectedSymbolUri required");
           }
-
-          const existing = await tx.symbol.findUnique({
-            where: { id: selectedSymbolId },
-          });
-
-          if (!existing) {
-            throw new Error("Symbol not found");
-          }
-
-          uri = existing.symbolName;
+          uri = uriFromPicker;
         } else {
           if (!selectedSymbolUri) {
             throw new Error("selectedSymbolUri required");
@@ -389,11 +300,10 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
       const newStatement = sanitizeStatementForPersist(unwrapRoot(updatedRoot));
 
       if (symdecl && !linkedExistingSymbol) {
-        await addDeclaredSymbol(tx, floDownBlockId, uri, {
-          futureRepo: existing.futureRepo,
-          filePath: existing.filePath,
-          fileName: existing.fileName,
-          language: existing.language,
+        await addDeclaredSymbol(tx, floDownBlockId, {
+          symbolName: symbolName.trim(),
+          symbolUri: uri,
+          alias,
         });
       }
 
@@ -422,16 +332,8 @@ export const createSymbolDefiniendum = createServerFn({ method: "POST" })
 export const searchSymbol = createServerFn({ method: "POST" })
   .inputValidator((query: string) => query)
   .handler(async ({ data: query }) => {
-    return prisma.symbol.findMany({
-      where: {
-        symbolName: {
-          contains: query,
-          mode: "insensitive",
-        },
-      },
-      take: 10,
-      orderBy: { createdAt: "desc" },
-    });
+    const blocks = await loadLiveFloDownBlocks();
+    return searchCatalog(blocks, query);
   });
 
 export const getFloDownBlockBySymbol = createServerFn({ method: "POST" })

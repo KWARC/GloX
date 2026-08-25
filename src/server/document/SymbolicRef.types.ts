@@ -6,6 +6,7 @@ export type UnifiedSymbolicReference =
   | {
       source: "DB";
       symbolName: string;
+      symbolUri?: string;
       futureRepo: string;
       filePath: string;
       fileName: string;

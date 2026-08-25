@@ -1,3 +1,4 @@
+import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { queryClient } from "@/queryClient";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { normalizeSymRef, parseUri, ReplacePayload } from "@/server/parseUri";
@@ -201,6 +202,13 @@ export function useSemanticEditingFlow({
       });
     } else {
       if (params.mode === "CREATE") {
+        const symbolUri = await floDownDeclareSymbolUri({
+          futureRepo: futureRepo.trim(),
+          filePath: filePath.trim(),
+          fileName: fileName.trim(),
+          language: language.trim(),
+          symbolName: params.symbolName,
+        });
         const result = await createSymbolDefiniendum({
           data: {
             floDownBlockId: floDownBlockExtractId,
@@ -213,6 +221,7 @@ export function useSemanticEditingFlow({
             fileName: fileName.trim(),
             language: language.trim(),
             symbolName: params.symbolName,
+            symbolUri,
           },
         });
         if (result.linkedExistingSymbol) {
@@ -235,6 +244,7 @@ export function useSemanticEditingFlow({
             symbolName: "",
             selectedSymbolSource: "DB",
             selectedSymbolId: params.selectedSymbol.id,
+            selectedSymbolUri: params.selectedSymbol.symbolUri,
           },
         });
       } else {

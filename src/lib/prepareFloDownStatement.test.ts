@@ -216,6 +216,30 @@ describe("rewriteStatementForFloDown", () => {
     });
   });
 
+  it("passes stored HTTP symbol URIs through without rewriting", () => {
+    const declared: string[] = [];
+    const uri =
+      "http://mathhub.info?a=smglom/algebra&p=mod&m=Boolean-algebra&s=Boolean algebra&l=de";
+    const { statement, replacements } = rewriteStatementForFloDown(
+      {
+        type: "paragraph",
+        content: [{ type: "symref", uri, content: ["B"] }],
+      },
+      {
+        addSymbolDeclaration: (name) => {
+          declared.push(name);
+          return `http://mathhub.info?s=${name}`;
+        },
+      },
+      { futureRepo: "a", filePath: "p", fileName: "m" },
+    );
+    expect(declared).toEqual([]);
+    expect(replacements).toEqual([]);
+    expect(statement).toMatchObject({
+      content: [{ type: "symref", uri }],
+    });
+  });
+
   it("mountStatementOnFloDown rewrites and calls addElement", () => {
     const elements: unknown[] = [];
     const { replacements } = mountStatementOnFloDown(
