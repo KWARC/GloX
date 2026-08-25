@@ -1,5 +1,9 @@
 import { initFloDown } from "@/lib/flodownClient";
-import { createFloDownDocumentFromGlox } from "@/lib/flodownUris";
+import {
+  createFloDownDocumentFromGlox,
+  documentUriFromGlox,
+} from "@/lib/flodownUris";
+import type { TexZipFile } from "@/lib/texZipExport";
 import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
 import {
   FloDownStatement,
@@ -37,6 +41,7 @@ export type TexFilePreview = {
   ftmlStatement: FloDownStatement;
   declaredSymbols?: readonly string[];
   declaredSymbolsInfo?: unknown;
+  uri: string;
 };
 
 type ModulePreviewBlock = PersistedBlock | HeadingNode;
@@ -155,6 +160,12 @@ export async function generateModuleDescriptionTexPreview(
       ftmlStatement: block.statement,
       declaredSymbols: block.declaredSymbols,
       declaredSymbolsInfo: block.declaredSymbolsInfo,
+      uri: documentUriFromGlox({
+        futureRepo: block.futureRepo,
+        filePath: block.filePath,
+        fileName: block.fileName,
+        language: block.language,
+      }),
     })),
   );
 
@@ -163,9 +174,36 @@ export async function generateModuleDescriptionTexPreview(
       fileName: `${input.moduleId}.${input.language}.tex`,
       tex: moduleTex,
       ftmlStatement: moduleStatement,
+      uri: documentUriFromGlox({
+        futureRepo: input.futureRepo,
+        filePath: input.modulesFilePath,
+        fileName: input.moduleId,
+        language: input.language,
+      }),
     },
     definitionTex,
   };
+}
+
+export type ModuleDescriptionTexPreview = Awaited<
+  ReturnType<typeof generateModuleDescriptionTexPreview>
+>;
+
+export function flattenModuleDescriptionTexPreview(
+  preview: ModuleDescriptionTexPreview,
+): TexZipFile[] {
+  return [preview.moduleTex, ...preview.definitionTex];
+}
+
+export async function generateAllModuleDescriptionTexFiles(
+  modules: readonly GenerateModuleTexInput[],
+): Promise<TexZipFile[]> {
+  const files: TexZipFile[] = [];
+  for (const moduleInput of modules) {
+    const preview = await generateModuleDescriptionTexPreview(moduleInput);
+    files.push(...flattenModuleDescriptionTexPreview(preview));
+  }
+  return files;
 }
 
 /** @deprecated Use generateModuleDescriptionModuleTex */

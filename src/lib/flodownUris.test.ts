@@ -4,6 +4,7 @@ import {
   documentUriFromGlox,
   FloDownLanguage,
   languageToFloDown,
+  parseDocumentUri,
   scratchDocumentUri,
 } from "./flodownUris";
 
@@ -70,6 +71,22 @@ describe("flodownUris", () => {
     expect(scratchDocumentUri("preview-1", "en")).toBe(
       "http://mathhub.info?a=no/archive&d=preview-1&l=en",
     );
+  });
+
+  it("round-trips document URIs through parseDocumentUri", () => {
+    const identity = {
+      futureRepo: "courses/FAU/module-descriptions",
+      filePath: "modules",
+      fileName: "121455",
+      language: "en",
+    };
+    const uri = documentUriFromGlox(identity);
+    expect(parseDocumentUri(uri)).toEqual({
+      archive: identity.futureRepo,
+      path: identity.filePath,
+      name: identity.fileName,
+      language: identity.language,
+    });
   });
 });
 

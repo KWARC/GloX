@@ -35,6 +35,7 @@
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
+    "fflate": "^0.8.3",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.562.0",
     "nitro": "latest",

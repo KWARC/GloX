@@ -80,6 +80,19 @@ export function documentUri(identity: FloDownExportIdentity): string {
   });
 }
 
+/** Parse a FloDown document URI built by {@link documentUri}. */
+export function parseDocumentUri(uri: string): FloDownExportIdentity {
+  const url = new URL(uri);
+  const archive = url.searchParams.get("a");
+  const name = url.searchParams.get("d");
+  const language = url.searchParams.get("l");
+  if (!archive || !name || !language) {
+    throw new Error(`Invalid document URI: ${uri}`);
+  }
+  const path = url.searchParams.get("p") ?? undefined;
+  return { archive, path, name, language };
+}
+
 export function exportIdentityFromGlox(params: {
   futureRepo: string;
   filePath?: string | null;

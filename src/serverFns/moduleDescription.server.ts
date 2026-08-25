@@ -29,6 +29,7 @@ import {
 import { ExtractBlockType } from "@/types/blockType";
 import type { IndexStatus } from "@/types/indexStatus";
 import { createServerFn } from "@tanstack/react-start";
+import type { Prisma } from "generated/prisma/client";
 import type { UpdateFloDownBlockAstResult } from "@/serverFns/updateFloDownBlock.server";
 
 type ModuleStatementField =
@@ -86,6 +87,59 @@ async function cleanupOrphanedModuleSymbols(
   _moduleDescriptionId: string,
 ): Promise<void> {
   return;
+}
+
+type ModuleDescriptionWithBlocks = Prisma.ModuleDescriptionGetPayload<{
+  include: {
+    floDownBlocks: true;
+  };
+}>;
+
+export type ModuleDescriptionTexExportInput = {
+  moduleId: string;
+  language: string;
+  titleStatement: FloDownStatement;
+  inhaltStatement: FloDownStatement;
+  lernzieleStatement: FloDownStatement;
+  futureRepo: string;
+  modulesFilePath: string;
+  definitionBlocks: Array<{
+    id: string;
+    statement: FloDownStatement;
+    declaredSymbols: readonly string[];
+    declaredSymbolsInfo?: object;
+    futureRepo: string;
+    filePath: string;
+    fileName: string;
+    language: string;
+  }>;
+};
+
+function toTexExportInput(
+  row: ModuleDescriptionWithBlocks,
+): ModuleDescriptionTexExportInput {
+  return {
+    moduleId: row.moduleId,
+    language: row.language,
+    titleStatement: assertFloDownStatement(row.titleStatement),
+    inhaltStatement: assertFloDownStatement(row.inhaltStatement),
+    lernzieleStatement: assertFloDownStatement(row.lernzieleStatement),
+    futureRepo: row.futureRepo,
+    modulesFilePath: row.modulesFilePath,
+    definitionBlocks: row.floDownBlocks.map((block) => ({
+      id: block.id,
+      statement: assertFloDownStatement(block.statement),
+      declaredSymbols: declaredUrisFromJson(block.declaredSymbolsInfo),
+      declaredSymbolsInfo:
+        block.declaredSymbolsInfo == null
+          ? undefined
+          : (block.declaredSymbolsInfo as object),
+      futureRepo: block.futureRepo,
+      filePath: block.filePath,
+      fileName: block.fileName,
+      language: block.language,
+    })),
+  };
 }
 
 export const searchModuleDescriptions = createServerFn({ method: "GET" })
@@ -529,6 +583,24 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
 
     return { items, total, page, pageSize };
   });
+
+export const listModuleDescriptionsForTexExport = createServerFn({ method: "POST" }).handler(
+  async (): Promise<ModuleDescriptionTexExportInput[]> => {
+    await requireCuratorOrAdmin();
+
+    const rows = await prisma.moduleDescription.findMany({
+      orderBy: [{ moduleId: "asc" }],
+      include: {
+        floDownBlocks: {
+          where: { documentId: null },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    return rows.map(toTexExportInput);
+  },
+);
 
 export const updateModuleDescriptionIndexStatus = createServerFn({
   method: "POST",
