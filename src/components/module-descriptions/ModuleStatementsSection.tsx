@@ -399,7 +399,11 @@ export function ModuleStatementsSection({
         mode="symbol-target"
         symbolName={symbolName}
         createSymbolFlow
-        filePath={`${futureRepo}/ ${defsFilePath}/ ${language}`}
+        identity={{
+          futureRepo,
+          filePath: defsFilePath,
+          language,
+        }}
         setParagraphFileName={setParagraphFileName}
         setBlockType={setBlockType}
         setSymbolName={setSymbolName}

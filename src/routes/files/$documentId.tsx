@@ -550,7 +550,11 @@ function RouteComponent() {
           setParagraphFileName: extractionFlow.setParagraphFileName,
           setBlockType: extractionFlow.setExtractBlockType,
           setSymbolName: extractionFlow.setSymbolName,
-          filePath: `${semanticFlow.futureRepo}/ ${semanticFlow.filePath}/ ${semanticFlow.language}`,
+          identity: {
+            futureRepo: semanticFlow.futureRepo,
+            filePath: semanticFlow.filePath,
+            language: semanticFlow.language,
+          },
           location: {
             futureRepo: semanticFlow.futureRepo,
             filePath: semanticFlow.filePath,

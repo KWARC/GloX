@@ -1,5 +1,6 @@
 import { initFloDown } from "@/lib/flodownClient";
 import { documentUriFromGlox } from "@/lib/flodownUris";
+import type { GloxBlockIdentity } from "@/lib/gloxFileIdentity";
 import { collectDeclaredSymbolsForDefinitionBlock } from "@/lib/moduleLocalSymbols";
 import type { ModuleLocalSymbolSource } from "@/lib/moduleLocalSymbols";
 import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
@@ -27,13 +28,6 @@ export type FloDownSymbolContext = {
   fileName: string;
   language: string;
   hoverDefinitions?: readonly FloDownHoverDefinition[];
-};
-
-type GloxFileIdentity = {
-  futureRepo: string;
-  filePath: string;
-  fileName: string;
-  language: string;
 };
 
 function collectStatementUris(statement: FloDownStatement): string[] {
@@ -94,7 +88,7 @@ function symbolContextDep(context: FloDownSymbolContext | undefined): string {
 function identityFromContext(
   docId: string,
   symbolContext: FloDownSymbolContext | undefined,
-): GloxFileIdentity {
+): GloxBlockIdentity {
   const fromHover = symbolContext?.hoverDefinitions?.find(
     (definition) => definition.cacheKey === docId,
   );
@@ -122,7 +116,7 @@ function identityFromContext(
   };
 }
 
-function documentUriForIdentity(identity: GloxFileIdentity): string {
+function documentUriForIdentity(identity: GloxBlockIdentity): string {
   return documentUriFromGlox({
     futureRepo: identity.futureRepo,
     filePath: identity.filePath,
@@ -207,7 +201,7 @@ export function FtmlPreview({
           mountStatementOnFloDown(fd, statement);
         };
 
-        const createHiddenFd = (identity: GloxFileIdentity): FloDownWasmBlock => {
+        const createHiddenFd = (identity: GloxBlockIdentity): FloDownWasmBlock => {
           const child = document.createElement("div");
           hiddenEl.appendChild(child);
           const fd = floDown.FloDown.fromUri(
@@ -238,7 +232,7 @@ export function FtmlPreview({
         for (const [, blocks] of groups) {
           if (disposed) return;
           const first = blocks[0];
-          const identity: GloxFileIdentity = {
+          const identity: GloxBlockIdentity = {
             futureRepo: first.futureRepo,
             filePath: first.filePath,
             fileName: first.fileName,
@@ -274,7 +268,7 @@ export function FtmlPreview({
             ]),
           );
           for (const dep of uniqueDefs.values()) {
-            const identity: GloxFileIdentity = {
+            const identity: GloxBlockIdentity = {
               futureRepo: dep.futureRepo,
               filePath: dep.filePath,
               fileName: dep.fileName,

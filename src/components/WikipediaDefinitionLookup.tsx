@@ -1,7 +1,4 @@
-import {
-  parseWikipediaLanguage,
-  resolveWikipediaLanguageFromFilePath,
-} from "@/lib/wikipediaLanguage";
+import { parseWikipediaLanguage } from "@/lib/wikipediaLanguage";
 import { searchWikipediaForSymbol } from "@/serverFns/wikipediaSearch.server";
 import { WikipediaSearchResultItem } from "@/types/wikipedia.types";
 import {
@@ -29,8 +26,7 @@ const PANEL_SPLIT_STYLE: CSSProperties = {
 
 type WikipediaDefinitionLookupProps = {
   symbolName: string;
-  filePath: string;
-  locationLanguage?: string;
+  language: string;
   enabled: boolean;
   /** Left side of the shared top row (typically the new symbol name field). */
   symbolNameField: ReactNode;
@@ -39,8 +35,7 @@ type WikipediaDefinitionLookupProps = {
 
 export function WikipediaDefinitionLookup({
   symbolName,
-  filePath,
-  locationLanguage,
+  language,
   enabled,
   symbolNameField,
   children,
@@ -56,9 +51,7 @@ export function WikipediaDefinitionLookup({
   const autoSearchedForOpenRef = useRef(false);
   const searchGenerationRef = useRef(0);
 
-  const blockLanguage =
-    parseWikipediaLanguage(locationLanguage ?? "") ??
-    resolveWikipediaLanguageFromFilePath(filePath);
+  const blockLanguage = parseWikipediaLanguage(language);
 
   useEffect(() => {
     setQuery(symbolName);

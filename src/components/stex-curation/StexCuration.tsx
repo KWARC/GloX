@@ -272,7 +272,11 @@ export function StexCuration({ identity }: { identity: FileIdentity }) {
                 setParagraphFileName: semanticFlow.setParagraphFileName,
                 setBlockType: semanticFlow.setExtractBlockType,
                 setSymbolName: semanticFlow.setSymbolName,
-                filePath: `${identity.futureRepo}/ ${identity.filePath}/ ${identity.language}`,
+                identity: {
+                  futureRepo: identity.futureRepo,
+                  filePath: identity.filePath,
+                  language: identity.language,
+                },
                 createSymbolFlow: true,
                 onClose: () => {
                   semanticFlow.setExtractDialogOpen(false);

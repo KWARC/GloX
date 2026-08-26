@@ -21,6 +21,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { IconRefresh } from "@tabler/icons-react";
+import type { GloxDocumentIdentity } from "@/lib/gloxFileIdentity";
 import { ComponentProps, Dispatch, SetStateAction } from "react";
 
 export type SelectionDialogProps = {
@@ -82,7 +83,7 @@ export type ExtractionDialogProps = {
   setParagraphFileName: Dispatch<SetStateAction<string>>;
   setBlockType: ComponentProps<typeof ExtractTextDialog>["setBlockType"];
   setSymbolName?: Dispatch<SetStateAction<string>>;
-  filePath: string;
+  identity: GloxDocumentIdentity;
   location?: ComponentProps<typeof ExtractTextDialog>["location"];
   onClose: () => void;
   onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
@@ -268,7 +269,7 @@ export function FileDialogs({
         setParagraphFileName={extraction.setParagraphFileName}
         setBlockType={extraction.setBlockType}
         setSymbolName={extraction.setSymbolName}
-        filePath={extraction.filePath}
+        identity={extraction.identity}
         location={extraction.location}
         onClose={extraction.onClose}
         onSubmit={extraction.onSubmit}

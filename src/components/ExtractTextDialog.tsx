@@ -15,6 +15,10 @@ import {
 } from "@mantine/core";
 import { IconFileText, IconPencil } from "@tabler/icons-react";
 import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
+import {
+  gloxIdentityDisplayFields,
+  type GloxDocumentIdentity,
+} from "@/lib/gloxFileIdentity";
 import { EXTRACT_BLOCK_TYPES, ExtractBlockType, blockTypeLabel } from "@/types/blockType";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
@@ -32,22 +36,6 @@ export function normalizeContentName(value: string) {
   return value.toLowerCase().replaceAll(" ", "-");
 }
 
-function getFilePathSegments(filePath: string): string[] {
-  const parts = filePath
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  const grouped: string[] = [];
-  for (let index = 0; index < parts.length; index += 2) {
-    const current = parts[index];
-    const next = parts[index + 1];
-    grouped.push(next ? `${current}/${next}` : current);
-  }
-
-  return grouped;
-}
-
 interface ExtractTextDialogProps {
   opened: boolean;
   initialText: string;
@@ -57,7 +45,7 @@ interface ExtractTextDialogProps {
   mode?: "definition" | "symbol-target";
   symbolName?: string;
   symbolNameDisabled?: boolean;
-  filePath: string;
+  identity: GloxDocumentIdentity;
   location?: {
     futureRepo: string;
     filePath: string;
@@ -101,7 +89,7 @@ export function ExtractTextDialog({
   setParagraphFileName,
   setBlockType,
   setSymbolName,
-  filePath,
+  identity,
   location,
   onClose,
   onSubmit,
@@ -130,7 +118,8 @@ export function ExtractTextDialog({
   const effectiveBlockType: ExtractBlockType = createSymbolFlow
     ? "definition"
     : blockType;
-  const filePathSegments = getFilePathSegments(filePath);
+  const displayIdentity = location ?? identity;
+  const identityFields = gloxIdentityDisplayFields(displayIdentity);
   const draftSemantic = useDraftSemanticAuthoring(
     text,
     enableSemanticAuthoring && semanticEnabled,
@@ -194,14 +183,12 @@ export function ExtractTextDialog({
   ) {
     try {
       if (params.mode === "CREATE") {
-        if (!location) {
-          throw new Error("Export identity required to declare a symbol");
-        }
+        const exportIdentity = location ?? identity;
         const symbolUri = await floDownDeclareSymbolUri({
-          futureRepo: location.futureRepo,
-          filePath: location.filePath,
+          futureRepo: exportIdentity.futureRepo,
+          filePath: exportIdentity.filePath,
           fileName: paragraphFileName.trim(),
-          language: location.language,
+          language: exportIdentity.language,
           symbolName: params.symbolName,
         });
         draftSemantic.applyDefiniendum({
@@ -360,9 +347,9 @@ export function ExtractTextDialog({
             </Group>
 
             <Group gap={6} wrap="wrap">
-              {filePathSegments.map((segment) => (
-                <Text key={segment} size="xs" c="dimmed" ff="monospace" style={{ userSelect: "text", lineHeight: 1.2 }}>
-                  [{segment}]
+              {identityFields.map((field) => (
+                <Text key={field} size="xs" c="dimmed" ff="monospace" style={{ userSelect: "text", lineHeight: 1.2 }}>
+                  [{field}]
                 </Text>
               ))}
               {location && <ActionIcon size="xs" variant="subtle" onClick={() => setEditingLocation((value) => !value)} aria-label="Edit content location">
@@ -406,8 +393,7 @@ export function ExtractTextDialog({
             {createSymbolFlow ? (
               <WikipediaDefinitionLookup
                 symbolName={symbolName}
-                filePath={filePath}
-                locationLanguage={location?.language}
+                language={displayIdentity.language}
                 enabled={opened}
                 symbolNameField={
                   showSymbolNameField ? (

@@ -18,7 +18,6 @@ type WikimediaSearchResponse = {
 
 export {
   parseWikipediaLanguage,
-  resolveWikipediaLanguageFromFilePath,
 } from "@/lib/wikipediaLanguage";
 
 export async function searchWikipediaArticles(

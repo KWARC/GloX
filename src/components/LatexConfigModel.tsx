@@ -1,3 +1,4 @@
+import { formatGloxBlockIdentity } from "@/lib/gloxFileIdentity";
 import { ExtractedItem } from "@/server/text-selection";
 import { Box, Button, Group, Modal, Select, Stack, Text } from "@mantine/core";
 import { useState } from "react";
@@ -23,10 +24,6 @@ interface ConfigOption {
   language: string;
 }
 
-function formatConfigLabel(config: Omit<ConfigOption, "value" | "label">) {
-  return `[${config.futureRepo}] [${config.filePath}] [${config.fileName}] [${config.language}]`;
-}
-
 export function LatexConfigModel({
   opened,
   onClose,
@@ -42,7 +39,7 @@ export function LatexConfigModel({
       seen.add(key);
       configOptions.push({
         value: key,
-        label: formatConfigLabel(extract),
+        label: formatGloxBlockIdentity(extract),
         futureRepo: extract.futureRepo,
         filePath: extract.filePath,
         fileName: extract.fileName,
@@ -149,7 +146,7 @@ export function LatexConfigModel({
 
         {selectedConfigData && (
           <Text size="xs" c="dimmed" ff="monospace">
-            {formatConfigLabel(selectedConfigData)}
+            {formatGloxBlockIdentity(selectedConfigData)}
           </Text>
         )}
 

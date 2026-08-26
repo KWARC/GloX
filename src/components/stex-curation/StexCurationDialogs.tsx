@@ -2,6 +2,7 @@ import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
 import { ExtractedItem, PopupState } from "@/server/text-selection";
 import type { CreatedSymbolTarget } from "@/serverFns/createFloDownBlockWithDeclaredSymbol.server";
 import { FileIdentity } from "@/serverFns/latex.server";
+import type { GloxDocumentIdentity } from "@/lib/gloxFileIdentity";
 import { ComponentProps, Dispatch, SetStateAction } from "react";
 import { CreateSymbolDefiniendumDialog } from "../CreateSymbolDefiniendumDialog";
 import { DefiniendumDialog } from "../DefiniendumDialog";
@@ -73,7 +74,7 @@ export type StexCurationDialogsProps = {
     setParagraphFileName: (value: string) => void;
     setBlockType: ComponentProps<typeof ExtractTextDialog>["setBlockType"];
     setSymbolName: Dispatch<SetStateAction<string>>;
-    filePath: string;
+    identity: GloxDocumentIdentity;
     onClose: () => void;
     onSubmit: ComponentProps<typeof ExtractTextDialog>["onSubmit"];
     createSymbolFlow?: boolean;
@@ -159,7 +160,7 @@ export function StexCurationDialogs({
         setParagraphFileName={extraction.setParagraphFileName}
         setBlockType={extraction.setBlockType}
         setSymbolName={extraction.setSymbolName}
-        filePath={extraction.filePath}
+        identity={extraction.identity}
         onClose={extraction.onClose}
         onSubmit={extraction.onSubmit}
       />

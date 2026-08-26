@@ -1,3 +1,4 @@
+import type { GloxBlockIdentity } from "@/lib/gloxFileIdentity";
 import { initFloDown } from "@/lib/flodownClient";
 import {
   createFloDownDocumentFromGlox,
@@ -56,16 +57,11 @@ type FloDownLib = {
   };
 };
 
-type GloxDocumentIdentity = Pick<
-  DefinitionBlockInput,
-  "futureRepo" | "filePath" | "fileName" | "language"
->;
-
 function texFileName(name: string, language: string): string {
   return `${name}.${language}.tex`;
 }
 
-function documentUriFor(identity: GloxDocumentIdentity): string {
+function documentUriFor(identity: GloxBlockIdentity): string {
   return documentUriFromGlox(identity);
 }
 

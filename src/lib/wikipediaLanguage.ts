@@ -15,17 +15,6 @@ export function parseWikipediaLanguage(
   return null;
 }
 
-export function resolveWikipediaLanguageFromFilePath(
-  filePath: string,
-): WikipediaLanguage | null {
-  const segments = filePath
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-  const last = segments[segments.length - 1];
-  return last ? parseWikipediaLanguage(last) : null;
-}
-
 export function buildWikipediaArticleUrl(
   language: WikipediaLanguage,
   pageKey: string,
