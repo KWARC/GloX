@@ -1,3 +1,4 @@
+import { parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import { ExtractedItem } from "@/server/text-selection";
 import { blockTypeLabel, getTopLevelBlockType } from "@/types/blockType";
 import {
@@ -11,7 +12,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import {
   IconDog,
   IconArrowLeft,
@@ -23,6 +24,67 @@ import {
 } from "@tabler/icons-react";
 import { FolderSymlink } from "lucide-react";
 import { FtmlPreview, type FloDownSymbolContext } from "./FtmlPreview";
+
+function DeclaredSymbolLink({
+  symbolName,
+  symbolUri,
+}: {
+  symbolName: string;
+  symbolUri: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyUri(event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    await navigator.clipboard.writeText(symbolUri);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <Tooltip
+      label={copied ? "Copied!" : symbolUri}
+      withArrow
+      multiline
+      maw={420}
+    >
+      <Text
+        component="span"
+        size="xs"
+        c="blue"
+        style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+        onClick={(event) => void copyUri(event)}
+      >
+        {symbolName}
+      </Text>
+    </Tooltip>
+  );
+}
+
+function DeclaredSymbolsSummary({
+  declaredSymbolsInfo,
+}: {
+  declaredSymbolsInfo?: ExtractedItem["declaredSymbolsInfo"];
+}) {
+  const symbols = parseDeclaredSymbolsInfo(declaredSymbolsInfo);
+  if (!symbols.length) return null;
+
+  return (
+    <Text size="xs" c="dimmed" mt={4}>
+      Declared:{" "}
+      {symbols.map((symbol, index) => (
+        <span key={symbol.symbolUri}>
+          {index > 0 && ", "}
+          <DeclaredSymbolLink
+            symbolName={symbol.symbolName}
+            symbolUri={symbol.symbolUri}
+          />
+        </span>
+      ))}
+    </Text>
+  );
+}
 
 interface ExtractedTextPanelProps {
   isLocked?: boolean;
@@ -290,21 +352,26 @@ export function ExtractedTextPanel({
                       }}
                     />
                   ) : (
-                    <div
-                      style={{ userSelect: "text", cursor: "text" }}
-                      onMouseUp={() => onSelection(item.id)}
-                    >
-                      <FtmlPreview
-                        key={item.id}
-                        docId={item.id}
-                        ftmlAst={item.statement}
-                        declaredSymbols={item.declaredSymbols}
-                        declaredSymbolsInfo={item.declaredSymbolsInfo}
-                        symbolContext={symbolContext}
-                      />
+                    <>
+                      <div
+                        style={{ userSelect: "text", cursor: "text" }}
+                        onMouseUp={() => onSelection(item.id)}
+                      >
+                        <FtmlPreview
+                          key={item.id}
+                          docId={item.id}
+                          ftmlAst={item.statement}
+                          declaredSymbols={item.declaredSymbols}
+                          declaredSymbolsInfo={item.declaredSymbolsInfo}
+                          symbolContext={symbolContext}
+                        />
 
-                      {/* <SuggestedDefinienda item={item} /> */}
-                    </div>
+                        {/* <SuggestedDefinienda item={item} /> */}
+                      </div>
+                      <DeclaredSymbolsSummary
+                        declaredSymbolsInfo={item.declaredSymbolsInfo}
+                      />
+                    </>
                   )}
 
                   {showFloDownBlockMeta && (
