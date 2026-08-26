@@ -1936,7 +1936,7 @@ let floDown = (function(exports) {
         };
         return {
             __proto__: null,
-            "./flodown.js": import0,
+            "./flodown_bg.js": import0,
         };
     }
 
@@ -2395,3 +2395,4 @@ let floDown = (function(exports) {
 
     return Object.assign(__wbg_init, { initSync }, exports);
 })({ __proto__: null });
+window.floDown = floDown;
