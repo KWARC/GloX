@@ -45,6 +45,13 @@ export function declaredUrisFromJson(value: unknown): string[] {
   return declaredSymbolUris(parseDeclaredSymbolsInfo(value));
 }
 
+/** Short names FloDown `addSymbolDeclaration` expects (not stored URIs). */
+export function declaredNamesFromJson(value: unknown): string[] {
+  return parseDeclaredSymbolsInfo(value)
+    .map((item) => item.symbolName.trim())
+    .filter(Boolean);
+}
+
 export function isDeclaredLocalUri(
   declaredUris: readonly string[] | undefined,
   uri: string,

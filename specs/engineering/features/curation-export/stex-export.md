@@ -32,8 +32,8 @@ Out of scope:
 | Layer | Responsibility |
 | --- | --- |
 | `src/serverFns/floDownBlockAggregate.server.ts` | Combines FloDown block statements for a file identity into one export document. |
-| `src/server/ftml/generateStexFromFtml.ts` | Creates a FloDown document with `fromUri`, mounts each top-level block through `mountStatementOnFloDown`, and serializes sTeX. |
-| `src/lib/prepareFloDownStatement.ts` | Passes stored HTTP URIs into FloDown `addElement` (heading/`for_symbols`/`symdecl` shape only). |
+| `src/server/ftml/generateStexFromFtml.ts` | Creates a FloDown document with `fromUri`, registers this file's symbol names via `addSymbolDeclaration` (so `getStex()` emits `\\symdecl*`), mounts each top-level block through `mountStatementOnFloDown`, and serializes sTeX. |
+| `src/lib/prepareFloDownStatement.ts` | Passes stored HTTP URIs into FloDown `addElement` (heading/`for_symbols`/`symdecl` shape only). `registerSymbolDeclarations` is the shared `addSymbolDeclaration` helper used by preview and export. |
 | `src/serverFns/getSymbolUriMap.server.ts` | Resolves defining definitions for opaque symbol URIs. Used by **preview hover**, not by `generateStexFromFloDown`. |
 | `src/serverFns/floDownBlockProvenance.server.ts` | Loads provenance metadata (document, page, timestamps) per contributing block. |
 | `src/server/ftml/addProvenanceData.ts` | Appends provenance comment lines to generated sTeX. |
@@ -49,8 +49,10 @@ Out of scope:
 
 ## Business rules
 
-**S-CUR-04 (Event-Driven):** WHEN `generateStexFromFloDown` runs, the system MUST pass stored symbol
-URIs into FloDown using `mountStatementOnFloDown` (D-FTML-05).
+**S-CUR-04 (Event-Driven):** WHEN `generateStexFromFloDown` runs, the system MUST register each
+contributing block's declared **symbol names** with FloDown `addSymbolDeclaration` before mounting,
+and MUST pass stored symbol URIs into FloDown using `mountStatementOnFloDown` (D-FTML-05). URIs MUST
+NOT be passed to `addSymbolDeclaration`.
 
 **Upstream:** R-CUR-04
 
@@ -75,7 +77,7 @@ history.
 
 | SDD rule | PRD rule | Test |
 | --- | --- | --- |
-| S-CUR-04 | R-CUR-04 | Gap |
+| S-CUR-04 | R-CUR-04 | `generateStexFromFtml.test.ts`, `prepareFloDownStatement.test.ts` |
 | S-CUR-05 | R-CUR-05 | Gap |
 | S-CUR-06 | R-CUR-06 | Gap |
 | S-CUR-08 | R-CUR-08 | Gap |

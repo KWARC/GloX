@@ -1,6 +1,9 @@
 import { initFloDown } from "@/lib/flodownClient";
 import { createFloDownDocumentFromGlox } from "@/lib/flodownUris";
-import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
+import {
+  mountStatementOnFloDown,
+  registerSymbolDeclarations,
+} from "@/lib/prepareFloDownStatement";
 import { isHttp } from "@/server/ftml/statementContent";
 import {
   FloDownStatement,
@@ -14,8 +17,7 @@ export async function generateStexFromFloDown(
   futureRepo: string,
   filePath: string,
   fileName: string,
-  // Remaining issue: unused after boundary cleanup. Callers still pass per-block declaredSymbols.
-  _declaredSymbolsPerBlock: readonly (readonly string[])[] = [],
+  declaredNamesPerBlock: readonly (readonly string[])[] = [],
   language = "en",
 ): Promise<string> {
   const floDown = await initFloDown();
@@ -27,6 +29,7 @@ export async function generateStexFromFloDown(
     language,
   });
   const mountFd = fd as Parameters<typeof mountStatementOnFloDown>[0];
+  registerSymbolDeclarations(mountFd, declaredNamesPerBlock.flat());
   const root = normalizeToRoot(statement);
 
   for (const block of root.content) {

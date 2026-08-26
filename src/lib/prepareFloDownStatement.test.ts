@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   mountStatementOnFloDown,
+  registerSymbolDeclarations,
   rewriteStatementForFloDown,
 } from "./prepareFloDownStatement";
 
@@ -107,5 +108,21 @@ describe("rewriteStatementForFloDown", () => {
       type: "paragraph",
       content: [{ type: "symref", uri: GROUP_URI, content: ["Group"] }],
     });
+  });
+});
+
+describe("registerSymbolDeclarations", () => {
+  it("calls addSymbolDeclaration with unique trimmed names", () => {
+    const names: string[] = [];
+    registerSymbolDeclarations(
+      {
+        addSymbolDeclaration: (name) => {
+          names.push(name);
+          return `uri:${name}`;
+        },
+      },
+      [" triangle ", "triangle", "angle", ""],
+    );
+    expect(names).toEqual(["triangle", "angle"]);
   });
 });

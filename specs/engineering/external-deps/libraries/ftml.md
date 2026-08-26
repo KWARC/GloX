@@ -148,9 +148,10 @@ declaration-only URI map.
 4. **`getDefiningDefinitions` full-table scan** of non-discarded FloDown blocks (preview hover
    only). Authenticated now; still not indexed by URI.
 5. **Parallel rewrites.** Mark-reference LaTeX and unused `finalFloDown.ts` are not on
-   `prepareFloDownStatement`. Document sTeX (`generateStexFromFloDown`) passes stored URIs and does
-   not mount defining bodies — **S-CUR-08 on purpose**. If MathHub expected the defining
-   `sdefinition` in the same file, that is a product gap, not a WASM panic.
+   `prepareFloDownStatement`. Document sTeX (`generateStexFromFloDown`) registers declared names via
+   `addSymbolDeclaration` then passes stored URIs and does not mount defining bodies — **S-CUR-08 on
+   purpose**. If MathHub expected the defining `sdefinition` in the same file, that is a product gap,
+   not a WASM panic.
 6. **`/flodown-lab`.** Keep until hover is signed off (Curator/Admin). Then drop or leave
    diagnostic-only.
 

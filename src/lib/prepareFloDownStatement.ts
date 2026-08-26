@@ -83,6 +83,20 @@ export type FloDownMountBlock = {
   addSymbolDeclaration?: (name: string) => string | undefined;
 };
 
+/** Register this document's symbol declarations so `getStex()` emits `\\symdecl*`. */
+export function registerSymbolDeclarations(
+  fd: Pick<FloDownMountBlock, "addSymbolDeclaration">,
+  names: readonly string[],
+): void {
+  const seen = new Set<string>();
+  for (const name of names) {
+    const trimmed = name.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    fd.addSymbolDeclaration?.(trimmed);
+  }
+}
+
 function addStatementBlocks(fd: FloDownMountBlock, statement: unknown): void {
   if (Array.isArray(statement)) {
     for (const block of statement) {

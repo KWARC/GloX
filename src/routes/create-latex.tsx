@@ -126,7 +126,7 @@ function CreateLatexPage() {
         futureRepo,
         filePath,
         fileName,
-        combinedStatement!.declaredSymbolsPerBlock,
+        combinedStatement!.declaredNamesPerBlock,
         language,
       ),
     enabled: !finalized && !!combinedStatement?.statement,

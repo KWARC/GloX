@@ -1,11 +1,11 @@
 import prisma from "@/lib/prisma";
-import { declaredUrisFromJson } from "@/server/declaredSymbolsInfo";
+import { declaredNamesFromJson } from "@/server/declaredSymbolsInfo";
 import { FloDownStatement, RootNode, normalizeToRoot } from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
 
 export type CombinedFloDownStatement = {
   statement: RootNode;
-  declaredSymbolsPerBlock: string[][];
+  declaredNamesPerBlock: string[][];
 };
 
 export const getCombinedFloDownStatement = createServerFn({ method: "GET" })
@@ -40,7 +40,7 @@ export const getCombinedFloDownStatement = createServerFn({ method: "GET" })
         row.id,
         {
           statement: row.statement as FloDownStatement | null,
-          declaredSymbols: declaredUrisFromJson(row.declaredSymbolsInfo),
+          declaredSymbols: declaredNamesFromJson(row.declaredSymbolsInfo),
         },
       ]),
     );
@@ -49,7 +49,7 @@ export const getCombinedFloDownStatement = createServerFn({ method: "GET" })
       type: "root",
       content: [],
     };
-    const declaredSymbolsPerBlock: string[][] = [];
+    const declaredNamesPerBlock: string[][] = [];
 
     for (const id of data.floDownBlockIds) {
       const row = defMap.get(id);
@@ -58,11 +58,11 @@ export const getCombinedFloDownStatement = createServerFn({ method: "GET" })
       const root = normalizeToRoot(row.statement);
       for (const block of root.content) {
         combined.content.push(block);
-        declaredSymbolsPerBlock.push(row.declaredSymbols);
+        declaredNamesPerBlock.push(row.declaredSymbols);
       }
     }
 
-    return { statement: combined, declaredSymbolsPerBlock };
+    return { statement: combined, declaredNamesPerBlock };
   });
 
 export const getFinalizedLatexById = createServerFn({ method: "GET" })

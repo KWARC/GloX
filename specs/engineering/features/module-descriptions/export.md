@@ -31,7 +31,7 @@ Out of scope (sibling specs):
 | Layer | Responsibility |
 | --- | --- |
 | `src/routes/module-description/$moduleId.tsx` | Shows Preview LaTeX only for Curator or Admin and invokes client-side TeX generation. |
-| `src/lib/moduleDescriptionTex.ts` | Builds the combined module FTML document and serializes module and definition sTeX via FloDown WASM in the browser. Mounts **only** the file being exported (D-FTML-03 for preview; export does not copy sibling definition bodies). |
+| `src/lib/moduleDescriptionTex.ts` | Builds the combined module FTML document and serializes module and definition sTeX via FloDown WASM in the browser. Definition files call `addSymbolDeclaration` with that block's declared names before `getStex()`. Mounts **only** the file being exported (D-FTML-03 for preview; export does not copy sibling definition bodies). |
 | `src/lib/prepareFloDownStatement.ts` | Shared rewrite before `addElement` (stored URIs pass through). |
 | `src/lib/moduleLocalSymbols.ts` | Collects declared opaque URIs for hover/export identity of sibling definition blocks. |
 | `ModuleDescriptionLatexModal` | Displays generated module and definition TeX for copy or download. |

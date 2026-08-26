@@ -5,7 +5,11 @@ import {
   documentUriFromGlox,
 } from "@/lib/flodownUris";
 import type { TexZipFile } from "@/lib/texZipExport";
-import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
+import { declaredNamesFromJson } from "@/server/declaredSymbolsInfo";
+import {
+  mountStatementOnFloDown,
+  registerSymbolDeclarations,
+} from "@/lib/prepareFloDownStatement";
 import {
   FloDownStatement,
   HeadingNode,
@@ -127,6 +131,11 @@ export async function generateModuleDescriptionDefinitionTex(
 ): Promise<string> {
   const floDown = await requireFloDownLib();
   const fd = createFloDownDocumentFromGlox(floDown.FloDown, defBlock) as FloDownWasmBlock;
+
+  registerSymbolDeclarations(
+    fd,
+    declaredNamesFromJson(defBlock.declaredSymbolsInfo),
+  );
 
   const root = normalizeToRoot(defBlock.statement);
   for (const block of root.content) {

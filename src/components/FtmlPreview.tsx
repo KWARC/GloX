@@ -3,8 +3,14 @@ import { documentUriFromGlox } from "@/lib/flodownUris";
 import type { GloxBlockIdentity } from "@/lib/gloxFileIdentity";
 import { collectDeclaredSymbolsForDefinitionBlock } from "@/lib/moduleLocalSymbols";
 import type { ModuleLocalSymbolSource } from "@/lib/moduleLocalSymbols";
-import { mountStatementOnFloDown } from "@/lib/prepareFloDownStatement";
-import { parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
+import {
+  mountStatementOnFloDown,
+  registerSymbolDeclarations,
+} from "@/lib/prepareFloDownStatement";
+import {
+  declaredNamesFromJson,
+  parseDeclaredSymbolsInfo,
+} from "@/server/declaredSymbolsInfo";
 import {
   getInlineContent,
   isHttp,
@@ -50,25 +56,10 @@ function collectStatementUris(statement: FloDownStatement): string[] {
   return [...found];
 }
 
-function declaredNames(info: unknown): string[] {
-  return parseDeclaredSymbolsInfo(info)
-    .map((item) => item.symbolName.trim())
-    .filter(Boolean);
-}
-
 function declaredUris(info: unknown, fallback: readonly string[] = []): string[] {
   const fromInfo = parseDeclaredSymbolsInfo(info).map((item) => item.symbolUri);
   if (fromInfo.length > 0) return fromInfo;
   return fallback.filter((uri) => isHttp(uri));
-}
-
-function registerDeclarations(
-  fd: { addSymbolDeclaration: (name: string) => string | undefined },
-  names: readonly string[],
-): void {
-  for (const name of names) {
-    fd.addSymbolDeclaration(name);
-  }
 }
 
 function symbolContextDep(context: FloDownSymbolContext | undefined): string {
@@ -197,7 +188,7 @@ export function FtmlPreview({
           statement: unknown,
           names: readonly string[],
         ) => {
-          registerDeclarations(fd, names);
+          registerSymbolDeclarations(fd, names);
           mountStatementOnFloDown(fd, statement);
         };
 
@@ -247,7 +238,11 @@ export function FtmlPreview({
             )) {
               coveredUris.add(uri);
             }
-            mountOnFd(fd, block.statement, declaredNames(block.declaredSymbolsInfo));
+            mountOnFd(
+              fd,
+              block.statement,
+              declaredNamesFromJson(block.declaredSymbolsInfo),
+            );
           }
         }
 
@@ -291,9 +286,11 @@ export function FtmlPreview({
         const ownHover = symbolContext?.hoverDefinitions?.find(
           (definition) => definition.cacheKey === docId,
         );
-        registerDeclarations(
+        registerSymbolDeclarations(
           fdVisible,
-          declaredNames(ownHover?.declaredSymbolsInfo ?? declaredSymbolsInfo),
+          declaredNamesFromJson(
+            ownHover?.declaredSymbolsInfo ?? declaredSymbolsInfo,
+          ),
         );
         mountStatementOnFloDown(fdVisible, ftmlAst);
       } catch (error) {

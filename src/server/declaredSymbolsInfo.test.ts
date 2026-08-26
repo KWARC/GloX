@@ -3,6 +3,7 @@ import {
   catalogDeclaresUri,
   createDeclarationRecord,
   declaredUrisFromJson,
+  declaredNamesFromJson,
   isDeclaredLocalUri,
   localDeclarationUris,
   matchesCatalogQuery,
@@ -219,5 +220,13 @@ describe("declaredUrisFromJson", () => {
     expect(
       declaredUrisFromJson([{ symbolName: "triangle", symbolUri: SAMPLE_URI }]),
     ).toEqual([SAMPLE_URI]);
+  });
+});
+
+describe("declaredNamesFromJson", () => {
+  it("returns symbolName values for FloDown addSymbolDeclaration", () => {
+    expect(
+      declaredNamesFromJson([{ symbolName: "triangle", symbolUri: SAMPLE_URI }]),
+    ).toEqual(["triangle"]);
   });
 });
