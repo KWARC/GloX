@@ -9,18 +9,25 @@ export type ModuleSearchResult = {
   subjectArea: string | null;
 };
 
+export type ModuleOrganization = {
+  faculty: string | null;
+  subjectArea: string | null;
+};
+
+export type ModuleProgram = {
+  rootUnitId: string;
+  ancestorChain?: string[];
+  category?: string;
+};
+
 export type ModuleCatalogJson = {
   moduleId: string;
   elementnr?: string;
   title: string;
   descriptionSections: Record<string, string>;
   metadata?: Record<string, string | string[] | number | boolean | null>;
-  organizations?: Array<{ faculty: string; subjectArea: string }>;
-  programs?: Array<{
-    rootUnitId: string;
-    ancestorChain?: string[];
-    category?: string;
-  }>;
+  organizations?: ModuleOrganization[];
+  programs?: ModuleProgram[];
 };
 
 type HierarchyModule = {
@@ -139,6 +146,62 @@ export async function searchModules(
   return matches.slice(0, limit);
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asOptionalString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+/** Drop null/empty catalog org rows (unclassified modules often store `[null]`). */
+export function normalizeOrganizations(raw: unknown): ModuleOrganization[] {
+  if (!Array.isArray(raw)) return [];
+
+  const organizations: ModuleOrganization[] = [];
+  for (const entry of raw) {
+    if (!isPlainObject(entry)) continue;
+    const faculty = asOptionalString(entry.faculty);
+    const subjectArea = asOptionalString(entry.subjectArea);
+    if (!faculty && !subjectArea) continue;
+    organizations.push({ faculty, subjectArea });
+  }
+  return organizations;
+}
+
+/** Drop null/incomplete program rows from catalog JSON. */
+export function normalizePrograms(raw: unknown): ModuleProgram[] {
+  if (!Array.isArray(raw)) return [];
+
+  const programs: ModuleProgram[] = [];
+  for (const entry of raw) {
+    if (!isPlainObject(entry)) continue;
+    const rootUnitId = asOptionalString(entry.rootUnitId);
+    if (!rootUnitId) continue;
+    programs.push({
+      rootUnitId,
+      ancestorChain: Array.isArray(entry.ancestorChain)
+        ? entry.ancestorChain.filter(
+            (part): part is string => typeof part === "string",
+          )
+        : undefined,
+      category:
+        typeof entry.category === "string" ? entry.category : undefined,
+    });
+  }
+  return programs;
+}
+
+export function normalizeModuleCatalogJson(
+  json: ModuleCatalogJson,
+): ModuleCatalogJson {
+  return {
+    ...json,
+    organizations: normalizeOrganizations(json.organizations),
+    programs: normalizePrograms(json.programs),
+  };
+}
+
 function cacheJson(moduleId: string, json: ModuleCatalogJson) {
   if (jsonCache.size >= JSON_CACHE_MAX) {
     const firstKey = jsonCache.keys().next().value;
@@ -172,7 +235,9 @@ export async function getModuleJson(
     );
   }
 
-  const json = JSON.parse(raw) as ModuleCatalogJson;
+  const json = normalizeModuleCatalogJson(
+    JSON.parse(raw) as ModuleCatalogJson,
+  );
   cacheJson(moduleId, json);
   return json;
 }

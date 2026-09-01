@@ -46,6 +46,7 @@ Out of scope (sibling specs):
 
 | Field / enum | Values / notes |
 | --- | --- |
+| Catalog `organizations` / `programs` | Loader drops null or incomplete rows. Unclassified modules may store `organizations: [null]`; the workspace omits faculty/subject area instead of crashing. |
 | Statement fields | `titleStatement`, `inhaltStatement`, `lernzieleStatement` (FTML JSON) |
 | Export identity | `futureRepo`, `modulesFilePath`, `defsFilePath`, `language` |
 | Defaults | `courses/FAU/module-descriptions`, `modules`, `defs`, `de` |

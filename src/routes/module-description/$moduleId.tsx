@@ -291,19 +291,28 @@ function ModuleDescriptionDetailPage() {
               <Title order={4} mb="sm">
                 Organization & programs
               </Title>
-              {organizations.map((org, i) => (
-                <Text key={i} size="sm">
-                  {org.faculty} — {org.subjectArea}
-                </Text>
-              ))}
-              {programs.map((prog, i) => (
-                <Text key={i} size="sm" c="dimmed">
-                  Program {prog.rootUnitId}
-                  {prog.ancestorChain?.length
-                    ? ` (${prog.ancestorChain.join(" › ")})`
-                    : ""}
-                </Text>
-              ))}
+              {organizations.map((org, i) => {
+                const label = [org?.faculty, org?.subjectArea]
+                  .filter(Boolean)
+                  .join(" — ");
+                if (!label) return null;
+                return (
+                  <Text key={i} size="sm">
+                    {label}
+                  </Text>
+                );
+              })}
+              {programs.map((prog, i) => {
+                if (!prog?.rootUnitId) return null;
+                return (
+                  <Text key={i} size="sm" c="dimmed">
+                    Program {prog.rootUnitId}
+                    {prog.ancestorChain?.length
+                      ? ` (${prog.ancestorChain.join(" › ")})`
+                      : ""}
+                  </Text>
+                );
+              })}
             </Paper>
           )}
 
