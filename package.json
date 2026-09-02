@@ -12,7 +12,9 @@
     "backfill:declared-symbols": "node -r dotenv/config scripts/backfill-declared-symbols.mjs",
     "backfill:declared-symbols-info": "node -r dotenv/config scripts/backfill-declared-symbols-info.mjs",
     "backup:statement-json": "node -r dotenv/config scripts/backup-statement-json.mjs",
-    "restore:statement-json": "node -r dotenv/config scripts/restore-statement-json.mjs"
+    "restore:statement-json": "node -r dotenv/config scripts/restore-statement-json.mjs",
+    "sync:module-organizations": "node scripts/sync-hierarchy-module-organizations.mjs",
+    "check:module-organizations": "node scripts/sync-hierarchy-module-organizations.mjs --check"
   },
   "dependencies": {
     "@flexiformal/ftml": "^0.0.22",
