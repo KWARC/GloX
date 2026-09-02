@@ -35,7 +35,7 @@
 
 ## Module descriptions
 
-- **FAU module catalog search** — Search hierarchy from `MODULES_DIR`.
+- **FAU module catalog search** — Search hierarchy from `MODULES_DIR`; show faculty and subject area under each hit (when present) and order by faculty then subject area.
 - **Module description workspace** — Seed title/inhalt/lernziele statements; extract definitions.
 - **Module definition blocks** — Create FloDown blocks in module context (German default).
 

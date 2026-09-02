@@ -187,19 +187,33 @@ function ModuleDescriptionsPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {results.map((row) => (
-                <Table.Tr key={row.moduleId}>
-                  <Table.Td>
-                    <Link
-                      to="/module-description/$moduleId"
-                      params={{ moduleId: row.moduleId }}
-                    >
-                      {row.moduleId}
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>{row.title}</Table.Td>
-                </Table.Tr>
-              ))}
+              {results.map((row) => {
+                const organizationLabel = [row.faculty, row.subjectArea]
+                  .filter(Boolean)
+                  .join(" — ");
+                return (
+                  <Table.Tr key={row.moduleId}>
+                    <Table.Td>
+                      <Link
+                        to="/module-description/$moduleId"
+                        params={{ moduleId: row.moduleId }}
+                      >
+                        {row.moduleId}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td>
+                      <Stack gap={2}>
+                        <Text size="sm">{row.title}</Text>
+                        {organizationLabel ? (
+                          <Text size="xs" c="dimmed">
+                            {organizationLabel}
+                          </Text>
+                        ) : null}
+                      </Stack>
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
             </Table.Tbody>
           </Table>
         )}
