@@ -11,6 +11,7 @@ import {
 } from "@/server/floDownBlockDeclaredSymbols";
 import { SemanticOperation, transform } from "@/server/parseUri";
 import { assertFloDownStatement } from "@/types/floDown.types";
+import { assertFloDownBlockAllowsSemanticMutation } from "@/server/modules/moduleDuplicateGuards";
 import { createServerFn } from "@tanstack/react-start";
 
 export type UpdateFloDownBlockAstResult =
@@ -42,6 +43,10 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
       const def = await tx.floDownBlock.findUniqueOrThrow({
         where: { id: data.floDownBlockId },
       });
+      await assertFloDownBlockAllowsSemanticMutation(
+        tx,
+        def.moduleDescriptionId,
+      );
       assertFloDownStatement(def.statement);
 
       const operation = data.operation;

@@ -2,11 +2,21 @@ import prisma from "@/lib/prisma";
 import { documentFloDownBlockWhere } from "@/server/floDownBlockProvenance";
 import { currentUser } from "@/server/auth/currentUser";
 import {
+  buildParagraphStatement,
   getModuleJson,
   getModuleSearchEntry,
   searchModules,
   seedStatementsFromCatalog,
 } from "@/server/modules/moduleCatalog";
+import { attachDuplicateHints, duplicateHintForModule } from "@/server/modules/moduleDuplicateHints";
+import { loadCatalogDuplicatesIndex } from "@/server/modules/moduleDuplicateIndex";
+import {
+  assertExtractorPlusAuth,
+  assertNotDuplicateDescription,
+  planMarkDuplicate,
+  planUnmarkDuplicate,
+} from "@/server/modules/moduleDuplicateGuards";
+import { composeModuleTexInputForExport } from "@/lib/moduleDescriptionTex";
 import {
   findAllTextOccurrences,
   pathTraversesSemanticNode,
@@ -43,13 +53,7 @@ const DEFAULT_DEFS_PATH = "defs";
 const DEFAULT_LANGUAGE = "de";
 
 async function requireExtractorPlus() {
-  const userRes = await currentUser();
-  if (!userRes.loggedIn) throw new Error("Unauthorized");
-  const role = userRes.user.role;
-  if (role !== "ADMIN" && role !== "CURATOR" && role !== "EXTRACTOR") {
-    throw new Error("Forbidden");
-  }
-  return { userId: userRes.user.id, role };
+  return assertExtractorPlusAuth(await currentUser());
 }
 
 async function requireCuratorOrAdmin() {
@@ -113,6 +117,7 @@ export type ModuleDescriptionTexExportInput = {
     fileName: string;
     language: string;
   }>;
+  duplicateOfModuleId?: string | null;
 };
 
 function toTexExportInput(
@@ -139,6 +144,7 @@ function toTexExportInput(
       fileName: block.fileName,
       language: block.language,
     })),
+    duplicateOfModuleId: row.duplicateOfModuleId,
   };
 }
 
@@ -146,7 +152,37 @@ export const searchModuleDescriptions = createServerFn({ method: "GET" })
   .inputValidator((data: { query: string }) => data)
   .handler(async ({ data }) => {
     await requireExtractorPlus();
-    return searchModules(data.query ?? "");
+    const hits = await searchModules(data.query ?? "");
+    const index = await loadCatalogDuplicatesIndex();
+    const hitIds = hits.map((hit) => hit.moduleId);
+    const peerIds = hits.flatMap((hit) => {
+      const entry = index?.modules[hit.moduleId];
+      return [
+        ...(entry?.exact ?? []).map((peer) => peer.moduleId),
+        ...(entry?.near ?? []).map((peer) => peer.moduleId),
+      ];
+    });
+    const lookupIds = [...new Set([...hitIds, ...peerIds])];
+    const descriptionRows =
+      lookupIds.length === 0
+        ? []
+        : await prisma.moduleDescription.findMany({
+            where: { moduleId: { in: lookupIds } },
+            select: { moduleId: true, duplicateOfModuleId: true },
+          });
+    const extractedIds = new Set(descriptionRows.map((row) => row.moduleId));
+    const duplicateOfByModuleId = new Map(
+      descriptionRows.map((row) => [row.moduleId, row.duplicateOfModuleId]),
+    );
+    return attachDuplicateHints(
+      hits,
+      index,
+      extractedIds,
+      duplicateOfByModuleId,
+    ).map((hit) => ({
+      ...hit,
+      duplicateOfModuleId: duplicateOfByModuleId.get(hit.moduleId) ?? null,
+    }));
   });
 
 export const getModuleDescriptionPage = createServerFn({ method: "POST" })
@@ -177,15 +213,65 @@ export const getModuleDescriptionPage = createServerFn({ method: "POST" })
       },
     });
 
+    const duplicateIndex = await loadCatalogDuplicatesIndex();
+    const hintEntry = duplicateIndex?.modules[moduleId];
+    const peerIds = [
+      ...(hintEntry?.exact ?? []).map((peer) => peer.moduleId),
+      ...(hintEntry?.near ?? []).map((peer) => peer.moduleId),
+    ];
+    const peerRows =
+      peerIds.length === 0
+        ? []
+        : await prisma.moduleDescription.findMany({
+            where: { moduleId: { in: peerIds } },
+            select: { moduleId: true, duplicateOfModuleId: true },
+          });
+    const extractedIds = new Set(peerRows.map((row) => row.moduleId));
+    const duplicateOfByModuleId = new Map(
+      peerRows.map((row) => [row.moduleId, row.duplicateOfModuleId]),
+    );
+    const duplicateHint = duplicateHintForModule(
+      moduleId,
+      duplicateIndex,
+      extractedIds,
+      duplicateOfByModuleId,
+    );
+
+    let canonical = null;
+    if (dbRow?.duplicateOfModuleId) {
+      const canonicalRow = await prisma.moduleDescription.findUnique({
+        where: { moduleId: dbRow.duplicateOfModuleId },
+        select: {
+          moduleId: true,
+          titleStatement: true,
+          inhaltStatement: true,
+          lernzieleStatement: true,
+        },
+      });
+      if (canonicalRow) {
+        canonical = {
+          moduleId: canonicalRow.moduleId,
+          titleStatement: assertFloDownStatement(canonicalRow.titleStatement),
+          inhaltStatement: assertFloDownStatement(canonicalRow.inhaltStatement),
+          lernzieleStatement: assertFloDownStatement(
+            canonicalRow.lernzieleStatement,
+          ),
+        };
+      }
+    }
+
     return {
       moduleId,
       searchEntry,
       catalog,
       catalogError,
+      duplicateHint,
+      canonical,
       moduleDescription: dbRow
         ? {
             id: dbRow.id,
             moduleId: dbRow.moduleId,
+            duplicateOfModuleId: dbRow.duplicateOfModuleId,
             titleStatement: assertFloDownStatement(dbRow.titleStatement),
             inhaltStatement: assertFloDownStatement(dbRow.inhaltStatement),
             lernzieleStatement: assertFloDownStatement(
@@ -267,6 +353,11 @@ export const updateModuleDescriptionStatement = createServerFn({ method: "POST" 
   .handler(async ({ data }) => {
     await requireExtractorPlus();
 
+    const row = await prisma.moduleDescription.findUniqueOrThrow({
+      where: { id: data.moduleDescriptionId },
+    });
+    assertNotDuplicateDescription(row);
+
     const statement = sanitizeStatementForPersist(data.statement);
     const serialized = JSON.parse(JSON.stringify(statement));
 
@@ -292,6 +383,7 @@ export const updateModuleDescriptionAst = createServerFn({ method: "POST" })
     const row = await prisma.moduleDescription.findUniqueOrThrow({
       where: { id: data.moduleDescriptionId },
     });
+    assertNotDuplicateDescription(row);
 
     const current = assertFloDownStatement(row[data.field]);
     const newAst = sanitizeStatementForPersist(
@@ -324,6 +416,7 @@ export const moduleDescriptionSymbolicRef = createServerFn({ method: "POST" })
     const row = await prisma.moduleDescription.findUniqueOrThrow({
       where: { id: data.moduleDescriptionId },
     });
+    assertNotDuplicateDescription(row);
 
     const currentStatement = assertFloDownStatement(row[data.field]);
     const root = normalizeToRoot(currentStatement);
@@ -392,6 +485,7 @@ export const createModuleDefinitionBlock = createServerFn({ method: "POST" })
     const moduleDesc = await prisma.moduleDescription.findUniqueOrThrow({
       where: { id: data.moduleDescriptionId },
     });
+    assertNotDuplicateDescription(moduleDesc);
 
     const paragraphFileName = data.paragraphFileName.trim();
     const originalText = data.originalText.trim();
@@ -489,6 +583,7 @@ export const resetModuleSemantics = createServerFn({ method: "POST" })
     const row = await prisma.moduleDescription.findUniqueOrThrow({
       where: { id: data.moduleDescriptionId },
     });
+    assertNotDuplicateDescription(row);
 
     const catalog = await getModuleJson(row.moduleId);
     const statements = seedStatementsFromCatalog(catalog);
@@ -503,6 +598,114 @@ export const resetModuleSemantics = createServerFn({ method: "POST" })
       await tx.moduleDescription.update({
         where: { id: row.id },
         data: {
+          titleStatement: JSON.parse(JSON.stringify(statements.titleStatement)),
+          inhaltStatement: JSON.parse(
+            JSON.stringify(statements.inhaltStatement),
+          ),
+          lernzieleStatement: JSON.parse(
+            JSON.stringify(statements.lernzieleStatement),
+          ),
+        },
+      });
+    });
+
+    return { ok: true };
+  });
+
+export const markModuleDescriptionDuplicate = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      moduleId: string;
+      canonicalModuleId: string;
+      futureRepo?: string;
+      modulesFilePath?: string;
+      defsFilePath?: string;
+      language?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const { userId } = await requireExtractorPlus();
+
+    const moduleId = data.moduleId.trim();
+    const canonicalModuleId = data.canonicalModuleId.trim();
+
+    let row = await prisma.moduleDescription.findUnique({
+      where: { moduleId },
+    });
+    if (!row) {
+      const catalog = await getModuleJson(moduleId);
+      const statements = seedStatementsFromCatalog(catalog);
+      row = await prisma.moduleDescription.create({
+        data: {
+          moduleId,
+          titleStatement: JSON.parse(JSON.stringify(statements.titleStatement)),
+          inhaltStatement: JSON.parse(
+            JSON.stringify(statements.inhaltStatement),
+          ),
+          lernzieleStatement: JSON.parse(
+            JSON.stringify(statements.lernzieleStatement),
+          ),
+          futureRepo: data.futureRepo?.trim() || DEFAULT_FUTURE_REPO,
+          modulesFilePath: data.modulesFilePath?.trim() || DEFAULT_MODULES_PATH,
+          defsFilePath: data.defsFilePath?.trim() || DEFAULT_DEFS_PATH,
+          language: data.language?.trim() || DEFAULT_LANGUAGE,
+          createdById: userId,
+        },
+      });
+    }
+
+    const target = await prisma.moduleDescription.findUnique({
+      where: { moduleId: canonicalModuleId },
+      select: { moduleId: true, duplicateOfModuleId: true },
+    });
+    const plan = planMarkDuplicate({ sourceModuleId: row.moduleId, target });
+
+    const catalog = await getModuleJson(row.moduleId);
+    const statements = seedStatementsFromCatalog(catalog);
+    const empty = buildParagraphStatement("");
+
+    await cleanupOrphanedModuleSymbols(row.id);
+
+    await prisma.$transaction(async (tx) => {
+      if (plan.deleteDefinitionBlocks) {
+        await tx.floDownBlock.deleteMany({
+          where: { moduleDescriptionId: row.id },
+        });
+      }
+      await tx.moduleDescription.update({
+        where: { id: row.id },
+        data: {
+          duplicateOfModuleId: plan.duplicateOfModuleId,
+          titleStatement: JSON.parse(JSON.stringify(statements.titleStatement)),
+          inhaltStatement: JSON.parse(JSON.stringify(empty)),
+          lernzieleStatement: JSON.parse(JSON.stringify(empty)),
+        },
+      });
+    });
+
+    return { ok: true, moduleDescriptionId: row.id, moduleId: row.moduleId };
+  });
+
+export const unmarkModuleDescriptionDuplicate = createServerFn({
+  method: "POST",
+})
+  .inputValidator((data: { moduleDescriptionId: string }) => data)
+  .handler(async ({ data }) => {
+    await requireExtractorPlus();
+    planUnmarkDuplicate();
+
+    const row = await prisma.moduleDescription.findUniqueOrThrow({
+      where: { id: data.moduleDescriptionId },
+    });
+
+    const catalog = await getModuleJson(row.moduleId);
+    const statements = seedStatementsFromCatalog(catalog);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.moduleDescription.update({
+        where: { id: row.id },
+        data: {
+          duplicateOfModuleId: null,
           titleStatement: JSON.parse(JSON.stringify(statements.titleStatement)),
           inhaltStatement: JSON.parse(
             JSON.stringify(statements.inhaltStatement),
@@ -557,6 +760,7 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
           indexStatus: true,
           language: true,
           updatedAt: true,
+          duplicateOfModuleId: true,
         },
       }),
       prisma.moduleDescription.count({ where }),
@@ -577,6 +781,7 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
           indexStatus: row.indexStatus,
           language: row.language,
           updatedAt: row.updatedAt.toISOString(),
+          duplicateOfModuleId: row.duplicateOfModuleId,
         };
       }),
     );
@@ -598,7 +803,24 @@ export const listModuleDescriptionsForTexExport = createServerFn({ method: "POST
       },
     });
 
-    return rows.map(toTexExportInput);
+    return rows.map((row) => {
+      const input = toTexExportInput(row);
+      if (!row.duplicateOfModuleId) return input;
+      const canonical = rows.find(
+        (candidate) => candidate.moduleId === row.duplicateOfModuleId,
+      );
+      return composeModuleTexInputForExport(
+        input,
+        canonical
+          ? {
+              inhaltStatement: assertFloDownStatement(canonical.inhaltStatement),
+              lernzieleStatement: assertFloDownStatement(
+                canonical.lernzieleStatement,
+              ),
+            }
+          : null,
+      ) as ModuleDescriptionTexExportInput;
+    });
   },
 );
 

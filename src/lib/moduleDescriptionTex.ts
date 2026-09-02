@@ -38,7 +38,49 @@ export type GenerateModuleTexInput = {
   futureRepo: string;
   modulesFilePath: string;
   definitionBlocks: DefinitionBlockInput[];
+  duplicateOfModuleId?: string | null;
 };
+
+export type CanonicalTexStatements = Pick<
+  GenerateModuleTexInput,
+  "inhaltStatement" | "lernzieleStatement"
+>;
+
+/** Alias TeX: this module's title + canonical Inhalt/Lernziele; no alias definitions. */
+export function composeModuleTexInputForExport(
+  input: GenerateModuleTexInput,
+  canonical: CanonicalTexStatements | null,
+): GenerateModuleTexInput {
+  if (!input.duplicateOfModuleId) return input;
+  if (!canonical) {
+    throw new Error(
+      `Canonical module ${input.duplicateOfModuleId} is required to export a duplicate`,
+    );
+  }
+  return {
+    ...input,
+    inhaltStatement: canonical.inhaltStatement,
+    lernzieleStatement: canonical.lernzieleStatement,
+    definitionBlocks: [],
+  };
+}
+
+export function plannedTexZipFileNames(
+  modules: readonly GenerateModuleTexInput[],
+): string[] {
+  return modules.flatMap((module) => {
+    const moduleFile = texFileName(module.moduleId, module.language);
+    if (module.duplicateOfModuleId) {
+      return [moduleFile];
+    }
+    return [
+      moduleFile,
+      ...module.definitionBlocks.map((block) =>
+        texFileName(block.fileName, block.language),
+      ),
+    ];
+  });
+}
 
 export type TexFilePreview = TexZipFile & {
   ftmlStatement: FloDownStatement;
@@ -188,11 +230,13 @@ export async function generateModuleDescriptionTexPreview(
     await generateModuleDescriptionModuleTex(input),
     moduleStatement,
   );
-  const definitionTex = await Promise.all(
-    input.definitionBlocks.map((block) =>
-      buildDefinitionTexPreview(input.moduleId, block, input.definitionBlocks),
-    ),
-  );
+  const definitionTex = input.duplicateOfModuleId
+    ? []
+    : await Promise.all(
+        input.definitionBlocks.map((block) =>
+          buildDefinitionTexPreview(input.moduleId, block, input.definitionBlocks),
+        ),
+      );
 
   return { moduleTex, definitionTex };
 }

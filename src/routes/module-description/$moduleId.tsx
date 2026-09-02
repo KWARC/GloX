@@ -1,14 +1,25 @@
 import { IndexStatusMenu } from "@/components/IndexStatusMenu";
+import {
+  MarkedDuplicateOf,
+  ModuleDuplicateHint,
+  PotentialDuplicateTargets,
+} from "@/components/module-descriptions/ModuleDuplicateHint";
 import { ModuleDefinitionsSection } from "@/components/module-descriptions/ModuleDefinitionsSection";
 import { ModuleDescriptionLatexModal } from "@/components/module-descriptions/ModuleDescriptionLatexModal";
 import { ModuleStatementsSection } from "@/components/module-descriptions/ModuleStatementsSection";
-import { generateModuleDescriptionTexPreview } from "@/lib/moduleDescriptionTex";
-import type { TexFilePreview } from "@/lib/moduleDescriptionTex";
+import { eligibleMarkTargetIds, pickMarkCanonicalId } from "@/lib/moduleDuplicateHintDisplay";
 import {
+  composeModuleTexInputForExport,
+  generateModuleDescriptionTexPreview,
+  type TexFilePreview,
+} from "@/lib/moduleDescriptionTex";
+import {
+  createModuleDescription,
   deleteModuleDescription,
   getModuleDescriptionPage,
-  createModuleDescription,
+  markModuleDescriptionDuplicate,
   resetModuleSemantics,
+  unmarkModuleDescriptionDuplicate,
   updateModuleDescriptionIndexStatus,
 } from "@/serverFns/moduleDescription.server";
 import { INDEX_STATUS_CONFIG, IndexStatus } from "@/types/indexStatus";
@@ -31,7 +42,7 @@ import { useMediaQuery } from "@mantine/hooks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { currentUser } from "@/server/auth/currentUser";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/module-description/$moduleId")({
   loader: async () => {
@@ -69,6 +80,8 @@ function ModuleDescriptionDetailPage() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
+  const [markOpen, setMarkOpen] = useState(false);
+  const [canonicalModuleId, setCanonicalModuleId] = useState("");
   const [latexOpen, setLatexOpen] = useState(false);
   const [latexPreview, setLatexPreview] = useState<{
     moduleTex: TexFilePreview;
@@ -111,6 +124,36 @@ function ModuleDescriptionDetailPage() {
     },
   });
 
+  const markMutation = useMutation({
+    mutationFn: (canonicalId: string) =>
+      markModuleDescriptionDuplicate({
+        data: {
+          moduleId,
+          canonicalModuleId: canonicalId,
+          futureRepo,
+          modulesFilePath,
+          defsFilePath,
+          language,
+        },
+      }),
+    onSuccess: () => {
+      setMarkOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
+      void queryClient.invalidateQueries({ queryKey: ["module-descriptions-list"] });
+      void queryClient.invalidateQueries({ queryKey: ["module-descriptions-search"] });
+    },
+  });
+
+  const unmarkMutation = useMutation({
+    mutationFn: (moduleDescriptionId: string) =>
+      unmarkModuleDescriptionDuplicate({ data: { moduleDescriptionId } }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
+      void queryClient.invalidateQueries({ queryKey: ["module-descriptions-list"] });
+      void queryClient.invalidateQueries({ queryKey: ["module-descriptions-search"] });
+    },
+  });
+
   const statusMutation = useMutation({
     mutationFn: ({
       moduleDescriptionId,
@@ -132,16 +175,27 @@ function ModuleDescriptionDetailPage() {
     mutationFn: async (
       mod: NonNullable<NonNullable<typeof data>["moduleDescription"]>,
     ) => {
-      return generateModuleDescriptionTexPreview({
-        moduleId: mod.moduleId,
-        language: mod.language,
-        titleStatement: mod.titleStatement,
-        inhaltStatement: mod.inhaltStatement,
-        lernzieleStatement: mod.lernzieleStatement,
-        futureRepo: mod.futureRepo,
-        modulesFilePath: mod.modulesFilePath,
-        definitionBlocks: mod.definitionBlocks,
-      });
+      return generateModuleDescriptionTexPreview(
+        composeModuleTexInputForExport(
+          {
+            moduleId: mod.moduleId,
+            language: mod.language,
+            titleStatement: mod.titleStatement,
+            inhaltStatement: mod.inhaltStatement,
+            lernzieleStatement: mod.lernzieleStatement,
+            futureRepo: mod.futureRepo,
+            modulesFilePath: mod.modulesFilePath,
+            definitionBlocks: mod.definitionBlocks,
+            duplicateOfModuleId: mod.duplicateOfModuleId,
+          },
+          data?.canonical
+            ? {
+                inhaltStatement: data.canonical.inhaltStatement,
+                lernzieleStatement: data.canonical.lernzieleStatement,
+              }
+            : null,
+        ),
+      );
     },
     onMutate: () => setLatexError(null),
     onSuccess: (result) => {
@@ -152,6 +206,16 @@ function ModuleDescriptionDetailPage() {
       setLatexError(err instanceof Error ? err.message : String(err));
     },
   });
+
+  useEffect(() => {
+    const hint = data?.duplicateHint;
+    if (!hint) return;
+    const eligible = eligibleMarkTargetIds(hint.exact, hint.near);
+    const suggested = pickMarkCanonicalId(eligible.exact, eligible.near);
+    if (suggested) {
+      setCanonicalModuleId((current) => current || suggested);
+    }
+  }, [data?.duplicateHint]);
 
   if (isLoading) {
     return (
@@ -180,6 +244,11 @@ function ModuleDescriptionDetailPage() {
   const organizations = data.catalog?.organizations ?? [];
   const programs = data.catalog?.programs ?? [];
   const mod = data.moduleDescription;
+  const isDuplicate = Boolean(mod?.duplicateOfModuleId);
+  const markTargets = eligibleMarkTargetIds(
+    data.duplicateHint?.exact ?? [],
+    data.duplicateHint?.near ?? [],
+  );
 
   return (
     <Box
@@ -199,7 +268,25 @@ function ModuleDescriptionDetailPage() {
               <Button component={Link} to="/module-descriptions" variant="subtle" size="compact-sm">
                 ← Back to search
               </Button>
-              <Button variant="light" color="orange" onClick={() => setResetOpen(true)}>
+              {isDuplicate ? (
+                <Button
+                  variant="light"
+                  loading={unmarkMutation.isPending}
+                  onClick={() => unmarkMutation.mutate(mod.id)}
+                >
+                  Unmark duplicate
+                </Button>
+              ) : (
+                <Button variant="light" onClick={() => setMarkOpen(true)}>
+                  Mark as duplicate
+                </Button>
+              )}
+              <Button
+                variant="light"
+                color="orange"
+                disabled={isDuplicate}
+                onClick={() => setResetOpen(true)}
+              >
                 Reset semantics
               </Button>
               <Button variant="light" color="red" onClick={() => setDeleteOpen(true)}>
@@ -236,21 +323,40 @@ function ModuleDescriptionDetailPage() {
             )}
           </Group>
         ) : (
-          <Button
-            component={Link}
-            to="/module-descriptions"
-            variant="subtle"
-            size="compact-sm"
-            mt="md"
-          >
-            ← Back to search
-          </Button>
+          <Group gap="sm" mt="md" mx="xs">
+            <Button
+              component={Link}
+              to="/module-descriptions"
+              variant="subtle"
+              size="compact-sm"
+            >
+              ← Back to search
+            </Button>
+            <Button variant="light" onClick={() => setMarkOpen(true)}>
+              Mark as duplicate
+            </Button>
+          </Group>
         )}
 
         {mod && latexError && (
           <Alert color="red" title="LaTeX preview failed" mt="md">
             {latexError}
           </Alert>
+        )}
+
+        {isDuplicate && mod?.duplicateOfModuleId && (
+          <Box mt="md" mx="xs">
+            <MarkedDuplicateOf moduleId={mod.duplicateOfModuleId} />
+          </Box>
+        )}
+
+        {data.duplicateHint && !isDuplicate && (
+          <Box mt="sm" mx="xs">
+            <ModuleDuplicateHint
+              exact={data.duplicateHint.exact}
+              near={data.duplicateHint.near}
+            />
+          </Box>
         )}
       </Box>
 
@@ -340,7 +446,7 @@ function ModuleDescriptionDetailPage() {
             </Button>
           </Paper>
         </Stack>
-      ) : (
+      ) : isDuplicate ? null : (
         <Flex
           gap={isTablet ? "md" : "lg"}
           style={{ flex: 1, minHeight: 0, overflow: "hidden" }}
@@ -417,6 +523,45 @@ function ModuleDescriptionDetailPage() {
             onClick={() => mod && resetMutation.mutate(mod.id)}
           >
             Reset
+          </Button>
+        </Group>
+      </Modal>
+
+      <Modal opened={markOpen} onClose={() => setMarkOpen(false)} title="Mark as duplicate?">
+        {mod ? (
+          <Text size="sm" mb="md">
+            Extracted Inhalt, Lernziele, definitions, and related glossary blocks on
+            this module will be permanently removed.
+          </Text>
+        ) : null}
+        <PotentialDuplicateTargets
+          exactIds={markTargets.exact}
+          nearIds={markTargets.near}
+          onSelect={setCanonicalModuleId}
+        />
+        <TextInput
+          label="Canonical module ID"
+          placeholder="e.g. 42438"
+          value={canonicalModuleId}
+          onChange={(e) => setCanonicalModuleId(e.currentTarget.value)}
+          mb="md"
+        />
+        {markMutation.isError && (
+          <Alert color="red" mb="md">
+            {(markMutation.error as Error).message}
+          </Alert>
+        )}
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setMarkOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            color="orange"
+            loading={markMutation.isPending}
+            disabled={!canonicalModuleId.trim()}
+            onClick={() => markMutation.mutate(canonicalModuleId.trim())}
+          >
+            Mark as duplicate
           </Button>
         </Group>
       </Modal>
