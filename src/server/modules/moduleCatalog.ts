@@ -34,6 +34,8 @@ type HierarchyModule = {
   moduleId: string;
   elementnr?: string;
   title: string;
+  faculty?: string | null;
+  subjectArea?: string | null;
   occurrences?: Array<{
     rootUnitId: string;
     ancestorChain?: string[];
@@ -65,6 +67,14 @@ async function ensureCatalogLoaded(): Promise<void> {
   await catalogInit;
 }
 
+/** Clears the in-memory catalog so tests can point `MODULES_DIR` at a fixture. */
+export function resetModuleCatalogForTests(): void {
+  catalogInit = null;
+  searchIndex = [];
+  modulesIndex = {};
+  jsonCache.clear();
+}
+
 async function loadCatalog(): Promise<void> {
   const modulesDir = getModulesDir();
   const hierarchyPath = path.join(modulesDir, "hierarchy.json");
@@ -81,9 +91,21 @@ async function loadCatalog(): Promise<void> {
   searchIndex = (hierarchy.modules ?? []).map((entry) => ({
     moduleId: entry.moduleId,
     title: entry.title,
-    faculty: null,
-    subjectArea: null,
+    faculty: asOptionalString(entry.faculty),
+    subjectArea: asOptionalString(entry.subjectArea),
   }));
+}
+
+function compareModuleSearchResults(
+  a: ModuleSearchResult,
+  b: ModuleSearchResult,
+): number {
+  return (
+    (a.faculty ?? "").localeCompare(b.faculty ?? "") ||
+    (a.subjectArea ?? "").localeCompare(b.subjectArea ?? "") ||
+    a.title.toLowerCase().localeCompare(b.title.toLowerCase()) ||
+    a.moduleId.localeCompare(b.moduleId)
+  );
 }
 
 // TODO: Convert Markdown in catalog fields to structured FTML (lists, emphasis).
@@ -143,7 +165,7 @@ export async function searchModules(
     );
   });
 
-  return matches.slice(0, limit);
+  return matches.sort(compareModuleSearchResults).slice(0, limit);
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

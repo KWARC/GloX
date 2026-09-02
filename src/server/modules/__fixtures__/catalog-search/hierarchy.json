@@ -1,0 +1,32 @@
+{
+  "modules": [
+    {
+      "moduleId": "m2",
+      "title": "Beta Course",
+      "faculty": "Technische Fakultät",
+      "subjectArea": "Optics"
+    },
+    {
+      "moduleId": "m1",
+      "title": "Alpha Course",
+      "faculty": "Technische Fakultät",
+      "subjectArea": "Materials"
+    },
+    {
+      "moduleId": "m3",
+      "title": "Gamma Course",
+      "faculty": "Medizinische Fakultät",
+      "subjectArea": "Logopädie"
+    },
+    {
+      "moduleId": "m4",
+      "title": "Delta Course"
+    },
+    {
+      "moduleId": "m5",
+      "title": "alpha course",
+      "faculty": "Technische Fakultät",
+      "subjectArea": "Materials"
+    }
+  ]
+}
