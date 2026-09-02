@@ -143,15 +143,23 @@ export function DuplicateOfIconLink({
 export function ModuleIdWithDuplicateIcon({
   moduleId,
   duplicateOfModuleId,
+  extracted = false,
 }: {
   moduleId: string;
   duplicateOfModuleId?: string | null;
+  extracted?: boolean;
 }) {
   return (
     <Group gap={6} wrap="nowrap" align="center">
       <ModuleIdLink moduleId={moduleId} />
       {duplicateOfModuleId ? (
         <DuplicateOfIconLink duplicateOfModuleId={duplicateOfModuleId} />
+      ) : extracted ? (
+        <Tooltip label="Extracted" withArrow>
+          <span style={{ display: "inline-flex" }}>
+            <Database size={14} aria-label="Extracted" />
+          </span>
+        </Tooltip>
       ) : null}
     </Group>
   );

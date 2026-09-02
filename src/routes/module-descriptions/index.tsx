@@ -198,6 +198,7 @@ function ModuleDescriptionsPage() {
                       <ModuleIdWithDuplicateIcon
                         moduleId={row.moduleId}
                         duplicateOfModuleId={row.duplicateOfModuleId}
+                        extracted={row.extracted}
                       />
                     </Table.Td>
                     <Table.Td>

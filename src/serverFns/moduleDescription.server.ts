@@ -181,6 +181,7 @@ export const searchModuleDescriptions = createServerFn({ method: "GET" })
       duplicateOfByModuleId,
     ).map((hit) => ({
       ...hit,
+      extracted: extractedIds.has(hit.moduleId),
       duplicateOfModuleId: duplicateOfByModuleId.get(hit.moduleId) ?? null,
     }));
   });
