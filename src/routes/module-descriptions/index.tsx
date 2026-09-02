@@ -11,6 +11,7 @@ import {
   downloadTexFilesAsZip,
   MODULE_DESCRIPTIONS_TEX_ZIP_FILE_NAME,
 } from "@/lib/texZipExport";
+import { ModuleDuplicateHint, ModuleIdWithDuplicateIcon } from "@/components/module-descriptions/ModuleDuplicateHint";
 import {
   INDEX_STATUS_CONFIG,
   INDEX_STATUS_OPTIONS,
@@ -33,7 +34,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { currentUser } from "@/server/auth/currentUser";
 import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -194,12 +195,10 @@ function ModuleDescriptionsPage() {
                 return (
                   <Table.Tr key={row.moduleId}>
                     <Table.Td>
-                      <Link
-                        to="/module-description/$moduleId"
-                        params={{ moduleId: row.moduleId }}
-                      >
-                        {row.moduleId}
-                      </Link>
+                      <ModuleIdWithDuplicateIcon
+                        moduleId={row.moduleId}
+                        duplicateOfModuleId={row.duplicateOfModuleId}
+                      />
                     </Table.Td>
                     <Table.Td>
                       <Stack gap={2}>
@@ -208,6 +207,12 @@ function ModuleDescriptionsPage() {
                           <Text size="xs" c="dimmed">
                             {organizationLabel}
                           </Text>
+                        ) : null}
+                        {row.duplicateHint ? (
+                          <ModuleDuplicateHint
+                            exact={row.duplicateHint.exact}
+                            near={row.duplicateHint.near}
+                          />
                         ) : null}
                       </Stack>
                     </Table.Td>
@@ -335,12 +340,10 @@ function ModuleDescriptionsPage() {
                     return (
                       <Table.Tr key={row.id}>
                         <Table.Td>
-                          <Link
-                            to="/module-description/$moduleId"
-                            params={{ moduleId: row.moduleId }}
-                          >
-                            {row.moduleId}
-                          </Link>
+                          <ModuleIdWithDuplicateIcon
+                            moduleId={row.moduleId}
+                            duplicateOfModuleId={row.duplicateOfModuleId}
+                          />
                         </Table.Td>
                         <Table.Td>{row.title}</Table.Td>
                         <Table.Td>{row.language}</Table.Td>

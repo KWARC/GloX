@@ -8,6 +8,8 @@
     "build": "pnpm typecheck && vite build",
     "preview": "node -r dotenv/config .output/server/index.mjs ",
     "test": "vitest run",
+    "detect:module-duplicates": "node scripts/find-module-description-duplicates.mjs",
+    "detect:elementnr-consistency": "node scripts/check-elementnr-consistency.mjs",
     "audit:statements": "node -r dotenv/config scripts/audit-flo-down-block-statements.mjs",
     "backfill:declared-symbols": "node -r dotenv/config scripts/backfill-declared-symbols.mjs",
     "backfill:declared-symbols-info": "node -r dotenv/config scripts/backfill-declared-symbols-info.mjs",

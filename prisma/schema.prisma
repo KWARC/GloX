@@ -81,6 +81,10 @@ model ModuleDescription {
 
   indexStatus IndexStatus @default(EXTRACTED)
 
+  duplicateOfModuleId String?
+  duplicateOf         ModuleDescription?  @relation("ModuleDescriptionDuplicates", fields: [duplicateOfModuleId], references: [moduleId], onDelete: Restrict, onUpdate: Cascade)
+  duplicates          ModuleDescription[] @relation("ModuleDescriptionDuplicates")
+
   floDownBlocks FloDownBlock[]
 
   createdAt DateTime @default(now())
@@ -88,6 +92,7 @@ model ModuleDescription {
 
   @@index([createdById])
   @@index([indexStatus])
+  @@index([duplicateOfModuleId])
 }
 
 model Document {

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-02T00:00:00.000Z",
+  "fields": ["title", "Inhalt", "Lernziele und Kompetenzen"],
+  "nearThreshold": 0.9,
+  "modules": {
+    "42438": {
+      "exact": [{ "moduleId": "62083", "title": "Lineare Algebra I" }]
+    },
+    "62083": {
+      "exact": [{ "moduleId": "42438", "title": "Lineare Algebra I" }]
+    }
+  }
+}

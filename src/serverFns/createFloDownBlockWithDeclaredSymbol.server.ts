@@ -16,6 +16,7 @@ import {
 import { findDeclarationByUri, parseDeclaredSymbolsInfo } from "@/server/declaredSymbolsInfo";
 import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
+import { assertFloDownBlockAllowsSemanticMutation } from "@/server/modules/moduleDuplicateGuards";
 import { ExtractBlockType } from "@/types/blockType";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -226,6 +227,10 @@ export const declareCreatedSymbolDefiniendum = createServerFn({
       if (!floDownBlock?.statement) {
         throw new Error("Content not found");
       }
+      await assertFloDownBlockAllowsSemanticMutation(
+        tx,
+        floDownBlock.moduleDescriptionId,
+      );
 
       const symbolUri = data.symbolId.trim();
       if (!symbolUri) {

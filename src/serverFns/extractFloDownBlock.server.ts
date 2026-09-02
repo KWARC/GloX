@@ -23,6 +23,7 @@ import { getInlineContent, walkInlines } from "@/server/ftml/statementContent";
 import { prepareFloDownBlockForPersist } from "@/server/ftml/declaredSymbols";
 import { ExtractBlockType, buildStatementFromText } from "@/types/blockType";
 import { setDeclaredSymbolsInfo } from "@/server/floDownBlockDeclaredSymbols";
+import { assertFloDownBlockAllowsSemanticMutation } from "@/server/modules/moduleDuplicateGuards";
 import type { DeclaredSymbolDraft } from "@/types/declaredSymbolsInfo";
 import { createServerFn } from "@tanstack/react-start";
 import { FileIdentity } from "./latex.server";
@@ -246,6 +247,10 @@ export const updateFloDownBlock = createServerFn({ method: "POST" })
       const existing = await tx.floDownBlock.findUniqueOrThrow({
         where: { id: data.id },
       });
+      await assertFloDownBlockAllowsSemanticMutation(
+        tx,
+        existing.moduleDescriptionId,
+      );
 
       const nextVersion = existing.currentVersion + 1;
       const { statement } = prepareFloDownBlockForPersist(
@@ -288,6 +293,10 @@ export const deleteFloDownBlock = createServerFn({ method: "POST" })
       const target = await tx.floDownBlock.findUniqueOrThrow({
         where: { id: data.id },
       });
+      await assertFloDownBlockAllowsSemanticMutation(
+        tx,
+        target.moduleDescriptionId,
+      );
       const declared = getDeclaredSymbolUris(
         assertFloDownStatement(target.statement),
         declaredUrisFromJson(target.declaredSymbolsInfo),
@@ -369,6 +378,10 @@ export const updateFloDownBlockFilePath = createServerFn({ method: "POST" })
       const current = await tx.floDownBlock.findUniqueOrThrow({
         where: { id: data.id },
       });
+      await assertFloDownBlockAllowsSemanticMutation(
+        tx,
+        current.moduleDescriptionId,
+      );
 
       const targetDefs = await tx.floDownBlock.findMany({
         where: {

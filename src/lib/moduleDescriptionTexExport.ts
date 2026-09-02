@@ -116,13 +116,15 @@ async function generateTrackedPreview(
   );
 
   const definitionTex = [];
-  for (const block of input.definitionBlocks) {
-    onPhase(`definition TeX for ${block.fileName}`);
-    definitionTex.push(
-      await runPhase(moduleId, `definition ${block.fileName}`, () =>
-        buildDefinitionTexPreview(moduleId, block, input.definitionBlocks),
-      ),
-    );
+  if (!input.duplicateOfModuleId) {
+    for (const block of input.definitionBlocks) {
+      onPhase(`definition TeX for ${block.fileName}`);
+      definitionTex.push(
+        await runPhase(moduleId, `definition ${block.fileName}`, () =>
+          buildDefinitionTexPreview(moduleId, block, input.definitionBlocks),
+        ),
+      );
+    }
   }
 
   return { moduleTex, definitionTex };
