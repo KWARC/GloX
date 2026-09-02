@@ -114830,6 +114830,8 @@
       "moduleId": "23007",
       "elementnr": "77570",
       "title": "Examensvorbereitung",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "129222",
@@ -172573,6 +172575,8 @@
       "moduleId": "23328",
       "elementnr": "77170",
       "title": "Optionsmodul L-GYM Linguistics",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4108",
@@ -172614,6 +172618,8 @@
       "moduleId": "23329",
       "elementnr": "77180",
       "title": "Optionsmodul L-GYM Literature",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4108",
@@ -172655,6 +172661,8 @@
       "moduleId": "73430",
       "elementnr": "77161",
       "title": "Optionsmodul L-GYM Language",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4108",
@@ -180949,6 +180957,8 @@
       "moduleId": "53407",
       "elementnr": "72203",
       "title": "Basismodul Einführung in die Französische Literaturwissenschaft",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181017,6 +181027,8 @@
       "moduleId": "47811",
       "elementnr": "72224",
       "title": "Basismodul Französische Sprachpraxis 2",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181115,6 +181127,8 @@
       "moduleId": "40336",
       "elementnr": "72252",
       "title": "Aufbaumodul Französische Sprachwissenschaft 1",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181161,6 +181175,8 @@
       "moduleId": "47812",
       "elementnr": "72256",
       "title": "Aufbaumodul Französische Sprachwissenschaft 2",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181199,6 +181215,8 @@
       "moduleId": "40338",
       "elementnr": "72271",
       "title": "Aufbaumodul Französische Literatur- und Kulturwissenschaft",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181260,6 +181278,8 @@
       "moduleId": "47814",
       "elementnr": "72452",
       "title": "Abschlussmodul Französische Sprachpraxis 5",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181283,6 +181303,8 @@
       "moduleId": "47815",
       "elementnr": "72453",
       "title": "Französische Kulturwissenschaft",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181336,6 +181358,8 @@
       "moduleId": "41141",
       "elementnr": "72461",
       "title": "Französische Sprach-, Literatur- und Kulturwissenschaft für das Lehramt an Gymnasien 1",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181367,6 +181391,8 @@
       "moduleId": "41143",
       "elementnr": "72471",
       "title": "Französische Sprach-, Literatur- und Kulturwissenschaft für das Lehramt an Gymnasien 2",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181398,6 +181424,8 @@
       "moduleId": "41149",
       "elementnr": "72572",
       "title": "Basismodul Didaktik der romanischen Sprachen",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -181429,6 +181457,8 @@
       "moduleId": "41155",
       "elementnr": "72582",
       "title": "Aufbaumodul Didaktik der romanischen Sprachen (Lehramt Gymnasien)",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4110",
@@ -190748,6 +190778,8 @@
       "moduleId": "73229",
       "elementnr": "73003",
       "title": "Wahlpflichtmodul I",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -190771,6 +190803,8 @@
       "moduleId": "73228",
       "elementnr": "73013",
       "title": "Wahlpflichtmodul II",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -190794,6 +190828,8 @@
       "moduleId": "55423",
       "elementnr": "73023",
       "title": "Wahlpflichtmodul III",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -190825,6 +190861,8 @@
       "moduleId": "62892",
       "elementnr": "73032",
       "title": "Wahlpflichtmodul IV",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -190856,6 +190894,8 @@
       "moduleId": "67487",
       "elementnr": "73052",
       "title": "Sprachübungen I",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -190887,6 +190927,8 @@
       "moduleId": "63671",
       "elementnr": "73063",
       "title": "Poesie",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -190918,6 +190960,8 @@
       "moduleId": "63209",
       "elementnr": "73072",
       "title": "Prosa",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -190949,6 +190993,8 @@
       "moduleId": "57411",
       "elementnr": "73075",
       "title": "Lektüre",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -190988,6 +191034,8 @@
       "moduleId": "59530",
       "elementnr": "73081",
       "title": "Sprachübungen II",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -191019,6 +191067,8 @@
       "moduleId": "73227",
       "elementnr": "73133",
       "title": "Grundlagen",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -191042,6 +191092,8 @@
       "moduleId": "42098",
       "elementnr": "73152",
       "title": "Literatur",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -191081,6 +191133,8 @@
       "moduleId": "38260",
       "elementnr": "73172",
       "title": "Altertumswissenschaften",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4113",
@@ -256244,6 +256298,8 @@
       "moduleId": "53410",
       "elementnr": "72292",
       "title": "Basismodul Italienische Sprachpraxis 1",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256275,6 +256331,8 @@
       "moduleId": "56783",
       "elementnr": "72302",
       "title": "Basismodul Italienische Sprachpraxis 2",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256306,6 +256364,8 @@
       "moduleId": "59000",
       "elementnr": "72312",
       "title": "Aufbaumodul Italienische Sprachpraxis 3",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256329,6 +256389,8 @@
       "moduleId": "76898",
       "elementnr": "72313",
       "title": "Aufbaumodul Italienische Sprachpraxis 1",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256352,6 +256414,8 @@
       "moduleId": "76899",
       "elementnr": "72314",
       "title": "Aufbaumodul Italienische Sprachpraxis 2",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256390,6 +256454,8 @@
       "moduleId": "65713",
       "elementnr": "72323",
       "title": "Vertiefungsmodul Italienische Sprachpraxis 4",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256413,6 +256479,8 @@
       "moduleId": "62831",
       "elementnr": "72324",
       "title": "Vertiefungsmodul Italienische Sprachpraxis 5",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256436,6 +256504,8 @@
       "moduleId": "76904",
       "elementnr": "72325",
       "title": "Vertiefungsmodul Italienische Sprachpraxis 1",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256459,6 +256529,8 @@
       "moduleId": "76905",
       "elementnr": "72326",
       "title": "Vertiefungsmodul Italienische Sprachpraxis 2",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256482,6 +256554,8 @@
       "moduleId": "60877",
       "elementnr": "72332",
       "title": "Aufbaumodul Italienische Sprachwissenschaft 1",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256505,6 +256579,8 @@
       "moduleId": "76890",
       "elementnr": "72333",
       "title": "Aufbaumodul Italienische Sprachwissenschaft 1",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256543,6 +256619,8 @@
       "moduleId": "57899",
       "elementnr": "72336",
       "title": "Aufbaumodul Italienische Sprachwissenschaft 2",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256566,6 +256644,8 @@
       "moduleId": "76892",
       "elementnr": "72337",
       "title": "Aufbaumodul Italienische Sprachwissenschaft 2",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256589,6 +256669,8 @@
       "moduleId": "66397",
       "elementnr": "72351",
       "title": "Aufbaumodul Italienische Literatur- und Kulturwissenschaft",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256612,6 +256694,8 @@
       "moduleId": "76894",
       "elementnr": "72352",
       "title": "Aufbaumodul Italienische Literatur- und Kulturwissenschaft 1",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256681,6 +256765,8 @@
       "moduleId": "47895",
       "elementnr": "72492",
       "title": "Abschlussmodul Italienische Sprachpraxis 6",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256712,6 +256798,8 @@
       "moduleId": "47896",
       "elementnr": "72493",
       "title": "Modul italienische Kulturwissenschaft",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256751,6 +256839,8 @@
       "moduleId": "76907",
       "elementnr": "72494",
       "title": "Abschlussmodul Italienische Sprachpraxis",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256805,6 +256895,8 @@
       "moduleId": "41207",
       "elementnr": "72501",
       "title": "Italienische Sprach-, Literatur- und Kulturwissenschaft für das Lehramt an Gymnasien 1",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256867,6 +256959,8 @@
       "moduleId": "41209",
       "elementnr": "72511",
       "title": "Italienische Sprach-, Literatur- und Kulturwissenschaft für das Lehramt an Gymnasien 2",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256906,6 +257000,8 @@
       "moduleId": "53411",
       "elementnr": "72623",
       "title": "Basismodul Italienische Sprachwissenschaft",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -256937,6 +257033,8 @@
       "moduleId": "53412",
       "elementnr": "72624",
       "title": "Basismodul Italienische Literaturwissenschaft",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -257006,6 +257104,8 @@
       "moduleId": "41232",
       "elementnr": "72602",
       "title": "Aufbaumodul Didaktik der romanischen Sprachen",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "4115",
@@ -258966,6 +259066,8 @@
       "moduleId": "114572",
       "elementnr": "95750",
       "title": "Werkstoffe und ihre Struktur I ",
+      "faculty": "Technische Fakultät",
+      "subjectArea": "Materialwissenschaft und Werkstofftechnik",
       "occurrences": [
         {
           "rootUnitId": "121723",
@@ -267801,6 +267903,8 @@
       "moduleId": "50452",
       "elementnr": "74112",
       "title": "Poesie",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -267834,6 +267938,8 @@
       "moduleId": "50454",
       "elementnr": "74122",
       "title": "Prosa",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -267867,6 +267973,8 @@
       "moduleId": "50456",
       "elementnr": "74131",
       "title": "Gattungen lateinischer Poesie",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -267900,6 +268008,8 @@
       "moduleId": "50458",
       "elementnr": "74141",
       "title": "Gattungen lateinischer Prosa",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -267933,6 +268043,8 @@
       "moduleId": "50460",
       "elementnr": "74151",
       "title": "Latinistische Forschung",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -267966,6 +268078,8 @@
       "moduleId": "50462",
       "elementnr": "74161",
       "title": "Römische Literaturgeschichte",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -267999,6 +268113,8 @@
       "moduleId": "50293",
       "elementnr": "74002",
       "title": "Lateinische Sprachwissenschaft und Sprachpraxis Ia",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268022,6 +268138,8 @@
       "moduleId": "50296",
       "elementnr": "74003",
       "title": "Lateinische Sprachwissenschaft und Sprachpraxis Ib",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268045,6 +268163,8 @@
       "moduleId": "50290",
       "elementnr": "74012",
       "title": "Lateinische Literaturwissenschaft I",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268068,6 +268188,8 @@
       "moduleId": "50297",
       "elementnr": "74022",
       "title": "Altertumswissenschaft für Latinisten I",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268091,6 +268213,8 @@
       "moduleId": "50300",
       "elementnr": "74023",
       "title": "Altertumswissenschaft für Latinisten II",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268114,6 +268238,8 @@
       "moduleId": "50311",
       "elementnr": "74032",
       "title": "Lateinische Sprachwissenschaft und Sprachpraxis IIa",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268138,6 +268264,8 @@
       "moduleId": "50314",
       "elementnr": "74033",
       "title": "Lateinische Sprachwissenschaft und Sprachpraxis IIb",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268162,6 +268290,8 @@
       "moduleId": "50301",
       "elementnr": "74042",
       "title": "Lateinische Literaturwissenschaft II",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268185,6 +268315,8 @@
       "moduleId": "50306",
       "elementnr": "74052",
       "title": "Lateinische Sprachwissenschaft und Sprachpraxis IIIa",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268209,6 +268341,8 @@
       "moduleId": "50307",
       "elementnr": "74053",
       "title": "Lateinische Sprachwissenschaft und Sprachpraxis IIIb",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268233,6 +268367,8 @@
       "moduleId": "50468",
       "elementnr": "74063",
       "title": "Lateinische Literaturwissenschaft III",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268256,6 +268392,8 @@
       "moduleId": "50464",
       "elementnr": "74172",
       "title": "Examensvorbereitung I",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -268287,6 +268425,8 @@
       "moduleId": "50467",
       "elementnr": "74173",
       "title": "Examensvorbereitung II",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "5076",
@@ -416451,6 +416591,8 @@
       "moduleId": "73507",
       "elementnr": "76351",
       "title": "Sozialstruktur",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "114245",
@@ -491509,6 +491651,8 @@
       "moduleId": "60930",
       "elementnr": "74810",
       "title": "Betriebswirtschaftslehre I",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491540,6 +491684,8 @@
       "moduleId": "61812",
       "elementnr": "74820",
       "title": "Einführung in die Volkswirtschaftslehre",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491571,6 +491717,8 @@
       "moduleId": "58840",
       "elementnr": "74830",
       "title": "Betriebswirtschaftslehre II",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491602,6 +491750,8 @@
       "moduleId": "58436",
       "elementnr": "74840",
       "title": "Mikroökonomie",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491633,6 +491783,8 @@
       "moduleId": "64159",
       "elementnr": "74850",
       "title": "Makroökonomie",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491656,6 +491808,8 @@
       "moduleId": "68308",
       "elementnr": "74860",
       "title": "Betriebliches Rechnungswesen I",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491687,6 +491841,8 @@
       "moduleId": "65127",
       "elementnr": "74870",
       "title": "Sozialpolitik",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491720,6 +491876,8 @@
       "moduleId": "67151",
       "elementnr": "74880",
       "title": "Betriebliches Rechnungswesen II",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491751,6 +491909,8 @@
       "moduleId": "67321",
       "elementnr": "74890",
       "title": "Statistik",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491782,6 +491942,8 @@
       "moduleId": "63685",
       "elementnr": "74902",
       "title": "Volkswirtschaftliches Seminar",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491813,6 +491975,8 @@
       "moduleId": "57272",
       "elementnr": "74920",
       "title": "Betriebswirtschaftslehre III (Bilanzierung)",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491844,6 +492008,8 @@
       "moduleId": "65597",
       "elementnr": "74940",
       "title": "Wirtschaftspolitik",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491877,6 +492043,8 @@
       "moduleId": "41258",
       "elementnr": "74991",
       "title": "Hauptseminar Volkswirtschaftslehre",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491916,6 +492084,8 @@
       "moduleId": "41257",
       "elementnr": "75001",
       "title": "Hauptseminar Betriebswirtschaftslehre",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491955,6 +492125,8 @@
       "moduleId": "23248",
       "elementnr": "75020",
       "title": "Recht für Wirtschaftswissenschaftler III und IV",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -491994,6 +492166,8 @@
       "moduleId": "75435",
       "elementnr": "82101",
       "title": "Grundlagen des öffentlichen Rechts und des Zivilrechts",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -492025,6 +492199,8 @@
       "moduleId": "75436",
       "elementnr": "82111",
       "title": "Wirtschaftsprivatrecht",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -492056,6 +492232,8 @@
       "moduleId": "77472",
       "elementnr": "82154",
       "title": "Business and Information Systems Engineering",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -492097,6 +492275,8 @@
       "moduleId": "77461",
       "elementnr": "82173",
       "title": "Data Science: Machine Learning and Data Driven Business",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3842",
@@ -492138,6 +492318,8 @@
       "moduleId": "67432",
       "elementnr": "74810",
       "title": "Betriebswirtschaftslehre I",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492177,6 +492359,8 @@
       "moduleId": "68282",
       "elementnr": "74820",
       "title": "Einführung in die Volkswirtschaftslehre",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492216,6 +492400,8 @@
       "moduleId": "65307",
       "elementnr": "74830",
       "title": "Betriebswirtschaftslehre II",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492255,6 +492441,8 @@
       "moduleId": "57692",
       "elementnr": "74850",
       "title": "Makroökonomie",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492286,6 +492474,8 @@
       "moduleId": "61791",
       "elementnr": "74860",
       "title": "Betriebliches Rechnungswesen I",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492325,6 +492515,8 @@
       "moduleId": "58646",
       "elementnr": "74870",
       "title": "Sozialpolitik",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492366,6 +492558,8 @@
       "moduleId": "60626",
       "elementnr": "74880",
       "title": "Betriebliches Rechnungswesen II",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492405,6 +492599,8 @@
       "moduleId": "57278",
       "elementnr": "74902",
       "title": "Volkswirtschaftliches Seminar",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492444,6 +492640,8 @@
       "moduleId": "63693",
       "elementnr": "74920",
       "title": "Betriebswirtschaftslehre III (Bilanzierung)",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492483,6 +492681,8 @@
       "moduleId": "59151",
       "elementnr": "74940",
       "title": "Wirtschaftspolitik",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492524,6 +492724,8 @@
       "moduleId": "73333",
       "elementnr": "82070",
       "title": "Makroökonomie",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492547,6 +492749,8 @@
       "moduleId": "75439",
       "elementnr": "82101",
       "title": "Grundlagen des öffentlichen Rechts und des Zivilrechts",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",
@@ -492578,6 +492782,8 @@
       "moduleId": "75440",
       "elementnr": "82111",
       "title": "Wirtschaftsprivatrecht",
+      "faculty": "Lehramt",
+      "subjectArea": "Lehramt",
       "occurrences": [
         {
           "rootUnitId": "3824",

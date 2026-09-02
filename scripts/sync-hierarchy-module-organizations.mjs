@@ -1,17 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * Copies faculty and subjectArea from the canonical module JSON into each
+ * Copies faculty and subjectArea from the indexed module file path into each
  * matching entry in modules/hierarchy.json.
  *
- * The first path in modules-index.json is the canonical source. This mirrors
- * getModuleJson(), which uses the same precedence when a module ID exists in
- * more than one source file. Values come from the first usable
- * `organizations` row in that file, not from the directory names (those
- * sometimes replace `:` / `/` with `-`).
+ * Every relative path in modules-index.json is considered. The first path
+ * that yields an organization is selected; unclassified paths are skipped.
+ * Values come from the path only:
+ * modules/<faculty>/<subjectArea>/<moduleId>.json.
  *
  * Usage:
- *   pnpm check:module-organizations          # verify; exit 1 on mismatches
  *   pnpm sync:module-organizations           # dry run
  *   pnpm sync:module-organizations -- --apply
  */
@@ -21,37 +19,53 @@ import process from "node:process";
 
 const args = new Set(process.argv.slice(2));
 const apply = args.has("--apply");
-const check = args.has("--check");
-const strict = args.has("--strict");
-const verbose = args.has("--verbose");
-const validArgs = new Set(["--apply", "--check", "--strict", "--verbose"]);
+const validArgs = new Set(["--apply"]);
 
-if ([...args].some((arg) => !validArgs.has(arg)) || (apply && check)) {
+if ([...args].some((arg) => !validArgs.has(arg))) {
   console.error(
-    "Usage: node scripts/sync-hierarchy-module-organizations.mjs [--check | --apply] [--strict] [--verbose]",
+    "Usage: node scripts/sync-hierarchy-module-organizations.mjs [--apply]",
   );
   process.exit(2);
 }
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const modulesDirectory = path.join(projectRoot, "modules");
+const moduleFilesDirectory = path.join(modulesDirectory, "modules");
 const hierarchyPath = path.join(modulesDirectory, "hierarchy.json");
 const indexPath = path.join(modulesDirectory, "modules-index.json");
 
-function asOptionalString(value) {
-  return typeof value === "string" && value.trim() ? value : null;
-}
+function organizationFromFilePath(relativePath, moduleId) {
+  const filePath = path.resolve(modulesDirectory, relativePath);
+  const relativeToModuleFiles = path.relative(moduleFilesDirectory, filePath);
+  const parentDirectory = path.dirname(filePath);
+  const parentName = path.basename(parentDirectory);
 
-function firstOrganization(raw) {
-  if (!Array.isArray(raw)) return null;
-  for (const entry of raw) {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
-    const faculty = asOptionalString(entry.faculty);
-    const subjectArea = asOptionalString(entry.subjectArea);
-    if (!faculty || !subjectArea) continue;
-    return { faculty, subjectArea };
+  if (
+    relativeToModuleFiles.startsWith("..") ||
+    path.isAbsolute(relativeToModuleFiles) ||
+    path.basename(filePath) !== `${moduleId}.json`
+  ) {
+    throw new Error("path must identify that module's JSON file below modules/modules");
   }
-  return null;
+
+  // Single-directory paths: modules/lehramt/<id>.json and
+  // modules/unclassified/<id>.json.
+  if (path.dirname(parentDirectory) === moduleFilesDirectory) {
+    if (parentName === "unclassified") return null;
+    if (parentName !== "lehramt") {
+      throw new Error("single-directory path must be lehramt or unclassified");
+    }
+    return { faculty: "Lehramt", subjectArea: "Lehramt" };
+  }
+
+  const facultyDirectory = path.dirname(parentDirectory);
+  if (path.dirname(facultyDirectory) !== moduleFilesDirectory) {
+    throw new Error("path must contain exactly faculty and subject-area directories");
+  }
+  return {
+    faculty: path.basename(facultyDirectory),
+    subjectArea: parentName,
+  };
 }
 
 function sameOrganization(module, expected) {
@@ -95,8 +109,8 @@ function needsUpdate(module, expected) {
 
 function reportIds(label, ids, method = "warn") {
   if (!ids.length) return;
-  const detail = verbose ? ids.join(", ") : ids.slice(0, 20).join(", ");
-  console[method](`${label} (${ids.length}): ${detail}${verbose || ids.length <= 20 ? "" : ", …"}`);
+  const detail = ids.slice(0, 20).join(", ");
+  console[method](`${label} (${ids.length}): ${detail}${ids.length <= 20 ? "" : ", …"}`);
 }
 
 const modulesIndex = JSON.parse(await readFile(indexPath, "utf8"));
@@ -105,23 +119,34 @@ const sourceProblems = [];
 const sourceIdsWithoutOrganization = new Set();
 
 for (const [moduleId, paths] of Object.entries(modulesIndex)) {
-  const relativePath = Array.isArray(paths) ? paths[0] : undefined;
-  if (typeof relativePath !== "string") {
-    sourceProblems.push(`${moduleId}: no canonical path in modules-index.json`);
+  if (!Array.isArray(paths) || paths.length === 0) {
+    sourceProblems.push(`${moduleId}: no paths in modules-index.json`);
     continue;
   }
 
-  try {
-    const json = JSON.parse(await readFile(path.join(modulesDirectory, relativePath), "utf8"));
-    const organization = firstOrganization(json.organizations);
-    if (!organization) {
-      sourceIdsWithoutOrganization.add(moduleId);
+  let organization;
+  let hasUnclassifiedPath = false;
+
+  for (const relativePath of paths) {
+    if (typeof relativePath !== "string") {
+      sourceProblems.push(`${moduleId}: path is not a string`);
       continue;
     }
-    sourceByModuleId.set(moduleId, organization);
-  } catch (error) {
-    sourceProblems.push(`${relativePath}: ${error.message}`);
+
+    try {
+      const candidate = organizationFromFilePath(relativePath, moduleId);
+      if (!candidate) {
+        hasUnclassifiedPath = true;
+        continue;
+      }
+      organization ??= candidate;
+    } catch (error) {
+      sourceProblems.push(`${relativePath}: ${error.message}`);
+    }
   }
+
+  if (organization) sourceByModuleId.set(moduleId, organization);
+  else if (hasUnclassifiedPath) sourceIdsWithoutOrganization.add(moduleId);
 }
 
 const hierarchy = JSON.parse(await readFile(hierarchyPath, "utf8"));
@@ -143,6 +168,20 @@ for (let index = 0; index < hierarchy.modules.length; index += 1) {
       ? sourcesWithoutOrganization
       : missingSources
     ).push(moduleId);
+    // Path has no faculty/subjectArea — strip any leftover flat fields.
+    const hasFlatOrg =
+      "faculty" in module || "subjectArea" in module || "organizations" in module;
+    if (hasFlatOrg) {
+      pendingUpdates += 1;
+      if (apply) {
+        const cleared = { ...module };
+        delete cleared.faculty;
+        delete cleared.subjectArea;
+        delete cleared.organizations;
+        hierarchy.modules[index] = cleared;
+        updated += 1;
+      }
+    }
     continue;
   }
 
@@ -168,20 +207,19 @@ const mismatches = hierarchyForVerification.modules
   })
   .map((module) => String(module.moduleId));
 
-const mode = apply ? "Applied" : check ? "Checked" : "Dry run";
+const mode = apply ? "Applied" : "Dry run";
 console.log(`${mode} for ${hierarchy.modules.length} hierarchy modules.`);
 console.log(`Canonical organization data found for ${sourceByModuleId.size} module IDs.`);
 if (apply) console.log(`Updated ${updated} hierarchy entries.`);
 else console.log(`Would update ${pendingUpdates} hierarchy entries.`);
 reportIds("Organization mismatches", mismatches, "error");
 reportIds("No matching source JSON", missingSources);
-reportIds("Source JSON without organization data", sourcesWithoutOrganization);
+reportIds("Source path without organization data", sourcesWithoutOrganization);
 if (sourceProblems.length) console.error(`Source problems (${sourceProblems.length}):\n${sourceProblems.join("\n")}`);
 
 if (
   sourceProblems.length ||
-  ((apply || check) && mismatches.length) ||
-  (strict && (missingSources.length || sourcesWithoutOrganization.length))
+  (apply && mismatches.length)
 ) {
   process.exitCode = 1;
 }
