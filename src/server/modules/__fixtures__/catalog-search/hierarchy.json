@@ -19,6 +19,12 @@
       "subjectArea": "Logopädie"
     },
     {
+      "moduleId": "m3-json",
+      "title": "Org source fixture",
+      "faculty": "Medizinische Fakultät",
+      "subjectArea": "Logopädie"
+    },
+    {
       "moduleId": "m4",
       "title": "Delta Course"
     },

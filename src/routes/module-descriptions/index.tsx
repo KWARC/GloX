@@ -332,6 +332,9 @@ function ModuleDescriptionsPage() {
                 <Table.Tbody>
                   {listItems.map((row) => {
                     const statusConf = INDEX_STATUS_CONFIG[row.indexStatus];
+                    const organizationLabel = [row.faculty, row.subjectArea]
+                      .filter(Boolean)
+                      .join(" — ");
                     return (
                       <Table.Tr key={row.id}>
                         <Table.Td>
@@ -342,7 +345,16 @@ function ModuleDescriptionsPage() {
                             {row.moduleId}
                           </Link>
                         </Table.Td>
-                        <Table.Td>{row.title}</Table.Td>
+                        <Table.Td>
+                          <Stack gap={2}>
+                            <Text size="sm">{row.title}</Text>
+                            {organizationLabel ? (
+                              <Text size="xs" c="dimmed">
+                                {organizationLabel}
+                              </Text>
+                            ) : null}
+                          </Stack>
+                        </Table.Td>
                         <Table.Td>{row.language}</Table.Td>
                         <Table.Td>
                           <Badge

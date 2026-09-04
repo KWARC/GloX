@@ -273,12 +273,11 @@ export async function getModuleSearchEntry(
 
   try {
     const json = await getModuleJson(moduleId);
-    const org = json.organizations?.[0];
     return {
       moduleId: entry.moduleId,
       title: json.title || entry.title,
-      faculty: org?.faculty ?? null,
-      subjectArea: org?.subjectArea ?? null,
+      faculty: entry.faculty,
+      subjectArea: entry.subjectArea,
     };
   } catch {
     return entry;
