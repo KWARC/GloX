@@ -779,6 +779,8 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
           id: row.id,
           moduleId: row.moduleId,
           title,
+          faculty: searchEntry?.faculty ?? null,
+          subjectArea: searchEntry?.subjectArea ?? null,
           indexStatus: row.indexStatus,
           language: row.language,
           updatedAt: row.updatedAt.toISOString(),

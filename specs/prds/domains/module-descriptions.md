@@ -38,6 +38,10 @@ catalog, the system MUST NOT invent a faculty or subject area label for that sea
 description list, the system MUST return module descriptions already in progress, with pagination and
 optional filter by index status.
 
+**R-MOD-25 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin requests the module
+description list, the system MUST present each row’s faculty and subject area from the configured FAU
+hierarchy catalog beneath that module’s title when those values are present.
+
 **R-MOD-03 (Event-Driven):** WHEN an Extractor, Curator, or Admin creates a module description for a
 catalog module, the system MUST seed title, inhalt, and lernziele statements from that module's
 catalog entry and MUST reject creation when a description for the same module already exists.
@@ -109,7 +113,7 @@ semantics can pollute the MathHub archive path.
 - Document curation queue and server-side LaTeX versioning — see `curation-export.md`
 - Automated MathHub submission or index-status-driven export jobs — status is tracked metadata only
 - Post-create edit of module-level export identity — identity is fixed at creation today
-- Faculty / subject area subtitle or sort on the in-progress Modules list
+- Reordering the Modules list by faculty or subject area
 - Catalog search filter or facet by faculty or subject area
 - German locale-specific sort of faculty or subject area as a product promise
 
@@ -122,6 +126,7 @@ semantics can pollute the MathHub archive path.
 | R-MOD-17 | `workspace.md` S-MOD-17 |
 | R-MOD-18 | `workspace.md` S-MOD-18 |
 | R-MOD-02 | `workspace.md` S-MOD-02 |
+| R-MOD-25 | `workspace.md` S-MOD-25 |
 | R-MOD-03 | `workspace.md` S-MOD-03 |
 | R-MOD-04 | `workspace.md` S-MOD-04 |
 | R-MOD-05 | `workspace.md` S-MOD-05 |

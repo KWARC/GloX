@@ -1,6 +1,7 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  getModuleSearchEntry,
   normalizeModuleCatalogJson,
   normalizeOrganizations,
   normalizePrograms,
@@ -126,5 +127,54 @@ describe("searchModules hierarchy faculty and subject area", () => {
     expect(first?.moduleId).toBe("m4");
     expect(first?.faculty).toBeNull();
     expect(first?.subjectArea).toBeNull();
+  });
+});
+
+describe("getModuleSearchEntry hierarchy faculty and subject area", () => {
+  const previousModulesDir = process.env.MODULES_DIR;
+
+  beforeEach(() => {
+    process.env.MODULES_DIR = catalogSearchFixtureDir;
+    resetModuleCatalogForTests();
+  });
+
+  afterEach(() => {
+    if (previousModulesDir === undefined) {
+      delete process.env.MODULES_DIR;
+    } else {
+      process.env.MODULES_DIR = previousModulesDir;
+    }
+    resetModuleCatalogForTests();
+  });
+
+  it("returns hierarchy faculty and subjectArea (S-MOD-25)", async () => {
+    const entry = await getModuleSearchEntry("m3");
+    expect(entry).toMatchObject({
+      moduleId: "m3",
+      title: "Gamma Course",
+      faculty: "Medizinische Fakultät",
+      subjectArea: "Logopädie",
+    });
+  });
+
+  it("uses null when hierarchy omits org fields and does not invent Unclassified (S-MOD-18)", async () => {
+    const entry = await getModuleSearchEntry("m4");
+    expect(entry).toMatchObject({
+      moduleId: "m4",
+      faculty: null,
+      subjectArea: null,
+    });
+    expect(JSON.stringify(entry)).not.toMatch(/Unclassified/i);
+  });
+
+  it("prefers hierarchy org over per-module JSON organizations (S-MOD-18)", async () => {
+    const entry = await getModuleSearchEntry("m3-json");
+    expect(entry).toMatchObject({
+      moduleId: "m3-json",
+      title: "Org source fixture JSON title",
+      faculty: "Medizinische Fakultät",
+      subjectArea: "Logopädie",
+    });
+    expect(entry?.faculty).not.toBe("JSON Faculty");
   });
 });

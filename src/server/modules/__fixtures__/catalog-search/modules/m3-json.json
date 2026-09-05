@@ -1,0 +1,11 @@
+{
+  "moduleId": "m3-json",
+  "title": "Org source fixture JSON title",
+  "descriptionSections": {},
+  "organizations": [
+    {
+      "faculty": "JSON Faculty",
+      "subjectArea": "JSON Subject"
+    }
+  ]
+}
