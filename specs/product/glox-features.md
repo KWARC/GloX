@@ -38,6 +38,7 @@
 - **FAU module catalog search** — Search hierarchy from `MODULES_DIR`; show faculty and subject area under each catalog hit (when present) and order by faculty then subject area; same org subtitle on the in-progress Modules list. Hits with catalog clones show exact/near peer counts and identifiers; extracted vs duplicate icons on module ids.
 - **Module description workspace** — Seed title/inhalt/lernziele statements; extract definitions.
 - **Mark module description as duplicate** — Extractor+ mark a description as a duplicate of another already-created description (warns before deleting this module’s Inhalt, Lernziele, and definitions). Unmark re-seeds from this module’s catalog. Duplicate workspaces hide statement and definition panels. Curator/Admin TeX export uses the duplicate’s catalog title plus the original’s Inhalt and Lernziele.
+- **Module description favorites** — Extractor+ star or unstar in-progress descriptions from the Modules table; **Show only favorites** filters to the caller’s personal set (stacks with status and module-ID filters).
 - **Module definition blocks** — Create FloDown blocks in module context (German default).
 
 ## Curation & export

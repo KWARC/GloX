@@ -70,9 +70,10 @@ UI polish after Apply (tooltip, unfavorite confirm, filter order) does not chang
 1. **Prerequisite:** Verify normally follows a PR and tiered code review — not recorded here.
 2. **Postgres integration:** no fixture harness; isolation / filter-stack / cascade leftovers not DB-tested.
 3. **UI E2E:** not configured; browser check is manual.
-4. **Canonical specs:** still only in `/specs/changes/` until Archive.
+4. **Canonical specs:** folded 2026-09-07 into `module-descriptions.md`, `workspace.md`, `glox-features.md`.
 
-<!-- After cursory human sign-off: Archive —
-     fold deltas into canonical specs and move this set to
-     /specs/changes/archive/YYYY-MM-DD-module-description-favorites/. -->
+---
+
+**Archive:** 2026-09-07 — folded into canonical specs; moved to
+`specs/changes/archive/2026-09-07-module-description-favorites/`.
 

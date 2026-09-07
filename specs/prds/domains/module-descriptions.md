@@ -135,6 +135,21 @@ only.
 MUST include the module TeX file for each duplicate description as well as for each canonical
 description.
 
+**R-MOD-26 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin marks or unmarks an
+in-progress module description as a favorite from the module description list, the system MUST
+persist that choice as that user’s personal favorite of that description.
+
+**R-MOD-27 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin turns on “Show only
+favorites” on the module description list, the system MUST return only module descriptions that user
+has favorited, still paginated, and MUST still apply any status or module-ID filters the user has
+set. WHEN none of that user’s favorites match the active filters, the system MUST return an empty
+list.
+
+**R-MOD-28 (Ubiquitous):** The system MUST NOT present or change another user’s module-description
+favorites.
+
+**Rationale:** The in-progress list is shared; a personal working set must not leak across GloXers.
+
 ### Binding operator / compliance promises
 
 **R-MOD-13 (Ubiquitous):** The system MUST NOT allow unauthenticated users or users without
@@ -169,6 +184,10 @@ semantics can pollute the MathHub archive path.
 - German locale-specific sort of faculty or subject area as a product promise
 - Catalog duplicate detection algorithm details and file layout — SDD
 - Exam-number identity for catalog duplicates
+- Favoriting catalog modules that have no in-progress ModuleDescription
+- Shared or Admin-visible favorite lists
+- Pinning favorites to the top of the unfiltered Modules list
+- Favorite control on the module workspace
 
 ## Traceability
 
@@ -199,6 +218,9 @@ semantics can pollute the MathHub archive path.
 | R-MOD-22 | `workspace.md` S-MOD-22 |
 | R-MOD-23 | `export.md` S-MOD-23 |
 | R-MOD-24 | `export.md` S-MOD-24 |
+| R-MOD-26 | `workspace.md` S-MOD-27 |
+| R-MOD-27 | `workspace.md` S-MOD-26 |
+| R-MOD-28 | `workspace.md` S-MOD-28 |
 
 ## Related docs
 
