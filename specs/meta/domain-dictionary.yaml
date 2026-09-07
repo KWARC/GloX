@@ -387,13 +387,30 @@ terms:
     preferred: Module description
     definition: >
       A FAU course module record created from the FAU modules catalog, with seeded Title, Inhalt,
-      and Lernziele statements and associated definition FloDown blocks.
+      and Lernziele statements and associated definition FloDown blocks. A description MAY be marked
+      as a duplicate of another already-created description (duplicateOfModuleId).
     technical_anchors:
       - prisma/schema.prisma ModuleDescription
       - src/server/modules/moduleCatalog.ts
     allowed_aliases:
       - label: ModuleDescription
         context: database model
+
+  marked_duplicate_module_description:
+    preferred: duplicate
+    definition: >
+      A Module description whose duplicateOfModuleId points at another Module description (the
+      original). The duplicate keeps its catalog Title only; Inhalt, Lernziele, and definitions are
+      not curated on that row. Workspace UI copy: “Marked duplicate of …”. Export uses this Title
+      plus the original’s annotated Inhalt and Lernziele.
+    technical_anchors:
+      - prisma/schema.prisma ModuleDescription.duplicateOfModuleId
+      - src/server/modules/moduleDuplicateGuards.ts
+    allowed_aliases:
+      - label: marked duplicate
+        context: workspace banner
+      - label: alias
+        context: export composition (not UI copy)
 
   flo_down_block_status:
     preferred: FloDown block status

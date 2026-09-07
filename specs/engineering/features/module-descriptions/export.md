@@ -6,6 +6,7 @@ upstream:
 compliance: []
 code:
   - src/lib/moduleDescriptionTex.ts
+  - src/lib/moduleDescriptionTexExport.ts
   - src/lib/prepareFloDownStatement.ts
   - src/lib/flodownUris.ts
   - src/components/module-descriptions/ModuleDescriptionLatexModal.tsx
@@ -18,7 +19,9 @@ code:
 ## Domain context
 
 Owns Curator/Admin export of MathHub-oriented sTeX for a ModuleDescription: one module file from the
-annotated title/inhalt/lernziele statements, plus one TeX file per extracted definition FloDown block.
+annotated title/inhalt/lernziele statements (or, for a marked duplicate, alias catalog title plus
+canonical Inhalt/Lernziele), plus one TeX file per extracted definition FloDown block on non-duplicate
+rows.
 
 Out of scope (sibling specs):
 
@@ -49,17 +52,32 @@ Out of scope (sibling specs):
 
 ## Business rules
 
-**S-MOD-11 (Event-Driven):** WHEN Curator or Admin export runs, `generateModuleDescriptionModuleTex`
-MUST produce sTeX for a file named `{moduleId}.{language}.tex` whose content is built from the three
-annotated statements under Title, Inhalt, and Lernziele und Kompetenzen section headings.
+**S-MOD-11 (Event-Driven):** WHEN Curator or Admin export runs for a row that is not a duplicate,
+`generateModuleDescriptionModuleTex` MUST produce sTeX for a file named `{moduleId}.{language}.tex`
+whose content is built from the three annotated statements under Title, Inhalt, and Lernziele und
+Kompetenzen section headings.
 
 **Upstream:** R-MOD-11
 
 **S-MOD-12 (Event-Driven):** WHEN Curator or Admin export runs, `generateModuleDescriptionTexPreview`
 MUST produce one TeX artifact per definition FloDown block associated with the ModuleDescription,
-named `{fileName}.{language}.tex`.
+named `{fileName}.{language}.tex`. Duplicate rows MUST NOT contribute definition TeX files.
 
 **Upstream:** R-MOD-12
+
+**S-MOD-23 (Event-Driven):** WHEN Curator or Admin export runs for a row with `duplicateOfModuleId`
+set, `composeModuleTexInputForExport` / `generateModuleDescriptionModuleTex` MUST name the file
+`{this.moduleId}.{this.language}.tex`, MUST build the Title section from this row’s retained catalog
+title as plain text, and MUST build Inhalt and Lernziele from the **canonical** row’s
+`inhaltStatement` and `lernzieleStatement`.
+
+**Upstream:** R-MOD-23
+
+**S-MOD-24 (Event-Driven):** WHEN Curator or Admin bulk export runs, the zip MUST include the module
+TeX file for every `ModuleDescription` including duplicates (`plannedTexZipFileNames`). Definition
+TeX files MUST be produced only for rows that are not duplicates.
+
+**Upstream:** R-MOD-24
 
 **S-MOD-15 (Ubiquitous):** The module detail UI MUST NOT offer TeX export controls to Extractor-role
 users; only Curator and Admin may invoke export.
@@ -70,8 +88,10 @@ users; only Curator and Admin may invoke export.
 
 | SDD rule | PRD rule | Test |
 | --- | --- | --- |
-| S-MOD-11 | R-MOD-11 | Gap |
-| S-MOD-12 | R-MOD-12 | Gap |
+| S-MOD-11 | R-MOD-11 | Gap (WASM serialize); compose path covered for non-duplicate via S-MOD-23 unit |
+| S-MOD-12 | R-MOD-12 | Gap (WASM serialize) |
+| S-MOD-23 | R-MOD-23 | `moduleDescriptionTex.duplicate.test.ts` — alias Title from catalog; Inhalt from canonical |
+| S-MOD-24 | R-MOD-24 | `moduleDescriptionTex.duplicate.test.ts` — zip names include alias and canonical module files |
 | S-MOD-15 | R-MOD-15 | Gap |
 
 ## Open documentation gaps

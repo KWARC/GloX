@@ -15,7 +15,9 @@ GloX turns FAU course module descriptions into MathHub-ready sTeX. Extractors, C
 search the FAU modules catalog, open a module workspace, annotate the seeded title, inhalt, and
 lernziele text with semantics, introduce new symbols with their definitions when needed, annotate
 those definitions in turn (which may introduce further symbols and definitions), and export a module
-TeX file plus definition TeX files. Shared FloDown and symbol rules apply via sibling PRDs.
+TeX file plus definition TeX files. Shared FloDown and symbol rules apply via sibling PRDs. GloXers
+may mark a module description as a **duplicate** of another already-created description so catalog
+clones share annotated Inhalt and Lernziele.
 
 ## Business rules
 
@@ -48,17 +50,20 @@ catalog entry and MUST reject creation when a description for the same module al
 
 **R-MOD-04 (Event-Driven):** WHEN an Extractor, Curator, or Admin works in a module description, the
 system MUST allow adding semantics to the title, inhalt, and lernziele statements — including marking
-definienda and inserting symrefs to local Symbols or MathHub concepts.
+definienda and inserting symrefs to local Symbols or MathHub concepts. This rule does **not** apply
+WHILE the description is marked as a duplicate of another (R-MOD-21).
 
 **R-MOD-05 (Event-Driven):** WHEN an Extractor, Curator, or Admin needs a new local Symbol while
 annotating a module description statement or definition, the system MUST create that Symbol together
 with a definition FloDown block associated with the ModuleDescription, using the module's export
-identity for definitions.
+identity for definitions. This rule does **not** apply WHILE the description is marked as a duplicate
+of another (R-MOD-21).
 
 **R-MOD-06 (Event-Driven):** WHEN an Extractor, Curator, or Admin works on an extracted definition in
 a module description, the system MUST allow adding semantics to that definition — including marking
 definienda and inserting symrefs — and WHEN that annotation requires a new local Symbol, the system
-MUST apply R-MOD-05 (which may introduce further definitions that are themselves annotated).
+MUST apply R-MOD-05 (which may introduce further definitions that are themselves annotated). This
+rule does **not** apply WHILE the description is marked as a duplicate of another (R-MOD-21).
 
 **R-MOD-07 (Ubiquitous):** At module description creation, the system MUST capture export identity
 (future repository, modules path, definitions path, language) using FAU module-description archive
@@ -79,10 +84,56 @@ status as read-only.
 **R-MOD-11 (Event-Driven):** WHEN a Curator or Admin exports a module description, the system MUST
 produce a module TeX file whose name is the module identifier plus language (for example
 `12345.de.tex`), structured under Title, Inhalt, and Lernziele und Kompetenzen sections from the
-annotated statements.
+annotated statements. WHEN the description is marked as a duplicate of another, the module TeX MUST
+follow R-MOD-23 instead of using only that description’s own three annotated statements.
 
 **R-MOD-12 (Event-Driven):** WHEN a Curator or Admin exports a module description, the system MUST
 also produce a TeX file for each extracted definition associated with that ModuleDescription.
+
+**R-MOD-19 (Event-Driven):** WHEN an Extractor, Curator, or Admin searches the module catalog, the
+system MUST, for each result that has known exact or near catalog peers on title, Inhalt, and
+Lernziele, inform the user of those peers without hiding the searched module identifier.
+
+**Rationale:** Users look up a specific module identifier; collapsing clones would hide that hit.
+
+**R-MOD-20 (Event-Driven):** WHEN an Extractor, Curator, or Admin marks a module description as a
+duplicate of another, the system MUST require that the other description already exists, MUST NOT
+allow the other description to itself be a duplicate, and MUST then remove extracted Inhalt,
+Lernziele, definitions, and related glossary blocks on **this** description while retaining this
+description’s catalog title. WHEN this description already exists, the system MUST warn before that
+removal. WHEN this description does not yet exist, the system MUST NOT show that deletion warning.
+The mark UI MUST NOT pre-select a catalog peer that has no description or that is itself a
+duplicate. WHEN more than one exact or near catalog peer already has a non-duplicate description,
+the mark UI MUST list those peers as potential duplicates, grouped by exact vs near.
+
+**Rationale:** Destructive FloDown delete is the same incident class as reset (data loss of curated
+statements and definitions). The original of a mark MUST already be a real description; an
+unpersisted catalog clone is not a valid default.
+
+**R-MOD-21 (State-Driven):** WHILE a module description is marked as a duplicate of another, the
+system MUST NOT allow adding or changing semantics on that description, and MUST NOT allow adding
+symbols or definitions on that description.
+
+**Applies as exception to:** R-MOD-04, R-MOD-05, R-MOD-06.
+
+**Rationale:** Duplicate descriptions are publication aliases, not a second semantic workspace.
+
+**R-MOD-22 (Event-Driven):** WHEN an Extractor, Curator, or Admin unmarks a duplicate, the system
+MUST restore an independent workspace by re-seeding title, Inhalt, and Lernziele from this module’s
+catalog entry.
+
+**R-MOD-23 (Event-Driven):** WHEN a Curator or Admin exports a module description that is marked as
+a duplicate of another, the system MUST produce a module TeX file named from **this** module
+identifier and language whose Title section is this description’s retained catalog title (plain
+text) and whose Inhalt and Lernziele sections are the **canonical** description’s annotated
+statements.
+
+**Rationale:** Near-duplicate titles can differ; title semantics stay on the canonical description
+only.
+
+**R-MOD-24 (Event-Driven):** WHEN a Curator or Admin exports all module descriptions, the system
+MUST include the module TeX file for each duplicate description as well as for each canonical
+description.
 
 ### Binding operator / compliance promises
 
@@ -116,6 +167,8 @@ semantics can pollute the MathHub archive path.
 - Reordering the Modules list by faculty or subject area
 - Catalog search filter or facet by faculty or subject area
 - German locale-specific sort of faculty or subject area as a product promise
+- Catalog duplicate detection algorithm details and file layout — SDD
+- Exam-number identity for catalog duplicates
 
 ## Traceability
 
@@ -135,11 +188,17 @@ semantics can pollute the MathHub archive path.
 | R-MOD-08 | `workspace.md` S-MOD-08 |
 | R-MOD-09 | `workspace.md` S-MOD-09 |
 | R-MOD-10 | `workspace.md` S-MOD-10 |
-| R-MOD-11 | `export.md` S-MOD-11 |
+| R-MOD-11 | `export.md` S-MOD-11, S-MOD-23 |
 | R-MOD-12 | `export.md` S-MOD-12 |
 | R-MOD-13 | `workspace.md` S-MOD-13 |
 | R-MOD-14 | `workspace.md` S-MOD-10, S-MOD-14 |
 | R-MOD-15 | `export.md` S-MOD-15 |
+| R-MOD-19 | `workspace.md` S-MOD-19 |
+| R-MOD-20 | `workspace.md` S-MOD-20 |
+| R-MOD-21 | `workspace.md` S-MOD-21 |
+| R-MOD-22 | `workspace.md` S-MOD-22 |
+| R-MOD-23 | `export.md` S-MOD-23 |
+| R-MOD-24 | `export.md` S-MOD-24 |
 
 ## Related docs
 

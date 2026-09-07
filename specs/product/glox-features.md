@@ -1,6 +1,6 @@
 # GloX — shipped features
 
-> **Layer:** Product inventory — orientation only. **Last verified:** 2026-08-25.
+> **Layer:** Product inventory — orientation only. **Last verified:** 2026-09-07.
 >
 > Parent brief: [`glox.md`](./glox.md)
 
@@ -35,8 +35,9 @@
 
 ## Module descriptions
 
-- **FAU module catalog search** — Search hierarchy from `MODULES_DIR`; show faculty and subject area under each catalog hit (when present) and order by faculty then subject area; same org subtitle on the in-progress Modules list.
+- **FAU module catalog search** — Search hierarchy from `MODULES_DIR`; show faculty and subject area under each catalog hit (when present) and order by faculty then subject area; same org subtitle on the in-progress Modules list. Hits with catalog clones show exact/near peer counts and identifiers; extracted vs duplicate icons on module ids.
 - **Module description workspace** — Seed title/inhalt/lernziele statements; extract definitions.
+- **Mark module description as duplicate** — Extractor+ mark a description as a duplicate of another already-created description (warns before deleting this module’s Inhalt, Lernziele, and definitions). Unmark re-seeds from this module’s catalog. Duplicate workspaces hide statement and definition panels. Curator/Admin TeX export uses the duplicate’s catalog title plus the original’s Inhalt and Lernziele.
 - **Module definition blocks** — Create FloDown blocks in module context (German default).
 
 ## Curation & export
