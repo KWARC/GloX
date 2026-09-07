@@ -152,6 +152,13 @@ omit the subtitle when both are null).
 
 **Upstream:** R-MOD-25, R-MOD-18
 
+**S-MOD-26 (Event-Driven):** WHEN `listModuleDescriptions` returns rows, each item MUST include
+`createdBy` with `firstName`, `lastName`, and `email`, and WHEN the Modules table on
+`/module-descriptions` renders a row, the UI MUST expose that attribution via an info control (tooltip
+with display name and email).
+
+**Upstream:** R-MOD-26
+
 **S-MOD-03 (Event-Driven):** WHEN `createModuleDescription` succeeds, the system MUST seed
 `titleStatement`, `inhaltStatement`, and `lernzieleStatement` from `seedStatementsFromCatalog` and
 MUST reject the request if a row already exists for that `moduleId`.
@@ -289,6 +296,7 @@ MUST NOT succeed for Extractor-role users.
 | S-MOD-18 | R-MOD-18 | `moduleCatalog.test.ts` — null when omitted; no invented “Unclassified”; hierarchy over JSON org |
 | S-MOD-02 | R-MOD-02 | Gap |
 | S-MOD-25 | R-MOD-25, R-MOD-18 | `moduleCatalog.test.ts` — `getModuleSearchEntry`; Modules table UI optional |
+| S-MOD-26 | R-MOD-26 | Gap (list UI optional) |
 | S-MOD-03 | R-MOD-03 | Gap |
 | S-MOD-04 | R-MOD-04 | Gap |
 | S-MOD-05 | R-MOD-05 | Gap |

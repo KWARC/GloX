@@ -769,6 +769,13 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
             where: { userId },
             select: { id: true },
           },
+          createdBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
         },
       }),
       prisma.moduleDescription.count({ where }),
@@ -793,6 +800,7 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
           updatedAt: row.updatedAt.toISOString(),
           duplicateOfModuleId: row.duplicateOfModuleId,
           isFavorite: row.favorites.length > 0,
+          createdBy: row.createdBy,
         };
       }),
     );

@@ -44,6 +44,10 @@ optional filter by index status.
 description list, the system MUST present each row’s faculty and subject area from the configured FAU
 hierarchy catalog beneath that module’s title when those values are present.
 
+**R-MOD-26 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin views the Modules
+table on `/module-descriptions`, the system MUST allow revealing who created each listed module
+description (display name and email).
+
 **R-MOD-03 (Event-Driven):** WHEN an Extractor, Curator, or Admin creates a module description for a
 catalog module, the system MUST seed title, inhalt, and lernziele statements from that module's
 catalog entry and MUST reject creation when a description for the same module already exists.
@@ -199,6 +203,7 @@ semantics can pollute the MathHub archive path.
 | R-MOD-18 | `workspace.md` S-MOD-18 |
 | R-MOD-02 | `workspace.md` S-MOD-02 |
 | R-MOD-25 | `workspace.md` S-MOD-25 |
+| R-MOD-26 | `workspace.md` S-MOD-26 |
 | R-MOD-03 | `workspace.md` S-MOD-03 |
 | R-MOD-04 | `workspace.md` S-MOD-04 |
 | R-MOD-05 | `workspace.md` S-MOD-05 |
