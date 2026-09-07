@@ -12,6 +12,7 @@ import {
   MODULE_DESCRIPTIONS_TEX_ZIP_FILE_NAME,
 } from "@/lib/texZipExport";
 import { ModuleDuplicateHint, ModuleIdWithDuplicateIcon } from "@/components/module-descriptions/ModuleDuplicateHint";
+import { UploadAttributionInfo } from "@/components/UploadAttributionInfo";
 import {
   INDEX_STATUS_CONFIG,
   INDEX_STATUS_OPTIONS,
@@ -305,7 +306,7 @@ function ModuleDescriptionsPage() {
           </Box>
         ) : (
           <>
-            <Table.ScrollContainer minWidth={720}>
+            <Table.ScrollContainer minWidth={780}>
               <Table
                 highlightOnHover
                 withTableBorder
@@ -329,10 +330,13 @@ function ModuleDescriptionsPage() {
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th w="12%">ID</Table.Th>
-                    <Table.Th w="44%">Title</Table.Th>
+                    <Table.Th w="40%">Title</Table.Th>
                     <Table.Th w="10%">Lang</Table.Th>
-                    <Table.Th w="18%">Status</Table.Th>
-                    <Table.Th w="16%">Updated</Table.Th>
+                    <Table.Th w="16%">Status</Table.Th>
+                    <Table.Th w="14%">Updated</Table.Th>
+                    <Table.Th ta="center" w="8%">
+                      Info
+                    </Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -373,6 +377,16 @@ function ModuleDescriptionsPage() {
                           <Text size="xs" c="dimmed">
                             {new Date(row.updatedAt).toLocaleDateString()}
                           </Text>
+                        </Table.Td>
+                        <Table.Td ta="center">
+                          <UploadAttributionInfo
+                            attributions={[
+                              {
+                                label: "Created by",
+                                user: row.createdBy,
+                              },
+                            ]}
+                          />
                         </Table.Td>
                       </Table.Tr>
                     );
