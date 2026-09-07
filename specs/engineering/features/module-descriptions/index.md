@@ -5,7 +5,7 @@ Non-binding orientation for the module description domain. Binding rules: PRD + 
 | Doc | Role |
 | --- | --- |
 | [`../../../prds/domains/module-descriptions.md`](../../../prds/domains/module-descriptions.md) | Binding PRD |
-| [`workspace.md`](./workspace.md) | SDD — catalog, create, statement/definition semantics, reset, delete, index status |
+| [`workspace.md`](./workspace.md) | SDD — catalog, duplicate hints, mark/unmark duplicate, create, statement/definition semantics, reset, delete, index status |
 | [`export.md`](./export.md) | SDD — module and definition TeX export |
 
 **Code anchors:** `src/serverFns/moduleDescription.server.ts`, `src/server/modules/moduleCatalog.ts`,
