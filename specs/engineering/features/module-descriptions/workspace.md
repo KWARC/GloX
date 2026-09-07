@@ -10,6 +10,7 @@ code:
   - src/server/modules/moduleDuplicateIndex.ts
   - src/server/modules/moduleDuplicateHints.ts
   - src/server/modules/moduleDuplicateGuards.ts
+  - src/server/modules/moduleDescriptionFavorite.test.ts
   - src/lib/moduleDuplicateHintDisplay.ts
   - src/routes/module-descriptions/index.tsx
   - src/routes/module-description/$moduleId.tsx
@@ -27,9 +28,9 @@ code:
 ## Domain context
 
 Owns catalog search (including hierarchy faculty / subject area on search hits), catalog duplicate
-hints, module description create/list, mark/unmark duplicate, seeded statement editing with
-semantics, definition FloDown blocks (including recursive symbol+definition creation), reset, delete,
-and index status role gating.
+hints, module description create/list, personal favorites on the in-progress Modules list,
+mark/unmark duplicate, seeded statement editing with semantics, definition FloDown blocks (including
+recursive symbol+definition creation), reset, delete, and index status role gating.
 
 Out of scope (sibling specs):
 
@@ -43,9 +44,9 @@ Out of scope (sibling specs):
 
 | Layer | Responsibility |
 | --- | --- |
-| `src/routes/module-descriptions/index.tsx` | Lists in-progress ModuleDescription rows and searches the FAU modules catalog; catalog search table and Modules table show muted hierarchy faculty / subject area under the title when present; catalog search annotates duplicate peers and extracted/duplicate icons; redirects unless the caller is Extractor, Curator, or Admin. |
+| `src/routes/module-descriptions/index.tsx` | Lists in-progress ModuleDescription rows and searches the FAU modules catalog; catalog search table and Modules table show muted hierarchy faculty / subject area under the title when present; catalog search annotates duplicate peers and extracted/duplicate icons; Modules table exposes per-row favorite toggle and **Show only favorites** (starts off); redirects unless the caller is Extractor, Curator, or Admin. |
 | `src/routes/module-description/$moduleId.tsx` | Hosts the module workspace: create, statements, definitions, mark/unmark duplicate, index status UI, reset/delete, and Curator/Admin export entry. Organization panel still uses per-module JSON `organizations`, not hierarchy search fields. WHILE marked duplicate, statement and definition panels are hidden. |
-| `src/serverFns/moduleDescription.server.ts` | Authenticates and mutates ModuleDescription rows, statement fields, definition creation, mark/unmark duplicate, reset, delete, and index status. `searchModuleDescriptions` uses `requireExtractorPlus` and returns `searchModules` results including org fields and duplicate hints. `listModuleDescriptions` includes hierarchy org fields per row via `getModuleSearchEntry`. |
+| `src/serverFns/moduleDescription.server.ts` | Authenticates and mutates ModuleDescription rows, statement fields, definition creation, mark/unmark duplicate, personal favorite toggle, reset, delete, and index status. `searchModuleDescriptions` uses `requireExtractorPlus` and returns `searchModules` results including org fields and duplicate hints. `listModuleDescriptions` includes hierarchy org fields per row via `getModuleSearchEntry`, caller `isFavorite`, and optional favorites-only filter. |
 | `src/server/modules/moduleCatalog.ts` | Loads the static FAU modules catalog from `hierarchy.json` / index; copies hierarchy `faculty` and `subjectArea` into search results; orders `searchModules` matches per S-MOD-17; `getModuleSearchEntry` uses hierarchy org fields (not per-module JSON) with optional JSON title override; seeds title, inhalt, and lernziele from per-module catalog JSON. |
 | `src/server/modules/moduleDuplicateIndex.ts` | Loads `MODULES_DIR/duplicates.json` once per process; missing file yields no hints. |
 | `src/server/modules/moduleDuplicateHints.ts` | C2 suggestion among exact then near peers using existing `ModuleDescription` rows. |
@@ -55,6 +56,7 @@ Out of scope (sibling specs):
 | `ModuleStatementsSection` / `useModuleStatementSemantics` | Edits the three statement fields and inserts definienda or symrefs on those statements. |
 | `ModuleDefinitionsSection` / `useModuleDefinitionSemantics` | Lists and semantically edits definition FloDown blocks; creates further symbols and definitions via shared FloDown serverFns. |
 | `prisma/schema.prisma` `ModuleDescription` | Stores seeded statements, export identity, index status, optional `duplicateOfModuleId`, and the relation to definition FloDown blocks. |
+| `prisma/schema.prisma` `ModuleDescriptionFavorite` | Named per-user favorite rows (`userId`, `moduleDescriptionId`, unique pair). Not a shared flag on `ModuleDescription`. FKs cascade on ModuleDescription or User delete. |
 
 ## Data contracts
 
@@ -70,6 +72,9 @@ Out of scope (sibling specs):
 | Defaults | `courses/FAU/module-descriptions`, `modules`, `defs`, `de` |
 | `IndexStatus` | `EXTRACTED`, `FINALIZED`, `SUBMITTED_TO_MATHHUB` (default `EXTRACTED`) |
 | Definition blocks | `FloDownBlock` with `moduleDescriptionId` set and `documentId` null; `filePath` = module `defsFilePath` |
+| List item `isFavorite` | Boolean for the **current caller** only. |
+| `listModuleDescriptions` filter | Existing `status` / `query` (`moduleId`); optional favorites-only flag, default off. A returned row MUST match every filter that is set. Pagination is over that combined set. |
+| `ModuleDescriptionFavorite` | `{ id, userId, moduleDescriptionId, createdAt }`; `@@unique([userId, moduleDescriptionId])`; `onDelete: Cascade` on both FKs. |
 
 Auth helpers in `moduleDescription.server.ts`:
 
@@ -111,10 +116,33 @@ per-module JSON `organizations` for missing hierarchy fields on those lists.
 **Upstream:** R-MOD-18
 
 **S-MOD-02 (Event-Driven):** WHEN `listModuleDescriptions` runs, the handler MUST call
-`requireExtractorPlus` and MUST return paginated ModuleDescription rows with optional `indexStatus`
-and `moduleId` filters.
+`requireExtractorPlus` and MUST return paginated ModuleDescription rows with optional `indexStatus`,
+`moduleId`, and favorites-only filters.
 
 **Upstream:** R-MOD-02
+
+**S-MOD-26 (Event-Driven):** WHEN `listModuleDescriptions` runs, the handler MUST call
+`requireExtractorPlus`, MUST include `isFavorite` for the authenticated caller on each item, and
+WHEN the caller requests favorites-only, MUST return only ModuleDescription rows that have a
+favorites-table row for that caller. WHEN favorites-only is combined with `indexStatus` or `moduleId`
+filters, the result MUST include only rows that satisfy every set filter. WHEN no rows match, the
+handler MUST return an empty `items` list (and a `total` of zero). The Modules table **Show only
+favorites** control MUST start off.
+
+**Upstream:** R-MOD-02, R-MOD-27, R-MOD-28
+
+**S-MOD-27 (Event-Driven):** WHEN the caller favorites or unfavorites a ModuleDescription from the
+Modules table, the dedicated toggle serverFn MUST call `requireExtractorPlus` and MUST insert or
+delete a row in the named favorites table for **that caller and that ModuleDescription only**. The
+Modules table MUST expose the toggle on each in-progress row.
+
+**Upstream:** R-MOD-26, R-MOD-13
+
+**S-MOD-28 (Ubiquitous):** List and toggle handlers MUST NOT return another user’s `isFavorite`, MUST
+NOT insert or delete another user’s favorites-table rows, and MUST NOT store favorites as a shared
+flag on `ModuleDescription` or as an implicit many-to-many join without a named model.
+
+**Upstream:** R-MOD-28
 
 **S-MOD-25 (Event-Driven):** WHEN `listModuleDescriptions` returns rows, each item MUST include
 `faculty` and `subjectArea` from hierarchy via `getModuleSearchEntry` (null when absent), and WHEN
@@ -188,6 +216,11 @@ FloDown blocks).
 
 **Upstream:** R-MOD-08
 
+**S-MOD-29 (Event-Driven):** WHEN `deleteModuleDescription` succeeds, the system MUST leave no
+favorites-table rows for that ModuleDescription.
+
+**Upstream:** R-MOD-26
+
 **S-MOD-09 (Event-Driven):** WHEN `resetModuleSemantics` succeeds, the system MUST delete all FloDown
 blocks for the ModuleDescription, MUST re-seed the three statement fields from the current catalog
 JSON, and MUST clean up Symbols orphaned by the deleted blocks.
@@ -234,7 +267,8 @@ the detail UI MUST show index status as read-only for Extractors.
 **Upstream:** R-MOD-10, R-MOD-14
 
 **S-MOD-13 (Ubiquitous):** Module description route loaders and dedicated module serverFns MUST reject
-unauthenticated callers and callers whose role is not Extractor, Curator, or Admin.
+unauthenticated callers and callers whose role is not Extractor, Curator, or Admin (includes the
+favorite toggle).
 
 **Upstream:** R-MOD-13
 
@@ -277,6 +311,10 @@ MUST NOT succeed for Extractor-role users.
 | S-MOD-20 | R-MOD-20 | `moduleDuplicates.integration.test.ts` + `moduleDuplicateHints.test.ts` — missing canonical / alias target / eligible originals (guard/helpers; no live Prisma) |
 | S-MOD-21 | R-MOD-21 | `moduleDuplicates.integration.test.ts` — statement and create-definition fail WHILE duplicate (guards) |
 | S-MOD-22 | R-MOD-22 | `moduleDuplicates.integration.test.ts` — unmark clears FK and re-seeds (policy; no live Prisma) |
+| S-MOD-26 | R-MOD-27 | `moduleDescriptionFavorite.test.ts` — `favoritesOnly` + `isFavorite` contract (integration waived) |
+| S-MOD-27 | R-MOD-26 | `moduleDescriptionFavorite.test.ts` — toggle export + `requireExtractorPlus` (integration waived) |
+| S-MOD-28 | R-MOD-28 | `moduleDescriptionFavorite.test.ts` — named model, unique pair, no shared boolean (integration waived) |
+| S-MOD-29 | R-MOD-26 | `moduleDescriptionFavorite.test.ts` — cascade on `moduleDescription` FK (integration waived) |
 
 ## Open documentation gaps
 

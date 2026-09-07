@@ -54,6 +54,7 @@ model User {
   updatedFloDownBlocks   FloDownBlock[]        @relation("FloDownBlockUpdatedBy")
   createdMarkReferences  MarkReference[]       @relation("MarkReferenceCreatedBy")
   createdModuleDescriptions ModuleDescription[] @relation("ModuleDescriptionCreatedBy")
+  moduleDescriptionFavorites ModuleDescriptionFavorite[] @relation("ModuleDescriptionFavorites")
   /// @deprecated Unused by application. Retained for existing Symbol rows.
   confirmedSymbols       Symbol[]
 }
@@ -86,6 +87,7 @@ model ModuleDescription {
   duplicates          ModuleDescription[] @relation("ModuleDescriptionDuplicates")
 
   floDownBlocks FloDownBlock[]
+  favorites     ModuleDescriptionFavorite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -93,6 +95,22 @@ model ModuleDescription {
   @@index([createdById])
   @@index([indexStatus])
   @@index([duplicateOfModuleId])
+}
+
+model ModuleDescriptionFavorite {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation("ModuleDescriptionFavorites", fields: [userId], references: [id], onDelete: Cascade)
+
+  moduleDescriptionId String
+  moduleDescription   ModuleDescription @relation(fields: [moduleDescriptionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, moduleDescriptionId])
+  @@index([userId])
+  @@index([moduleDescriptionId])
 }
 
 model Document {
