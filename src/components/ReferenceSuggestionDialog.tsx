@@ -28,6 +28,9 @@ import { FtmlPreview } from "./FtmlPreview";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 
+const SNIFFY_REVIEW_DIALOG_HEIGHT = "90dvh";
+const SNIFFY_REVIEW_DIALOG_WIDTH = "50vw";
+
 type Props = {
   opened: boolean;
   onClose: () => void;
@@ -166,6 +169,13 @@ export function ReferenceSuggestionDialog({
 
   const context = current ? getContext(originalText, current) : null;
   const complete = index >= suggestions.length;
+  const isSuggestionReview =
+    !catalogError &&
+    !loading &&
+    suggestions.length > 0 &&
+    !complete &&
+    Boolean(current) &&
+    Boolean(context);
   const selectedCandidateKey = selectedCandidate
     ? getSuggestedReferenceCandidateKey(selectedCandidate)
     : null;
@@ -267,11 +277,32 @@ export function ReferenceSuggestionDialog({
       opened={opened}
       onClose={onClose}
       title={<Text fw={600}>{title}</Text>}
-      size="lg"
+      size={SNIFFY_REVIEW_DIALOG_WIDTH}
       centered
       padding="lg"
       radius="md"
-      styles={{ body: { overflow: "hidden" } }}
+      styles={{
+        content: isSuggestionReview
+          ? {
+              width: SNIFFY_REVIEW_DIALOG_WIDTH,
+              height: SNIFFY_REVIEW_DIALOG_HEIGHT,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }
+          : undefined,
+        body: {
+          overflow: "hidden",
+          ...(isSuggestionReview
+            ? {
+                flex: 1,
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+              }
+            : {}),
+        },
+      }}
     >
       {catalogError ? (
         <Stack gap="md">
@@ -331,23 +362,22 @@ export function ReferenceSuggestionDialog({
           style={{
             display: "flex",
             flexDirection: "column",
-            maxHeight: "calc(100dvh - 160px)",
+            flex: 1,
             minHeight: 0,
+            height: "100%",
           }}
         >
-          <Stack gap="md" style={{ flex: "0 0 auto" }}>
+          <Stack gap="md" style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}>
             {floDownBlockStatement && (
               <Paper withBorder p="sm" radius="md">
                 <Text size="xs" c="dimmed" fw={600} mb={6}>
                   Content
                 </Text>
-                <Box mah={180} style={{ overflow: "auto" }}>
-                  <FtmlPreview
-                    ftmlAst={floDownBlockStatement}
-                    docId={floDownBlockId}
-                    declaredSymbolsInfo={declaredSymbolsInfo}
-                  />
-                </Box>
+                <FtmlPreview
+                  ftmlAst={floDownBlockStatement}
+                  docId={floDownBlockId}
+                  declaredSymbolsInfo={declaredSymbolsInfo}
+                />
               </Paper>
             )}
 
@@ -361,66 +391,56 @@ export function ReferenceSuggestionDialog({
                 {context.post}
               </Text>
             </Paper>
-          </Stack>
 
-          <Paper
-            withBorder
-            p="sm"
-            radius="md"
-            mt="md"
-            style={{
-              flex: "1 1 auto",
-              minHeight: 0,
-              overflowY: "auto",
-            }}
-          >
-            <Stack gap="sm">
-              <Group justify="space-between" align="flex-start">
-                <Stack gap={2}>
-                  <Text size="xs" c="dimmed" fw={600}>
-                    Match
-                  </Text>
-                  <Text size="sm">{current.text}</Text>
-                </Stack>
-                <Text size="xs" c="dimmed" fw={600}>
-                  {current.candidates.length} results
-                </Text>
-              </Group>
-
-              <TextInput
-                placeholder="Search symbolic target"
-                leftSection={<IconSearch size={16} />}
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.currentTarget.value)}
-              />
-
+            <Paper withBorder p="sm" radius="md">
               <Stack gap="sm">
-                <Stack gap={6}>
+                <Group justify="space-between" align="flex-start">
+                  <Stack gap={2}>
+                    <Text size="xs" c="dimmed" fw={600}>
+                      Match
+                    </Text>
+                    <Text size="sm">{current.text}</Text>
+                  </Stack>
                   <Text size="xs" c="dimmed" fw={600}>
-                    sn-ify results
+                    {current.candidates.length} results
                   </Text>
+                </Group>
 
-                  {current.candidates.map(renderCandidate)}
-                </Stack>
+                <TextInput
+                  placeholder="Search symbolic target"
+                  leftSection={<IconSearch size={16} />}
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.currentTarget.value)}
+                />
 
-                {searchQuery.trim() && (
+                <Stack gap="sm">
                   <Stack gap={6}>
                     <Text size="xs" c="dimmed" fw={600}>
-                      Search results
+                      sn-ify results
                     </Text>
 
-                    {searchResults.length > 0 ? (
-                      searchResults.map(renderCandidate)
-                    ) : (
-                      <Text size="xs" c="dimmed">
-                        No matching symbolic targets
-                      </Text>
-                    )}
+                    {current.candidates.map(renderCandidate)}
                   </Stack>
-                )}
+
+                  {searchQuery.trim() && (
+                    <Stack gap={6}>
+                      <Text size="xs" c="dimmed" fw={600}>
+                        Search results
+                      </Text>
+
+                      {searchResults.length > 0 ? (
+                        searchResults.map(renderCandidate)
+                      ) : (
+                        <Text size="xs" c="dimmed">
+                          No matching symbolic targets
+                        </Text>
+                      )}
+                    </Stack>
+                  )}
+                </Stack>
               </Stack>
-            </Stack>
-          </Paper>
+            </Paper>
+          </Stack>
 
           <Stack gap={6} mt="md" style={{ flex: "0 0 auto" }}>
             {error && (
