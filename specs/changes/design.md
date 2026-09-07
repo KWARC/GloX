@@ -1,159 +1,166 @@
-# Design: Module description catalog duplicates
+# Design: Module description favorites filter
 
 > **Layer:** *how* — **SDD / tech-spec delta** for the current stack. Copy from `_TEMPLATE/` into
 > `/specs/changes/`. Do not edit canonical tech specs until Archive.
 >
 > **Depends on:** Signed `clarify.md`; `proposal.md` reviewed. SDD = policy and boundaries on the current stack — not pseudo-code.
-> See [spec-authoring §7](../../engineering/spec-authoring.md#7-what-belongs-in-prd-sdd-and-code).
+> See [spec-authoring §7](../engineering/spec-authoring.md#7-what-belongs-in-prd-sdd-and-code).
 
 ---
 
 ## SDD delta
 
-Fold into [`workspace.md`](../../engineering/features/module-descriptions/workspace.md) and
-[`export.md`](../../engineering/features/module-descriptions/export.md) at Archive. At Archive, add
-a domain-dictionary term for a module description that is marked as a duplicate of another
-(preferred label to match UI copy).
+Fold at Archive into
+[`specs/engineering/features/module-descriptions/workspace.md`](../engineering/features/module-descriptions/workspace.md).
+Do not edit that canonical path until Archive.
 
-### Data contracts
+This SDD implements proposal PRD rules **R-MOD-26**, **R-MOD-27**, and **R-MOD-28**. It extends the
+in-progress Modules list only. **S-MOD-02** (paginated list, optional `indexStatus` and `moduleId`
+filters) and **S-MOD-13** (Extractor+ on dedicated module serverFns) stay in force. It does not change
+catalog search, workspace statement/definition editing, index-status role gates, FloDown, symbols, or
+export.
 
-**Catalog duplicate index file** (`MODULES_DIR/duplicates.json`, default `modules/duplicates.json`):
+### Domain context (delta)
 
-- Envelope: `version` (integer `1`), `generatedAt`, `fields`, `nearThreshold`, `modules`.
-- `modules` keys are `moduleId` strings. Omit identifiers that have no peers.
-- Each value has `exact` and `near` arrays (empty arrays MAY be omitted; readers treat missing as
-  empty). A peer MUST NOT appear in both arrays (**exact wins** at generation).
-- Exact peer: `{ moduleId, title }` (catalog title). Near peer: those fields plus `score` and
-  `nearKind` (`normalized` | `similar` | `mixed`).
-- No self-entries. If A lists B as exact, B lists A as exact (same for near). Arrays sorted by
-  numeric `moduleId`.
-- The file MUST NOT store who is extracted or who is marked duplicate.
+The Modules table on `/module-descriptions` remains a shared Extractor+ inventory. v1 adds a
+**personal** favorite per caller, stored in a named favorites table, a row toggle on that table, and
+an optional **Show only favorites** filter that stacks with existing list filters.
 
-**Prisma `ModuleDescription`:** nullable `duplicateOfModuleId` foreign key to another
-`ModuleDescription`. Canonical rows have null. Duplicate rows MUST NOT be used as a mark target.
-WHILE `duplicateOfModuleId` is set, `inhaltStatement` and `lernzieleStatement` MUST NOT hold
-curated semantics (empty or unused); `titleStatement` holds catalog title only; no definition
-`FloDownBlock` rows.
+Out of scope (proposal Non-goals / siblings):
 
-### Workspace (`workspace.md`)
+- Catalog search table
+- Module workspace (`$moduleId.tsx`)
+- Module TeX export — [`export.md`](../engineering/features/module-descriptions/export.md)
 
-**S-MOD-19 (Event-Driven):** WHEN `searchModuleDescriptions` returns catalog hits, the handler MUST
-read the catalog duplicate index and MUST attach, for each hit, that hit’s `exact` and `near` peer
-lists plus a **C2** suggestion: among `exact` peers prefer a `moduleId` that already has a
-`ModuleDescription` (lowest numeric id if several), else the same rule on `near` peers, else the
-lowest numeric peer id among `exact` then `near`. The search UI MUST keep the hit’s `moduleId`
-visible and MUST show U1 copy (exact vs near, suggestion title, whether that suggestion has a row,
-and `+N other catalog matches` when more than one peer exists). U1 copy MUST sit alongside the
-existing faculty/subject-area subtitle (**S-MOD-16**); it MUST NOT replace or hide that subtitle.
+### Architecture boundaries (delta)
 
-**Upstream:** R-MOD-19
+| Layer | Responsibility |
+| --- | --- |
+| `prisma/schema.prisma` | Named `ModuleDescriptionFavorite` model (schema below). Not implicit many-to-many, not a flag on `ModuleDescription`. Unique `(userId, moduleDescriptionId)`. FKs cascade when the ModuleDescription or User is deleted. |
+| `src/serverFns/moduleDescription.server.ts` | `listModuleDescriptions` stays `requireExtractorPlus`; each item includes whether the **caller** favorited that row; optional favorites-only filter uses only the caller’s favorites table rows and stacks with existing `status` / `query` filters. Dedicated toggle serverFn uses `requireExtractorPlus` and inserts or deletes only the caller’s row. |
+| `src/routes/module-descriptions/index.tsx` | Modules table: per-row favorite control; **Show only favorites** starts off; empty combined result shows an empty table. Catalog search table unchanged. |
 
-**S-MOD-20 (Event-Driven):** WHEN mark-as-duplicate runs, the handler MUST call
-`requireExtractorPlus`, MUST reject if the target `moduleId` has no `ModuleDescription` row, MUST
-reject if the target row has `duplicateOfModuleId` set, MUST reject if the target is this same row,
-MUST persist `duplicateOfModuleId` on this row, MUST delete this module’s definition FloDown blocks
-with the same orphan-symbol cleanup as `resetModuleSemantics` (R-FDB-03), MUST keep this row’s
-catalog title, and MUST drop curated Inhalt and Lernziele on this row. If this `moduleId` has no
-row yet, the workspace MUST create it first (existing `createModuleDescription`) then mark. The UI
-MUST show the deletion warning only WHEN a row already exists for this module; the warning text
-MUST be that extracted Inhalt, Lernziele, definitions, and related glossary blocks on this module
-will be permanently removed. The UI MUST pre-fill the canonical `moduleId` only from an exact (else
-near) catalog peer that already has a non-duplicate `ModuleDescription`. The UI MUST list those
-eligible peers as `Potential duplicates: Exact (…)` and/or `Near (…)` when any exist.
+### Data contracts (delta)
 
-**Upstream:** R-MOD-20
+| Field / enum | Values / notes |
+| --- | --- |
+| List item `isFavorite` | Boolean for the **current caller** only. |
+| `listModuleDescriptions` filter | Existing `status` / `query` (`moduleId`); new optional favorites-only flag, default off. A returned row MUST match every filter that is set. Pagination (`page`, `pageSize`, `total`) is over that combined set. |
 
-**S-MOD-21 (State-Driven):** WHILE `duplicateOfModuleId` is set, `updateModuleDescriptionStatement`,
-`updateModuleDescriptionAst`, `moduleDescriptionSymbolicRef`, `createModuleDefinitionBlock`, and
-shared FloDown mutations targeting this module’s blocks MUST fail; the workspace UI MUST disable
-semantic editing and definition/symbol addition.
+**Favorites table (Prisma, Apply into `prisma/schema.prisma`):** named model `ModuleDescriptionFavorite`.
+Not a boolean on `ModuleDescription`. Not Prisma implicit M2M.
 
-**Upstream:** R-MOD-21
+```prisma
+model ModuleDescriptionFavorite {
+  id String @id @default(uuid())
 
-**S-MOD-22 (Event-Driven):** WHEN unmark-duplicate runs, the handler MUST call
-`requireExtractorPlus`, MUST clear `duplicateOfModuleId`, and MUST re-seed title, Inhalt, and
-Lernziele from the current catalog JSON for this `moduleId` (same seed path as
-`resetModuleSemantics` without requiring a prior reset).
+  userId String
+  user   User   @relation("ModuleDescriptionFavorites", fields: [userId], references: [id], onDelete: Cascade)
 
-**Upstream:** R-MOD-22
+  moduleDescriptionId String
+  moduleDescription   ModuleDescription @relation(fields: [moduleDescriptionId], references: [id], onDelete: Cascade)
 
-**S-MOD-01** is unchanged except search payload growth (**S-MOD-19**). **S-MOD-04–S-MOD-06** remain
-the mutation paths; **S-MOD-21** is the alias guard. Catalog faculty/subject-area rules
-**S-MOD-16–18** are unchanged.
+  createdAt DateTime @default(now())
 
-Offline generation: existing detector MUST emit this file shape (`--match` exact and near, then
-map). The running app MUST NOT scan all catalog module JSON files to compute peers.
+  @@unique([userId, moduleDescriptionId])
+  @@index([userId])
+  @@index([moduleDescriptionId])
+}
+```
 
-### Export (`export.md`)
+On `User`, add `moduleDescriptionFavorites ModuleDescriptionFavorite[] @relation("ModuleDescriptionFavorites")`.
+On `ModuleDescription`, add `favorites ModuleDescriptionFavorite[]`. Do not add a shared favorite
+boolean on `ModuleDescription`. `onDelete: Cascade` on `moduleDescription` satisfies **S-MOD-29**.
+Cascade on `user` drops that user’s favorite rows if the user is deleted (referential integrity;
+not a new product surface).
 
-**S-MOD-23 (Event-Driven):** WHEN Curator or Admin export runs for a row with `duplicateOfModuleId`
-set, `generateModuleDescriptionModuleTex` MUST name the file `{this.moduleId}.{this.language}.tex`,
-MUST build the Title section from this row’s retained catalog title as plain text, and MUST build
-Inhalt and Lernziele from the **canonical** row’s `inhaltStatement` and `lernzieleStatement`.
+### Business rules (add)
 
-**Upstream:** R-MOD-23
+**S-MOD-26 (Event-Driven):** WHEN `listModuleDescriptions` runs, the handler MUST call
+`requireExtractorPlus`, MUST include `isFavorite` for the authenticated caller on each item, and
+WHEN the caller requests favorites-only, MUST return only ModuleDescription rows that have a
+favorites-table row for that caller. WHEN favorites-only is combined with `indexStatus` or `moduleId`
+filters, the result MUST include only rows that satisfy every set filter. WHEN no rows match, the
+handler MUST return an empty `items` list (and a `total` of zero). The Modules table **Show only
+favorites** control MUST start off.
 
-**S-MOD-24 (Event-Driven):** WHEN Curator or Admin bulk export runs, the zip MUST include the module
-TeX file for every `ModuleDescription` including duplicates. Definition TeX files MUST be produced
-only for rows that are not duplicates (canonical bodies).
+**Upstream:** R-MOD-02, R-MOD-27, R-MOD-28
 
-**Upstream:** R-MOD-24
+**S-MOD-27 (Event-Driven):** WHEN the caller favorites or unfavorites a ModuleDescription from the
+Modules table, the dedicated toggle serverFn MUST call `requireExtractorPlus` and MUST insert or
+delete a row in the named favorites table for **that caller and that ModuleDescription only**. The
+Modules table MUST expose the toggle on each in-progress row.
 
-Existing **S-MOD-11** applies to non-duplicate rows. **S-MOD-12** applies only to definition blocks
-that remain (canonical). **S-MOD-15** is unchanged.
+**Upstream:** R-MOD-26, R-MOD-13
 
----
+**S-MOD-28 (Ubiquitous):** List and toggle handlers MUST NOT return another user’s `isFavorite`, MUST
+NOT insert or delete another user’s favorites-table rows, and MUST NOT store favorites as a shared
+flag on `ModuleDescription` or as an implicit many-to-many join without a named model.
+
+**Upstream:** R-MOD-28
+
+**S-MOD-29 (Event-Driven):** WHEN `deleteModuleDescription` succeeds, the system MUST leave no
+favorites-table rows for that ModuleDescription.
+
+**Upstream:** R-MOD-26 (persistence identity of the description); Clarify delete resolution
+
+### Existing rules (unchanged; still apply)
+
+**S-MOD-02** — `listModuleDescriptions` MUST call `requireExtractorPlus` and MUST return paginated
+rows with optional `indexStatus` and `moduleId` filters (now also favorites-only per S-MOD-26).
+
+**Upstream:** R-MOD-02
+
+**S-MOD-08** — delete still removes the ModuleDescription, definition blocks, and orphaned Symbols;
+favorites cleanup is S-MOD-29.
+
+**Upstream:** R-MOD-08
+
+**S-MOD-13** — Module description route loaders and dedicated module serverFns MUST reject callers
+who are not Extractor, Curator, or Admin (includes the favorite toggle).
+
+**Upstream:** R-MOD-13
 
 ## Boundaries
 
 | Area | Paths / identifiers |
 | --- | --- |
-| Code | `scripts/find-module-description-duplicates.mjs`, `scripts/moduleDescriptionDuplicates.mjs`; `src/server/modules/` catalog + duplicate-index load; `src/serverFns/moduleDescription.server.ts`; `src/routes/module-descriptions/index.tsx`; `src/routes/module-description/$moduleId.tsx`; statement/definition sections and hooks; `src/lib/moduleDescriptionTex.ts`, `src/lib/moduleDescriptionTexExport.ts` |
-| Data | `MODULES_DIR/duplicates.json`; `ModuleDescription.duplicateOfModuleId`; FloDown blocks on mark (delete) |
-| Tenants / tiers | N/A — role gates Extractor+ / Curator+ as today |
-
-| Layer | Responsibility |
-| --- | --- |
-| Offline detector | Writes the module-keyed duplicate index from catalog JSON three-field signatures and MUST assert symmetry. |
-| Catalog / search server | Loads the index once per process (same directory as the module catalog) and attaches U1 hint payloads to search hits using live `ModuleDescription` existence for C2. |
-| Workspace server | Authenticates mark/unmark, enforces T1 and no alias-of-alias, deletes FloDown on mark, rejects semantic mutations on duplicates. |
-| Workspace UI | Shows U1 annotations, always offers mark-as-duplicate, warns before mark, disables editors on duplicates. |
-| TeX export | Composes duplicate module files per S-MOD-23 and includes them in bulk zip per S-MOD-24. |
+| Code | `prisma/schema.prisma`; `src/serverFns/moduleDescription.server.ts` (`listModuleDescriptions`, new toggle, `deleteModuleDescription` cascade); `src/routes/module-descriptions/index.tsx` (Modules table only) |
+| Data | `ModuleDescriptionFavorite` in `prisma/schema.prisma` (schema in Data contracts); PostgreSQL migration |
+| Tenants / tiers | N/A — role gate remains Extractor+; isolation is per `userId`, not a tenant product |
+| Out of blast radius | Catalog search; `$moduleId.tsx`; FloDown; symbols; export; JWT cookies; Document ownership |
 
 ## ADR alignment
 
-Pass — no new ADR. FloDown WASM remains client-only for TeX. Duplicate mark is a server mutation
-plus cascade delete already owned by module reset.
+Pass — no new or superseded `D-*` atom. Do not introduce a general user-preferences platform.
 
 ## Operations
 
 | Concern | Link or N/A |
 | --- | --- |
 | Vendors | N/A |
-| Deployment / flags | After catalog refresh, operators regenerate `duplicates.json` with the detector (`pnpm detect:module-duplicates` plus emit map). Missing file: search MUST still work and MUST omit duplicate hints. |
+| Deployment / flags | Prisma migrate on deploy; no new env vars |
 
 ## Test mapping
 
-| Rule ID / summary | Test (file or describe block) | Layer (integration / unit / E2E) |
+| Rule ID / summary | Test (file or describe block) | Layer |
 | --- | --- | --- |
-| S-MOD-19 search hints + C2 | Unit: C2 pick among peers given a set of existing ids. Integration: search hit for `62083` includes exact peer `42438` when the index file says so. | unit + integration |
-| R-MOD-19 / U1 does not hide hit | Integration or component: result still lists the queried `moduleId`. | integration |
-| S-MOD-20 mark rejects missing canonical | Integration: mark of A→B fails if B has no row. | integration |
-| S-MOD-20 mark rejects alias target | Integration: mark A→B fails if B is already a duplicate. | integration |
-| S-MOD-20 mark UI eligible originals | Unit: prefill/list only persisted non-duplicate peers; omit unpersisted C2 fallback. | unit |
-| S-MOD-21 MUST NOT mutate alias | Integration: statement update and create definition fail. | integration |
-| S-MOD-22 unmark re-seeds | Integration: three catalog fields restored; `duplicateOfModuleId` null. | integration |
-| S-MOD-23 E1 Title | Unit: TeX Title from alias catalog title; Inhalt from canonical statements. | unit |
-| S-MOD-24 bulk zip | Unit/integration: zip paths include both `{alias}.{lang}.tex` and `{canonical}.{lang}.tex`; no alias definition files. | unit |
-| Index file symmetry / exact-wins | Unit: generator or loader rejects or never emits a peer in both lists; A↔B exact. | unit |
-| R-MOD-13 / Extractor+ | Integration: unauthenticated mark rejected. | integration |
-| R-MOD-15 | Unchanged: Extractor still cannot export. | Gap (existing) |
+| S-MOD-27 / R-MOD-26 — favorite insert and unfavorite delete for caller | Integration: toggle then DB row present / absent for that user + ModuleDescription | integration |
+| S-MOD-26 / R-MOD-27 — favorites-only list returns only caller’s favorites | Integration: two users, two modules; caller A favorites one; A’s favorites-only list is that one row | integration |
+| S-MOD-26 / R-MOD-27 — favorites-only + status stacks | Integration: favorite EXTRACTED and FINALIZED; filter favorites + FINALIZED → only FINALIZED favorite | integration |
+| S-MOD-26 / R-MOD-27 — empty combined list | Integration: favorites-only with no matching rows → `items` `[]`, `total` 0 | integration |
+| S-MOD-26 — list `isFavorite` is caller’s | Integration: B favorited a row that A did not; A’s list `isFavorite` false for that row | integration |
+| S-MOD-28 / R-MOD-28 — MUST NOT mutate another user’s favorite | Negative integration: A cannot delete B’s favorites-table row via toggle; B’s row still present | integration |
+| S-MOD-28 — MUST NOT store as shared ModuleDescription flag / implicit M2M | Schema / contract: named model + unique pair; `ModuleDescription` has no shared favorite boolean | unit / schema |
+| S-MOD-29 — delete ModuleDescription removes favorites rows | Integration: favorite then `deleteModuleDescription`; no leftover favorites rows | integration |
+| S-MOD-13 — toggle rejects unauthenticated / non-Extractor+ | Integration or existing gap pattern for dedicated module serverFns | integration |
+| UI toggle + Show only favorites starts off | Optional beyond server contract; no E2E requirement (Playwright not configured) | optional |
 
 ---
 
 <!-- Upstream review sign-off (REVIEW_GUIDE §1.4) — add after review:
 
-Upstream review: <name> — <date>
+Upstream review: Keerthan K — 2026-09-07
 Scope: design
 Teach-back: confirmed
 -->

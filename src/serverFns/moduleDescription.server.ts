@@ -728,14 +728,16 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
       pageSize?: number;
       status?: IndexStatus | null;
       query?: string;
+      favoritesOnly?: boolean;
     }) => data,
   )
   .handler(async ({ data }) => {
-    await requireExtractorPlus();
+    const { userId } = await requireExtractorPlus();
 
     const page = Math.max(1, data.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, data.pageSize ?? 20));
     const query = data.query?.trim() ?? "";
+    const favoritesOnly = Boolean(data.favoritesOnly);
 
     const where = {
       ...(data.status ? { indexStatus: data.status } : {}),
@@ -746,6 +748,7 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
             ],
           }
         : {}),
+      ...(favoritesOnly ? { favorites: { some: { userId } } } : {}),
     };
 
     const [rows, total] = await Promise.all([
@@ -762,6 +765,10 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
           language: true,
           updatedAt: true,
           duplicateOfModuleId: true,
+          favorites: {
+            where: { userId },
+            select: { id: true },
+          },
         },
       }),
       prisma.moduleDescription.count({ where }),
@@ -785,11 +792,43 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
           language: row.language,
           updatedAt: row.updatedAt.toISOString(),
           duplicateOfModuleId: row.duplicateOfModuleId,
+          isFavorite: row.favorites.length > 0,
         };
       }),
     );
 
     return { items, total, page, pageSize };
+  });
+
+export const toggleModuleDescriptionFavorite = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: { moduleDescriptionId: string; favorite: boolean }) => data,
+  )
+  .handler(async ({ data }) => {
+    const { userId } = await requireExtractorPlus();
+    const moduleDescriptionId = data.moduleDescriptionId.trim();
+
+    const row = await prisma.moduleDescription.findUnique({
+      where: { id: moduleDescriptionId },
+      select: { id: true },
+    });
+    if (!row) throw new Error("Module description not found");
+
+    if (data.favorite) {
+      await prisma.moduleDescriptionFavorite.upsert({
+        where: {
+          userId_moduleDescriptionId: { userId, moduleDescriptionId },
+        },
+        create: { userId, moduleDescriptionId },
+        update: {},
+      });
+    } else {
+      await prisma.moduleDescriptionFavorite.deleteMany({
+        where: { userId, moduleDescriptionId },
+      });
+    }
+
+    return { moduleDescriptionId, isFavorite: data.favorite };
   });
 
 export const listModuleDescriptionsForTexExport = createServerFn({ method: "POST" }).handler(

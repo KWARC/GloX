@@ -2,6 +2,7 @@ import {
   listModuleDescriptions,
   listModuleDescriptionsForTexExport,
   searchModuleDescriptions,
+  toggleModuleDescriptionFavorite,
 } from "@/serverFns/moduleDescription.server";
 import {
   generateAllModuleDescriptionTexFiles,
@@ -18,6 +19,7 @@ import {
   IndexStatus,
 } from "@/types/indexStatus";
 import {
+  ActionIcon,
   Alert,
   Badge,
   Box,
@@ -28,15 +30,17 @@ import {
   Pagination,
   Select,
   Stack,
+  Switch,
   Table,
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { currentUser } from "@/server/auth/currentUser";
-import { Download } from "lucide-react";
+import { Download, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const LIST_PAGE_SIZE = 20;
@@ -66,6 +70,8 @@ function ModuleDescriptionsPage() {
   const [statusFilter, setStatusFilter] = useState<IndexStatus | null>(null);
   const [listQuery, setListQuery] = useState("");
   const [debouncedListQuery, setDebouncedListQuery] = useState("");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
@@ -79,7 +85,7 @@ function ModuleDescriptionsPage() {
 
   useEffect(() => {
     setListPage(1);
-  }, [statusFilter, debouncedListQuery]);
+  }, [statusFilter, debouncedListQuery, favoritesOnly]);
 
   const { data: auth } = useQuery({
     queryKey: ["currentUser"],
@@ -131,6 +137,7 @@ function ModuleDescriptionsPage() {
       listPage,
       statusFilter,
       debouncedListQuery,
+      favoritesOnly,
     ],
     queryFn: () =>
       listModuleDescriptions({
@@ -139,6 +146,7 @@ function ModuleDescriptionsPage() {
           pageSize: LIST_PAGE_SIZE,
           status: statusFilter,
           query: debouncedListQuery || undefined,
+          favoritesOnly,
         },
       }),
   });
@@ -146,6 +154,16 @@ function ModuleDescriptionsPage() {
   const listItems = listData?.items ?? [];
   const listTotal = listData?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(listTotal / LIST_PAGE_SIZE));
+
+  const favoriteMutation = useMutation({
+    mutationFn: (input: { moduleDescriptionId: string; favorite: boolean }) =>
+      toggleModuleDescriptionFavorite({ data: input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["module-descriptions-list"],
+      });
+    },
+  });
 
   return (
     <Stack p="md" gap="lg" maw={1200} mx="auto" w="100%">
@@ -248,6 +266,14 @@ function ModuleDescriptionsPage() {
                 Download all
               </Button>
             )}
+            <Switch
+              label="Show only favorites"
+              checked={favoritesOnly}
+              onChange={(event) =>
+                setFavoritesOnly(event.currentTarget.checked)
+              }
+              size="sm"
+            />
             <Select
               label="Filter by status"
               placeholder="All statuses"
@@ -328,10 +354,11 @@ function ModuleDescriptionsPage() {
               >
                 <Table.Thead>
                   <Table.Tr>
+                    <Table.Th w="6%"></Table.Th>
                     <Table.Th w="12%">ID</Table.Th>
-                    <Table.Th w="44%">Title</Table.Th>
+                    <Table.Th w="40%">Title</Table.Th>
                     <Table.Th w="10%">Lang</Table.Th>
-                    <Table.Th w="18%">Status</Table.Th>
+                    <Table.Th w="16%">Status</Table.Th>
                     <Table.Th w="16%">Updated</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
@@ -343,6 +370,45 @@ function ModuleDescriptionsPage() {
                       .join(" — ");
                     return (
                       <Table.Tr key={row.id}>
+                        <Table.Td>
+                          <Tooltip
+                            label={
+                              row.isFavorite
+                                ? "Remove from favorites"
+                                : "Add as favorite"
+                            }
+                            withArrow
+                            openDelay={200}
+                          >
+                            <ActionIcon
+                              variant="subtle"
+                              color={row.isFavorite ? "yellow" : "gray"}
+                              aria-label={
+                                row.isFavorite
+                                  ? "Remove from favorites"
+                                  : "Add as favorite"
+                              }
+                              disabled={favoriteMutation.isPending}
+                              onClick={() => {
+                                if (row.isFavorite) {
+                                  const confirmed = window.confirm(
+                                    "Remove this module description from your favorites?",
+                                  );
+                                  if (!confirmed) return;
+                                }
+                                favoriteMutation.mutate({
+                                  moduleDescriptionId: row.id,
+                                  favorite: !row.isFavorite,
+                                });
+                              }}
+                            >
+                              <Star
+                                size={16}
+                                fill={row.isFavorite ? "currentColor" : "none"}
+                              />
+                            </ActionIcon>
+                          </Tooltip>
+                        </Table.Td>
                         <Table.Td>
                           <ModuleIdWithDuplicateIcon
                             moduleId={row.moduleId}
