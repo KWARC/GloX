@@ -817,7 +817,7 @@ declare namespace wasm_bindgen {
 
     export function rdf_encode(s: string): string | undefined;
 
-    export function run(): void;
+    export function run_flodown(): void;
 
     /**
      * Globally set the URL of the FTML/FLAMS backend to use
@@ -841,7 +841,7 @@ declare interface InitOutput {
     readonly flodown_getUri: (a: number, b: number) => void;
     readonly flodown_isModule: (a: number) => number;
     readonly flodown_mountTo: (a: number, b: number) => void;
-    readonly run: () => void;
+    readonly run_flodown: () => void;
     readonly setBackendUrl: (a: number, b: number) => void;
     readonly clear_cache: () => void;
     readonly print_cache: () => void;
@@ -880,16 +880,16 @@ declare interface InitOutput {
     readonly solutions_to_jstring: (a: number, b: number) => void;
     readonly solutions_to_solutions: (a: number, b: number) => void;
     readonly rdf_encode: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_36817: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_36819: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_26307: (a: number, b: number, c: number) => number;
-    readonly __wasm_bindgen_func_elem_30235: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_11806: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_29988: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_30235_4: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_21714: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_29987: (a: number, b: number) => void;
-    readonly __wasm_bindgen_func_elem_30234: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_36331: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_36333: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_25919: (a: number, b: number, c: number) => number;
+    readonly __wasm_bindgen_func_elem_29848: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_11451: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_29601: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_29848_4: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_21318: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_29600: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_29847: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
