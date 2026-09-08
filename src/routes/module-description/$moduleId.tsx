@@ -20,6 +20,7 @@ import {
   getModuleDescriptionPage,
   markModuleDescriptionDuplicate,
   resetModuleSemantics,
+  toggleModuleDescriptionFavorite,
   unmarkModuleDescriptionDuplicate,
   updateModuleDescriptionIndexStatus,
 } from "@/serverFns/moduleDescription.server";
@@ -156,6 +157,15 @@ function ModuleDescriptionDetailPage() {
     },
   });
 
+  const favoriteMutation = useMutation({
+    mutationFn: (input: { moduleDescriptionId: string; favorite: boolean }) =>
+      toggleModuleDescriptionFavorite({ data: input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
+      void queryClient.invalidateQueries({ queryKey: ["module-descriptions-list"] });
+    },
+  });
+
   const statusMutation = useMutation({
     mutationFn: ({
       moduleDescriptionId,
@@ -288,6 +298,26 @@ function ModuleDescriptionDetailPage() {
                   Mark as duplicate
                 </Button>
               )}
+              <Button
+                variant="light"
+                color={mod.isFavorite ? "red" : "yellow"}
+                c={mod.isFavorite ? "red" : "yellow.8"}
+                loading={favoriteMutation.isPending}
+                onClick={() => {
+                  if (mod.isFavorite) {
+                    const confirmed = window.confirm(
+                      "Remove this module description from your favourites?",
+                    );
+                    if (!confirmed) return;
+                  }
+                  favoriteMutation.mutate({
+                    moduleDescriptionId: mod.id,
+                    favorite: !mod.isFavorite,
+                  });
+                }}
+              >
+                {mod.isFavorite ? "Remove from favourites" : "Add as favourites"}
+              </Button>
               <Button
                 variant="light"
                 color="orange"

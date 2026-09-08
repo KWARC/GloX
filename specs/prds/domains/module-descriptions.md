@@ -142,8 +142,9 @@ MUST include the module TeX file for each duplicate description as well as for e
 description.
 
 **R-MOD-26 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin marks or unmarks an
-in-progress module description as a favorite from the module description list, the system MUST
-persist that choice as that user’s personal favorite of that description.
+in-progress module description as a favorite from the module description list or from an in-progress
+module workspace, the system MUST persist that choice as that user’s personal favorite of that
+description.
 
 **R-MOD-27 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin turns on “Show only
 favorites” on the module description list, the system MUST return only module descriptions that user
@@ -193,7 +194,6 @@ semantics can pollute the MathHub archive path.
 - Favoriting catalog modules that have no in-progress ModuleDescription
 - Shared or Admin-visible favorite lists
 - Pinning favorites to the top of the unfiltered Modules list
-- Favorite control on the module workspace
 
 ## Traceability
 

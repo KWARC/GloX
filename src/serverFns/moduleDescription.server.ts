@@ -199,7 +199,7 @@ export const searchModuleDescriptions = createServerFn({ method: "GET" })
 export const getModuleDescriptionPage = createServerFn({ method: "POST" })
   .inputValidator((data: { moduleId: string }) => data)
   .handler(async ({ data }) => {
-    await requireExtractorPlus();
+    const { userId } = await requireExtractorPlus();
 
     const moduleId = data.moduleId.trim();
     let catalog;
@@ -220,6 +220,10 @@ export const getModuleDescriptionPage = createServerFn({ method: "POST" })
         floDownBlocks: {
           where: { documentId: null },
           orderBy: { createdAt: "asc" },
+        },
+        favorites: {
+          where: { userId },
+          select: { id: true },
         },
       },
     });
@@ -293,6 +297,7 @@ export const getModuleDescriptionPage = createServerFn({ method: "POST" })
             defsFilePath: dbRow.defsFilePath,
             language: dbRow.language,
             indexStatus: dbRow.indexStatus,
+            isFavorite: dbRow.favorites.length > 0,
             definitionBlocks: dbRow.floDownBlocks.map((block) => ({
               id: block.id,
               originalText: block.originalText,
