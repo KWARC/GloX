@@ -8,6 +8,7 @@ import { ModuleDefinitionsSection } from "@/components/module-descriptions/Modul
 import { ModuleDescriptionLatexModal } from "@/components/module-descriptions/ModuleDescriptionLatexModal";
 import { ModuleStatementsSection } from "@/components/module-descriptions/ModuleStatementsSection";
 import { eligibleMarkTargetIds, pickMarkCanonicalId } from "@/lib/moduleDuplicateHintDisplay";
+import { defaultDefsFilePath } from "@/lib/moduleDefsFilePath";
 import {
   composeModuleTexInputForExport,
   generateModuleDescriptionTexPreview,
@@ -42,7 +43,7 @@ import { useMediaQuery } from "@mantine/hooks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { currentUser } from "@/server/auth/currentUser";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export const Route = createFileRoute("/module-description/$moduleId")({
   loader: async () => {
@@ -76,6 +77,7 @@ function ModuleDescriptionDetailPage() {
   const [futureRepo, setFutureRepo] = useState("courses/FAU/module-descriptions");
   const [modulesFilePath, setModulesFilePath] = useState("modules");
   const [defsFilePath, setDefsFilePath] = useState("defs");
+  const defsPathUserEditedRef = useRef(false);
   const [language, setLanguage] = useState("de");
 
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -216,6 +218,11 @@ function ModuleDescriptionDetailPage() {
       setCanonicalModuleId((current) => current || suggested);
     }
   }, [data?.duplicateHint]);
+
+  useEffect(() => {
+    if (defsPathUserEditedRef.current) return;
+    setDefsFilePath(defaultDefsFilePath(data?.searchEntry?.subjectArea));
+  }, [data?.searchEntry?.subjectArea]);
 
   if (isLoading) {
     return (
@@ -431,7 +438,10 @@ function ModuleDescriptionDetailPage() {
                 <>
                   <TextInput label="futureRepo" value={futureRepo} onChange={(e) => setFutureRepo(e.currentTarget.value)} />
                   <TextInput label="modules path" value={modulesFilePath} onChange={(e) => setModulesFilePath(e.currentTarget.value)} />
-                  <TextInput label="defs path" value={defsFilePath} onChange={(e) => setDefsFilePath(e.currentTarget.value)} />
+                  <TextInput label="defs path" value={defsFilePath} onChange={(e) => {
+                    defsPathUserEditedRef.current = true;
+                    setDefsFilePath(e.currentTarget.value);
+                  }} />
                 </>
               )}
               <TextInput label="language (de/en)" value={language} onChange={(e) => setLanguage(e.currentTarget.value)} />

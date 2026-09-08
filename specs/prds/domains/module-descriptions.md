@@ -71,7 +71,9 @@ rule does **not** apply WHILE the description is marked as a duplicate of anothe
 
 **R-MOD-07 (Ubiquitous):** At module description creation, the system MUST capture export identity
 (future repository, modules path, definitions path, language) using FAU module-description archive
-defaults unless the user overrides them at creation.
+defaults unless the user overrides them at creation. WHEN the catalog hierarchy lists a subject area
+for the module, the default definitions path MUST include that subject area as a path segment under
+`defs`; WHEN no subject area is listed, the default definitions path MUST be `defs`.
 
 **R-MOD-08 (Event-Driven):** WHEN an Extractor, Curator, or Admin deletes a module description, the
 system MUST remove the ModuleDescription, its definition FloDown blocks, and Symbols that become

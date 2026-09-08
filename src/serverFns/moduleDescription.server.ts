@@ -16,6 +16,7 @@ import {
   planMarkDuplicate,
   planUnmarkDuplicate,
 } from "@/server/modules/moduleDuplicateGuards";
+import { defaultDefsFilePath } from "@/lib/moduleDefsFilePath";
 import { composeModuleTexInputForExport } from "@/lib/moduleDescriptionTex";
 import {
   findAllTextOccurrences,
@@ -49,8 +50,17 @@ type ModuleStatementField =
 
 const DEFAULT_FUTURE_REPO = "courses/FAU/module-descriptions";
 const DEFAULT_MODULES_PATH = "modules";
-const DEFAULT_DEFS_PATH = "defs";
 const DEFAULT_LANGUAGE = "de";
+
+async function resolveModuleDefsFilePath(
+  moduleId: string,
+  clientDefsFilePath?: string,
+): Promise<string> {
+  const trimmed = clientDefsFilePath?.trim();
+  if (trimmed) return trimmed;
+  const searchEntry = await getModuleSearchEntry(moduleId);
+  return defaultDefsFilePath(searchEntry?.subjectArea);
+}
 
 async function requireExtractorPlus() {
   return assertExtractorPlusAuth(await currentUser());
@@ -334,7 +344,10 @@ export const createModuleDescription = createServerFn({ method: "POST" })
         ),
         futureRepo: data.futureRepo?.trim() || DEFAULT_FUTURE_REPO,
         modulesFilePath: data.modulesFilePath?.trim() || DEFAULT_MODULES_PATH,
-        defsFilePath: data.defsFilePath?.trim() || DEFAULT_DEFS_PATH,
+        defsFilePath: await resolveModuleDefsFilePath(
+          moduleId,
+          data.defsFilePath,
+        ),
         language: data.language?.trim() || DEFAULT_LANGUAGE,
         createdById: userId,
       },
@@ -648,7 +661,10 @@ export const markModuleDescriptionDuplicate = createServerFn({ method: "POST" })
           ),
           futureRepo: data.futureRepo?.trim() || DEFAULT_FUTURE_REPO,
           modulesFilePath: data.modulesFilePath?.trim() || DEFAULT_MODULES_PATH,
-          defsFilePath: data.defsFilePath?.trim() || DEFAULT_DEFS_PATH,
+          defsFilePath: await resolveModuleDefsFilePath(
+            moduleId,
+            data.defsFilePath,
+          ),
           language: data.language?.trim() || DEFAULT_LANGUAGE,
           createdById: userId,
         },

@@ -12,6 +12,7 @@ code:
   - src/server/modules/moduleDuplicateGuards.ts
   - src/server/modules/moduleDescriptionFavorite.test.ts
   - src/lib/moduleDuplicateHintDisplay.ts
+  - src/lib/moduleDefsFilePath.ts
   - src/routes/module-descriptions/index.tsx
   - src/routes/module-description/$moduleId.tsx
   - src/components/module-descriptions/ModuleStatementsSection.tsx
@@ -69,7 +70,7 @@ Out of scope (sibling specs):
 | Catalog `organizations` / `programs` | Per-module JSON only (workspace detail). Loader drops null or incomplete rows. Unclassified modules may store `organizations: [null]`; the workspace omits faculty/subject area instead of crashing. Not the catalog-search org source. |
 | Statement fields | `titleStatement`, `inhaltStatement`, `lernzieleStatement` (FTML JSON) |
 | Export identity | `futureRepo`, `modulesFilePath`, `defsFilePath`, `language` |
-| Defaults | `courses/FAU/module-descriptions`, `modules`, `defs`, `de` |
+| Defaults | `courses/FAU/module-descriptions`, `modules`, `defs` (or `defs/{subject-area-slug}` from hierarchy `subjectArea` when present), `de` |
 | `IndexStatus` | `EXTRACTED`, `FINALIZED`, `SUBMITTED_TO_MATHHUB` (default `EXTRACTED`) |
 | Definition blocks | `FloDownBlock` with `moduleDescriptionId` set and `documentId` null; `filePath` = module `defsFilePath` |
 | List item `isFavorite` | Boolean for the **current caller** only. |
@@ -179,7 +180,11 @@ catalog module JSON files to compute peers. Offline generation MUST emit the ind
 
 **S-MOD-07 (Ubiquitous):** `createModuleDescription` MUST persist `futureRepo`, `modulesFilePath`,
 `defsFilePath`, and `language`, falling back to the FAU module-description defaults when the client
-omits or blanks a field.
+omits or blanks a field. WHEN the client omits or blanks `defsFilePath`, the handler MUST derive the
+definitions path as `defs/{subject-area-slug}` from the module’s hierarchy catalog `subjectArea`
+(lowercase, spaces as hyphens) via `getModuleSearchEntry`; WHEN hierarchy has no subject area, the
+handler MUST fall back to `defs`. The same derivation MUST apply when mark-as-duplicate creates a new
+`ModuleDescription` row. An explicit non-blank client `defsFilePath` MUST be persisted unchanged.
 
 **Upstream:** R-MOD-07
 
@@ -301,7 +306,7 @@ MUST NOT succeed for Extractor-role users.
 | S-MOD-04 | R-MOD-04 | Gap |
 | S-MOD-05 | R-MOD-05 | Gap |
 | S-MOD-06 | R-MOD-06 | Gap |
-| S-MOD-07 | R-MOD-07 | Gap |
+| S-MOD-07 | R-MOD-07 | `moduleDefsFilePath.test.ts` — slug + blank fallback; server `resolveModuleDefsFilePath` on create |
 | S-MOD-08 | R-MOD-08 | Gap |
 | S-MOD-09 | R-MOD-09 | Gap |
 | S-MOD-10 | R-MOD-10, R-MOD-14 | Gap |
