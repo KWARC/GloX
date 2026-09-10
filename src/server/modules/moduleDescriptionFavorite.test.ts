@@ -76,4 +76,14 @@ describe("list and toggle serverFns (S-MOD-26, S-MOD-27, S-MOD-13)", () => {
     expect(slice).toMatch(/favoritesOnly/);
     expect(slice).toMatch(/isFavorite/);
   });
+
+  it("S-MOD-27 page payload includes caller isFavorite", () => {
+    const src = read(serverFnPath);
+    const start = src.indexOf("export const getModuleDescriptionPage");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const slice = src.slice(start, src.indexOf("export const", start + 1));
+    expect(slice).toMatch(/isFavorite/);
+    expect(slice).toMatch(/requireExtractorPlus/);
+    expect(slice).toMatch(/where:\s*\{\s*userId/);
+  });
 });

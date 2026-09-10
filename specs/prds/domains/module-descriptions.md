@@ -71,7 +71,9 @@ rule does **not** apply WHILE the description is marked as a duplicate of anothe
 
 **R-MOD-07 (Ubiquitous):** At module description creation, the system MUST capture export identity
 (future repository, modules path, definitions path, language) using FAU module-description archive
-defaults unless the user overrides them at creation.
+defaults unless the user overrides them at creation. WHEN the catalog hierarchy lists a subject area
+for the module, the default definitions path MUST include that subject area as a path segment under
+`defs`; WHEN no subject area is listed, the default definitions path MUST be `defs`.
 
 **R-MOD-08 (Event-Driven):** WHEN an Extractor, Curator, or Admin deletes a module description, the
 system MUST remove the ModuleDescription, its definition FloDown blocks, and Symbols that become
@@ -140,8 +142,9 @@ MUST include the module TeX file for each duplicate description as well as for e
 description.
 
 **R-MOD-26 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin marks or unmarks an
-in-progress module description as a favorite from the module description list, the system MUST
-persist that choice as that user’s personal favorite of that description.
+in-progress module description as a favorite from the module description list or from an in-progress
+module workspace, the system MUST persist that choice as that user’s personal favorite of that
+description.
 
 **R-MOD-27 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin turns on “Show only
 favorites” on the module description list, the system MUST return only module descriptions that user
@@ -191,7 +194,6 @@ semantics can pollute the MathHub archive path.
 - Favoriting catalog modules that have no in-progress ModuleDescription
 - Shared or Admin-visible favorite lists
 - Pinning favorites to the top of the unfiltered Modules list
-- Favorite control on the module workspace
 
 ## Traceability
 
