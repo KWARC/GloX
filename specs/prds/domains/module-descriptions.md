@@ -26,6 +26,10 @@ clones share annotated Inhalt and Lernziele.
 **R-MOD-01 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin searches the module
 catalog, the system MUST return matching modules from the configured FAU modules catalog.
 
+**R-MOD-31 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin searches the module
+catalog, the system MUST match each hierarchy module’s `elementnr` (element ID) in addition to module
+identifier and title, and MUST present that element ID on each catalog search hit when present.
+
 **R-MOD-16 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin searches the module
 catalog, the system MUST present each matching module’s faculty and subject area from the configured
 FAU hierarchy catalog beneath that module’s title when those values are present.
@@ -47,6 +51,10 @@ hierarchy catalog beneath that module’s title when those values are present.
 **R-MOD-26 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin views the Modules
 table on `/module-descriptions`, the system MUST allow revealing who created each listed module
 description (display name and email).
+
+**R-MOD-29 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin views the Modules
+table on `/module-descriptions`, the system MUST present each in-progress module description’s
+definition count (number of extracted definition FloDown blocks for that description).
 
 **R-MOD-03 (Event-Driven):** WHEN an Extractor, Curator, or Admin creates a module description for a
 catalog module, the system MUST seed title, inhalt, and lernziele statements from that module's
@@ -198,12 +206,14 @@ semantics can pollute the MathHub archive path.
 | PRD rule | SDD rule(s) |
 | --- | --- |
 | R-MOD-01 | `workspace.md` S-MOD-01 |
+| R-MOD-31 | `workspace.md` S-MOD-31 |
 | R-MOD-16 | `workspace.md` S-MOD-16 |
 | R-MOD-17 | `workspace.md` S-MOD-17 |
 | R-MOD-18 | `workspace.md` S-MOD-18 |
 | R-MOD-02 | `workspace.md` S-MOD-02 |
 | R-MOD-25 | `workspace.md` S-MOD-25 |
 | R-MOD-26 | `workspace.md` S-MOD-26 |
+| R-MOD-29 | `workspace.md` S-MOD-30 |
 | R-MOD-03 | `workspace.md` S-MOD-03 |
 | R-MOD-04 | `workspace.md` S-MOD-04 |
 | R-MOD-05 | `workspace.md` S-MOD-05 |

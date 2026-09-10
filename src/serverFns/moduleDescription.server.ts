@@ -776,6 +776,11 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
               email: true,
             },
           },
+          _count: {
+            select: {
+              floDownBlocks: true,
+            },
+          },
         },
       }),
       prisma.moduleDescription.count({ where }),
@@ -800,6 +805,7 @@ export const listModuleDescriptions = createServerFn({ method: "POST" })
           updatedAt: row.updatedAt.toISOString(),
           duplicateOfModuleId: row.duplicateOfModuleId,
           isFavorite: row.favorites.length > 0,
+          definitionCount: row._count.floDownBlocks,
           createdBy: row.createdBy,
         };
       }),

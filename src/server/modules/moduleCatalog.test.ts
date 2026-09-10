@@ -91,6 +91,7 @@ describe("searchModules hierarchy faculty and subject area", () => {
     expect(results).toEqual([
       {
         moduleId: "m3",
+        elementnr: "26002",
         title: "Gamma Course",
         faculty: "Medizinische Fakultät",
         subjectArea: "Logopädie",
@@ -103,6 +104,7 @@ describe("searchModules hierarchy faculty and subject area", () => {
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
       moduleId: "m4",
+      elementnr: null,
       title: "Delta Course",
       faculty: null,
       subjectArea: null,
@@ -127,6 +129,31 @@ describe("searchModules hierarchy faculty and subject area", () => {
     expect(first?.moduleId).toBe("m4");
     expect(first?.faculty).toBeNull();
     expect(first?.subjectArea).toBeNull();
+  });
+
+  it("matches numeric queries by elementnr prefix (S-MOD-31)", async () => {
+    const results = await searchModules("26002");
+    expect(results.map((row) => row.moduleId)).toEqual(["m3"]);
+  });
+
+  it("matches numeric queries by moduleId prefix when elementnr differs (S-MOD-31)", async () => {
+    const results = await searchModules("424");
+    expect(results.map((row) => row.moduleId)).toEqual(["42438"]);
+  });
+
+  it("matches elementnr when moduleId does not share the numeric prefix (S-MOD-31)", async () => {
+    const results = await searchModules("888");
+    expect(results.map((row) => row.moduleId)).toEqual(["m-element"]);
+  });
+
+  it("still matches modules without elementnr by title (S-MOD-31)", async () => {
+    const results = await searchModules("Delta");
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      moduleId: "m4",
+      elementnr: null,
+      title: "Delta Course",
+    });
   });
 });
 

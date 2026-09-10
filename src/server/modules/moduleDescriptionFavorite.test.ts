@@ -76,4 +76,13 @@ describe("list and toggle serverFns (S-MOD-26, S-MOD-27, S-MOD-13)", () => {
     expect(slice).toMatch(/favoritesOnly/);
     expect(slice).toMatch(/isFavorite/);
   });
+
+  it("S-MOD-30 list includes definitionCount from floDownBlocks _count", () => {
+    const src = read(serverFnPath);
+    const start = src.indexOf("export const listModuleDescriptions");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const slice = src.slice(start, src.indexOf("export const", start + 1));
+    expect(slice).toMatch(/floDownBlocks/);
+    expect(slice).toMatch(/definitionCount/);
+  });
 });
