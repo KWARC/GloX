@@ -12,6 +12,7 @@ code:
   - src/server/modules/moduleDuplicateGuards.ts
   - src/server/modules/moduleDescriptionFavorite.test.ts
   - src/lib/moduleDuplicateHintDisplay.ts
+  - src/lib/moduleDefsFilePath.ts
   - src/routes/module-descriptions/index.tsx
   - src/routes/module-description/$moduleId.tsx
   - src/components/module-descriptions/ModuleStatementsSection.tsx
@@ -45,8 +46,8 @@ Out of scope (sibling specs):
 | Layer | Responsibility |
 | --- | --- |
 | `src/routes/module-descriptions/index.tsx` | Lists in-progress ModuleDescription rows and searches the FAU modules catalog; catalog search matches module ID, hierarchy `elementnr`, and title; catalog search table shows muted element ID under the module ID and muted hierarchy faculty / subject area under the title when present; the Modules table also shows each row’s definition count in muted text beneath the title; catalog search annotates duplicate peers and extracted/duplicate icons; Modules table exposes per-row favorite toggle and **Show only favorites** (starts off); redirects unless the caller is Extractor, Curator, or Admin. |
-| `src/routes/module-description/$moduleId.tsx` | Hosts the module workspace: create, statements, definitions, mark/unmark duplicate, index status UI, reset/delete, and Curator/Admin export entry. Organization panel still uses per-module JSON `organizations`, not hierarchy search fields. WHILE marked duplicate, statement and definition panels are hidden. On the catalog-only create form, **language** is the primary export-identity field; **future repo**, **module path**, and **defs path** sit in a collapsed **Export paths** accordion for all Extractor+ roles (read-only for Extractors; editable for Curator/Admin). |
-| `src/serverFns/moduleDescription.server.ts` | Authenticates and mutates ModuleDescription rows, statement fields, definition creation, mark/unmark duplicate, personal favorite toggle, reset, delete, and index status. `searchModuleDescriptions` uses `requireExtractorPlus` and returns `searchModules` results including org fields and duplicate hints. `listModuleDescriptions` includes hierarchy org fields per row via `getModuleSearchEntry`, caller `isFavorite`, `definitionCount` (linked definition FloDown blocks), and optional favorites-only filter. |
+| `src/routes/module-description/$moduleId.tsx` | Hosts the module workspace: create, statements, definitions, mark/unmark duplicate, index status UI, reset/delete, personal favorite toggle WHILE a description exists, and Curator/Admin export entry. Organization panel still uses per-module JSON `organizations`, not hierarchy search fields. WHILE marked duplicate, statement and definition panels are hidden. The favorite control is a labeled button (**Add as favourites** / **Remove from favourites**), not a star icon. On the catalog-only create form, **language** is the primary export-identity field; **future repo**, **module path**, and **defs path** sit in a collapsed **Export paths** accordion for all Extractor+ roles (read-only for Extractors; editable for Curator/Admin). |
+| `src/serverFns/moduleDescription.server.ts` | Authenticates and mutates ModuleDescription rows, statement fields, definition creation, mark/unmark duplicate, personal favorite toggle, reset, delete, and index status. `searchModuleDescriptions` uses `requireExtractorPlus` and returns `searchModules` results including org fields and duplicate hints. `listModuleDescriptions` includes hierarchy org fields per row via `getModuleSearchEntry`, caller `isFavorite`, `definitionCount` (linked definition FloDown blocks), and optional favorites-only filter. `getModuleDescriptionPage` includes caller `isFavorite` on the description payload when a row exists. |
 | `src/server/modules/moduleCatalog.ts` | Loads the static FAU modules catalog from `hierarchy.json` / index; copies hierarchy `elementnr`, `faculty`, and `subjectArea` into search results; `searchModules` matches module ID, `elementnr`, and title per S-MOD-31; orders matches per S-MOD-17; `getModuleSearchEntry` uses hierarchy org fields (not per-module JSON) with optional JSON title override; seeds title, inhalt, and lernziele from per-module catalog JSON. |
 | `src/server/modules/moduleDuplicateIndex.ts` | Loads `MODULES_DIR/duplicates.json` once per process; missing file yields no hints. |
 | `src/server/modules/moduleDuplicateHints.ts` | C2 suggestion among exact then near peers using existing `ModuleDescription` rows. |
@@ -69,11 +70,12 @@ Out of scope (sibling specs):
 | Catalog `organizations` / `programs` | Per-module JSON only (workspace detail). Loader drops null or incomplete rows. Unclassified modules may store `organizations: [null]`; the workspace omits faculty/subject area instead of crashing. Not the catalog-search org source. |
 | Statement fields | `titleStatement`, `inhaltStatement`, `lernzieleStatement` (FTML JSON) |
 | Export identity | `futureRepo`, `modulesFilePath`, `defsFilePath`, `language` |
-| Defaults | `courses/FAU/module-descriptions`, `modules`, `defs`, `de` |
+| Defaults | `courses/FAU/module-descriptions`, `modules`, `defs` (or `defs/{subject-area-slug}` from hierarchy `subjectArea` when present), `de` |
 | `IndexStatus` | `EXTRACTED`, `FINALIZED`, `SUBMITTED_TO_MATHHUB` (default `EXTRACTED`) |
 | Definition blocks | `FloDownBlock` with `moduleDescriptionId` set and `documentId` null; `filePath` = module `defsFilePath` |
 | List item `isFavorite` | Boolean for the **current caller** only. |
 | List item `definitionCount` | Non-negative integer: count of `FloDownBlock` rows linked to the `ModuleDescription` (`moduleDescriptionId` set, `documentId` null). Duplicate rows SHOULD be zero after mark cleanup. |
+| Workspace `isFavorite` | Same caller-only boolean on `getModuleDescriptionPage` when a ModuleDescription row exists. |
 | `listModuleDescriptions` filter | Existing `status` / `query` (`moduleId`); optional favorites-only flag, default off. A returned row MUST match every filter that is set. Pagination is over that combined set. |
 | `ModuleDescriptionFavorite` | `{ id, userId, moduleDescriptionId, createdAt }`; `@@unique([userId, moduleDescriptionId])`; `onDelete: Cascade` on both FKs. |
 
@@ -142,9 +144,11 @@ favorites** control MUST start off.
 **Upstream:** R-MOD-02, R-MOD-27, R-MOD-28
 
 **S-MOD-27 (Event-Driven):** WHEN the caller favorites or unfavorites a ModuleDescription from the
-Modules table, the dedicated toggle serverFn MUST call `requireExtractorPlus` and MUST insert or
-delete a row in the named favorites table for **that caller and that ModuleDescription only**. The
-Modules table MUST expose the toggle on each in-progress row.
+Modules table or from the module workspace, the dedicated toggle serverFn MUST call
+`requireExtractorPlus` and MUST insert or delete a row in the named favorites table for **that
+caller and that ModuleDescription only**. The Modules table MUST expose the toggle on each
+in-progress row. WHILE a ModuleDescription exists on the workspace, the UI MUST expose a labeled
+**Add as favourites** / **Remove from favourites** control (not a star icon).
 
 **Upstream:** R-MOD-26, R-MOD-13
 
@@ -196,7 +200,11 @@ catalog module JSON files to compute peers. Offline generation MUST emit the ind
 
 **S-MOD-07 (Ubiquitous):** `createModuleDescription` MUST persist `futureRepo`, `modulesFilePath`,
 `defsFilePath`, and `language`, falling back to the FAU module-description defaults when the client
-omits or blanks a field.
+omits or blanks a field. WHEN the client omits or blanks `defsFilePath`, the handler MUST derive the
+definitions path as `defs/{subject-area-slug}` from the module’s hierarchy catalog `subjectArea`
+(lowercase, spaces as hyphens) via `getModuleSearchEntry`; WHEN hierarchy has no subject area, the
+handler MUST fall back to `defs`. The same derivation MUST apply when mark-as-duplicate creates a new
+`ModuleDescription` row. An explicit non-blank client `defsFilePath` MUST be persisted unchanged.
 
 **Upstream:** R-MOD-07
 
@@ -320,7 +328,7 @@ MUST NOT succeed for Extractor-role users.
 | S-MOD-04 | R-MOD-04 | Gap |
 | S-MOD-05 | R-MOD-05 | Gap |
 | S-MOD-06 | R-MOD-06 | Gap |
-| S-MOD-07 | R-MOD-07 | Gap |
+| S-MOD-07 | R-MOD-07 | `moduleDefsFilePath.test.ts` — slug + blank fallback; server `resolveModuleDefsFilePath` on create |
 | S-MOD-08 | R-MOD-08 | Gap |
 | S-MOD-09 | R-MOD-09 | Gap |
 | S-MOD-10 | R-MOD-10, R-MOD-14 | Gap |
@@ -331,7 +339,7 @@ MUST NOT succeed for Extractor-role users.
 | S-MOD-21 | R-MOD-21 | `moduleDuplicates.integration.test.ts` — statement and create-definition fail WHILE duplicate (guards) |
 | S-MOD-22 | R-MOD-22 | `moduleDuplicates.integration.test.ts` — unmark clears FK and re-seeds (policy; no live Prisma) |
 | S-MOD-26 | R-MOD-27 | `moduleDescriptionFavorite.test.ts` — `favoritesOnly` + `isFavorite` contract (integration waived) |
-| S-MOD-27 | R-MOD-26 | `moduleDescriptionFavorite.test.ts` — toggle export + `requireExtractorPlus` (integration waived) |
+| S-MOD-27 | R-MOD-26 | `moduleDescriptionFavorite.test.ts` — toggle export + `requireExtractorPlus`; page `isFavorite` (integration waived) |
 | S-MOD-28 | R-MOD-28 | `moduleDescriptionFavorite.test.ts` — named model, unique pair, no shared boolean (integration waived) |
 | S-MOD-29 | R-MOD-26 | `moduleDescriptionFavorite.test.ts` — cascade on `moduleDescription` FK (integration waived) |
 

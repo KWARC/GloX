@@ -8,6 +8,7 @@ import { ModuleDefinitionsSection } from "@/components/module-descriptions/Modul
 import { ModuleDescriptionLatexModal } from "@/components/module-descriptions/ModuleDescriptionLatexModal";
 import { ModuleStatementsSection } from "@/components/module-descriptions/ModuleStatementsSection";
 import { eligibleMarkTargetIds, pickMarkCanonicalId } from "@/lib/moduleDuplicateHintDisplay";
+import { defaultDefsFilePath } from "@/lib/moduleDefsFilePath";
 import {
   composeModuleTexInputForExport,
   generateModuleDescriptionTexPreview,
@@ -19,6 +20,7 @@ import {
   getModuleDescriptionPage,
   markModuleDescriptionDuplicate,
   resetModuleSemantics,
+  toggleModuleDescriptionFavorite,
   unmarkModuleDescriptionDuplicate,
   updateModuleDescriptionIndexStatus,
 } from "@/serverFns/moduleDescription.server";
@@ -44,7 +46,7 @@ import { useMediaQuery } from "@mantine/hooks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { currentUser } from "@/server/auth/currentUser";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export const Route = createFileRoute("/module-description/$moduleId")({
   loader: async () => {
@@ -78,6 +80,7 @@ function ModuleDescriptionDetailPage() {
   const [futureRepo, setFutureRepo] = useState("courses/FAU/module-descriptions");
   const [modulesFilePath, setModulesFilePath] = useState("modules");
   const [defsFilePath, setDefsFilePath] = useState("defs");
+  const defsPathUserEditedRef = useRef(false);
   const [language, setLanguage] = useState("de");
 
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -156,6 +159,15 @@ function ModuleDescriptionDetailPage() {
     },
   });
 
+  const favoriteMutation = useMutation({
+    mutationFn: (input: { moduleDescriptionId: string; favorite: boolean }) =>
+      toggleModuleDescriptionFavorite({ data: input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["module-description", moduleId] });
+      void queryClient.invalidateQueries({ queryKey: ["module-descriptions-list"] });
+    },
+  });
+
   const statusMutation = useMutation({
     mutationFn: ({
       moduleDescriptionId,
@@ -218,6 +230,11 @@ function ModuleDescriptionDetailPage() {
       setCanonicalModuleId((current) => current || suggested);
     }
   }, [data?.duplicateHint]);
+
+  useEffect(() => {
+    if (defsPathUserEditedRef.current) return;
+    setDefsFilePath(defaultDefsFilePath(data?.searchEntry?.subjectArea));
+  }, [data?.searchEntry?.subjectArea]);
 
   if (isLoading) {
     return (
@@ -283,6 +300,26 @@ function ModuleDescriptionDetailPage() {
                   Mark as duplicate
                 </Button>
               )}
+              <Button
+                variant="light"
+                color={mod.isFavorite ? "red" : "yellow"}
+                c={mod.isFavorite ? "red" : "yellow.8"}
+                loading={favoriteMutation.isPending}
+                onClick={() => {
+                  if (mod.isFavorite) {
+                    const confirmed = window.confirm(
+                      "Remove this module description from your favourites?",
+                    );
+                    if (!confirmed) return;
+                  }
+                  favoriteMutation.mutate({
+                    moduleDescriptionId: mod.id,
+                    favorite: !mod.isFavorite,
+                  });
+                }}
+              >
+                {mod.isFavorite ? "Remove from favourites" : "Add as favourites"}
+              </Button>
               <Button
                 variant="light"
                 color="orange"
@@ -469,7 +506,10 @@ function ModuleDescriptionDetailPage() {
                       <TextInput
                         label="Defs path"
                         value={defsFilePath}
-                        onChange={(e) => setDefsFilePath(e.currentTarget.value)}
+                        onChange={(e) => {
+                          defsPathUserEditedRef.current = true;
+                          setDefsFilePath(e.currentTarget.value);
+                        }}
                         readOnly={!canEditExportIdentityPaths}
                       />
                     </Stack>
