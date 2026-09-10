@@ -4,6 +4,7 @@ import { ParagraphNode } from "@/types/floDown.types";
 
 export type ModuleSearchResult = {
   moduleId: string;
+  elementnr: string | null;
   title: string;
   faculty: string | null;
   subjectArea: string | null;
@@ -90,6 +91,7 @@ async function loadCatalog(): Promise<void> {
 
   searchIndex = (hierarchy.modules ?? []).map((entry) => ({
     moduleId: entry.moduleId,
+    elementnr: asOptionalString(entry.elementnr),
     title: entry.title,
     faculty: asOptionalString(entry.faculty),
     subjectArea: asOptionalString(entry.subjectArea),
@@ -156,12 +158,17 @@ export async function searchModules(
   const isNumeric = /^\d+$/.test(trimmed);
 
   const matches = searchIndex.filter((entry) => {
+    const elementnr = entry.elementnr ?? "";
     if (isNumeric) {
-      return entry.moduleId.startsWith(trimmed);
+      return (
+        entry.moduleId.startsWith(trimmed) ||
+        elementnr.startsWith(trimmed)
+      );
     }
     return (
       entry.moduleId.includes(trimmed) ||
-      entry.title.toLowerCase().includes(lower)
+      entry.title.toLowerCase().includes(lower) ||
+      elementnr.toLowerCase().includes(lower)
     );
   });
 
@@ -275,6 +282,7 @@ export async function getModuleSearchEntry(
     const json = await getModuleJson(moduleId);
     return {
       moduleId: entry.moduleId,
+      elementnr: entry.elementnr,
       title: json.title || entry.title,
       faculty: entry.faculty,
       subjectArea: entry.subjectArea,

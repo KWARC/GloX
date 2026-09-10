@@ -2,24 +2,28 @@
   "modules": [
     {
       "moduleId": "m2",
+      "elementnr": "91002",
       "title": "Beta Course",
       "faculty": "Technische Fakultät",
       "subjectArea": "Optics"
     },
     {
       "moduleId": "m1",
+      "elementnr": "91001",
       "title": "Alpha Course",
       "faculty": "Technische Fakultät",
       "subjectArea": "Materials"
     },
     {
       "moduleId": "m3",
+      "elementnr": "26002",
       "title": "Gamma Course",
       "faculty": "Medizinische Fakultät",
       "subjectArea": "Logopädie"
     },
     {
       "moduleId": "m3-json",
+      "elementnr": "26003",
       "title": "Org source fixture",
       "faculty": "Medizinische Fakultät",
       "subjectArea": "Logopädie"
@@ -28,23 +32,33 @@
       "moduleId": "m4",
       "title": "Delta Course"
     },
-  {
-    "moduleId": "m5",
-    "title": "alpha course",
-    "faculty": "Technische Fakultät",
-    "subjectArea": "Materials"
-  },
-  {
-    "moduleId": "42438",
-    "title": "Lineare Algebra I",
-    "faculty": "Naturwissenschaftliche Fakultät",
-    "subjectArea": "Mathematik"
-  },
-  {
-    "moduleId": "62083",
-    "title": "Lineare Algebra I",
-    "faculty": "Naturwissenschaftliche Fakultät",
-    "subjectArea": "Technomathematik"
-  }
+    {
+      "moduleId": "m5",
+      "elementnr": "91005",
+      "title": "alpha course",
+      "faculty": "Technische Fakultät",
+      "subjectArea": "Materials"
+    },
+    {
+      "moduleId": "m-element",
+      "elementnr": "88888",
+      "title": "Element-only numeric hit",
+      "faculty": "Technische Fakultät",
+      "subjectArea": "Materials"
+    },
+    {
+      "moduleId": "42438",
+      "elementnr": "1999",
+      "title": "Lineare Algebra I",
+      "faculty": "Naturwissenschaftliche Fakultät",
+      "subjectArea": "Mathematik"
+    },
+    {
+      "moduleId": "62083",
+      "elementnr": "62080",
+      "title": "Lineare Algebra I",
+      "faculty": "Naturwissenschaftliche Fakultät",
+      "subjectArea": "Technomathematik"
+    }
   ]
 }

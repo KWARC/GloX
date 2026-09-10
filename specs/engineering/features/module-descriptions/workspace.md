@@ -45,10 +45,10 @@ Out of scope (sibling specs):
 
 | Layer | Responsibility |
 | --- | --- |
-| `src/routes/module-descriptions/index.tsx` | Lists in-progress ModuleDescription rows and searches the FAU modules catalog; catalog search table and Modules table show muted hierarchy faculty / subject area under the title when present; catalog search annotates duplicate peers and extracted/duplicate icons; Modules table exposes per-row favorite toggle and **Show only favorites** (starts off); redirects unless the caller is Extractor, Curator, or Admin. |
-| `src/routes/module-description/$moduleId.tsx` | Hosts the module workspace: create, statements, definitions, mark/unmark duplicate, index status UI, reset/delete, personal favorite toggle WHILE a description exists, and Curator/Admin export entry. Organization panel still uses per-module JSON `organizations`, not hierarchy search fields. WHILE marked duplicate, statement and definition panels are hidden. The favorite control is a labeled button (**Add as favourites** / **Remove from favourites**), not a star icon. |
-| `src/serverFns/moduleDescription.server.ts` | Authenticates and mutates ModuleDescription rows, statement fields, definition creation, mark/unmark duplicate, personal favorite toggle, reset, delete, and index status. `searchModuleDescriptions` uses `requireExtractorPlus` and returns `searchModules` results including org fields and duplicate hints. `listModuleDescriptions` includes hierarchy org fields per row via `getModuleSearchEntry`, caller `isFavorite`, and optional favorites-only filter. `getModuleDescriptionPage` includes caller `isFavorite` on the description payload when a row exists. |
-| `src/server/modules/moduleCatalog.ts` | Loads the static FAU modules catalog from `hierarchy.json` / index; copies hierarchy `faculty` and `subjectArea` into search results; orders `searchModules` matches per S-MOD-17; `getModuleSearchEntry` uses hierarchy org fields (not per-module JSON) with optional JSON title override; seeds title, inhalt, and lernziele from per-module catalog JSON. |
+| `src/routes/module-descriptions/index.tsx` | Lists in-progress ModuleDescription rows and searches the FAU modules catalog; catalog search matches module ID, hierarchy `elementnr`, and title; catalog search table shows muted element ID under the module ID and muted hierarchy faculty / subject area under the title when present; the Modules table also shows each row’s definition count in muted text beneath the title; catalog search annotates duplicate peers and extracted/duplicate icons; Modules table exposes per-row favorite toggle and **Show only favorites** (starts off); redirects unless the caller is Extractor, Curator, or Admin. |
+| `src/routes/module-description/$moduleId.tsx` | Hosts the module workspace: create, statements, definitions, mark/unmark duplicate, index status UI, reset/delete, personal favorite toggle WHILE a description exists, and Curator/Admin export entry. Organization panel still uses per-module JSON `organizations`, not hierarchy search fields. WHILE marked duplicate, statement and definition panels are hidden. The favorite control is a labeled button (**Add as favourites** / **Remove from favourites**), not a star icon. On the catalog-only create form, **language** is the primary export-identity field; **future repo**, **module path**, and **defs path** sit in a collapsed **Export paths** accordion for all Extractor+ roles (read-only for Extractors; editable for Curator/Admin). |
+| `src/serverFns/moduleDescription.server.ts` | Authenticates and mutates ModuleDescription rows, statement fields, definition creation, mark/unmark duplicate, personal favorite toggle, reset, delete, and index status. `searchModuleDescriptions` uses `requireExtractorPlus` and returns `searchModules` results including org fields and duplicate hints. `listModuleDescriptions` includes hierarchy org fields per row via `getModuleSearchEntry`, caller `isFavorite`, `definitionCount` (linked definition FloDown blocks), and optional favorites-only filter. `getModuleDescriptionPage` includes caller `isFavorite` on the description payload when a row exists. |
+| `src/server/modules/moduleCatalog.ts` | Loads the static FAU modules catalog from `hierarchy.json` / index; copies hierarchy `elementnr`, `faculty`, and `subjectArea` into search results; `searchModules` matches module ID, `elementnr`, and title per S-MOD-31; orders matches per S-MOD-17; `getModuleSearchEntry` uses hierarchy org fields (not per-module JSON) with optional JSON title override; seeds title, inhalt, and lernziele from per-module catalog JSON. |
 | `src/server/modules/moduleDuplicateIndex.ts` | Loads `MODULES_DIR/duplicates.json` once per process; missing file yields no hints. |
 | `src/server/modules/moduleDuplicateHints.ts` | C2 suggestion among exact then near peers using existing `ModuleDescription` rows. |
 | `src/server/modules/moduleDuplicateGuards.ts` | Extractor+ mark/unmark policy: T1 canonical exists, no alias-of-alias, FloDown delete on mark. |
@@ -64,7 +64,7 @@ Out of scope (sibling specs):
 | Field / enum | Values / notes |
 | --- | --- |
 | Hierarchy module `faculty` / `subjectArea` | Optional strings on each `hierarchy.json` module entry. Search index maps missing or blank values to `null`. Unclassified paths may omit both. |
-| `ModuleSearchResult` | `{ moduleId, title, faculty: string \| null, subjectArea: string \| null }` — hierarchy org source for catalog search and the Modules list on `/module-descriptions`. Search hits also attach duplicate hints and `duplicateOfModuleId` / extracted flags when a description exists. |
+| `ModuleSearchResult` | `{ moduleId, elementnr: string \| null, title, faculty: string \| null, subjectArea: string \| null }` — hierarchy org source for catalog search and the Modules list on `/module-descriptions`. `elementnr` is null when absent from hierarchy. Search hits also attach duplicate hints and `duplicateOfModuleId` / extracted flags when a description exists. |
 | Catalog duplicate index | `MODULES_DIR/duplicates.json` (default `modules/duplicates.json`). Envelope `version` `1`, `generatedAt`, `fields`, `nearThreshold`, `modules`. Keys are `moduleId`; omit ids with no peers. Each value has `exact` and `near` (empty arrays MAY be omitted). A peer MUST NOT appear in both lists (exact wins). Exact peer `{ moduleId, title }`; near peer plus `score` and `nearKind` (`normalized` \| `similar` \| `mixed`). No self-entries; A↔B symmetry; arrays sorted by numeric `moduleId`. MUST NOT store extracted or marked-duplicate state. Missing file: search still works with no duplicate hints. |
 | `ModuleDescription.duplicateOfModuleId` | Nullable FK to another row’s `moduleId`. Canonical rows are null. Duplicate rows MUST NOT be mark targets. WHILE set: `titleStatement` is catalog title only; Inhalt/Lernziele MUST NOT hold curated semantics; no definition `FloDownBlock` rows. |
 | Catalog `organizations` / `programs` | Per-module JSON only (workspace detail). Loader drops null or incomplete rows. Unclassified modules may store `organizations: [null]`; the workspace omits faculty/subject area instead of crashing. Not the catalog-search org source. |
@@ -74,6 +74,7 @@ Out of scope (sibling specs):
 | `IndexStatus` | `EXTRACTED`, `FINALIZED`, `SUBMITTED_TO_MATHHUB` (default `EXTRACTED`) |
 | Definition blocks | `FloDownBlock` with `moduleDescriptionId` set and `documentId` null; `filePath` = module `defsFilePath` |
 | List item `isFavorite` | Boolean for the **current caller** only. |
+| List item `definitionCount` | Non-negative integer: count of `FloDownBlock` rows linked to the `ModuleDescription` (`moduleDescriptionId` set, `documentId` null). Duplicate rows SHOULD be zero after mark cleanup. |
 | Workspace `isFavorite` | Same caller-only boolean on `getModuleDescriptionPage` when a ModuleDescription row exists. |
 | `listModuleDescriptions` filter | Existing `status` / `query` (`moduleId`); optional favorites-only flag, default off. A returned row MUST match every filter that is set. Pagination is over that combined set. |
 | `ModuleDescriptionFavorite` | `{ id, userId, moduleDescriptionId, createdAt }`; `@@unique([userId, moduleDescriptionId])`; `onDelete: Cascade` on both FKs. |
@@ -94,6 +95,15 @@ Auth helpers in `moduleDescription.server.ts`:
 (including organization fields and sort from S-MOD-16 / S-MOD-17, and duplicate hints from S-MOD-19).
 
 **Upstream:** R-MOD-01
+
+**S-MOD-31 (Event-Driven):** WHEN `searchModules` runs with a non-empty query, the system MUST match
+hierarchy `elementnr` in addition to `moduleId` and title: numeric-only queries MUST use prefix match
+on `moduleId` or `elementnr`; other queries MUST use substring match on all three fields
+(case-insensitive for title and `elementnr`). Each result MUST include `elementnr` (null when absent),
+and WHEN the catalog search table on `/module-descriptions` renders a hit with `elementnr` set, the UI
+MUST show it in muted text beneath the module ID (e.g. `Element 26002`).
+
+**Upstream:** R-MOD-31
 
 **S-MOD-16 (Event-Driven):** WHEN `searchModules` returns matches, each result MUST include `faculty`
 and `subjectArea` taken from that module’s `hierarchy.json` entry (null when absent), and WHEN the
@@ -162,6 +172,13 @@ omit the subtitle when both are null).
 with display name and email).
 
 **Upstream:** R-MOD-26
+
+**S-MOD-30 (Event-Driven):** WHEN `listModuleDescriptions` returns rows, each item MUST include
+`definitionCount` equal to the number of definition FloDown blocks linked to that
+`ModuleDescription`, and WHEN the Modules table on `/module-descriptions` renders a row, the UI MUST
+show that count in muted text beneath the module title (e.g. `3 definitions`).
+
+**Upstream:** R-MOD-29
 
 **S-MOD-03 (Event-Driven):** WHEN `createModuleDescription` succeeds, the system MUST seed
 `titleStatement`, `inhaltStatement`, and `lernzieleStatement` from `seedStatementsFromCatalog` and
@@ -299,12 +316,14 @@ MUST NOT succeed for Extractor-role users.
 | SDD rule | PRD rule | Test |
 | --- | --- | --- |
 | S-MOD-01 | R-MOD-01 | Gap (auth); contract covered via `searchModules` tests |
+| S-MOD-31 | R-MOD-31 | `moduleCatalog.test.ts` — `elementnr` prefix/substring match; catalog search UI optional |
 | S-MOD-16 | R-MOD-16, R-MOD-18 | `moduleCatalog.test.ts` — hierarchy faculty/subjectArea on results; UI muted subtitle optional |
 | S-MOD-17 | R-MOD-17 | `moduleCatalog.test.ts` — faculty → subjectArea → title → moduleId; null org as empty; bare compare |
 | S-MOD-18 | R-MOD-18 | `moduleCatalog.test.ts` — null when omitted; no invented “Unclassified”; hierarchy over JSON org |
 | S-MOD-02 | R-MOD-02 | Gap |
 | S-MOD-25 | R-MOD-25, R-MOD-18 | `moduleCatalog.test.ts` — `getModuleSearchEntry`; Modules table UI optional |
 | S-MOD-26 | R-MOD-26 | Gap (list UI optional) |
+| S-MOD-30 | R-MOD-29 | `moduleDescriptionFavorite.test.ts` — `definitionCount` from `floDownBlocks` _count (integration waived) |
 | S-MOD-03 | R-MOD-03 | Gap |
 | S-MOD-04 | R-MOD-04 | Gap |
 | S-MOD-05 | R-MOD-05 | Gap |

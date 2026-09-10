@@ -178,10 +178,10 @@ function ModuleDescriptionsPage() {
       <Stack gap="sm">
         <Title order={4}>Catalog search</Title>
         <Text size="sm" c="dimmed">
-          Find a module by ID or title.
+          Find a module by module ID, element ID, or title.
         </Text>
         <TextInput
-          placeholder="e.g. 33994 or Logopädie"
+          placeholder="e.g. 33994, 26002, or Logopädie"
           value={query}
           onChange={(e) => setQuery(e.currentTarget.value)}
         />
@@ -214,11 +214,18 @@ function ModuleDescriptionsPage() {
                 return (
                   <Table.Tr key={row.moduleId}>
                     <Table.Td>
-                      <ModuleIdWithDuplicateIcon
-                        moduleId={row.moduleId}
-                        duplicateOfModuleId={row.duplicateOfModuleId}
-                        extracted={row.extracted}
-                      />
+                      <Stack gap={2}>
+                        <ModuleIdWithDuplicateIcon
+                          moduleId={row.moduleId}
+                          duplicateOfModuleId={row.duplicateOfModuleId}
+                          extracted={row.extracted}
+                        />
+                        {row.elementnr ? (
+                          <Text size="xs" c="dimmed">
+                            Element nr: {row.elementnr}
+                          </Text>
+                        ) : null}
+                      </Stack>
                     </Table.Td>
                     <Table.Td>
                       <Stack gap={2}>
@@ -427,6 +434,11 @@ function ModuleDescriptionsPage() {
                                 {organizationLabel}
                               </Text>
                             ) : null}
+                            <Text size="xs" c="dimmed">
+                              {row.definitionCount === 1
+                                ? "1 definition"
+                                : `${row.definitionCount} definitions`}
+                            </Text>
                           </Stack>
                         </Table.Td>
                         <Table.Td>{row.language}</Table.Td>

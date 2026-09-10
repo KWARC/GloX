@@ -26,6 +26,7 @@ import {
 } from "@/serverFns/moduleDescription.server";
 import { INDEX_STATUS_CONFIG, IndexStatus } from "@/types/indexStatus";
 import {
+  Accordion,
   Alert,
   Badge,
   Box,
@@ -35,6 +36,7 @@ import {
   Loader,
   Modal,
   Paper,
+  Select,
   Stack,
   Text,
   TextInput,
@@ -464,17 +466,56 @@ function ModuleDescriptionDetailPage() {
               Export identity
             </Title>
             <Stack gap="sm">
-              {canEditExportIdentityPaths && (
-                <>
-                  <TextInput label="futureRepo" value={futureRepo} onChange={(e) => setFutureRepo(e.currentTarget.value)} />
-                  <TextInput label="modules path" value={modulesFilePath} onChange={(e) => setModulesFilePath(e.currentTarget.value)} />
-                  <TextInput label="defs path" value={defsFilePath} onChange={(e) => {
-                    defsPathUserEditedRef.current = true;
-                    setDefsFilePath(e.currentTarget.value);
-                  }} />
-                </>
-              )}
-              <TextInput label="language (de/en)" value={language} onChange={(e) => setLanguage(e.currentTarget.value)} />
+              <Select
+                label="Language"
+                description={`Used in export file names (${moduleId}.${language}.tex).`}
+                value={language}
+                onChange={(value) => setLanguage(value ?? "de")}
+                allowDeselect={false}
+                data={[
+                  { value: "de", label: "German (de)" },
+                  { value: "en", label: "English (en)" },
+                ]}
+              />
+              <Accordion variant="separated" radius="md">
+                <Accordion.Item value="export-paths">
+                  <Accordion.Control>
+                    <Stack gap={2}>
+                      <Text fw={600} size="sm">
+                        Export paths
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {futureRepo} · {modulesFilePath} · {defsFilePath}
+                      </Text>
+                    </Stack>
+                  </Accordion.Control>
+                  <Accordion.Panel>
+                    <Stack gap="sm">
+                      <TextInput
+                        label="Future repo"
+                        value={futureRepo}
+                        onChange={(e) => setFutureRepo(e.currentTarget.value)}
+                        readOnly={!canEditExportIdentityPaths}
+                      />
+                      <TextInput
+                        label="Module path"
+                        value={modulesFilePath}
+                        onChange={(e) => setModulesFilePath(e.currentTarget.value)}
+                        readOnly={!canEditExportIdentityPaths}
+                      />
+                      <TextInput
+                        label="Defs path"
+                        value={defsFilePath}
+                        onChange={(e) => {
+                          defsPathUserEditedRef.current = true;
+                          setDefsFilePath(e.currentTarget.value);
+                        }}
+                        readOnly={!canEditExportIdentityPaths}
+                      />
+                    </Stack>
+                  </Accordion.Panel>
+                </Accordion.Item>
+              </Accordion>
             </Stack>
             <Button
               mt="md"
