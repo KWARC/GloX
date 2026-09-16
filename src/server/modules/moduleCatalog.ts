@@ -8,6 +8,7 @@ export type ModuleSearchResult = {
   title: string;
   faculty: string | null;
   subjectArea: string | null;
+  missing: boolean;
 };
 
 export type ModuleOrganization = {
@@ -37,6 +38,7 @@ type HierarchyModule = {
   title: string;
   faculty?: string | null;
   subjectArea?: string | null;
+  missing?: boolean;
   occurrences?: Array<{
     rootUnitId: string;
     ancestorChain?: string[];
@@ -89,13 +91,18 @@ async function loadCatalog(): Promise<void> {
   const hierarchy = JSON.parse(hierarchyRaw) as HierarchyFile;
   modulesIndex = JSON.parse(indexRaw) as ModulesIndex;
 
-  searchIndex = (hierarchy.modules ?? []).map((entry) => ({
+  searchIndex = (hierarchy.modules ?? []).map(toSearchResult);
+}
+
+function toSearchResult(entry: HierarchyModule): ModuleSearchResult {
+  return {
     moduleId: entry.moduleId,
     elementnr: asOptionalString(entry.elementnr),
     title: entry.title,
     faculty: asOptionalString(entry.faculty),
     subjectArea: asOptionalString(entry.subjectArea),
-  }));
+    missing: entry.missing === true,
+  };
 }
 
 function compareModuleSearchResults(
@@ -281,11 +288,8 @@ export async function getModuleSearchEntry(
   try {
     const json = await getModuleJson(moduleId);
     return {
-      moduleId: entry.moduleId,
-      elementnr: entry.elementnr,
+      ...entry,
       title: json.title || entry.title,
-      faculty: entry.faculty,
-      subjectArea: entry.subjectArea,
     };
   } catch {
     return entry;

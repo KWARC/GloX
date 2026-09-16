@@ -229,7 +229,19 @@ function ModuleDescriptionsPage() {
                     </Table.Td>
                     <Table.Td>
                       <Stack gap={2}>
-                        <Text size="sm">{row.title}</Text>
+                        <Group gap={8} wrap="wrap" align="center">
+                          <Text size="sm">{row.title}</Text>
+                          {row.missing ? (
+                            <Badge
+                              size="xs"
+                              variant="light"
+                              color="orange"
+                              title="No module JSON in the catalog index"
+                            >
+                              missing
+                            </Badge>
+                          ) : null}
+                        </Group>
                         {organizationLabel ? (
                           <Text size="xs" c="dimmed">
                             {organizationLabel}

@@ -95,6 +95,7 @@ describe("searchModules hierarchy faculty and subject area", () => {
         title: "Gamma Course",
         faculty: "Medizinische Fakultät",
         subjectArea: "Logopädie",
+        missing: false,
       },
     ]);
   });
@@ -108,6 +109,7 @@ describe("searchModules hierarchy faculty and subject area", () => {
       title: "Delta Course",
       faculty: null,
       subjectArea: null,
+      missing: true,
     });
     expect(JSON.stringify(results[0])).not.toMatch(/Unclassified/i);
   });
@@ -190,6 +192,7 @@ describe("getModuleSearchEntry hierarchy faculty and subject area", () => {
       moduleId: "m4",
       faculty: null,
       subjectArea: null,
+      missing: true,
     });
     expect(JSON.stringify(entry)).not.toMatch(/Unclassified/i);
   });
