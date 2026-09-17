@@ -16,7 +16,8 @@
     "backup:statement-json": "node -r dotenv/config scripts/backup-statement-json.mjs",
     "restore:statement-json": "node -r dotenv/config scripts/restore-statement-json.mjs",
     "sync:module-organizations": "node scripts/sync-hierarchy-module-organizations.mjs",
-    "sync:hierarchy-missing": "node scripts/mark-hierarchy-missing-modules.mjs"
+    "sync:hierarchy-missing": "node scripts/mark-hierarchy-missing-modules.mjs",
+    "migrate:module-defs-path": "node -r dotenv/config scripts/migrate-module-defs-path.mjs"
   },
   "dependencies": {
     "@flexiformal/ftml": "^0.0.22",
