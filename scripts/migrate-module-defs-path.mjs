@@ -52,6 +52,30 @@ function titleFromStatement(statement) {
   return collectPlainText(statement).replace(/\s+/g, " ").trim();
 }
 
+function countExactString(value, target) {
+  if (typeof value === "string") return value === target ? 1 : 0;
+  if (Array.isArray(value)) {
+    return value.reduce((n, item) => n + countExactString(item, target), 0);
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value).reduce(
+      (n, child) => n + countExactString(child, target),
+      0,
+    );
+  }
+  return 0;
+}
+
+function moduleSummary(row, hierarchyMetaByModuleId) {
+  const meta = hierarchyMetaByModuleId.get(row.moduleId);
+  return {
+    id: row.id,
+    moduleId: row.moduleId,
+    title: meta?.title || titleFromStatement(row.titleStatement) || row.moduleId,
+    defsFilePath: row.defsFilePath,
+  };
+}
+
 async function loadHierarchyMeta(modulesDir) {
   const hierarchyPath = path.join(modulesDir, "hierarchy.json");
   const raw = await readFile(hierarchyPath, "utf8");
@@ -100,11 +124,18 @@ async function main() {
   const blocking = [];
 
   try {
-    const moduleParams = filterModuleId ? [filterModuleId] : [];
-    const moduleSql = filterModuleId
-      ? `SELECT id, "moduleId", "defsFilePath", "titleStatement" FROM "ModuleDescription" WHERE "moduleId" = $1`
-      : `SELECT id, "moduleId", "defsFilePath", "titleStatement" FROM "ModuleDescription"`;
-    const { rows: moduleRows } = await client.query(moduleSql, moduleParams);
+    const { rows: allModuleRows } = await client.query(`
+      SELECT id, "moduleId", "defsFilePath", "titleStatement"
+      FROM "ModuleDescription"
+    `);
+    const moduleByDescId = new Map();
+    for (const row of allModuleRows) {
+      moduleByDescId.set(row.id, moduleSummary(row, hierarchyMetaByModuleId));
+    }
+
+    const moduleRows = filterModuleId
+      ? allModuleRows.filter((row) => row.moduleId === filterModuleId)
+      : allModuleRows;
 
     if (filterModuleId && moduleRows.length === 0) {
       console.error(
@@ -223,21 +254,40 @@ async function main() {
       moveModuleDescIds.add(moduleDescId);
     }
 
-    /** uri -> newUri */
-    const replacements = new Map();
-    /** uri -> Set(moduleDescId) declaring it */
-    const uriDeclarerModules = new Map();
+    /** @type {Map<string, Map<string, object[]>>} oldUri -> newUri -> claims */
+    const uriClaims = new Map();
 
-    for (const block of defBlocks) {
-      const info = parseDeclaredSymbolsInfo(block.declaredSymbolsInfo);
-      for (const decl of info) {
-        const set = uriDeclarerModules.get(decl.symbolUri) ?? new Set();
-        set.add(block.moduleDescriptionId);
-        uriDeclarerModules.set(decl.symbolUri, set);
+    function addUriClaim(oldUri, newUri, claim) {
+      let byNew = uriClaims.get(oldUri);
+      if (!byNew) {
+        byNew = new Map();
+        uriClaims.set(oldUri, byNew);
       }
+      const list = byNew.get(newUri) ?? [];
+      list.push(claim);
+      byNew.set(newUri, list);
     }
 
-    for (const { moduleDescId, moduleId, targetPath } of modulesToMove.values()) {
+    function declarationSite(block, decl) {
+      const owner = moduleByDescId.get(block.moduleDescriptionId);
+      const planned = modulesToMove.get(block.moduleDescriptionId);
+      return {
+        moduleDescriptionId: block.moduleDescriptionId,
+        moduleId: owner?.moduleId ?? null,
+        title: owner?.title ?? null,
+        defsFilePath: owner?.defsFilePath ?? null,
+        inThisRun: moveModuleDescIds.has(block.moduleDescriptionId),
+        plannedTargetPath: planned?.targetPath ?? null,
+        blockId: block.id,
+        fileName: block.fileName,
+        filePath: block.filePath,
+        language: block.language,
+        status: block.status,
+        symbolName: decl.symbolName,
+      };
+    }
+
+    for (const { moduleDescId, moduleId, title, targetPath } of modulesToMove.values()) {
       const blocks = blocksByModuleDescId.get(moduleDescId) ?? [];
       for (const block of blocks) {
         const info = parseDeclaredSymbolsInfo(block.declaredSymbolsInfo);
@@ -269,41 +319,151 @@ async function main() {
             break;
           }
 
-          if (replacements.has(oldUri) && replacements.get(oldUri) !== newUri) {
-            blocking.push({
-              kind: "uri_split_conflict",
-              oldUri,
-              existing: replacements.get(oldUri),
-              attempted: newUri,
-              moduleId,
-            });
-            inc(stats, "uri_split_conflict");
-            pushSample(samples, "uri_split_conflict", {
-              oldUri,
-              moduleId,
-            });
-          } else {
-            replacements.set(oldUri, newUri);
-          }
+          addUriClaim(oldUri, newUri, {
+            moduleDescriptionId: moduleDescId,
+            moduleId,
+            title,
+            currentDefsFilePath: MODULE_DEFS_PATH_BASE,
+            plannedTargetPath: targetPath,
+            blockId: block.id,
+            fileName: block.fileName,
+            filePath: block.filePath,
+            language: block.language,
+            symbolName: decl.symbolName,
+          });
         }
         if (!modulesToMove.has(moduleDescId)) break;
       }
     }
 
-    if (filterModuleId) {
-      for (const [oldUri] of replacements) {
-        const declarers = uriDeclarerModules.get(oldUri) ?? new Set();
-        for (const descId of declarers) {
-          if (!moveModuleDescIds.has(descId)) {
-            blocking.push({
-              kind: "shared_uri_with_other_module",
-              oldUri,
-              otherModuleDescriptionId: descId,
-            });
-            inc(stats, "shared_uri_with_other_module");
-            pushSample(samples, "shared_uri_with_other_module", { oldUri });
+    const replacements = new Map();
+    const splitOldUris = [];
+    for (const [oldUri, byNew] of uriClaims) {
+      if (byNew.size === 1) {
+        replacements.set(oldUri, [...byNew.keys()][0]);
+        continue;
+      }
+      splitOldUris.push(oldUri);
+      inc(stats, "uri_split_conflict");
+      pushSample(samples, "uri_split_conflict", oldUri);
+    }
+
+    async function collectUriUsages(oldUri) {
+      const declaredOn = [];
+      for (const block of defBlocks) {
+        for (const decl of parseDeclaredSymbolsInfo(block.declaredSymbolsInfo)) {
+          if (decl.symbolUri === oldUri) {
+            declaredOn.push(declarationSite(block, decl));
           }
         }
+      }
+      declaredOn.sort((a, b) => String(a.moduleId).localeCompare(String(b.moduleId)));
+
+      const { rows: allBlocks } = await client.query(`
+        SELECT
+          id,
+          "moduleDescriptionId",
+          "documentId",
+          "fileName",
+          "filePath",
+          language,
+          statement,
+          "declaredSymbolsInfo"
+        FROM "FloDownBlock"
+      `);
+      const referencedFrom = [];
+      for (const row of allBlocks) {
+        const inStatement = countExactString(row.statement, oldUri);
+        const inInfo = countExactString(row.declaredSymbolsInfo, oldUri);
+        if (inStatement === 0 && inInfo === 0) continue;
+        const owner = row.moduleDescriptionId
+          ? moduleByDescId.get(row.moduleDescriptionId)
+          : null;
+        referencedFrom.push({
+          kind: row.documentId ? "pdf_or_document_block" : "module_definition_block",
+          blockId: row.id,
+          documentId: row.documentId,
+          moduleDescriptionId: row.moduleDescriptionId,
+          moduleId: owner?.moduleId ?? null,
+          title: owner?.title ?? null,
+          fileName: row.fileName,
+          filePath: row.filePath,
+          language: row.language,
+          hitsInStatement: inStatement,
+          hitsInDeclaredSymbolsInfo: inInfo,
+        });
+      }
+
+      const { rows: statementRows } = await client.query(`
+        SELECT id, "moduleId", "titleStatement", "inhaltStatement", "lernzieleStatement"
+        FROM "ModuleDescription"
+      `);
+      const moduleStatementRefs = [];
+      for (const row of statementRows) {
+        const titleHits = countExactString(row.titleStatement, oldUri);
+        const inhaltHits = countExactString(row.inhaltStatement, oldUri);
+        const lernHits = countExactString(row.lernzieleStatement, oldUri);
+        if (titleHits + inhaltHits + lernHits === 0) continue;
+        const owner = moduleByDescId.get(row.id);
+        moduleStatementRefs.push({
+          moduleDescriptionId: row.id,
+          moduleId: row.moduleId,
+          title: owner?.title ?? null,
+          hits: {
+            titleStatement: titleHits,
+            inhaltStatement: inhaltHits,
+            lernzieleStatement: lernHits,
+          },
+        });
+      }
+
+      return { declaredOn, referencedFrom, moduleStatementRefs };
+    }
+
+    for (const oldUri of splitOldUris) {
+      const byNew = uriClaims.get(oldUri);
+      const usages = await collectUriUsages(oldUri);
+      const competingTargets = [...byNew.entries()]
+        .map(([newUri, claims]) => ({
+          newUri,
+          plannedTargetPath: claims[0]?.plannedTargetPath ?? getQueryParam(newUri, "p"),
+          modules: claims,
+        }))
+        .sort((a, b) =>
+          String(a.plannedTargetPath).localeCompare(String(b.plannedTargetPath)),
+        );
+
+      blocking.push({
+        kind: "uri_split_conflict",
+        why: "The same declared symbol URI would move to more than one defs/{subjectArea} path. Opaque replace can only map one old string to one new string.",
+        oldUri,
+        currentPath: getQueryParam(oldUri, "p"),
+        fileName: getQueryParam(oldUri, "m"),
+        symbol: getQueryParam(oldUri, "s"),
+        competingTargets,
+        declaredOn: usages.declaredOn,
+        referencedFrom: usages.referencedFrom,
+        moduleStatementRefs: usages.moduleStatementRefs,
+      });
+    }
+
+    if (filterModuleId) {
+      for (const [oldUri] of replacements) {
+        const usages = await collectUriUsages(oldUri);
+        const others = usages.declaredOn.filter((site) => !site.inThisRun);
+        if (others.length === 0) continue;
+        blocking.push({
+          kind: "shared_uri_with_other_module",
+          why: "This run would rewrite a URI that another module also declares.",
+          oldUri,
+          newUri: replacements.get(oldUri),
+          declaredOn: usages.declaredOn,
+          otherModules: others,
+          referencedFrom: usages.referencedFrom,
+          moduleStatementRefs: usages.moduleStatementRefs,
+        });
+        inc(stats, "shared_uri_with_other_module");
+        pushSample(samples, "shared_uri_with_other_module", { oldUri });
       }
     }
 
