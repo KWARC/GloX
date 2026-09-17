@@ -138,8 +138,6 @@ export function useSemanticEditingFlow({
     await queryClient.invalidateQueries({
       queryKey: ["floDownBlocks", documentId],
     });
-    setSemanticPanelOpen(false);
-    setSemanticPanelFloDownBlockId(null);
   }
 
   function handleRightSelection(extractId: string) {

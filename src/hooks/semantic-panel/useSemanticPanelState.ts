@@ -86,6 +86,7 @@ export function useSemanticPanelState(floDownBlock: FloDownBlockSemantic | null)
     setSearchQuery("");
     setSelectedNode(null);
     setSelectedUri("");
+    setEditingNodeUri(null);
   }
 
   return {

@@ -139,8 +139,6 @@ export function useModuleDefinitionSemantics({
     });
 
     await invalidateModule();
-    setSemanticPanelOpen(false);
-    setSemanticPanelFloDownBlockId(null);
   }
 
   function handleRightSelection(extractId: string) {

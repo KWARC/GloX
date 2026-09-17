@@ -84,8 +84,6 @@ export function useModuleStatementSemantics({
     });
 
     await invalidateModule();
-    setSemanticPanelOpen(false);
-    setSemanticPanelExtractId(null);
   }
 
   function handleRightSelection(extractId: string) {

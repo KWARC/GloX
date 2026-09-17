@@ -47,6 +47,14 @@ export function SemanticPanel({
     onClose();
   }
 
+  async function handleDeleteNode(
+    floDownBlockId: string,
+    target: Parameters<OnDeleteNode>[1],
+  ) {
+    await onDeleteNode(floDownBlockId, target);
+    reset();
+  }
+
   return (
     <>
       <Modal
@@ -89,7 +97,7 @@ export function SemanticPanel({
                     floDownBlock={floDownBlock}
                     state={state}
                     onReplaceNode={onReplaceNode}
-                    onDeleteNode={onDeleteNode}
+                    onDeleteNode={handleDeleteNode}
                   />
                 )}
 
@@ -98,7 +106,7 @@ export function SemanticPanel({
                     floDownBlock={floDownBlock}
                     state={state}
                     onReplaceNode={onReplaceNode}
-                    onDeleteNode={onDeleteNode}
+                    onDeleteNode={handleDeleteNode}
                   />
                 )}
               </Box>
