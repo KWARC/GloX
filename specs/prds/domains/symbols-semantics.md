@@ -123,17 +123,25 @@ URI was supplied as the value FloDown returned for that declaration.
 identity).
 
 **R-SYM-20 (Event-Driven):** WHEN a MathHub duplicate of a local symbol URI with a MathHub URI
-succeeds, the system MUST remove the local declaration record for that URI and MUST keep the
-FloDown blocks and ModuleDescription rows that held the rewritten statements.
+succeeds, the system MUST remove the local declaration record for that URI. WHEN the curator chose
+to keep the defining FloDown block, the system MUST keep that block and its definition text. WHEN the
+curator chose to delete the defining FloDown block, the system MUST delete that `FloDownBlock` (and
+its version history) after retarget. The system MUST keep every other FloDown block and every
+ModuleDescription row that held rewritten statements.
 
 **Rationale:** MathHub already declares the concept; a second local `\symdecl*` is false identity.
-The glossary text stays.
+The curator decides whether the extracted definition block stays in the glossary.
 
 **R-SYM-21 (Event-Driven):** WHEN a Curator or Admin opens MathHub duplicate for that local URI, the
 system MUST list every FloDown block and every Title/Inhalt/Lernziele statement that currently
 contains the local URI (including the declaring block). WHILE a listed FloDown block has status
 DISCARDED, the system MUST indicate Discarded on that list entry. The system MUST NOT apply the
-rewrite without that list.
+rewrite without that list. The system MUST NOT apply the rewrite until the curator has chosen
+whether to keep or delete the defining FloDown block.
+
+**R-SYM-23 (State-Driven):** WHILE the FloDown block that declares the local symbol URI also
+declares any other local symbol URI in `declaredSymbolsInfo`, the system MUST NOT delete that block
+as part of MathHub duplicate for the first URI.
 
 **R-SYM-22 (Event-Driven):** WHEN a Curator or Admin views Deduplication, the system MUST list
 unconfirmed local declarations first and MUST list declarations with the confirmed-not-duplicate
@@ -176,6 +184,7 @@ flag under a section titled **Confirmed not a duplicate**.
 | R-SYM-20 | `uri-retarget.md` S-SYM-03 |
 | R-SYM-21 | `uri-retarget.md` S-SYM-14 |
 | R-SYM-22 | `Deduplication.tsx`, `dedupCatalogDisplay.ts` |
+| R-SYM-23 | `uri-retarget.md` S-SYM-03 |
 
 ## Related docs
 

@@ -119,6 +119,10 @@ statements in the same transaction.
 
 **Upstream:** R-FDB-03
 
+MathHub duplicate with `definingBlockAction` `delete` removes the declaring FloDown block after URI
+retarget in `replaceLocalSymbolWithMathHub`; that path MUST NOT invoke R-FDB-03 symref unwrap for
+the merged local URI because other statements already use the MathHub URI.
+
 ### Status & export identity
 
 **S-FDB-04 (State-Driven):** WHILE status is `DISCARDED`, curation list queries MUST filter

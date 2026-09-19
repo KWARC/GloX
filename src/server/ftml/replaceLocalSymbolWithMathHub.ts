@@ -1,4 +1,5 @@
 import {
+  declaredUrisFromJson,
   parseDeclaredSymbolsInfo,
   removeDeclarationByUri,
 } from "@/server/declaredSymbolsInfo";
@@ -9,9 +10,12 @@ import {
 import type { FloDownStatement } from "@/types/floDown.types";
 
 /** MathHub-duplicate write input (S-SYM-03). No FloDown ID list. */
+export type DefiningBlockAction = "keep" | "delete";
+
 export type ReplaceLocalSymbolWithMathHubInput = {
   localSymbolUri: string;
   mathHubUri: string;
+  definingBlockAction: DefiningBlockAction;
 };
 
 export type FloDownUriHit = {
@@ -125,13 +129,87 @@ export function retargetLocalSymbolSnapshot(
   };
 }
 
+export function findDeclaringBlockIdForLocalUri(
+  snapshot: RetargetSnapshot,
+  localSymbolUri: string,
+): string | null {
+  const target = localSymbolUri.trim();
+  for (const row of snapshot.floDown) {
+    if (declaredUrisFromJson(row.declaredSymbolsInfo).includes(target)) {
+      return row.id;
+    }
+  }
+  return null;
+}
+
+export function declaringBlockHasOtherLocalDeclarations(
+  declaredSymbolsInfo: unknown,
+  localSymbolUri: string,
+): boolean {
+  const target = localSymbolUri.trim();
+  return declaredUrisFromJson(declaredSymbolsInfo).some((uri) => uri !== target);
+}
+
+export function canDeleteDeclaringBlockForMathHubDuplicate(
+  declaredSymbolsInfo: unknown,
+  localSymbolUri: string,
+): boolean {
+  const target = localSymbolUri.trim();
+  const uris = declaredUrisFromJson(declaredSymbolsInfo);
+  if (!uris.includes(target)) return false;
+  return !declaringBlockHasOtherLocalDeclarations(
+    declaredSymbolsInfo,
+    localSymbolUri,
+  );
+}
+
+/** FloDown block ids to remove after retarget (delete defining block only). */
+export function resolveDefiningBlockDeleteIds(
+  snapshot: RetargetSnapshot,
+  localSymbolUri: string,
+  definingBlockAction: DefiningBlockAction,
+): string[] {
+  if (definingBlockAction === "keep") return [];
+
+  const declaringId = findDeclaringBlockIdForLocalUri(snapshot, localSymbolUri);
+  if (!declaringId) {
+    throw new Error("No declaring block found for this symbol");
+  }
+
+  const row = snapshot.floDown.find((entry) => entry.id === declaringId);
+  if (!row) {
+    throw new Error("No declaring block found for this symbol");
+  }
+
+  if (
+    declaringBlockHasOtherLocalDeclarations(
+      row.declaredSymbolsInfo,
+      localSymbolUri,
+    )
+  ) {
+    throw new Error(
+      "Cannot delete this block while it declares other local symbols",
+    );
+  }
+
+  return [declaringId];
+}
+
 export function parseReplaceLocalSymbolWithMathHubInput(
   data: Record<string, unknown>,
 ): ReplaceLocalSymbolWithMathHubInput {
+  const localSymbolUri =
+    typeof data.localSymbolUri === "string" ? data.localSymbolUri.trim() : "";
+  const mathHubUri =
+    typeof data.mathHubUri === "string" ? data.mathHubUri.trim() : "";
+  const action = data.definingBlockAction;
+  if (action !== "keep" && action !== "delete") {
+    throw new Error("definingBlockAction must be keep or delete");
+  }
   return {
-    localSymbolUri:
-      typeof data.localSymbolUri === "string" ? data.localSymbolUri.trim() : "",
-    mathHubUri: typeof data.mathHubUri === "string" ? data.mathHubUri.trim() : "",
+    localSymbolUri,
+    mathHubUri,
+    definingBlockAction: action,
   };
 }
 

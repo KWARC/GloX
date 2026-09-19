@@ -49,11 +49,17 @@ transaction: iterate every `FloDownBlock` and every `ModuleDescription`; replace
 definiendum and symref `uri` values from the given local URI to the given MathHub URI by opaque
 string equality; remove that local URI from the declaring block’s `declaredSymbolsInfo`; append a
 `FloDownBlockVersion` row and increment `currentVersion` for each FloDown block whose **current**
-statement changed. The handler MUST NOT accept a client list of block IDs. The handler MUST NOT
-rewrite historic version JSON. Module Title/Inhalt/Lernziele JSON has no version table; those
-columns MUST be overwritten in place when they change.
+statement changed (excluding a defining block deleted in the same transaction). The handler MUST
+accept `definingBlockAction` of `keep` or `delete` and MUST reject missing or invalid values. WHEN
+`definingBlockAction` is `delete`, the handler MUST delete the FloDown block that declared the local
+URI after retarget, and MUST NOT run the R-FDB-03 symref-unwrap path for that URI (retarget already
+updated other statements). WHEN `definingBlockAction` is `delete` and that block’s
+`declaredSymbolsInfo` lists any URI other than the local URI being merged, the handler MUST reject
+the request. The handler MUST NOT accept a client list of block IDs. The handler MUST NOT rewrite
+historic version JSON. Module Title/Inhalt/Lernziele JSON has no version table; those columns MUST
+be overwritten in place when they change.
 
-**Upstream:** R-SYM-03, R-SYM-20
+**Upstream:** R-SYM-03, R-SYM-20, R-SYM-23
 
 **S-SYM-03a (Event-Driven):** WHEN `retargetMathHubUriInSelectedBlocks` succeeds, the system MUST
 replace matching MathHub URIs in the selected statements and MUST record version history for each
@@ -88,7 +94,7 @@ Opaque URI replace stays `retargetUriInAst` (R-SYM-18).
 
 | SDD rule | PRD rule | Test |
 | --- | --- | --- |
-| S-SYM-03 | R-SYM-03, R-SYM-20 | `replaceLocalSymbolWithMathHub.test.ts` (in-memory; live-DB Gap) |
+| S-SYM-03 | R-SYM-03, R-SYM-20, R-SYM-23 | `replaceLocalSymbolWithMathHub.test.ts` (in-memory; live-DB Gap) |
 | S-SYM-03a | R-SYM-03 | Gap (sibling MathHub→local path) |
 | S-SYM-14 | R-SYM-21 | `collectLocalSymbolUriHits` in `replaceLocalSymbolWithMathHub.test.ts` |
 | S-SYM-15 | R-SYM-06, R-SYM-07 | `roleMayReplaceLocalSymbolWithMathHub` unit; live-DB handler Gap |

@@ -11,6 +11,7 @@ import {
   retargetLocalSymbolSnapshot,
   type ModuleRetargetRow,
   type RetargetSnapshot,
+  resolveDefiningBlockDeleteIds,
 } from "@/server/ftml/replaceLocalSymbolWithMathHub";
 import type { DeclaredSymbolInfo } from "@/types/declaredSymbolsInfo";
 import { assertFloDownStatement, FloDownStatement } from "@/types/floDown.types";
@@ -264,7 +265,7 @@ export const replaceLocalSymbolWithMathHub = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { id: userId } = await requireAdminOrCurator();
-    const { localSymbolUri, mathHubUri } = data;
+    const { localSymbolUri, mathHubUri, definingBlockAction } = data;
     if (!localSymbolUri || !mathHubUri) {
       throw new Error("Symbol URI required");
     }
@@ -316,12 +317,19 @@ export const replaceLocalSymbolWithMathHub = createServerFn({ method: "POST" })
         localSymbolUri,
         mathHubUri,
       );
+      const blockIdsToDelete = resolveDefiningBlockDeleteIds(
+        snapshot,
+        localSymbolUri,
+        definingBlockAction,
+      );
+      const deleteIdSet = new Set(blockIdsToDelete);
       const nextBlocks = new Map(next.floDown.map((row) => [row.id, row]));
       const nextModules = new Map(next.modules.map((row) => [row.id, row]));
 
       let updated = 0;
 
       for (const before of floDownBlocks) {
+        if (deleteIdSet.has(before.id)) continue;
         const after = nextBlocks.get(before.id);
         if (!after) continue;
         const statementChanged = !jsonEqual(before.statement, after.statement);
@@ -364,6 +372,11 @@ export const replaceLocalSymbolWithMathHub = createServerFn({ method: "POST" })
           where: { id: before.id },
           data: payload,
         });
+        updated += 1;
+      }
+
+      for (const blockId of blockIdsToDelete) {
+        await tx.floDownBlock.delete({ where: { id: blockId } });
         updated += 1;
       }
 

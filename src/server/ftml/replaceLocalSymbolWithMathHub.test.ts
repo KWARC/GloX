@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectLocalSymbolUriHits,
   parseReplaceLocalSymbolWithMathHubInput,
+  resolveDefiningBlockDeleteIds,
   retargetLocalSymbolSnapshot,
   roleMayReplaceLocalSymbolWithMathHub,
   type RetargetSnapshot,
@@ -150,18 +151,77 @@ describe("retargetLocalSymbolSnapshot (S-SYM-03 / R-SYM-03 / R-SYM-20)", () => {
 });
 
 describe("parseReplaceLocalSymbolWithMathHubInput (S-SYM-03 MUST NOT ID list)", () => {
-  it("keeps only localSymbolUri and mathHubUri", () => {
+  it("keeps localSymbolUri, mathHubUri, and definingBlockAction", () => {
     expect(
       parseReplaceLocalSymbolWithMathHubInput({
         localSymbolUri: LOCAL,
         mathHubUri: MATHHUB,
+        definingBlockAction: "keep",
         selectedFloDownBlockIds: ["declaring"],
         primaryFloDownBlockId: "declaring",
       }),
     ).toEqual({
       localSymbolUri: LOCAL,
       mathHubUri: MATHHUB,
+      definingBlockAction: "keep",
     });
+  });
+
+  it("rejects missing definingBlockAction", () => {
+    expect(() =>
+      parseReplaceLocalSymbolWithMathHubInput({
+        localSymbolUri: LOCAL,
+        mathHubUri: MATHHUB,
+      }),
+    ).toThrow(/definingBlockAction must be keep or delete/);
+  });
+});
+
+describe("resolveDefiningBlockDeleteIds (S-SYM-03 / R-SYM-20 / R-SYM-23)", () => {
+  it("returns no ids for keep", () => {
+    expect(
+      resolveDefiningBlockDeleteIds(snapshot(), LOCAL, "keep"),
+    ).toEqual([]);
+  });
+
+  it("returns declaring block id for delete", () => {
+    expect(
+      resolveDefiningBlockDeleteIds(snapshot(), LOCAL, "delete"),
+    ).toEqual(["declaring"]);
+  });
+
+  it("omits declaring row from persisted floDown after delete", () => {
+    const next = retargetLocalSymbolSnapshot(snapshot(), LOCAL, MATHHUB);
+    const deleteIds = resolveDefiningBlockDeleteIds(snapshot(), LOCAL, "delete");
+    const persisted = next.floDown.filter((row) => !deleteIds.includes(row.id));
+    expect(persisted.map((row) => row.id)).toEqual(["discarded"]);
+    expect(astReferencesUri(persisted[0].statement, MATHHUB)).toBe(true);
+    expect(astReferencesUri(persisted[0].statement, LOCAL)).toBe(false);
+  });
+
+  it("rejects delete when the declaring block has other local declarations", () => {
+    const multi: RetargetSnapshot = {
+      ...snapshot(),
+      floDown: [
+        {
+          ...snapshot().floDown[0],
+          declaredSymbolsInfo: [
+            ...(snapshot().floDown[0].declaredSymbolsInfo as object[]),
+            {
+              symbolName: "other",
+              symbolUri: "http://mathhub.info/?a=glox/local&p=mod&d=other&s=other",
+              hasConfirmed: false,
+              confirmedById: null,
+              confirmedBy: null,
+            },
+          ],
+        },
+        snapshot().floDown[1],
+      ],
+    };
+    expect(() =>
+      resolveDefiningBlockDeleteIds(multi, LOCAL, "delete"),
+    ).toThrow(/declares other local symbols/);
   });
 });
 

@@ -252,18 +252,14 @@ terms:
       Curator/Admin decision that a local declaration is the same concept as a chosen MathHub
       symbol. The system retargets that local URI to the MathHub URI in current FloDown statements
       (including discarded) and ModuleDescription Title/Inhalt/Lernziele, drops the local
-      declaration, keeps definition text, and appends FloDown version history for changed current
-      statements. Does not rewrite historic version JSON or page mark references.
+      declaration, and appends FloDown version history for changed current statements. The curator
+      MUST choose whether to keep the defining FloDown block or delete it after retarget. Does not
+      rewrite historic version JSON or page mark references.
     technical_anchors:
       - specs/engineering/features/symbols-semantics/uri-retarget.md
       - src/serverFns/uriRetarget.server.ts
       - src/server/ftml/replaceLocalSymbolWithMathHub.ts
       - src/components/MathHubDuplicateDialog.tsx
-    allowed_aliases:
-      - label: Same as this
-        context: Deduplication / Semantic Panel MathHub hit for a local declaration
-      - label: Apply MathHub URI
-        context: MathHub duplicate modal primary action
     see_also:
       - uri_retarget
       - symbol_confirmation
