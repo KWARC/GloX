@@ -55,7 +55,7 @@
 - **Symbol registry** — Local declarations on FloDown blocks, keyed by opaque FloDown symbol URI.
 - **MathHub duplicate** — Curator/Admin treats a local declaration as the same concept as a MathHub symbol: retargets the local URI across current FloDown statements (including discarded) and module Title/Inhalt/Lernziele; drops the local declaration; keeps definition text. The dialog lists the blast radius (Discarded chip; module field labels).
 - **URI retarget (MathHub → local)** — Optionally rewrite other FloDown blocks that still use a MathHub URI after a node is pointed at a local symbol.
-- **Duplicate confirmation** — Curators confirm declarations are not duplicates (`hasConfirmed`). Deduplication lists those under **Confirmed not a duplicate**.
+- **Duplicate confirmation** — Curators confirm declarations are not duplicates (`hasConfirmed`). Deduplication lists those under **Confirmed not a duplicate**, 20 grouped names per page.
 
 ## Mark references
 

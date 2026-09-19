@@ -40,8 +40,8 @@ Out of scope:
 | `src/server/floDownBlockDeclaredSymbols.ts` | Adds, removes, and uniqueness-scans declaration records. It does not upsert `Symbol` rows. |
 | `src/serverFns/symbol.server.ts` | Creates definienda using client-supplied FloDown URIs and lists or deletes declaration records by scanning `declaredSymbolsInfo`. |
 | `src/serverFns/symbolDuplicate.server.ts` | Sets confirmation fields on the matching `declaredSymbolsInfo` object. Curator/Admin only. |
-| `src/lib/dedupCatalogDisplay.ts` | Splits Deduplication catalog into unconfirmed vs confirmed-not-duplicate. |
-| `src/routes/Deduplication.tsx` | Curator/Admin UI: unconfirmed list then **Confirmed not a duplicate**. |
+| `src/lib/dedupCatalogDisplay.ts` | Splits Deduplication catalog into unconfirmed vs confirmed-not-duplicate and paginates grouped names. |
+| `src/routes/Deduplication.tsx` | Curator/Admin UI: unconfirmed list then **Confirmed not a duplicate**; 20 grouped names per page. |
 | `src/routes/symbols.tsx` | Curator/Admin UI for the local symbol registry. |
 | `scripts/backfill-declared-symbols-info.mjs` | One-shot production backfill of short names into URIs. Temporary mint lives only in this script. |
 
@@ -132,6 +132,11 @@ or canonicalize symbol URIs. Document URIs for `FloDown.fromUri` remain D-FTML-0
 
 **Upstream:** R-SYM-18, D-FTML-02, D-FTML-05
 
+**S-SYM-17 (State-Driven):** WHILE Deduplication lists grouped symbol names, the UI MUST paginate
+at 20 groups per page and MUST NOT reorder unconfirmed groups after confirmed-not-duplicate groups.
+
+**Upstream:** R-SYM-24
+
 ## Test mapping
 
 | SDD rule | PRD rule | Test |
@@ -147,6 +152,7 @@ or canonicalize symbol URIs. Document URIs for `FloDown.fromUri` remain D-FTML-0
 | S-SYM-11 | R-SYM-17 | mark-ref / `createLocalSymbol` reject (live-DB Gap) |
 | S-SYM-12 | Clarify Q3 | Backfill script; `flodownUris.test.ts` has no symbol mint helpers |
 | S-SYM-13 | R-SYM-18 | `prepareFloDownStatement.test.ts` HTTP pass-through |
+| S-SYM-17 | R-SYM-24 | `dedupCatalogDisplay.test.ts` pagination |
 
 ## Implementation bugs
 

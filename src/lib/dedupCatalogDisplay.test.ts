@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { CatalogSymbol } from "@/server/symbolCatalog";
 import {
   CONFIRMED_NOT_DUPLICATE_SECTION_TITLE,
+  DEDUP_PAGE_SIZE,
+  paginateDedupCatalog,
   partitionDedupCatalog,
 } from "./dedupCatalogDisplay";
 
@@ -43,5 +45,31 @@ describe("partitionDedupCatalog (R-SYM-22)", () => {
     expect(CONFIRMED_NOT_DUPLICATE_SECTION_TITLE).toBe(
       "Confirmed not a duplicate",
     );
+  });
+});
+
+describe("paginateDedupCatalog (R-SYM-24)", () => {
+  it("keeps page size at 20 grouped entries", () => {
+    expect(DEDUP_PAGE_SIZE).toBe(20);
+  });
+
+  it("slices unconfirmed before confirmed across pages", () => {
+    const unconfirmed = Array.from({ length: 22 }, (_, i) => `u${i}`);
+    const confirmed = ["c0", "c1"];
+    const page1 = paginateDedupCatalog(unconfirmed, confirmed, 1);
+    expect(page1.unconfirmed).toHaveLength(20);
+    expect(page1.confirmed).toEqual([]);
+    expect(page1.totalPages).toBe(2);
+    expect(page1.totalEntries).toBe(24);
+
+    const page2 = paginateDedupCatalog(unconfirmed, confirmed, 2);
+    expect(page2.unconfirmed).toEqual(["u20", "u21"]);
+    expect(page2.confirmed).toEqual(["c0", "c1"]);
+  });
+
+  it("clamps an out-of-range page to the last page", () => {
+    const page = paginateDedupCatalog(["a"], [], 9, 20);
+    expect(page.unconfirmed).toEqual(["a"]);
+    expect(page.totalPages).toBe(1);
   });
 });

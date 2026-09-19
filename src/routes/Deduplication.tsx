@@ -2,12 +2,15 @@ import { Duplicate } from "@/components/Duplicate";
 import { DeduplicationPageSkeleton } from "@/components/PageSkeletons";
 import {
   CONFIRMED_NOT_DUPLICATE_SECTION_TITLE,
+  DEDUP_PAGE_SIZE,
+  paginateDedupCatalog,
   partitionDedupCatalog,
 } from "@/lib/dedupCatalogDisplay";
 import { getAllSymbols } from "@/serverFns/symbol.server";
-import { Box, Stack, Text, Title } from "@mantine/core";
+import { Box, Group, Pagination, Stack, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/Deduplication")({
   component: DeduplicationPage,
@@ -25,38 +28,63 @@ function groupBySymbolName(
 }
 
 function DeduplicationPage() {
+  const [page, setPage] = useState(1);
   const { data: symbols = [], isLoading } = useQuery({
     queryKey: ["dedup-symbols"],
     queryFn: () => getAllSymbols(),
   });
 
-  if (isLoading) return <DeduplicationPageSkeleton />;
-
   const { unconfirmed, confirmed } = partitionDedupCatalog(symbols);
   const unconfirmedGroups = groupBySymbolName(unconfirmed);
   const confirmedGroups = groupBySymbolName(confirmed);
+  const catalogPage = paginateDedupCatalog(
+    unconfirmedGroups,
+    confirmedGroups,
+    page,
+    DEDUP_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    if (page > catalogPage.totalPages) setPage(catalogPage.totalPages);
+  }, [page, catalogPage.totalPages]);
+
+  if (isLoading) return <DeduplicationPageSkeleton />;
 
   return (
     <Box p="lg">
       <Title mb="md">Deduplication</Title>
 
-      {unconfirmedGroups.length === 0 && confirmedGroups.length === 0 && (
+      {catalogPage.totalEntries === 0 && (
         <Text c="dimmed">No duplicate symbols found</Text>
       )}
 
       <Stack>
-        {unconfirmedGroups.map(([symbolName]) => (
+        {catalogPage.unconfirmed.map(([symbolName]) => (
           <Duplicate key={symbolName} symbolName={symbolName} />
         ))}
       </Stack>
 
-      {confirmedGroups.length > 0 && (
+      {catalogPage.confirmed.length > 0 && (
         <Stack mt="xl">
           <Title order={3}>{CONFIRMED_NOT_DUPLICATE_SECTION_TITLE}</Title>
-          {confirmedGroups.map(([symbolName]) => (
+          {catalogPage.confirmed.map(([symbolName]) => (
             <Duplicate key={`confirmed-${symbolName}`} symbolName={symbolName} />
           ))}
         </Stack>
+      )}
+
+      {catalogPage.totalEntries > DEDUP_PAGE_SIZE && (
+        <Group justify="space-between" align="center" mt="xl">
+          <Text size="sm" c="dimmed">
+            {catalogPage.totalEntries} symbol
+            {catalogPage.totalEntries === 1 ? "" : "s"}
+          </Text>
+          <Pagination
+            value={Math.min(page, catalogPage.totalPages)}
+            onChange={setPage}
+            total={catalogPage.totalPages}
+          />
+        </Group>
       )}
     </Box>
   );

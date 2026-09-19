@@ -147,6 +147,9 @@ as part of MathHub duplicate for the first URI.
 unconfirmed local declarations first and MUST list declarations with the confirmed-not-duplicate
 flag under a section titled **Confirmed not a duplicate**.
 
+**R-SYM-24 (State-Driven):** WHILE Deduplication lists grouped symbol names, the system MUST show
+at most 20 entries per page, keeping unconfirmed entries before confirmed-not-duplicate entries.
+
 ## Out of scope
 
 - FloDown block version lifecycle — see `flodown-blocks.md`
@@ -185,6 +188,7 @@ flag under a section titled **Confirmed not a duplicate**.
 | R-SYM-21 | `uri-retarget.md` S-SYM-14 |
 | R-SYM-22 | `Deduplication.tsx`, `dedupCatalogDisplay.ts` |
 | R-SYM-23 | `uri-retarget.md` S-SYM-03 |
+| R-SYM-24 | `registry.md` S-SYM-17 |
 
 ## Related docs
 
