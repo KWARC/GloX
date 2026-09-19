@@ -54,7 +54,7 @@ as stated in REVIEW_GUIDE §2:
 
 Do **not** chase 100% line coverage. Chase **feature coverage** on critical areas
 ([AGENTS.md](../../AGENTS.md)): auth & sessions, document ownership, FloDown block lifecycle,
-symbol propagation, FTML/sTeX export, role gates — especially every SDD `MUST NOT`.
+MathHub duplicate, URI retarget, FTML/sTeX export, role gates — especially every SDD `MUST NOT`.
 
 ### 1.2 Layers
 
@@ -243,7 +243,7 @@ Agents MUST NOT pretend missing harness already exists.
 | Password fingerprint invalidation | `requireUser.ts` | Integration |
 | Document upload ownership | `upload.server.ts` | Integration |
 | FloDown block delete + symref cascade | `floDownBlockDeletion.ts` | Integration |
-| Symbol propagation URI replace | `SymbolPropagation.server.ts` | Integration |
+| MathHub duplicate URI replace | `uriRetarget.server.ts` | Integration |
 | sTeX URI rewrite | `generateStexFromFtml.ts` | Unit + integration |
 | LLM suggestion auth scope | `llmSuggestion.server.ts` | Integration |
 | FloDown preview mount | `FtmlPreview.tsx` | E2E (future) |

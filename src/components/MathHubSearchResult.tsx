@@ -3,7 +3,7 @@ import { Box, Button, Group, Paper } from "@mantine/core";
 import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 
-export type PendingPropagation = {
+export type PendingMathHubDuplicate = {
   localSymbolUri: string;
   mathHubUri: string;
   primaryFloDownBlockId: string;
@@ -12,15 +12,15 @@ export type PendingPropagation = {
 type MathHubSearchResultProps = {
   safeUri: string;
   floDownBlock: FloDownBlockSemantic;
-  selectedDefiniendum: { uri: string } | null;
-  setPendingPropagation: (data: PendingPropagation) => void;
+  localSymbolUri: string;
+  setPendingMathHubDuplicate: (data: PendingMathHubDuplicate) => void;
 };
 
 export function MathHubSearchResult({
   safeUri,
   floDownBlock,
-  selectedDefiniendum,
-  setPendingPropagation,
+  localSymbolUri,
+  setPendingMathHubDuplicate,
 }: MathHubSearchResultProps) {
   return (
     <Paper p="xs" withBorder>
@@ -35,15 +35,14 @@ export function MathHubSearchResult({
           size="xs"
           onClick={(e) => {
             e.stopPropagation();
-            if (!selectedDefiniendum) return;
-            setPendingPropagation({
-              localSymbolUri: selectedDefiniendum.uri,
+            setPendingMathHubDuplicate({
+              localSymbolUri,
               mathHubUri: safeUri,
               primaryFloDownBlockId: floDownBlock.id,
             });
           }}
         >
-          Use this
+          Same as this
         </Button>
       </Group>
     </Paper>

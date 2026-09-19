@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { requireAdminOrCurator } from "@/server/auth/requireAdminOrCurator";
 import { currentUser } from "@/server/auth/currentUser";
 import {
   findAllTextOccurrences,
@@ -25,26 +26,6 @@ import {
   unwrapRoot,
 } from "@/types/floDown.types";
 import { createServerFn } from "@tanstack/react-start";
-
-type AuthorizedRole = "ADMIN" | "CURATOR";
-
-async function requireAdminOrCurator(): Promise<{
-  id: string;
-  role: AuthorizedRole;
-}> {
-  const userRes = await currentUser();
-  if (!userRes.loggedIn) throw new Error("Unauthorized");
-
-  const role = userRes.user.role;
-  if (role !== "ADMIN" && role !== "CURATOR") {
-    throw new Error("Forbidden");
-  }
-
-  return {
-    id: userRes.user.id,
-    role,
-  };
-}
 
 export type CreateSymbolDefiniendumInput = {
   floDownBlockId: string;

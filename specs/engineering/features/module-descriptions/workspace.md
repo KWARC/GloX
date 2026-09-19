@@ -37,7 +37,7 @@ Out of scope (sibling specs):
 
 - Module and definition TeX export — [`export.md`](./export.md)
 - FloDown version lifecycle and cascade delete — `flodown-blocks/lifecycle.md`
-- Symbol registry / propagation — `symbols-semantics` PRD
+- Symbol registry / URI retarget — `symbols-semantics` PRD
 - Document PDF extraction — `documents-extraction`
 - Reordering the Modules list by faculty or subject area; catalog search filter/facet by faculty or subject area; German locale-aware sort
 

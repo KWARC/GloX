@@ -27,7 +27,7 @@ Set `featured: true` in frontmatter only after upstream review — not on work-i
 | [`features/documents-extraction/llm-suggestion-cache.md`](./features/documents-extraction/llm-suggestion-cache.md) | LLM suggestion cache |
 | [`features/flodown-blocks/lifecycle.md`](./features/flodown-blocks/lifecycle.md) | FloDown block lifecycle |
 | [`features/symbols-semantics/registry.md`](./features/symbols-semantics/registry.md) | Symbol registry |
-| [`features/symbols-semantics/propagation.md`](./features/symbols-semantics/propagation.md) | Symbol propagation |
+| [`features/symbols-semantics/uri-retarget.md`](./features/symbols-semantics/uri-retarget.md) | URI retarget |
 | [`features/symbols-semantics/search.md`](./features/symbols-semantics/search.md) | Symbolic catalog search |
 | [`features/symbols-semantics/wikipedia-lookup.md`](./features/symbols-semantics/wikipedia-lookup.md) | Wikipedia lookup for new symbols |
 | [`features/module-descriptions/workspace.md`](./features/module-descriptions/workspace.md) | Module description workspace |

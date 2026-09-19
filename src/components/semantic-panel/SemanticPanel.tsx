@@ -4,8 +4,8 @@ import {
   FloDownBlockSemantic,
 } from "@/types/Semantic.types";
 import { Box, Center, Flex, Modal, Text } from "@mantine/core";
-import { MathhubtoSymbolPropagationDialog } from "../MathhubtoSymbolPropagationDialog";
-import { SymbolPropagationDialog } from "../SymbolPropagationDialog";
+import { RewriteMathHubUriDialog } from "../RewriteMathHubUriDialog";
+import { MathHubDuplicateDialog } from "../MathHubDuplicateDialog";
 import { DefiniendumEditor } from "./DefiniendumEditor";
 import { SemanticNodeList } from "./SemanticNodeList";
 import { SemanticPanelFooter } from "./SemanticPanelFooter";
@@ -35,8 +35,8 @@ export function SemanticPanel({
   const {
     selectedNode,
     canEditDefinienda,
-    pendingPropagation,
-    setPendingPropagation,
+    pendingMathHubDuplicate,
+    setPendingMathHubDuplicate,
     pendingMathHubToLocal,
     setPendingMathHubToLocal,
     reset,
@@ -117,22 +117,20 @@ export function SemanticPanel({
         )}
       </Modal>
 
-      {pendingPropagation && (
-        <SymbolPropagationDialog
-          opened={pendingPropagation !== null}
-          localSymbolUri={pendingPropagation.localSymbolUri}
-          mathHubUri={pendingPropagation.mathHubUri}
-          primaryFloDownBlockId={pendingPropagation.primaryFloDownBlockId}
-          onReplaceNode={onReplaceNode}
+      {pendingMathHubDuplicate && (
+        <MathHubDuplicateDialog
+          opened={pendingMathHubDuplicate !== null}
+          localSymbolUri={pendingMathHubDuplicate.localSymbolUri}
+          mathHubUri={pendingMathHubDuplicate.mathHubUri}
           onDone={() => {
-            setPendingPropagation(null);
+            setPendingMathHubDuplicate(null);
           }}
-          onSkip={() => setPendingPropagation(null)}
+          onSkip={() => setPendingMathHubDuplicate(null)}
         />
       )}
 
       {pendingMathHubToLocal && (
-        <MathhubtoSymbolPropagationDialog
+        <RewriteMathHubUriDialog
           opened={pendingMathHubToLocal !== null}
           mathHubUri={pendingMathHubToLocal.mathHubUri}
           localSymbolUri={pendingMathHubToLocal.localSymbolUri}

@@ -13,8 +13,8 @@ import { RenderDbSymbol, RenderSymbolicUri } from "../RenderUri";
 import { ResultsSection } from "../ResultsSection";
 import { SymbolicLinkPreview } from "../SymbolicLinkPreview";
 import {
+  PendingMathHubDuplicate,
   PendingMathHubToLocal,
-  PendingPropagation,
   SemanticPanelState,
 } from "@/hooks/semantic-panel/useSemanticPanelState";
 
@@ -53,7 +53,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
     searchLoading,
     hasSearched,
     setSelectedNode,
-    setPendingPropagation,
+    setPendingMathHubDuplicate,
     setPendingMathHubToLocal,
   } = state;
 
@@ -173,7 +173,7 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                           });
                         }}
                       >
-                        Use this
+                        Use this URI
                       </Button>
                     </Group>
 
@@ -269,11 +269,11 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
 
                         if (props.mode === "definiendum") {
                           if (isLocalDeclaration(floDownBlock, props.selected.uri)) {
-                            setPendingPropagation({
+                            setPendingMathHubDuplicate({
                               localSymbolUri: props.selected.uri,
                               mathHubUri: r.uri,
                               primaryFloDownBlockId: floDownBlock.id,
-                            } satisfies PendingPropagation);
+                            } satisfies PendingMathHubDuplicate);
                           } else {
                             void handleReplaceNode(
                               floDownBlock.id,
@@ -318,7 +318,10 @@ export function SemanticSearchResults(props: SemanticSearchResultsProps) {
                         });
                       }}
                     >
-                      Use this
+                      {props.mode === "definiendum" &&
+                      isLocalDeclaration(floDownBlock, props.selected.uri)
+                        ? "Same as this"
+                        : "Use this URI"}
                     </Button>
                   </Group>
 

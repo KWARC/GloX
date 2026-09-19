@@ -17,7 +17,7 @@ import { createServerFn } from "@tanstack/react-start";
 export type UpdateFloDownBlockAstResult =
   | { kind: "ok" }
   | {
-      kind: "pendingPropagation";
+      kind: "pendingMathHubDuplicate";
       localSymbolUri: string;
       mathHubUri: string;
     };
@@ -130,7 +130,7 @@ export const updateFloDownBlockAst = createServerFn({ method: "POST" })
 
     if (isLocalToMathHubConversion && localSymbolUri && mathHubUri) {
       return {
-        kind: "pendingPropagation",
+        kind: "pendingMathHubDuplicate",
         localSymbolUri,
         mathHubUri,
       };

@@ -122,7 +122,7 @@ Register new areas in this table when adding a PRD/SDD file. One primary `AREA` 
 | `AUTH` | PRD | `prds/domains/auth.md` | Signup, login, roles, email verification |
 | `DOC` | PRD | `prds/domains/documents-extraction.md` | Upload, ownership, PDF extraction |
 | `FLO` | PRD | `prds/domains/flodown-blocks.md` | FloDown block outcomes |
-| `SYM` | PRD | `prds/domains/symbols-semantics.md` | Symbols, symrefs, propagation |
+| `SYM` | PRD | `prds/domains/symbols-semantics.md` | Symbols, symrefs, MathHub duplicate, URI retarget |
 | `MOD` | PRD | `prds/domains/module-descriptions.md` | FAU module catalog processing |
 | `CUR` | PRD | `prds/domains/curation-export.md` | Curation, sTeX/MathHub export |
 | `AUTH` | SDD | `features/auth/auth-sessions.md` | JWT sessions, password fingerprint |

@@ -189,7 +189,7 @@ semantics can pollute the MathHub archive path.
 
 - Live Campo/StudOn API integration — catalog is file-based today; see `prisma/modules-tar-update.md`
 - FloDown block version lifecycle, status moves, and cascade symref rules — see `flodown-blocks.md`
-- Symbol registry, propagation, and deduplication — see `symbols-semantics.md`
+- Symbol registry, MathHub duplicate, and URI retarget — see `symbols-semantics.md`
 - Document PDF extraction workflow — see `documents-extraction.md`
 - Document curation queue and server-side LaTeX versioning — see `curation-export.md`
 - Automated MathHub submission or index-status-driven export jobs — status is tracked metadata only

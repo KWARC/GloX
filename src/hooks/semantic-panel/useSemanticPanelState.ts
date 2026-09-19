@@ -10,7 +10,7 @@ import {
 } from "@/types/Semantic.types";
 import { useEffect, useMemo, useState } from "react";
 
-export type PendingPropagation = {
+export type PendingMathHubDuplicate = {
   localSymbolUri: string;
   mathHubUri: string;
   primaryFloDownBlockId: string;
@@ -31,8 +31,8 @@ export function useSemanticPanelState(floDownBlock: FloDownBlockSemantic | null)
   const [editingNodeUri, setEditingNodeUri] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [savingRename, setSavingRename] = useState(false);
-  const [pendingPropagation, setPendingPropagation] =
-    useState<PendingPropagation | null>(null);
+  const [pendingMathHubDuplicate, setPendingMathHubDuplicate] =
+    useState<PendingMathHubDuplicate | null>(null);
   const [pendingMathHubToLocal, setPendingMathHubToLocal] =
     useState<PendingMathHubToLocal | null>(null);
   const canEditDefinienda = floDownBlock
@@ -104,8 +104,8 @@ export function useSemanticPanelState(floDownBlock: FloDownBlockSemantic | null)
     setRenameValue,
     savingRename,
     setSavingRename,
-    pendingPropagation,
-    setPendingPropagation,
+    pendingMathHubDuplicate,
+    setPendingMathHubDuplicate,
     pendingMathHubToLocal,
     setPendingMathHubToLocal,
     definienda,

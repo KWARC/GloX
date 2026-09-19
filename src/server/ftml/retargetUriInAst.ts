@@ -10,60 +10,60 @@ import { mapInlineContent, mapInlines } from "@/server/ftml/statementContent";
 
 function replaceUriInContent(
   content: FloDownContent[],
-  localUri: string,
-  mathHubUri: string,
+  fromUri: string,
+  toUri: string,
 ): FloDownContent[] {
   return mapInlines(content, (item) => {
     if (typeof item === "string") return item;
 
     if (
       (item.type === "definiendum" || item.type === "symref") &&
-      item.uri === localUri
+      item.uri === fromUri
     ) {
-      return { ...item, uri: mathHubUri };
+      return { ...item, uri: toUri };
     }
 
     return item;
   });
 }
 
-function propagateUriInBlock(
+function retargetUriInBlock(
   block: PersistedBlock,
-  localUri: string,
-  mathHubUri: string,
+  fromUri: string,
+  toUri: string,
 ): PersistedBlock {
   return mapInlineContent(block, (content) =>
-    replaceUriInContent(content, localUri, mathHubUri),
+    replaceUriInContent(content, fromUri, toUri),
   );
 }
 
-export function propagateUriInAst(
+export function retargetUriInAst(
   ast: FloDownStatement,
-  localUri: string,
-  mathHubUri: string,
+  fromUri: string,
+  toUri: string,
 ): FloDownStatement {
   if (Array.isArray(ast)) {
-    return ast.map((block) => propagateUriInBlock(block, localUri, mathHubUri));
+    return ast.map((block) => retargetUriInBlock(block, fromUri, toUri));
   }
   if (ast.type === "root") {
     return {
       ...ast,
       content: ast.content.map((block) =>
-        propagateUriInBlock(block, localUri, mathHubUri),
+        retargetUriInBlock(block, fromUri, toUri),
       ),
     };
   }
-  return propagateUriInBlock(ast, localUri, mathHubUri);
+  return retargetUriInBlock(ast, fromUri, toUri);
 }
 
-export function astReferencesUri(ast: FloDownStatement, localUri: string): boolean {
+export function astReferencesUri(ast: FloDownStatement, uri: string): boolean {
   function scanContent(content: FloDownContent[]): boolean {
     for (const item of content) {
       if (typeof item === "string") continue;
 
       if (
         (item.type === "definiendum" || item.type === "symref") &&
-        item.uri === localUri
+        item.uri === uri
       ) {
         return true;
       }

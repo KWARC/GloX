@@ -12,6 +12,8 @@ code:
   - src/server/symbolCatalog.ts
   - src/routes/symbols.tsx
   - src/routes/Deduplication.tsx
+  - src/lib/dedupCatalogDisplay.ts
+  - src/server/auth/requireAdminOrCurator.ts
 ---
 
 # SDD: Symbol registry
@@ -26,7 +28,7 @@ for existing rows).
 
 Out of scope:
 
-- Symbol URI propagation across blocks — [`propagation.md`](./propagation.md)
+- Symbol URI retarget across blocks — [`uri-retarget.md`](./uri-retarget.md)
 - Catalog search / stemming — [`search.md`](./search.md)
 - FloDown statement editing lifecycle — `flodown-blocks/lifecycle.md`
 
@@ -37,7 +39,9 @@ Out of scope:
 | `prisma/schema.prisma` `FloDownBlock` | Stores FTML `statement` JSON and `declaredSymbolsInfo` as the declaration catalog for that block. |
 | `src/server/floDownBlockDeclaredSymbols.ts` | Adds, removes, and uniqueness-scans declaration records. It does not upsert `Symbol` rows. |
 | `src/serverFns/symbol.server.ts` | Creates definienda using client-supplied FloDown URIs and lists or deletes declaration records by scanning `declaredSymbolsInfo`. |
-| `src/serverFns/symbolDuplicate.server.ts` | Sets confirmation fields on the matching `declaredSymbolsInfo` object. |
+| `src/serverFns/symbolDuplicate.server.ts` | Sets confirmation fields on the matching `declaredSymbolsInfo` object. Curator/Admin only. |
+| `src/lib/dedupCatalogDisplay.ts` | Splits Deduplication catalog into unconfirmed vs confirmed-not-duplicate. |
+| `src/routes/Deduplication.tsx` | Curator/Admin UI: unconfirmed list then **Confirmed not a duplicate**. |
 | `src/routes/symbols.tsx` | Curator/Admin UI for the local symbol registry. |
 | `scripts/backfill-declared-symbols-info.mjs` | One-shot production backfill of short names into URIs. Temporary mint lives only in this script. |
 
@@ -79,15 +83,15 @@ database unique index required).
 
 **Upstream:** R-SYM-04
 
-**S-SYM-06 (Ubiquitous):** `deleteSymbolIfUnassociated` and Curator/Admin symbol-registry mutations that
-destroy or confirm Symbols MUST reject Extractor-role callers (`requireAdminOrCurator` or equivalent).
+**S-SYM-06 (Ubiquitous):** `deleteSymbolIfUnassociated`, `confirmSymbolNotDuplicate`,
+`undoSymbolConfirmation`, and Curator/Admin symbol-registry mutations that destroy or confirm
+Symbols MUST reject Extractor-role callers (`requireAdminOrCurator` or equivalent).
 
-**Upstream:** R-SYM-06 — **partially implemented** (see BUG-003: confirm/undo lack role gate).
+**Upstream:** R-SYM-06
 
 **S-SYM-07 (Ubiquitous):** Symbol and symref mutation handlers MUST require an authenticated session.
 
-**Upstream:** R-SYM-07 — **partially implemented** (see BUG-003: `undoSymbolConfirmation` and some
-search/list handlers lack auth).
+**Upstream:** R-SYM-07 — **partially implemented** (see BUG-003: some search/list handlers lack auth).
 
 **S-SYM-08 (Event-Driven):** WHEN delete-declaration is called, IF any non-discarded
 `declaredSymbolsInfo` still contains that `symbolUri`, the system MUST reject the request.
@@ -135,8 +139,8 @@ or canonicalize symbol URIs. Document URIs for `FloDown.fromUri` remain D-FTML-0
 | S-SYM-01 | R-SYM-01 | `declaredSymbolsInfo.test.ts`; declare persist requires URI (`symbol.server.ts`) |
 | S-SYM-02 | R-SYM-02 | `declaredSymbolsInfo.test.ts` uniqueness |
 | S-SYM-04 | R-SYM-04 | `declaredSymbolsInfo.test.ts` confirmation |
-| S-SYM-06 | R-SYM-06 | Gap (BUG-003) |
-| S-SYM-07 | R-SYM-07 | Gap (BUG-003) |
+| S-SYM-06 | R-SYM-06 | `roleMayReplaceLocalSymbolWithMathHub`; confirm/undo use `requireAdminOrCurator` (live-DB Gap) |
+| S-SYM-07 | R-SYM-07 | Gap (BUG-003 remaining list/search handlers) |
 | S-SYM-08 | R-SYM-08 | Catalog scan in `symbolCatalog.ts` (live-DB integration Gap) |
 | S-SYM-09 | R-SYM-19 | `declaredSymbolsInfo.test.ts` reject empty URI |
 | S-SYM-10 | R-SYM-16 | `declaredSymbolsInfo.test.ts` opaque replace |
@@ -148,12 +152,12 @@ or canonicalize symbol URIs. Document URIs for `FloDown.fromUri` remain D-FTML-0
 
 | ID | File(s) | Description |
 | --- | --- | --- |
-| BUG-003 | `symbolDuplicate.server.ts`, `SymbolPropagation.server.ts`, several list/search handlers | Role gates and/or auth missing relative to R-SYM-06/07; confirm and propagation rely on route UI, not server enforcement. |
+| BUG-003 | several list/search handlers | Role gates and/or auth missing relative to R-SYM-07 on some catalog list/search paths. Confirm/undo and MathHub duplicate are gated (`requireAdminOrCurator`). |
 
 ## Related docs
 
 - [`symbols-semantics.md`](../../../prds/domains/symbols-semantics.md)
-- [`propagation.md`](./propagation.md)
+- [`uri-retarget.md`](./uri-retarget.md)
 - [`search.md`](./search.md)
 - [`../flodown-blocks/lifecycle.md`](../flodown-blocks/lifecycle.md)
 - [`../../external-deps/libraries/ftml.md`](../../external-deps/libraries/ftml.md) — E-FTML-06

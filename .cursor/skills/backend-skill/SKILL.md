@@ -12,7 +12,7 @@ see_also:
 # Backend skill — GloX
 
 Load [`AGENTS.md`](../../../AGENTS.md) for critical-area guardrails (auth, document ownership,
-FloDown lifecycle, symbol propagation, FTML export). Conventions here do not override PRDs, SDDs,
+FloDown lifecycle, MathHub duplicate, URI retarget, FTML export). Conventions here do not override PRDs, SDDs,
 or ADRs.
 
 # 1. General guidelines
@@ -115,7 +115,7 @@ Use `include` or batched queries instead of N+1 loops. Prefer `findUnique` when 
 ### 2.4.3. Use transactions when appropriate
 
 Use `prisma.$transaction` for related writes that must succeed or fail together (e.g. FloDown block
-cascade updates, symbol propagation).
+cascade updates, URI retarget).
 
 # 3. Critical server domains
 
@@ -125,7 +125,7 @@ cascade updates, symbol propagation).
 | Documents & upload | `src/server/document/`, `src/serverFns/upload.server.ts` |
 | FloDown blocks | `src/server/floDownBlockDeletion.ts`, `src/serverFns/updateFloDownBlock.server.ts` |
 | FTML / sTeX export | `src/server/ftml/`, `src/serverFns/latex.server.ts` |
-| Symbol propagation | `src/serverFns/SymbolPropagation.server.ts` |
+| URI retarget | `src/serverFns/uriRetarget.server.ts` |
 | Module descriptions | `src/server/modules/`, `src/serverFns/moduleDescription.server.ts` |
 | LLM suggestions (optional) | `src/server/llm.ts`, `src/serverFns/llmSuggestion.server.ts` |
 

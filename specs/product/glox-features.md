@@ -1,6 +1,6 @@
 # GloX — shipped features
 
-> **Layer:** Product inventory — orientation only. **Last verified:** 2026-09-07.
+> **Layer:** Product inventory — orientation only. **Last verified:** 2026-09-19.
 >
 > Parent brief: [`glox.md`](./glox.md)
 
@@ -53,9 +53,9 @@
 ## Symbols & deduplication
 
 - **Symbol registry** — Local declarations on FloDown blocks, keyed by opaque FloDown symbol URI.
-- **Symbol propagation** — Replace symbol URIs across referencing blocks.
-- **MathHub URI replacement** — Bulk replace external URIs in block statements.
-- **Duplicate confirmation** — Curators confirm declarations are not duplicates (`hasConfirmed` on the declaration record).
+- **MathHub duplicate** — Curator/Admin treats a local declaration as the same concept as a MathHub symbol: retargets the local URI across current FloDown statements (including discarded) and module Title/Inhalt/Lernziele; drops the local declaration; keeps definition text. The dialog lists the blast radius (Discarded chip; module field labels).
+- **URI retarget (MathHub → local)** — Optionally rewrite other FloDown blocks that still use a MathHub URI after a node is pointed at a local symbol.
+- **Duplicate confirmation** — Curators confirm declarations are not duplicates (`hasConfirmed`). Deduplication lists those under **Confirmed not a duplicate**.
 
 ## Mark references
 

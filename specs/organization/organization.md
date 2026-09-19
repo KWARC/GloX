@@ -38,7 +38,7 @@ areas and escalate to the accountable owner.
 | Auth & sessions                      | Abhishek Chugh | Keerthan K          | Michael Kohlhase                 |
 | Authorization & document ownership   | Abhishek Chugh | Keerthan K          | Michael Kohlhase                 |
 | FloDown block lifecycle              | Abhishek Chugh | Keerthan K          | Dennis Müller → Michael Kohlhase |
-| Symbol propagation & deduplication   | Abhishek Chugh | Keerthan K          | Dennis Müller → Michael Kohlhase |
+| MathHub duplicate & URI retarget     | Abhishek Chugh | Keerthan K          | Dennis Müller → Michael Kohlhase |
 | FTML/sTeX export                     | Abhishek Chugh | Keerthan K          | Dennis Müller → Michael Kohlhase |
 | Role gates (EXTRACTOR/CURATOR/ADMIN) | Abhishek Chugh | Keerthan K          | Michael Kohlhase                 |
 

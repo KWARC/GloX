@@ -26,7 +26,7 @@ FloDown blocks — the curated FTML content unit.
 
 Out of scope (sibling specs):
 
-- Symbol registry and propagation — `symbols-semantics/` SDDs
+- Symbol registry and URI retarget — `symbols-semantics/` SDDs
 - sTeX export pipeline — `curation-export/stex-export.md`
 - FTML statement shapes — [`ftml.md`](../../external-deps/libraries/ftml.md)
 

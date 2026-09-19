@@ -246,32 +246,63 @@ terms:
       - label: static symbolic catalog
         context: client catalog.json / symbolicCatalog.server.ts
 
-  symbol_propagation:
-    preferred: Symbol propagation
+  mathhub_duplicate:
+    preferred: MathHub duplicate
     definition: >
-      Curator/Admin operation that replaces matching local symbol references (or MathHub URIs) across
-      FloDown block statements and records version history for each changed block.
+      Curator/Admin decision that a local declaration is the same concept as a chosen MathHub
+      symbol. The system retargets that local URI to the MathHub URI in current FloDown statements
+      (including discarded) and ModuleDescription Title/Inhalt/Lernziele, drops the local
+      declaration, keeps definition text, and appends FloDown version history for changed current
+      statements. Does not rewrite historic version JSON or page mark references.
     technical_anchors:
-      - specs/engineering/features/symbols-semantics/propagation.md
-      - src/serverFns/SymbolPropagation.server.ts
-      - src/server/ftml/convertLocalSymbolToMathHub.ts
+      - specs/engineering/features/symbols-semantics/uri-retarget.md
+      - src/serverFns/uriRetarget.server.ts
+      - src/server/ftml/replaceLocalSymbolWithMathHub.ts
+      - src/components/MathHubDuplicateDialog.tsx
     allowed_aliases:
-      - label: MathHub replacement
-        context: applyMathHubReplacement path
+      - label: Same as this
+        context: Deduplication / Semantic Panel MathHub hit for a local declaration
+      - label: Apply MathHub URI
+        context: MathHub duplicate modal primary action
+    see_also:
+      - uri_retarget
+      - symbol_confirmation
+
+  uri_retarget:
+    preferred: URI retarget
+    definition: >
+      Opaque replacement of one symbol URI with another in current FTML (definienda and
+      symrefs). Used to apply a MathHub duplicate and to rewrite other FloDown blocks that still
+      use a MathHub URI.
+    technical_anchors:
+      - specs/engineering/features/symbols-semantics/uri-retarget.md
+      - src/server/ftml/retargetUriInAst.ts
+      - src/serverFns/uriRetarget.server.ts
+    allowed_aliases:
+      - label: Rewrite other occurrences
+        context: Semantic Panel MathHub URI → local URI dialog
+      - label: Apply URI replace
+        context: Rewrite-other-occurrences modal primary action
+    see_also:
+      - mathhub_duplicate
 
   symbol_confirmation:
     preferred: Symbol confirmation
     definition: >
       Curator/Admin mark that a Symbol is not a duplicate (`hasConfirmed`), recording the confirming
-      user; Extractors MUST NOT confirm deduplication.
+      user; Extractors MUST NOT confirm that a symbol is not a duplicate.
     technical_anchors:
       - prisma/schema.prisma Symbol.hasConfirmed
       - prisma/schema.prisma Symbol.confirmedById
     allowed_aliases:
-      - label: deduplication
-        context: PRD wording for confirm-not-duplicate workflow
+      - label: Not a duplicate
+        context: Deduplication control
+      - label: Confirmed not a duplicate
+        context: Deduplication section title
       - label: confirmed flag
         context: database / SDD
+    see_also:
+      - mathhub_duplicate
 
   original_text:
     preferred: Original text

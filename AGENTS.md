@@ -16,7 +16,7 @@ model, or broken core workflows:
 | **Auth & sessions** | JWT cookies; password fingerprint invalidation; email verification gate |
 | **Authorization & document ownership** | Users must only read/mutate their own documents unless Admin |
 | **FloDown block lifecycle** | Cascade deletes rewrite symrefs across blocks; version history is authoritative |
-| **Symbol propagation & deduplication** | Bulk URI replacement affects multiple blocks and export identity |
+| **MathHub duplicate & URI retarget** | Bulk URI replacement affects multiple blocks and export identity |
 | **FTML/sTeX export** | Wrong URI rewriting breaks MathHub integration |
 | **Role gates** | EXTRACTOR vs CURATOR vs ADMIN capabilities on curation and symbol management |
 

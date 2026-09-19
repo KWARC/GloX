@@ -64,7 +64,7 @@ export function ConfirmationModal({
               </Text>{" "}
               as{" "}
               <Text span fw={700}>
-                NOT a duplicate
+                not a duplicate
               </Text>
               .
             </Text>

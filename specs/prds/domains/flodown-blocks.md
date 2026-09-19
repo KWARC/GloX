@@ -55,7 +55,7 @@ semantic data corruption incident.
 
 ## Out of scope
 
-- Symbol registry and propagation — see `symbols-semantics.md`
+- Symbol registry and URI retarget — see `symbols-semantics.md`
 - sTeX generation pipeline — see `curation-export.md`
 - Module-description-scoped blocks — shared rules apply; module-specific seeding in
   `module-descriptions.md`

@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { currentUser } from "@/server/auth/currentUser";
+import { requireAdminOrCurator } from "@/server/auth/requireAdminOrCurator";
 import {
   parseDeclaredSymbolsInfo,
   setDeclarationConfirmation,
@@ -9,11 +9,7 @@ import { createServerFn } from "@tanstack/react-start";
 export const confirmSymbolNotDuplicate = createServerFn({ method: "POST" })
   .inputValidator((data: { symbolId: string }) => data)
   .handler(async ({ data }) => {
-    const user = await currentUser();
-
-    if (!user.user?.id) {
-      throw new Error("Authentication required");
-    }
+    const user = await requireAdminOrCurator();
 
     const symbolUri = data.symbolId.trim();
     const blocks = await prisma.floDownBlock.findMany({
@@ -32,10 +28,8 @@ export const confirmSymbolNotDuplicate = createServerFn({ method: "POST" })
       symbolUri,
       {
         hasConfirmed: true,
-        confirmedById: user.user.id,
-        confirmedBy: [user.user.firstName, user.user.lastName]
-          .filter(Boolean)
-          .join(" ") || user.user.email,
+        confirmedById: user.id,
+        confirmedBy: user.displayName,
       },
     );
 
@@ -48,6 +42,7 @@ export const confirmSymbolNotDuplicate = createServerFn({ method: "POST" })
 export const undoSymbolConfirmation = createServerFn({ method: "POST" })
   .inputValidator((data: { symbolId: string }) => data)
   .handler(async ({ data }) => {
+    await requireAdminOrCurator();
     const symbolUri = data.symbolId.trim();
     const blocks = await prisma.floDownBlock.findMany({
       where: { status: { not: "DISCARDED" } },

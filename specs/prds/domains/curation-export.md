@@ -56,7 +56,7 @@ pipelines.
 - MathHub upload/submit automation — status SUBMITTED_TO_MATHHUB is tracked; actual archive push may
   be manual
 - FloDown block editing — see `flodown-blocks.md`
-- Symbol propagation — see `symbols-semantics.md`
+- MathHub duplicate and URI retarget — see `symbols-semantics.md`
 
 ## Traceability
 

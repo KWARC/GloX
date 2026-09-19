@@ -6,7 +6,7 @@ upstream:
 compliance: []
 code:
   - specs/engineering/features/symbols-semantics/registry.md
-  - specs/engineering/features/symbols-semantics/propagation.md
+  - specs/engineering/features/symbols-semantics/uri-retarget.md
   - specs/engineering/features/symbols-semantics/search.md
   - specs/engineering/features/symbols-semantics/wikipedia-lookup.md
 ---
@@ -16,8 +16,8 @@ code:
 A Symbol is a declared concept whose identity is the opaque URI FloDown returned. Declaration
 records live on the declaring FloDown block. Definienda in definitions name or verbalize that
 symbol (E-FTML-06). Symrefs link to local symbol URIs or MathHub URIs. This PRD covers symbol
-creation, search, propagation, deduplication, and Wikipedia-assisted definition authoring for
-**new** Symbols.
+creation, search, MathHub duplicate, URI retarget, confirmation that a symbol is not a duplicate,
+and Wikipedia-assisted definition authoring for **new** Symbols.
 
 ## Business rules
 
@@ -33,9 +33,15 @@ owns the local symbol URI.
 **R-SYM-02 (Ubiquitous):** The system MUST allow at most one non-discarded FloDown block to declare
 a given local symbol URI.
 
-**R-SYM-03 (Event-Driven):** WHEN a Curator or Admin applies symbol propagation, the system MUST
-replace matching local symbol references across all affected FloDown block statements and MUST record
-version history for each changed block.
+**R-SYM-03 (Event-Driven):** WHEN a Curator or Admin applies a MathHub duplicate (local symbol URI
+to a MathHub URI), the system MUST replace that local URI with the MathHub URI on every **current**
+FloDown block statement that contains it (definienda and symrefs; including discarded blocks and
+the declaring block) and on every ModuleDescription `titleStatement`, `inhaltStatement`, and
+`lernzieleStatement` that contains it, and MUST append a version history record for each **changed
+FloDown block**. The system MUST NOT rewrite historic `FloDownBlockVersion` statement JSON.
+
+**Rationale:** Version rows stay aligned with current statements (R-FDB-02). Old snapshots keep the
+local URI.
 
 **R-SYM-04 (Event-Driven):** WHEN a Curator confirms a Symbol is not a duplicate, the system MUST
 set the confirmed flag and MUST record the confirming user on that symbol’s declaration record.
@@ -87,7 +93,7 @@ URI.
 ### Binding operator / compliance promises
 
 **R-SYM-06 (Ubiquitous):** The system MUST NOT allow Extractor-role users to delete unassociated
-local symbol declarations or confirm deduplication.
+local symbol declarations, confirm a Symbol is not a duplicate, or apply a MathHub duplicate.
 
 **Rationale:** Symbol registry changes affect export identity and MathHub canonicalization — only
 Curators and Admins may perform destructive symbol operations.
@@ -116,6 +122,23 @@ URI was supplied as the value FloDown returned for that declaration.
 **Rationale:** Server- or model-invented URIs are the same incident class as R-SYM-18 (false export
 identity).
 
+**R-SYM-20 (Event-Driven):** WHEN a MathHub duplicate of a local symbol URI with a MathHub URI
+succeeds, the system MUST remove the local declaration record for that URI and MUST keep the
+FloDown blocks and ModuleDescription rows that held the rewritten statements.
+
+**Rationale:** MathHub already declares the concept; a second local `\symdecl*` is false identity.
+The glossary text stays.
+
+**R-SYM-21 (Event-Driven):** WHEN a Curator or Admin opens MathHub duplicate for that local URI, the
+system MUST list every FloDown block and every Title/Inhalt/Lernziele statement that currently
+contains the local URI (including the declaring block). WHILE a listed FloDown block has status
+DISCARDED, the system MUST indicate Discarded on that list entry. The system MUST NOT apply the
+rewrite without that list.
+
+**R-SYM-22 (Event-Driven):** WHEN a Curator or Admin views Deduplication, the system MUST list
+unconfirmed local declarations first and MUST list declarations with the confirmed-not-duplicate
+flag under a section titled **Confirmed not a duplicate**.
+
 ## Out of scope
 
 - FloDown block version lifecycle — see `flodown-blocks.md`
@@ -133,11 +156,11 @@ identity).
 | --- | --- |
 | R-SYM-01 | `registry.md` S-SYM-01 |
 | R-SYM-02 | `registry.md` S-SYM-02 |
-| R-SYM-03 | `propagation.md` S-SYM-03, S-SYM-03a |
+| R-SYM-03 | `uri-retarget.md` S-SYM-03, S-SYM-03a, S-SYM-16 |
 | R-SYM-04 | `registry.md` S-SYM-04 |
 | R-SYM-05 | `search.md` S-SYM-05 |
-| R-SYM-06 | `registry.md` S-SYM-06; `propagation.md` S-SYM-06a — **Gap (BUG-003)** |
-| R-SYM-07 | `registry.md` S-SYM-07 — **Gap (BUG-003)** |
+| R-SYM-06 | `registry.md` S-SYM-06; `uri-retarget.md` S-SYM-15 |
+| R-SYM-07 | `registry.md` S-SYM-07; `uri-retarget.md` S-SYM-15 — **Gap (BUG-003)** remaining list/search handlers |
 | R-SYM-08 | `registry.md` S-SYM-08 |
 | R-SYM-09 | `wikipedia-lookup.md` S-SYM-09 |
 | R-SYM-10 | `wikipedia-lookup.md` S-SYM-10 |
@@ -150,11 +173,14 @@ identity).
 | R-SYM-17 | `registry.md` S-SYM-11 |
 | R-SYM-18 | `registry.md` S-SYM-13; D-FTML-05 |
 | R-SYM-19 | `registry.md` S-SYM-09 |
+| R-SYM-20 | `uri-retarget.md` S-SYM-03 |
+| R-SYM-21 | `uri-retarget.md` S-SYM-14 |
+| R-SYM-22 | `Deduplication.tsx`, `dedupCatalogDisplay.ts` |
 
 ## Related docs
 
 - [`registry.md`](../../engineering/features/symbols-semantics/registry.md)
-- [`propagation.md`](../../engineering/features/symbols-semantics/propagation.md)
+- [`uri-retarget.md`](../../engineering/features/symbols-semantics/uri-retarget.md)
 - [`search.md`](../../engineering/features/symbols-semantics/search.md)
 - [`wikipedia-lookup.md`](../../engineering/features/symbols-semantics/wikipedia-lookup.md)
 - [`flodown-blocks.md`](./flodown-blocks.md)

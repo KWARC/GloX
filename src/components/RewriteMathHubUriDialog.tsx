@@ -1,8 +1,8 @@
 import {
-  PropagationCandidate,
-  applyMathHubReplacement,
+  FloDownUriRetargetCandidate,
   getFloDownBlocksReferencingMathHubUri,
-} from "@/serverFns/SymbolPropagation.server";
+  retargetMathHubUriInSelectedBlocks,
+} from "@/serverFns/uriRetarget.server";
 import { OnReplaceNode } from "@/types/Semantic.types";
 import {
   Badge,
@@ -20,7 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { FtmlPreview } from "./FtmlPreview";
 
-interface MathhubtoSymbolPropagationDialogProps {
+interface RewriteMathHubUriDialogProps {
   opened: boolean;
   mathHubUri: string;
   localSymbolUri: string;
@@ -31,7 +31,7 @@ interface MathhubtoSymbolPropagationDialogProps {
   onCancel: () => void;
 }
 
-export function MathhubtoSymbolPropagationDialog({
+export function RewriteMathHubUriDialog({
   opened,
   mathHubUri,
   localSymbolUri,
@@ -40,14 +40,15 @@ export function MathhubtoSymbolPropagationDialog({
   onReplaceNode,
   onDone,
   onCancel,
-}: MathhubtoSymbolPropagationDialogProps) {
+}: RewriteMathHubUriDialogProps) {
   const [applying, setApplying] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const { data: candidates = [], isLoading } = useQuery<PropagationCandidate[]>(
-    {
+  const { data: candidates = [], isLoading } = useQuery<
+    FloDownUriRetargetCandidate[]
+  >({
       queryKey: [
-        "mathhub-to-local-propagation-candidates",
+        "mathhub-uri-retarget-candidates",
         mathHubUri,
         primaryFloDownBlockId,
       ],
@@ -102,7 +103,7 @@ export function MathhubtoSymbolPropagationDialog({
         .map((c) => c.id);
 
       if (selectedFloDownBlockIds.length > 0) {
-        await applyMathHubReplacement({
+        await retargetMathHubUriInSelectedBlocks({
           data: {
             selectedFloDownBlockIds,
             mathHubUri,
@@ -126,7 +127,7 @@ export function MathhubtoSymbolPropagationDialog({
       title={
         <Stack gap={2}>
           <Text fw={600} size="md">
-            Replace MathHub Symbol with Local
+            Rewrite other occurrences
           </Text>
           <Text size="xs" c="dimmed">
             Replace{" "}
@@ -250,7 +251,7 @@ export function MathhubtoSymbolPropagationDialog({
           Cancel
         </Button>
         <Button onClick={handleApply} loading={applying}>
-          Confirm replace
+          Apply URI replace
         </Button>
       </Group>
     </Modal>

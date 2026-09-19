@@ -1,13 +1,12 @@
 import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
 import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { queryClient } from "@/queryClient";
-import { normalizeSymRef } from "@/server/parseUri";
+import { parseUri, ReplacePayload, normalizeSymRef } from "@/server/parseUri";
 import {
   declaredUrisFromJson,
   parseDeclaredSymbolsInfo,
 } from "@/server/declaredSymbolsInfo";
 import { extractSemanticIndex } from "@/server/ftml/semanticIndex";
-import { parseUri, ReplacePayload } from "@/server/parseUri";
 import { ExtractedItem, useTextSelection } from "@/server/text-selection";
 import { SymbolSearchResult, useSymbolSearch } from "@/server/useSymbolSearch";
 import {
@@ -29,7 +28,7 @@ import {
   UpdateFloDownBlockAstResult,
 } from "@/serverFns/updateFloDownBlock.server";
 import { assertFloDownStatement, FloDownStatement } from "@/types/floDown.types";
-import { OnReplaceNode, FloDownBlockSemantic } from "@/types/Semantic.types";
+import { FloDownBlockSemantic } from "@/types/Semantic.types";
 import { Box, Button, Group, Loader, Paper, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -37,33 +36,14 @@ import { ConfirmationModal, ConfirmDialogKind } from "./ConfirmationModal";
 import { ConfirmedIcon } from "./ConfirmedIcon";
 import { DefiniendumDialog } from "./DefiniendumDialog";
 import { ExtractedTextPanel } from "./ExtractedTextList";
-import { MathHubSearchResult, PendingPropagation } from "./MathHubSearchResult";
+import { MathHubSearchResult, PendingMathHubDuplicate } from "./MathHubSearchResult";
 import { SelectionPopup } from "./SelectionPopup";
 import { SymbolicRef } from "./SymbolicRef";
-import { SymbolPropagationDialog } from "./SymbolPropagationDialog";
-
-const handleReplaceNode: OnReplaceNode = async (
-  floDownBlockId,
-  target,
-  payload,
-  options,
-): Promise<UpdateFloDownBlockAstResult> => {
-  const result = await updateFloDownBlockAst({
-    data: {
-      floDownBlockId,
-      operation: { kind: "replaceSemantic", target, payload },
-      ...(options?.declaredSymbolName
-        ? { declaredSymbolName: options.declaredSymbolName }
-        : {}),
-    },
-  });
-  await queryClient.invalidateQueries({ queryKey: ["dedup-symbols"] });
-  return result;
-};
+import { MathHubDuplicateDialog } from "./MathHubDuplicateDialog";
 
 export function Duplicate({ symbolName }: { symbolName: string }) {
-  const [pendingPropagation, setPendingPropagation] =
-    useState<PendingPropagation | null>(null);
+  const [pendingMathHubDuplicate, setPendingMathHubDuplicate] =
+    useState<PendingMathHubDuplicate | null>(null);
   const [visibleCount, setVisibleCount] = useState(2);
   const [dialogKind, setDialogKind] = useState<ConfirmDialogKind | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
@@ -410,8 +390,8 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
                   key={safeUri}
                   safeUri={safeUri}
                   floDownBlock={floDownBlock!}
-                  selectedDefiniendum={selectedDefiniendum}
-                  setPendingPropagation={setPendingPropagation}
+                  localSymbolUri={symbol?.id ?? selectedDefiniendum?.uri ?? ""}
+                  setPendingMathHubDuplicate={setPendingMathHubDuplicate}
                 />
               );
             })}
@@ -449,7 +429,7 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
                   setDialogKind("confirm");
                 }}
               >
-                NOT A DUPLICATE
+                Not a duplicate
               </Button>
 
               {isConfirmed && (
@@ -485,15 +465,19 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
         />
       )}
 
-      {pendingPropagation && (
-        <SymbolPropagationDialog
+      {pendingMathHubDuplicate && (
+        <MathHubDuplicateDialog
           opened={true}
-          localSymbolUri={pendingPropagation.localSymbolUri}
-          mathHubUri={pendingPropagation.mathHubUri}
-          primaryFloDownBlockId={pendingPropagation.primaryFloDownBlockId}
-          onReplaceNode={handleReplaceNode}
-          onDone={() => setPendingPropagation(null)}
-          onSkip={() => setPendingPropagation(null)}
+          localSymbolUri={pendingMathHubDuplicate.localSymbolUri}
+          mathHubUri={pendingMathHubDuplicate.mathHubUri}
+          onDone={() => {
+            setPendingMathHubDuplicate(null);
+            void queryClient.invalidateQueries({ queryKey: ["dedup-symbols"] });
+            void queryClient.invalidateQueries({
+              queryKey: ["logical-paragraph-by-symbol", symbolName],
+            });
+          }}
+          onSkip={() => setPendingMathHubDuplicate(null)}
         />
       )}
 
