@@ -145,9 +145,36 @@ statements.
 **Rationale:** Near-duplicate titles can differ; title semantics stay on the canonical description
 only.
 
-**R-MOD-24 (Event-Driven):** WHEN a Curator or Admin exports all module descriptions, the system
-MUST include the module TeX file for each duplicate description as well as for each canonical
-description.
+**R-MOD-24 (Event-Driven):** WHEN a Curator or Admin exports all module descriptions and no index
+status is selected, the system MUST include the module TeX file for each duplicate description and
+for each canonical description.
+
+WHEN a Curator or Admin exports all module descriptions and one index status is selected, the
+system MUST include the module TeX file for every description with that status, including
+descriptions that are not on the current page of the module list. A duplicate’s module file is
+included only when that duplicate’s status matches. A canonical description’s own module file is
+included only when that canonical description’s status matches. WHEN an included duplicate’s
+canonical description has a different status, the duplicate’s Inhalt and Lernziele MUST still follow
+**R-MOD-23**.
+
+WHEN no description matches the selected status, the system MUST NOT download an archive and MUST
+tell the user there are no module descriptions to export.
+
+The system MUST NOT omit a matching description because **Show only favorites** is on or because a
+module-ID search is set. The system MUST NOT limit the archive to the current page of the module
+list.
+
+**Rationale:** Status is a publication-readiness gate. Curators need a zip of one status without
+losing rows that sit on later pages, and without the list’s other filters silently shrinking the
+archive.
+
+**R-MOD-32 (State-Driven):** WHILE a Curator or Admin can export all module descriptions, the
+bulk-export control MUST name the set that will be downloaded: “Download all” when no index status
+is selected, “Download extracted” when Extracted is selected, “Download finalized” when Finalized
+is selected, and “Download submitted” when Submitted to MathHub is selected.
+
+**Rationale:** The same control both filters the list and chooses the archive. The label is the
+warning that the click is not always the full catalog.
 
 **R-MOD-26 (Event-Driven):** WHEN an authenticated Extractor, Curator, or Admin marks or unmarks an
 in-progress module description as a favorite from the module description list or from an in-progress
@@ -202,6 +229,10 @@ semantics can pollute the MathHub archive path.
 - Favoriting catalog modules that have no in-progress ModuleDescription
 - Shared or Admin-visible favorite lists
 - Pinning favorites to the top of the unfiltered Modules list
+- Favorites-only or module-ID limits on bulk TeX export
+- Multi-status bulk export
+- Bulk export of only the current page
+- Scheduled export by index status
 
 ## Traceability
 
@@ -235,6 +266,7 @@ semantics can pollute the MathHub archive path.
 | R-MOD-22 | `workspace.md` S-MOD-22 |
 | R-MOD-23 | `export.md` S-MOD-23 |
 | R-MOD-24 | `export.md` S-MOD-24 |
+| R-MOD-32 | `export.md` S-MOD-32 |
 | R-MOD-26 | `workspace.md` S-MOD-27 |
 | R-MOD-27 | `workspace.md` S-MOD-26 |
 | R-MOD-28 | `workspace.md` S-MOD-28 |

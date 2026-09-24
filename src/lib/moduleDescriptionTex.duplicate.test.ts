@@ -91,4 +91,16 @@ describe("bulk export file list (S-MOD-24)", () => {
       "vector-space.de.tex",
     ]);
   });
+
+  it("omits definition files when the only selected row is a duplicate (S-MOD-24)", () => {
+    const alias = composeModuleTexInputForExport(
+      baseInput({ duplicateOfModuleId: "42438" }),
+      {
+        inhaltStatement: paragraph("canonical inhalt"),
+        lernzieleStatement: paragraph("canonical lernziele"),
+      },
+    );
+
+    expect(plannedTexZipFileNames([alias])).toEqual(["62083.de.tex"]);
+  });
 });

@@ -7,6 +7,7 @@ import {
   type ModuleDescriptionTexPreview,
 } from "@/lib/moduleDescriptionTex";
 import type { TexZipFile } from "@/lib/texZipExport";
+import type { IndexStatus } from "@/types/indexStatus";
 
 export type ModuleDescriptionTexExportFailure = {
   moduleId: string;
@@ -128,6 +129,34 @@ async function generateTrackedPreview(
   }
 
   return { moduleTex, definitionTex };
+}
+
+export function selectModuleDescriptionsForBulkTexExport<
+  T extends { indexStatus: IndexStatus },
+>(rows: readonly T[], indexStatus: IndexStatus | null): T[] {
+  if (indexStatus == null) return [...rows];
+  return rows.filter((row) => row.indexStatus === indexStatus);
+}
+
+export function assertModuleDescriptionsToExport(
+  modules: readonly unknown[],
+): void {
+  if (modules.length === 0) {
+    throw new Error("No module descriptions to export");
+  }
+}
+
+export function bulkTexExportButtonLabel(status: IndexStatus | null): string {
+  switch (status) {
+    case "EXTRACTED":
+      return "Download extracted";
+    case "FINALIZED":
+      return "Download finalized";
+    case "SUBMITTED_TO_MATHHUB":
+      return "Download submitted";
+    default:
+      return "Download all";
+  }
 }
 
 export async function generateAllModuleDescriptionTexFiles(

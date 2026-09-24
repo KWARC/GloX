@@ -18,6 +18,7 @@ import {
 } from "@/server/modules/moduleDuplicateGuards";
 import { defaultDefsFilePath } from "@/lib/moduleDefsFilePath";
 import { composeModuleTexInputForExport } from "@/lib/moduleDescriptionTex";
+import { selectModuleDescriptionsForBulkTexExport } from "@/lib/moduleDescriptionTexExport";
 import {
   findAllTextOccurrences,
   pathTraversesSemanticNode,
@@ -866,8 +867,11 @@ export const toggleModuleDescriptionFavorite = createServerFn({ method: "POST" }
     return { moduleDescriptionId, isFavorite: data.favorite };
   });
 
-export const listModuleDescriptionsForTexExport = createServerFn({ method: "POST" }).handler(
-  async (): Promise<ModuleDescriptionTexExportInput[]> => {
+export const listModuleDescriptionsForTexExport = createServerFn({ method: "POST" })
+  .inputValidator((data: { indexStatus?: IndexStatus | null } | undefined) => ({
+    indexStatus: data?.indexStatus ?? null,
+  }))
+  .handler(async ({ data }): Promise<ModuleDescriptionTexExportInput[]> => {
     await requireCuratorOrAdmin();
 
     const rows = await prisma.moduleDescription.findMany({
@@ -880,7 +884,12 @@ export const listModuleDescriptionsForTexExport = createServerFn({ method: "POST
       },
     });
 
-    return rows.map((row) => {
+    const selected = selectModuleDescriptionsForBulkTexExport(
+      rows,
+      data.indexStatus,
+    );
+
+    return selected.map((row) => {
       const input = toTexExportInput(row);
       if (!row.duplicateOfModuleId) return input;
       const canonical = rows.find(
@@ -898,8 +907,7 @@ export const listModuleDescriptionsForTexExport = createServerFn({ method: "POST
           : null,
       ) as ModuleDescriptionTexExportInput;
     });
-  },
-);
+  });
 
 export const updateModuleDescriptionIndexStatus = createServerFn({
   method: "POST",
