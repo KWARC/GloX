@@ -309,7 +309,7 @@ export function ModuleDefinitionsSection({
 
       <ReferenceSuggestionDialog
         opened={sniffyFlow.suggestOpen}
-        onClose={() => sniffyFlow.setSuggestOpen(false)}
+        onClose={sniffyFlow.closeSuggest}
         floDownBlockId={sniffyFlow.activeFloDownBlockId ?? ""}
         floDownBlockStatement={sniffyFlow.activeFloDownBlockStatement}
         declaredSymbolsInfo={sniffyFlow.activeDeclaredSymbolsInfo}

@@ -265,12 +265,17 @@ export function useModuleStatementSniffyFlow({
   staticCatalogError: Error | null;
   retryStaticCatalog: () => Promise<void>;
 }) {
-  return useSniffyReferenceSuggestions({
+  const pendingPageRefreshRef = useRef(false);
+
+  const sniffyFlow = useSniffyReferenceSuggestions({
     floDownBlocks: extracts,
     catalog: sniffyCatalog,
     catalogLoading: staticCatalogLoading,
     catalogError: staticCatalogError,
     retryCatalog: retryStaticCatalog,
+    onSessionMutated: () => {
+      pendingPageRefreshRef.current = true;
+    },
     invalidate: () =>
       queryClient.invalidateQueries({
         queryKey: ["module-description", moduleId],
@@ -304,4 +309,24 @@ export function useModuleStatementSniffyFlow({
       });
     },
   });
+
+  async function handleRecomputeReferences(floDownBlockId: string) {
+    pendingPageRefreshRef.current = false;
+    await sniffyFlow.handleRecomputeReferences(floDownBlockId);
+  }
+
+  function closeSuggest() {
+    sniffyFlow.setSuggestOpen(false);
+    if (!pendingPageRefreshRef.current) return;
+    pendingPageRefreshRef.current = false;
+    void queryClient.invalidateQueries({
+      queryKey: ["module-description", moduleId],
+    });
+  }
+
+  return {
+    ...sniffyFlow,
+    handleRecomputeReferences,
+    closeSuggest,
+  };
 }
