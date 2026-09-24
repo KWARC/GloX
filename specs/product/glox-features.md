@@ -1,6 +1,6 @@
 # GloX — shipped features
 
-> **Layer:** Product inventory — orientation only. **Last verified:** 2026-09-19.
+> **Layer:** Product inventory — orientation only. **Last verified:** 2026-09-24.
 >
 > Parent brief: [`glox.md`](./glox.md)
 
@@ -39,6 +39,7 @@
 - **Module description workspace** — Seed title/inhalt/lernziele statements; extract definitions.
 - **Mark module description as duplicate** — Extractor+ mark a description as a duplicate of another already-created description (warns before deleting this module’s Inhalt, Lernziele, and definitions). Unmark re-seeds from this module’s catalog. Duplicate workspaces hide statement and definition panels. Curator/Admin TeX export uses the duplicate’s catalog title plus the original’s Inhalt and Lernziele.
 - **Module description favorites** — Extractor+ star or unstar in-progress descriptions from the Modules table, or **Add as favourites** / **Remove from favourites** on the workspace after create; **Show only favorites** filters to the caller’s personal set (stacks with status and module-ID filters).
+- **Download all module TeX** — Curator/Admin download a zip of module descriptions. The Modules status filter chooses the zip (every match, not the current page). The button reads Download all, Download extracted, Download finalized, or Download submitted. Favorites and the module-ID search do not limit the zip.
 - **Module definition blocks** — Create FloDown blocks in module context (German default).
 
 ## Curation & export

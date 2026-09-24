@@ -5,6 +5,8 @@ import {
   toggleModuleDescriptionFavorite,
 } from "@/serverFns/moduleDescription.server";
 import {
+  assertModuleDescriptionsToExport,
+  bulkTexExportButtonLabel,
   generateAllModuleDescriptionTexFiles,
   ModuleDescriptionTexBulkExportError,
 } from "@/lib/moduleDescriptionTexExport";
@@ -96,11 +98,11 @@ function ModuleDescriptionsPage() {
   const canExportTex = role === "ADMIN" || role === "CURATOR";
 
   const exportAllMutation = useMutation({
-    mutationFn: async () => {
-      const modules = await listModuleDescriptionsForTexExport();
-      if (modules.length === 0) {
-        throw new Error("No module descriptions to export");
-      }
+    mutationFn: async (indexStatus: IndexStatus | null) => {
+      const modules = await listModuleDescriptionsForTexExport({
+        data: { indexStatus },
+      });
+      assertModuleDescriptionsToExport(modules);
       const { files, failures } = await generateAllModuleDescriptionTexFiles(modules);
       if (files.length > 0) {
         downloadTexFilesAsZip(files, MODULE_DESCRIPTIONS_TEX_ZIP_FILE_NAME);
@@ -281,9 +283,9 @@ function ModuleDescriptionsPage() {
                 size="compact-sm"
                 leftSection={<Download size={14} />}
                 loading={exportAllMutation.isPending}
-                onClick={() => exportAllMutation.mutate()}
+                onClick={() => exportAllMutation.mutate(statusFilter)}
               >
-                Download all
+                {bulkTexExportButtonLabel(statusFilter)}
               </Button>
             )}
             <Switch
