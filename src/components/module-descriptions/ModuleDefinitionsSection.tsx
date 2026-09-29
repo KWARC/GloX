@@ -2,7 +2,10 @@ import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { ExtractedContentToolbar } from "@/components/files/ExtractedContentToolbar";
 import { DefiniendumDialog } from "@/components/DefiniendumDialog";
 import { ExtractedTextPanel } from "@/components/ExtractedTextList";
-import { FloDownBlockDeleteModal } from "@/components/FloDownBlockReviewModals";
+import {
+  DuplicateFloDownBlockModal,
+  FloDownBlockDeleteModal,
+} from "@/components/FloDownBlockReviewModals";
 import { FloDownBlockIdentityDialog } from "@/components/FloDownBlockFilePathDialog";
 import {
   ExtractTextDialog,
@@ -21,7 +24,10 @@ import {
 } from "@/lib/moduleDefinitionExtracts";
 import { buildStaticCatalog } from "@/server/symbolic-suggestions";
 import { useTextSelection } from "@/server/text-selection";
+import { findFloDownBlocksByIdentity } from "@/serverFns/extractFloDownBlock.server";
 import { createModuleDefinitionBlock } from "@/serverFns/moduleDescription.server";
+import type { DeclaredSymbolDraft } from "@/types/declaredSymbolsInfo";
+import { FloDownStatement } from "@/types/floDown.types";
 import { listStaticSymbolicCatalog } from "@/serverFns/symbolicCatalog.server";
 import { ExtractBlockType } from "@/types/blockType";
 import type { FloDownSymbolContext } from "@/components/FtmlPreview";
@@ -116,10 +122,24 @@ export function ModuleDefinitionsSection({
   });
 
   const [extractDialogOpen, setExtractDialogOpen] = useState(false);
+  const [extractDialogMode, setExtractDialogMode] = useState<
+    "definition" | "symbol-target"
+  >("definition");
+  const [semanticEnabled, setSemanticEnabled] = useState(false);
   const [pendingExtractText, setPendingExtractText] = useState("");
   const [paragraphFileName, setParagraphFileName] = useState("");
   const [symbolName, setSymbolName] = useState("");
   const [blockType, setBlockType] = useState<ExtractBlockType>("definition");
+  const [duplicateFloDownBlocks, setDuplicateFloDownBlocks] = useState<
+    Awaited<ReturnType<typeof findFloDownBlocksByIdentity>>
+  >([]);
+  const [pendingDefinitionSubmit, setPendingDefinitionSubmit] = useState<{
+    text: string;
+    blockType: ExtractBlockType;
+    statement?: FloDownStatement;
+    declaredSymbols?: string[];
+    declaredSymbolsInfo?: DeclaredSymbolDraft[];
+  } | null>(null);
 
   const selectedFloDownBlock =
     extracts.find((e) => e.id === semanticFlow.semanticPanelFloDownBlockId) ??
@@ -130,6 +150,26 @@ export function ModuleDefinitionsSection({
     definitionBlocks[0]?.futureRepo ?? "courses/FAU/module-descriptions";
   const defsLanguage = definitionBlocks[0]?.language ?? "de";
 
+  function resetExtractDialogState() {
+    setExtractDialogOpen(false);
+    setExtractDialogMode("definition");
+    setSemanticEnabled(false);
+    setPendingExtractText("");
+    setParagraphFileName("");
+    setSymbolName("");
+    setBlockType("definition");
+  }
+
+  function handleCreateDefinition() {
+    setPendingExtractText("");
+    setParagraphFileName("");
+    setSymbolName("");
+    setBlockType("definition");
+    setExtractDialogMode("definition");
+    setSemanticEnabled(false);
+    setExtractDialogOpen(true);
+  }
+
   function handleCreateSymbolTarget() {
     const conceptUri = semanticFlow.conceptUri.trim();
     if (!conceptUri) return;
@@ -138,50 +178,93 @@ export function ModuleDefinitionsSection({
     setParagraphFileName(normalizeContentName(conceptUri));
     setSymbolName(conceptUri);
     setBlockType("definition");
+    setExtractDialogMode("symbol-target");
+    setSemanticEnabled(false);
     setExtractDialogOpen(true);
     semanticFlow.handleCloseSymbolicRefDialog();
   }
 
-  async function handleDefinitionSubmit({
+  async function performDefinitionSubmit({
     text,
     blockType: submittedBlockType,
     statement: definitionStatement,
+    declaredSymbolsInfo,
   }: {
     text: string;
     blockType: ExtractBlockType;
-    statement?: import("@/types/floDown.types").FloDownStatement;
+    statement?: FloDownStatement;
+    declaredSymbols?: string[];
+    declaredSymbolsInfo?: DeclaredSymbolDraft[];
+  }) {
+    const trimmedSymbolName = symbolName.trim();
+    const isSymbolTargetCreate = extractDialogMode === "symbol-target";
+
+    await createModuleDefinitionBlock({
+      data: {
+        moduleDescriptionId,
+        paragraphFileName: paragraphFileName.trim(),
+        originalText: text,
+        statement: definitionStatement,
+        ...(isSymbolTargetCreate
+          ? {
+              symbolName: trimmedSymbolName,
+              symbolUri: await floDownDeclareSymbolUri({
+                futureRepo: defsFutureRepo,
+                filePath: defsFilePath,
+                fileName: paragraphFileName.trim(),
+                language: defsLanguage,
+                symbolName: trimmedSymbolName,
+              }),
+            }
+          : {
+              declaredSymbolsInfo,
+            }),
+        blockType: submittedBlockType,
+      },
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["module-description", moduleId],
+    });
+    await queryClient.invalidateQueries({ queryKey: ["symbol-search-db"] });
+
+    resetExtractDialogState();
+  }
+
+  async function handleDefinitionSubmit(input: {
+    text: string;
+    blockType: ExtractBlockType;
+    statement?: FloDownStatement;
+    declaredSymbols?: string[];
+    declaredSymbolsInfo?: DeclaredSymbolDraft[];
   }) {
     try {
-      await createModuleDefinitionBlock({
+      const matches = await findFloDownBlocksByIdentity({
         data: {
-          moduleDescriptionId,
-          paragraphFileName: paragraphFileName.trim(),
-          originalText: text,
-          statement: definitionStatement,
-          symbolName: symbolName.trim(),
-          symbolUri: await floDownDeclareSymbolUri({
-            futureRepo:
-              definitionBlocks[0]?.futureRepo ??
-              "courses/FAU/module-descriptions",
-            filePath: definitionBlocks[0]?.filePath ?? "defs",
-            fileName: paragraphFileName.trim(),
-            language: definitionBlocks[0]?.language ?? "de",
-            symbolName: symbolName.trim(),
-          }),
-          blockType: submittedBlockType,
+          futureRepo: defsFutureRepo,
+          filePath: defsFilePath,
+          fileName: paragraphFileName.trim(),
+          language: defsLanguage,
         },
       });
+      if (matches.length) {
+        setDuplicateFloDownBlocks(matches);
+        setPendingDefinitionSubmit(input);
+        return;
+      }
+      await performDefinitionSubmit(input);
+    } catch {
+      // keep dialog open on error
+    }
+  }
 
-      await queryClient.invalidateQueries({
-        queryKey: ["module-description", moduleId],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["symbol-search-db"] });
-
-      setExtractDialogOpen(false);
-      setPendingExtractText("");
-      setParagraphFileName("");
-      setSymbolName("");
-      setBlockType("definition");
+  async function confirmDuplicateDefinition() {
+    if (!pendingDefinitionSubmit) return;
+    const input = pendingDefinitionSubmit;
+    setDuplicateFloDownBlocks([]);
+    setPendingDefinitionSubmit(null);
+    try {
+      await performDefinitionSubmit(input);
     } catch {
       // keep dialog open on error
     }
@@ -205,15 +288,15 @@ export function ModuleDefinitionsSection({
         <ExtractedContentToolbar
           extractCount={extracts.length}
           onOpenLatexConfig={semanticFlow.handleOpenLatexConfig}
-          onCreateDefinition={() => undefined}
+          onCreateDefinition={handleCreateDefinition}
           showLatexButton={canPreviewLatex}
-          showCreateButton={false}
         />
 
         <Box style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
           {extracts.length === 0 ? (
             <Text size="sm" c="dimmed" ta="center" p="md">
-              No definitions yet. Add one via Symbolic Ref → Create new symbol.
+              No definitions yet. Use + to create one, or add via Symbolic Ref →
+              Create new symbol.
             </Text>
           ) : (
             <ExtractedTextPanel
@@ -322,14 +405,27 @@ export function ModuleDefinitionsSection({
         onAccept={sniffyFlow.handleAcceptSuggestion}
       />
 
+      <DuplicateFloDownBlockModal
+        opened={duplicateFloDownBlocks.length > 0}
+        floDownBlocks={duplicateFloDownBlocks}
+        onCancel={() => {
+          setDuplicateFloDownBlocks([]);
+          setPendingDefinitionSubmit(null);
+        }}
+        onConfirm={() => void confirmDuplicateDefinition()}
+      />
+
       <ExtractTextDialog
         opened={extractDialogOpen}
         initialText={pendingExtractText}
         paragraphFileName={paragraphFileName}
         blockType={blockType}
-        mode="symbol-target"
+        mode={extractDialogMode}
         symbolName={symbolName}
-        createSymbolFlow
+        createSymbolFlow={extractDialogMode === "symbol-target"}
+        enableSemanticAuthoring={extractDialogMode === "definition"}
+        semanticEnabled={semanticEnabled}
+        setSemanticEnabled={setSemanticEnabled}
         identity={{
           futureRepo: defsFutureRepo,
           filePath: defsFilePath,
@@ -338,17 +434,25 @@ export function ModuleDefinitionsSection({
         setParagraphFileName={setParagraphFileName}
         setBlockType={setBlockType}
         setSymbolName={setSymbolName}
-        title="Add Content"
-        textLabel="Enter Content"
-        textPlaceholder="Enter content"
-        submitLabel="Add Content"
-        onClose={() => {
-          setExtractDialogOpen(false);
-          setPendingExtractText("");
-          setParagraphFileName("");
-          setSymbolName("");
-          setBlockType("definition");
-        }}
+        title={
+          extractDialogMode === "symbol-target" ? "Add Content" : undefined
+        }
+        textLabel={
+          extractDialogMode === "symbol-target" ||
+          extractDialogMode === "definition"
+            ? "Enter Content"
+            : undefined
+        }
+        textPlaceholder={
+          extractDialogMode === "symbol-target" ||
+          extractDialogMode === "definition"
+            ? "Enter content"
+            : undefined
+        }
+        submitLabel={
+          extractDialogMode === "symbol-target" ? "Add Content" : undefined
+        }
+        onClose={resetExtractDialogState}
         onSubmit={(payload) => void handleDefinitionSubmit(payload)}
       />
     </>

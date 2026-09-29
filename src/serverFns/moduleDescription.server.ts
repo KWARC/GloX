@@ -27,7 +27,11 @@ import {
 import { extractPlainText } from "@/server/ftml/statementContent";
 import { declaredUrisFromJson } from "@/server/declaredSymbolsInfo";
 import { sanitizeStatementForPersist } from "@/server/ftml/declaredSymbols";
-import { addDeclaredSymbol } from "@/server/floDownBlockDeclaredSymbols";
+import {
+  addDeclaredSymbol,
+  setDeclaredSymbolsInfo,
+} from "@/server/floDownBlockDeclaredSymbols";
+import type { DeclaredSymbolDraft } from "@/types/declaredSymbolsInfo";
 import { UnifiedSymbolicReference } from "@/server/document/SymbolicRef.types";
 import { parseUri, SemanticOperation, transform } from "@/server/parseUri";
 import {
@@ -493,9 +497,10 @@ export const createModuleDefinitionBlock = createServerFn({ method: "POST" })
       paragraphFileName: string;
       originalText: string;
       statement?: FloDownStatement;
-      symbolName: string;
+      symbolName?: string;
       symbolUri?: string;
       existingSymbolId?: string;
+      declaredSymbolsInfo?: DeclaredSymbolDraft[];
       blockType?: ExtractBlockType;
     }) => data,
   )
@@ -509,11 +514,12 @@ export const createModuleDefinitionBlock = createServerFn({ method: "POST" })
 
     const paragraphFileName = data.paragraphFileName.trim();
     const originalText = data.originalText.trim();
-    const symbolName = data.symbolName.trim();
+    const symbolName = (data.symbolName ?? "").trim();
     const existingSymbolId = data.existingSymbolId?.trim();
     const symbolUri = data.symbolUri?.trim() || existingSymbolId;
+    const declarationDrafts = data.declaredSymbolsInfo ?? [];
 
-    if (!paragraphFileName || !originalText || !symbolName) {
+    if (!paragraphFileName || !originalText) {
       throw new Error("Missing definition fields");
     }
 
@@ -522,7 +528,7 @@ export const createModuleDefinitionBlock = createServerFn({ method: "POST" })
     const statement = sanitizeStatementForPersist(rawStatement);
     const serializedStatement = JSON.parse(JSON.stringify(statement));
     const isNewSymbol = !existingSymbolId;
-    if (isNewSymbol && !symbolUri) {
+    if (symbolName && isNewSymbol && !symbolUri) {
       throw new Error("Symbol URI required");
     }
 
@@ -553,24 +559,33 @@ export const createModuleDefinitionBlock = createServerFn({ method: "POST" })
         },
       });
 
-      if (isNewSymbol && symbolUri) {
+      if (declarationDrafts.length > 0) {
+        await setDeclaredSymbolsInfo(tx, createdFloDownBlock.id, declarationDrafts);
+      } else if (isNewSymbol && symbolUri && symbolName) {
         await addDeclaredSymbol(tx, createdFloDownBlock.id, {
           symbolName,
           symbolUri,
         });
       }
 
+      const updatedBlock = await tx.floDownBlock.findUniqueOrThrow({
+        where: { id: createdFloDownBlock.id },
+        select: { statement: true, declaredSymbolsInfo: true },
+      });
+
+      const primaryDraft = declarationDrafts[0];
+
       return {
         id: createdFloDownBlock.id,
-        statement: assertFloDownStatement(createdFloDownBlock.statement),
-        declaredSymbols: declaredUrisFromJson(createdFloDownBlock.declaredSymbolsInfo),
+        statement: assertFloDownStatement(updatedBlock.statement),
+        declaredSymbols: declaredUrisFromJson(updatedBlock.declaredSymbolsInfo),
         futureRepo: createdFloDownBlock.futureRepo,
         filePath: createdFloDownBlock.filePath,
         fileName: createdFloDownBlock.fileName,
         language: createdFloDownBlock.language,
         symbol: {
-          id: symbolUri ?? existingSymbolId ?? symbolName,
-          symbolName,
+          id: symbolUri ?? existingSymbolId ?? primaryDraft?.symbolUri ?? symbolName,
+          symbolName: symbolName || primaryDraft?.symbolName || "",
         },
       };
     });

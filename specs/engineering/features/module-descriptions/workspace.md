@@ -218,9 +218,13 @@ inhalt, or lernziele. This rule does **not** apply WHILE `duplicateOfModuleId` i
 **Upstream:** R-MOD-04
 
 **S-MOD-05 (Event-Driven):** WHEN `createModuleDefinitionBlock` succeeds, the system MUST create a
-`FloDownBlock` linked to the ModuleDescription with `documentId` null, MUST create or link a Symbol
-keyed by the module definition export identity (`futureRepo`, `defsFilePath`, paragraph `fileName`,
-`language`), and MUST write an initial `FloDownBlockVersion`. This rule does **not** apply WHILE
+`FloDownBlock` linked to the ModuleDescription with `documentId` null, MUST write an initial
+`FloDownBlockVersion`, and MUST persist declaration metadata from the client when provided: WHEN the
+client sends `declaredSymbolsInfo`, the handler MUST call `setDeclaredSymbolsInfo`; WHEN the client
+sends a new `symbolName` and `symbolUri` (create-new-symbol flow) without draft declarations, the
+handler MUST call `addDeclaredSymbol` so the Symbol is keyed by the module definition export identity
+(`futureRepo`, `defsFilePath`, paragraph `fileName`, `language`). A manual **+** create MAY omit
+`symbolName` when the definition has no declared symbols yet. This rule does **not** apply WHILE
 `duplicateOfModuleId` is set (S-MOD-21).
 
 **Upstream:** R-MOD-05
