@@ -8,12 +8,15 @@ type SymbolicLinkPreviewProps = {
   uri: string;
   label?: string;
   compact?: boolean;
+  /** Let FloDown symref hover cards extend outside the preview box (e.g. sn-ify dialog). */
+  allowHoverOverflow?: boolean;
 };
 
 export function SymbolicLinkPreview({
   uri,
   label,
   compact = false,
+  allowHoverOverflow = false,
 }: SymbolicLinkPreviewProps) {
   const text = (() => {
     if (label?.trim()) return label.trim();
@@ -57,8 +60,8 @@ export function SymbolicLinkPreview({
     <Box
       data-compact-symref={compact ? "true" : undefined}
       style={{
-        minWidth: 0,
-        overflow: "hidden",
+        minWidth: allowHoverOverflow ? undefined : 0,
+        overflow: allowHoverOverflow ? "visible" : "hidden",
         ...(compact
           ? {
               display: "inline-block",

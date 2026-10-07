@@ -27,6 +27,7 @@ type UseSniffyReferenceSuggestionsParams = {
     selection: { text: string; startOffset: number; endOffset: number };
     symRef: UnifiedSymbolicReference;
   }) => Promise<void>;
+  onSessionMutated?: () => void;
 };
 
 export function useSniffyReferenceSuggestions({
@@ -38,6 +39,7 @@ export function useSniffyReferenceSuggestions({
   invalidate,
   refetchFloDownBlocks,
   applySymbolicRef,
+  onSessionMutated,
 }: UseSniffyReferenceSuggestionsParams) {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestLoading, setSuggestLoading] = useState(false);
@@ -172,12 +174,8 @@ export function useSniffyReferenceSuggestions({
       });
     }
 
-    setSuggestLoading(true);
-    try {
-      await reloadSniffySession(activeFloDownBlockId);
-    } finally {
-      setSuggestLoading(false);
-    }
+    await reloadSniffySession(activeFloDownBlockId);
+    onSessionMutated?.();
   }
 
   return {

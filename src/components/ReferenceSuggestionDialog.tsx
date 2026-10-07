@@ -29,7 +29,7 @@ import { RenderSymbolicUri } from "./RenderUri";
 import { SymbolicLinkPreview } from "./SymbolicLinkPreview";
 
 const SNIFFY_REVIEW_DIALOG_HEIGHT = "90dvh";
-const SNIFFY_REVIEW_DIALOG_WIDTH = "50vw";
+const SNIFFY_REVIEW_DIALOG_WIDTH = "75vw";
 
 type Props = {
   opened: boolean;
@@ -230,10 +230,11 @@ export function ReferenceSuggestionDialog({
                       showRightLabel={false}
                     />
                   </Box>
-                  <Box style={{ flexShrink: 0, minWidth: 0 }}>
+                  <Box style={{ flexShrink: 0 }}>
                     <SymbolicLinkPreview
                       uri={candidate.uri}
                       label={candidate.label}
+                      allowHoverOverflow
                     />
                   </Box>
                 </Group>
