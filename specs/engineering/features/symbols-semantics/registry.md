@@ -13,6 +13,7 @@ code:
   - src/routes/symbols.tsx
   - src/routes/Deduplication.tsx
   - src/lib/dedupCatalogDisplay.ts
+  - src/lib/dedupSearchWindow.ts
   - src/server/auth/requireAdminOrCurator.ts
 ---
 
@@ -41,7 +42,8 @@ Out of scope:
 | `src/serverFns/symbol.server.ts` | Creates definienda using client-supplied FloDown URIs and lists or deletes declaration records by scanning `declaredSymbolsInfo`. |
 | `src/serverFns/symbolDuplicate.server.ts` | Sets confirmation fields on the matching `declaredSymbolsInfo` object. Curator/Admin only. |
 | `src/lib/dedupCatalogDisplay.ts` | Splits Deduplication catalog into unconfirmed vs confirmed-not-duplicate and paginates grouped names. |
-| `src/routes/Deduplication.tsx` | Curator/Admin UI: unconfirmed list then **Confirmed not a duplicate**; 20 grouped names per page. |
+| `src/lib/dedupSearchWindow.ts` | Shows the first 5 MathHub hits for a Deduplication symbol, then 5 more from the current search response (at most 15). |
+| `src/routes/Deduplication.tsx` | Curator/Admin UI: unconfirmed list then **Confirmed not a duplicate**; 20 grouped names per page. Each symbol has a MathHub search field; hits render with **Same as this**. |
 | `src/routes/symbols.tsx` | Curator/Admin UI for the local symbol registry. |
 | `scripts/backfill-declared-symbols-info.mjs` | One-shot production backfill of short names into URIs. Temporary mint lives only in this script. |
 

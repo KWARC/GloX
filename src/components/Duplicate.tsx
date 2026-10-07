@@ -1,4 +1,8 @@
 import { SemanticPanel } from "@/components/semantic-panel/SemanticPanel";
+import {
+  DEDUP_SEARCH_PAGE_SIZE,
+  nextDedupSearchVisibleCount,
+} from "@/lib/dedupSearchWindow";
 import { floDownDeclareSymbolUri } from "@/lib/floDownDeclareSymbolUri";
 import { queryClient } from "@/queryClient";
 import { parseUri, ReplacePayload, normalizeSymRef } from "@/server/parseUri";
@@ -29,9 +33,10 @@ import {
 } from "@/serverFns/updateFloDownBlock.server";
 import { assertFloDownStatement, FloDownStatement } from "@/types/floDown.types";
 import { FloDownBlockSemantic } from "@/types/Semantic.types";
-import { Box, Button, Group, Loader, Paper, Stack, Text } from "@mantine/core";
+import { Box, Button, Group, Loader, Paper, Stack, Text, TextInput } from "@mantine/core";
+import { useDebouncedValue } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConfirmationModal, ConfirmDialogKind } from "./ConfirmationModal";
 import { ConfirmedIcon } from "./ConfirmedIcon";
 import { DefiniendumDialog } from "./DefiniendumDialog";
@@ -44,7 +49,9 @@ import { MathHubDuplicateDialog } from "./MathHubDuplicateDialog";
 export function Duplicate({ symbolName }: { symbolName: string }) {
   const [pendingMathHubDuplicate, setPendingMathHubDuplicate] =
     useState<PendingMathHubDuplicate | null>(null);
-  const [visibleCount, setVisibleCount] = useState(2);
+  const [searchQuery, setSearchQuery] = useState(symbolName);
+  const [debouncedSearchQuery] = useDebouncedValue(searchQuery, 300);
+  const [visibleCount, setVisibleCount] = useState(DEDUP_SEARCH_PAGE_SIZE);
   const [dialogKind, setDialogKind] = useState<ConfirmDialogKind | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -145,11 +152,14 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
     );
   }, [floDownBlock, symbolName]);
 
-  const searchQuery = `${symbolName} definition`;
   const { results, isLoading: isSearching } = useSymbolSearch(
-    searchQuery,
+    debouncedSearchQuery,
     true,
   );
+
+  useEffect(() => {
+    setVisibleCount(DEDUP_SEARCH_PAGE_SIZE);
+  }, [debouncedSearchQuery]);
 
   function handleToggleEdit(id: string) {
     setEditingId((prev) => (prev === id ? null : id));
@@ -311,15 +321,12 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
       r.source === "MATHHUB" && typeof r.uri === "string",
   );
 
-  if (
-    !isLoading &&
-    !isSearching &&
-    (!floDownBlock || mathHubResults.length === 0)
-  ) {
+  if (!isLoading && !isSearching && !floDownBlock) {
     return null;
   }
 
   const visibleResults = mathHubResults.slice(0, visibleCount);
+  const searchReady = debouncedSearchQuery.trim().length >= 2;
   const isConfirmed = symbol?.hasConfirmed === true;
 
   async function handleConfirmAction() {
@@ -380,39 +387,47 @@ export function Duplicate({ symbolName }: { symbolName: string }) {
           </Box>
 
           <Stack w="55%" gap="sm">
+            <TextInput
+              aria-label={`Search MathHub for ${symbolName}`}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+              placeholder="Search MathHub"
+            />
+
             {isSearching && <Loader size="xs" />}
 
-            {visibleResults.map((r) => {
-              const parsed = parseUri(r.uri);
-              const safeUri = parsed.conceptUri;
-              return (
-                <MathHubSearchResult
-                  key={safeUri}
-                  safeUri={safeUri}
-                  floDownBlock={floDownBlock!}
-                  localSymbolUri={symbol?.id ?? selectedDefiniendum?.uri ?? ""}
-                  setPendingMathHubDuplicate={setPendingMathHubDuplicate}
-                />
-              );
-            })}
+            {floDownBlock &&
+              visibleResults.map((r) => {
+                const parsed = parseUri(r.uri);
+                const safeUri = parsed.conceptUri;
+                return (
+                  <MathHubSearchResult
+                    key={safeUri}
+                    safeUri={safeUri}
+                    floDownBlock={floDownBlock}
+                    localSymbolUri={symbol?.id ?? selectedDefiniendum?.uri ?? ""}
+                    setPendingMathHubDuplicate={setPendingMathHubDuplicate}
+                  />
+                );
+              })}
 
-            {mathHubResults.length > 2 && (
+            {mathHubResults.length > DEDUP_SEARCH_PAGE_SIZE && (
               <Button
                 size="xs"
                 variant="subtle"
                 onClick={() =>
                   setVisibleCount((prev) =>
-                    prev >= mathHubResults.length ? 2 : prev + 3,
+                    nextDedupSearchVisibleCount(prev, mathHubResults.length),
                   )
                 }
               >
                 {visibleCount >= mathHubResults.length
-                  ? "Show Less"
-                  : "Show More"}
+                  ? "Show less"
+                  : `Show ${DEDUP_SEARCH_PAGE_SIZE} more`}
               </Button>
             )}
 
-            {mathHubResults.length === 0 && !isSearching && (
+            {searchReady && mathHubResults.length === 0 && !isSearching && (
               <Text size="xs" c="dimmed">
                 No results found in MathHub
               </Text>
